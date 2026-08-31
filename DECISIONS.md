@@ -2,6 +2,10 @@
 
 Append-only. Newest first.
 
+## #12 — 2026-08-31: Video quality was the prompt pipeline, not the LoRA; final-pass 1024x1280 verified good but costs ~2.4 h per 6 s shot
+
+Jeremy called the 832x480 e2e "AI slop" in both A/B variants — root causes were pipeline, not model: the rule decomposer emitted garbled English ("…at night, the slowly,") and crammed a two-phase camera move into one I2V shot, and the resolution default ignored the proven graph's 1024x1280 (b2c53d0 fixed all three; briefs now split on "then" into single-move shots). The face-forward re-run at 1024x1280 final looks like a real shoot (stable identity, clean push-in) and scored min 0.220/mean 0.365 vs the market shot's 0.026/0.203. Cost discovered: two-stage 28-step final at 1.3 MP x 145 frames runs ~305 s/step ≈ 2.4 h/shot on the 5090 (480p was ~3 min). Final quality at this res is real but not an iteration loop — draft = lightning at full res (~20 min), final = overnight, or drop frames/res (BACKLOG). Also: a transient /history poll failure killed a run mid-render — client.wait now tolerates dropped polls (30ba2ce).
+
 ## #11 — 2026-08-31: Wan low-noise LoRA v001 installed but measured identity-NEUTRAL; selection caught real divergence
 
 The min-score selection worked as designed: epochs 6–10 collapsed (min 0.43→0.03) after an fp16 loss spike at ~epoch 6 (avr_loss 0.001→0.03), and the ranking surfaced it immediately. Winner = epoch 1 (min 0.4334 draft / 0.3500 final). But controls show v001 buys nothing yet: same-seed baseline WITHOUT the LoRA scored min 0.4609 draft / 0.3379 final, and the e2e A/B (identical keyframes) scored no-LoRA min 0.106/mean 0.246 vs with-LoRA 0.026/0.203. Installed anyway as the plumbing proof (slot wiring, selection, A/B are now real); identity today comes from the image-LoRA keyframe + Wan's natural preservation. Retune knobs backlogged: lower LR / drop loraplus ratio (fp16 stability), max_timestep 900, motion clips in the dataset. Also learned: a tracks-her-from-behind shot inherently zeroes face-identity frames — min-score on such shots measures shot design, not the LoRA (BACKLOG: face-visibility-aware video scoring).

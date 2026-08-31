@@ -2,6 +2,9 @@
 
 ## Open
 
+- **Final-pass render budget at 1024x1280:** ~2.4 h per 6 s shot (28 steps, no lightning — DECISIONS #12). Options to evaluate: lightning-final hybrid (4-8 steps at full res), 768x960 middle ground, fewer frames (97 = 4 s), or accept overnight finals. Draft pass at full res with lightning is the iteration loop.
+- **Aesthetic/artifact gate:** identity scoring misses visually-bad renders (the kitchen keyframe scored 0.554 mid-pack while being the one Jeremy rejected). Add a jank check (e.g., an aesthetic scorer or VLM pass) alongside identity, or lean on multi-candidate re-rolls.
+
 - **Wan low-noise LoRA retune (v001 is identity-neutral, DECISIONS #11):** fp16 training diverged after ~epoch 5 (loss spike, min identity 0.43→0.03); winner epoch 1 doesn't beat no-LoRA baseline. Try: lower LR (8e-5), drop loraplus_lr_ratio (fp16 stability), max_timestep 900 (musubi docs), add short motion clips to the dataset, more epochs at the stabler settings.
 - **Wan HIGH-noise expert LoRA (deferred):** only the low-noise expert is trained (identity/detail); the high-noise expert (composition/motion) uses base weights. Train with `sourcemode train wan gwen --expert high --run` (timesteps 875-1000) if identity drifts during large motion.
 - **Face-visibility-aware video scoring:** frames where the subject faces away score ~0 and dominate the min — score only frames with a detected face above a size floor and report visible-frame coverage separately (the e2e tracking-from-behind shot min-scored 0.03-0.11 regardless of LoRA).
