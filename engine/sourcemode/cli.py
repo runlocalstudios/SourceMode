@@ -127,13 +127,64 @@ def source_bump(character: str):
 
 
 @gates_app.command("calibrate")
-def gates_calibrate(character: str):
+def gates_calibrate(
+    character: str,
+    negative: Path = typer.Option(None, "--negative", help="Image of a clearly-different face to check separation."),
+):
     """Pairwise similarity over the approved sheet -> per-character threshold."""
-    from .gates.identity import calibrate_identity  # noqa: PLC0415
+    from .gates.identity import IdentityScorer, calibrate_identity_full  # noqa: PLC0415
 
     _, chars, src = _load(character)
-    updated = calibrate_identity(chars, src)
-    rprint(f"[green]calibrated[/green] threshold={updated.identity_threshold} embedding={updated.identity_embedding_path}")
+    updated, stats = calibrate_identity_full(chars, src)
+
+    names = [Path(f).name for f in stats["files"]]
+    width = max(len(n) for n in names)
+    rprint("[bold]pairwise cosine similarity[/bold]")
+    header = " " * (width + 2) + "  ".join(f"{i:>6d}" for i in range(len(names)))
+    rprint(header)
+    for i, row in enumerate(stats["matrix"]):
+        cells = "  ".join(f"{v:6.3f}" for v in row)
+        rprint(f"{names[i]:<{width}} [{i}] {cells}")
+    if stats["skipped"]:
+        rprint(f"[yellow]no face found in: {stats['skipped']}[/yellow]")
+    rprint(
+        f"mean={stats['mean']} std={stats['std']} -> "
+        f"[green]threshold={updated.identity_threshold}[/green] embedding={updated.identity_embedding_path}"
+    )
+
+    unreliable = stats["mean"] < 0.35
+    if negative is not None:
+        result = IdentityScorer(chars).score(negative, updated)
+        if result.score is None:
+            rprint(f"[yellow]negative check: {result.details or 'no score'}[/yellow]")
+        else:
+            margin = stats["mean"] - result.score
+            separated = result.score < stats["mean"] - stats["std"]
+            rprint(
+                f"negative face similarity={result.score:.4f} "
+                f"(intra mean {stats['mean']}, margin {margin:.4f}) -> "
+                + ("[green]separated[/green]" if separated else "[red]NOT separated (within 1 std of positives)[/red]")
+            )
+            unreliable = unreliable or not separated
+    if unreliable:
+        rprint(
+            "[red]scorer looks unreliable on this character's style[/red] — "
+            "set gates.identity_mode = \"advisory\" in engine/config.toml"
+        )
+
+
+@gates_app.command("report")
+def gates_report(
+    directory: Path,
+    character: str = typer.Option(..., "--character"),
+    name: str = typer.Option(None, "--name", help="Output stem (default <character>_<dirname>)."),
+):
+    """Score every image in a folder -> CSV + sorted contact sheet in outputs/review/."""
+    from .gates.report import report_directory  # noqa: PLC0415
+
+    cfg, chars, src = _load(character)
+    summary = report_directory(directory, src, _scorer(cfg, chars), outputs_dir(cfg) / "review", name=name)
+    rprint(summary)
 
 
 @gates_app.command("score")
@@ -226,6 +277,99 @@ def render_shot(
     rprint(f"rendered -> {out}")
 
 
+@render_app.command("smoke")
+def render_smoke(
+    workflow: str = typer.Option(..., "--workflow", help="qwen_image_edit | qwen_image_t2i | wan22_i2v"),
+    prompt: str = typer.Option(..., "--prompt"),
+    character: str = typer.Option("gwen", "--character"),
+    image: Path = typer.Option(None, "--image", help="Local input image (required for edit/i2v)."),
+    negative: str = typer.Option(None, "--negative", help="Default: the character's negative_block."),
+    render_pass: str = typer.Option("draft", "--pass"),
+    seed: int = typer.Option(42, "--seed"),
+    width: int = typer.Option(None, "--width"),
+    height: int = typer.Option(None, "--height"),
+    duration: float = typer.Option(2.0, "--duration", help="I2V only, seconds."),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+):
+    """Small real render straight to outputs/smoke/, with timing."""
+    import time  # noqa: PLC0415
+
+    from .render.client import ComfyUIClient  # noqa: PLC0415
+    from .render.passes import (  # noqa: PLC0415
+        build_edit_workflow,
+        build_keyframe_workflow,
+        build_video_workflow,
+        loras_summary,
+        models_summary,
+    )
+    from .render.sidecar import write_sidecar  # noqa: PLC0415
+
+    cfg, chars, src = _load(character)
+    neg = negative if negative is not None else src.negative_block
+    client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
+    if not dry_run and not client.is_reachable():
+        rprint("[red]ComfyUI is not reachable[/red] — start it with C:\\ComfyUI\\start.bat and retry")
+        raise typer.Exit(2)
+
+    image_name = "smoke_input.png"
+    if image is not None and not dry_run:
+        image_name = client.upload_image(image)
+
+    if workflow == "qwen_image_edit":
+        if image is None:
+            rprint("[red]--image is required for qwen_image_edit[/red]")
+            raise typer.Exit(2)
+        nodes, settings = build_edit_workflow(
+            cfg, src, instruction=prompt, negative=neg, image_name=image_name,
+            seed=seed, render_pass=render_pass, filename_prefix="sourcemode/smoke_edit",
+        )
+    elif workflow == "qwen_image_t2i":
+        nodes, settings = build_keyframe_workflow(
+            cfg, src, positive=prompt, negative=neg, seed=seed, render_pass=render_pass,
+            width=width or 1024, height=height or 1024,
+        )
+    elif workflow == "wan22_i2v":
+        if image is None:
+            rprint("[red]--image is required for wan22_i2v[/red]")
+            raise typer.Exit(2)
+        nodes, settings = build_video_workflow(
+            cfg, src, positive=prompt, negative=neg, image_name=image_name,
+            seed=seed, render_pass=render_pass, duration_s=duration,
+            width=width, height=height,
+        )
+        nodes[next(k for k, v in nodes.items() if v["class_type"] == "SaveVideo")]["inputs"][
+            "filename_prefix"
+        ] = "sourcemode/smoke_video"
+    else:
+        rprint(f"[red]unknown workflow {workflow!r}[/red]")
+        raise typer.Exit(2)
+
+    if dry_run:
+        rprint(json.dumps(nodes, indent=2))
+        raise typer.Exit(0)
+
+    started = time.monotonic()
+    prompt_id = client.submit(nodes)
+    entry = client.wait(prompt_id)
+    files = client.outputs(entry)
+    elapsed = time.monotonic() - started
+    if not files:
+        rprint(f"[red]no output files in history for prompt {prompt_id}[/red]")
+        raise typer.Exit(1)
+    smoke_dir = outputs_dir(cfg) / "smoke"
+    fetched = []
+    for desc in files:
+        dest = smoke_dir / desc["filename"].replace("/", "_")
+        client.fetch(desc, dest)
+        fetched.append(dest)
+    write_sidecar(
+        fetched[0], source_version=src.version, prompt_hash="smoke", seed=seed,
+        models=models_summary(settings), loras=loras_summary(settings),
+        render_pass=render_pass, settings={"kind": "smoke", "workflow": workflow},
+    )
+    rprint(f"[green]smoke ok[/green] {workflow} in {elapsed:.1f}s -> " + ", ".join(str(p) for p in fetched))
+
+
 # --- train -----------------------------------------------------------------
 
 
@@ -278,8 +422,10 @@ def bootstrap_sheet_cmd(
     character: str,
     dry_run: bool = typer.Option(False, "--dry-run"),
     no_gate: bool = typer.Option(False, "--no-gate"),
+    render_pass: str = typer.Option("final", "--pass"),
+    seed_base: int = typer.Option(1000, "--seed-base"),
 ):
-    """Build the Qwen-Image-Edit sheet dataset (images + caption .txt)."""
+    """Build the Qwen-Image-Edit sheet dataset (images + caption .txt + manifest.json)."""
     from .bootstrap.sheet import bootstrap_sheet  # noqa: PLC0415
 
     cfg, chars, src = _load(character)
@@ -287,10 +433,14 @@ def bootstrap_sheet_cmd(
     client = None
     scorer = _scorer(cfg, chars) if gates_enabled else None
     if not dry_run:
-        rprint("[yellow]live sheet rendering requires a verified Qwen-Image-Edit workflow (BACKLOG); use --dry-run for now[/yellow]")
-        raise typer.Exit(2)
+        from .render.sheet import SheetRenderer  # noqa: PLC0415
+
+        client = SheetRenderer(cfg, chars, render_pass=render_pass, seed_base=seed_base, log=rprint)
+        if not client.client.is_reachable():
+            rprint("[red]ComfyUI is not reachable[/red] — start it with C:\\ComfyUI\\start.bat and retry")
+            raise typer.Exit(2)
     summary = bootstrap_sheet(cfg, src, chars, client=client, scorer=scorer,
-                              dry_run=dry_run, gates_enabled=gates_enabled)
+                              dry_run=dry_run, gates_enabled=gates_enabled, log=rprint)
     rprint(summary)
 
 

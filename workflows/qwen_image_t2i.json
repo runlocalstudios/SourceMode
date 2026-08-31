@@ -1,21 +1,26 @@
 {
   "_meta": {
-    "warning": "TEMPLATE-UNVERIFIED — written from the standard ComfyUI Qwen-Image T2I example structure, NOT exported from a live ComfyUI. No Qwen-Image DiT was present in C:\\ComfyUI\\models at inventory time; download the model and verify against a real export before first GPU run (see BACKLOG.md).",
+    "verified": "Structure verified 2026-08-30 against workflows/real/qwen_image_t2i.api.json (ComfyUI 0.25.1 export, Qwen-Image 2512). The export's ComfySwitchNode/Primitive scaffolding was dropped: the engine resolves steps/cfg/LoRAs at build time (see DECISIONS.md). Model chain preserved: UNET -> character LoRA -> lightning LoRA -> ModelSamplingAuraFlow -> KSampler.",
     "template": "qwen_image_t2i",
-    "placeholders": ["MODEL", "TEXT_ENCODER", "VAE", "POSITIVE", "NEGATIVE", "LORA_PATH", "LORA_STRENGTH", "SEED", "STEPS", "CFG", "WIDTH", "HEIGHT", "FILENAME_PREFIX"]
+    "placeholders": ["MODEL", "TEXT_ENCODER", "VAE", "POSITIVE", "NEGATIVE", "LORA_PATH", "LORA_STRENGTH", "LIGHTNING", "LIGHTNING_STRENGTH", "SHIFT", "SEED", "STEPS", "CFG", "WIDTH", "HEIGHT", "FILENAME_PREFIX"],
+    "prunable_loras": "Empty/placeholder lora_name values are pruned by render.workflow.prune_placeholder_loras before submit."
   },
   "nodes": {
     "37": {
       "class_type": "UNETLoader",
       "inputs": { "unet_name": "{{MODEL}}", "weight_dtype": "default" }
     },
-    "66": {
-      "class_type": "ModelSamplingAuraFlow",
-      "inputs": { "model": ["73", 0], "shift": 3.1 }
-    },
     "73": {
       "class_type": "LoraLoaderModelOnly",
       "inputs": { "model": ["37", 0], "lora_name": "{{LORA_PATH}}", "strength_model": "{{LORA_STRENGTH}}" }
+    },
+    "74": {
+      "class_type": "LoraLoaderModelOnly",
+      "inputs": { "model": ["73", 0], "lora_name": "{{LIGHTNING}}", "strength_model": "{{LIGHTNING_STRENGTH}}" }
+    },
+    "66": {
+      "class_type": "ModelSamplingAuraFlow",
+      "inputs": { "model": ["74", 0], "shift": "{{SHIFT}}" }
     },
     "38": {
       "class_type": "CLIPLoader",

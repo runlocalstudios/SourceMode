@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gates = ["insightface>=0.7", "onnxruntime-gpu>=1.17", "numpy>=1.26", "opencv-python-headless>=4.9"]
+gates = ["insightface>=0.7", "onnxruntime-gpu>=1.17", "numpy>=1.26", "opencv-python-headless>=4.9", "pillow>=10.0"]
 voice = ["chatterbox-tts>=0.1"]
 db = ["psycopg[binary]>=3.1"]
 
@@ -32,3 +32,6 @@ packages = ["sourcemode"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q -ra"
+markers = [
+    "gpu: integration test needing a running ComfyUI with real models (skips cleanly otherwise)",
+]

@@ -4,11 +4,18 @@ from pathlib import Path
 import pytest
 
 from sourcemode.render.client import ComfyUIClient
-from sourcemode.render.passes import build_keyframe_workflow, build_video_workflow, snap_frames
+from sourcemode.render.passes import (
+    build_edit_workflow,
+    build_keyframe_workflow,
+    build_video_workflow,
+    snap_frames,
+)
 from sourcemode.render.sidecar import read_sidecar, write_sidecar
 from sourcemode.render.workflow import (
+    PLACEHOLDER_LORA,
     LoraCompositionError,
     MissingPlaceholderError,
+    prune_placeholder_loras,
     substitute,
     validate_lora_stack,
 )
@@ -40,12 +47,43 @@ def test_substitute_missing_placeholder_raises():
 def test_lora_composition_rule():
     validate_lora_stack([
         {"path": "id.safetensors", "strength": 1.0, "is_identity": True},
-        {"path": "lightning.safetensors", "strength": 0.6, "is_identity": False},
+        {"path": "style.safetensors", "strength": 0.6, "is_identity": False},
+        {"path": "lightning.safetensors", "strength": 1.0, "is_distill": True},
     ])
     with pytest.raises(LoraCompositionError):
         validate_lora_stack([{"path": "id.safetensors", "strength": 1.1, "is_identity": True}])
     with pytest.raises(LoraCompositionError):
         validate_lora_stack([{"path": "style.safetensors", "strength": 0.7, "is_identity": False}])
+    with pytest.raises(LoraCompositionError):
+        validate_lora_stack([{"path": "lightning.safetensors", "strength": 1.1, "is_distill": True}])
+
+
+def test_prune_placeholder_loras_rewires_chains():
+    nodes = {
+        "1": {"class_type": "UNETLoader", "inputs": {"unet_name": "m.safetensors"}},
+        "2": {"class_type": "LoraLoaderModelOnly",
+              "inputs": {"model": ["1", 0], "lora_name": "", "strength_model": 1.0}},
+        "3": {"class_type": "LoraLoaderModelOnly",
+              "inputs": {"model": ["2", 0], "lora_name": PLACEHOLDER_LORA, "strength_model": 1.0}},
+        "4": {"class_type": "LoraLoaderModelOnly",
+              "inputs": {"model": ["3", 0], "lora_name": "real.safetensors", "strength_model": 1.0}},
+        "5": {"class_type": "KSampler", "inputs": {"model": ["4", 0], "seed": 1}},
+    }
+    prune_placeholder_loras(nodes)
+    assert "2" not in nodes and "3" not in nodes
+    assert nodes["4"]["inputs"]["model"] == ["1", 0]  # chain collapsed onto the UNET
+    assert nodes["5"]["inputs"]["model"] == ["4", 0]  # real LoRA kept
+
+
+def test_prune_all_loras_connects_consumer_to_source():
+    nodes = {
+        "1": {"class_type": "UNETLoader", "inputs": {"unet_name": "m.safetensors"}},
+        "2": {"class_type": "LoraLoaderModelOnly",
+              "inputs": {"model": ["1", 0], "lora_name": "", "strength_model": 1.0}},
+        "5": {"class_type": "KSampler", "inputs": {"model": ["2", 0], "seed": 1}},
+    }
+    prune_placeholder_loras(nodes)
+    assert nodes["5"]["inputs"]["model"] == ["1", 0]
 
 
 def test_snap_frames_4n_plus_1_capped():
@@ -67,6 +105,24 @@ def test_build_video_workflow_substitutes_fully(tmp_cfg, sample_source):
     assert nodes["6"]["inputs"]["text"] == "positive text"
     assert nodes["7"]["inputs"]["text"] == "negative text"
     assert nodes["52"]["inputs"]["image"] == "kf.png"
+    # no trained character LoRA -> identity slots pruned; draft lightning kept
+    lora_names = [n["inputs"]["lora_name"] for n in nodes.values() if n["class_type"] == "LoraLoaderModelOnly"]
+    assert lora_names == [
+        tmp_cfg["render"]["draft"]["wan_lightning_high"],
+        tmp_cfg["render"]["draft"]["wan_lightning_low"],
+    ]
+
+
+def test_build_video_workflow_final_has_no_loras(tmp_cfg, sample_source):
+    nodes, _ = build_video_workflow(
+        tmp_cfg, sample_source, positive="p", negative="n",
+        image_name="kf.png", seed=1, render_pass="final",
+    )
+    assert not [n for n in nodes.values() if n["class_type"] == "LoraLoaderModelOnly"]
+    # samplers still chain to the models through ModelSamplingSD3
+    samplers = [n for n in nodes.values() if n["class_type"] == "KSamplerAdvanced"]
+    assert len(samplers) == 2
+    assert all(nodes[s["inputs"]["model"][0]]["class_type"] == "ModelSamplingSD3" for s in samplers)
 
 
 def test_build_keyframe_workflow_substitutes_fully(tmp_cfg, sample_source):
@@ -74,7 +130,25 @@ def test_build_keyframe_workflow_substitutes_fully(tmp_cfg, sample_source):
         tmp_cfg, sample_source, positive="p", negative="n", seed=3, render_pass="final",
     )
     assert "{{" not in json.dumps(nodes)
-    assert settings["STEPS"] == tmp_cfg["render"]["final"]["steps"]
+    assert settings["STEPS"] == tmp_cfg["render"]["final"]["qwen_t2i_steps"]
+
+
+def test_build_edit_workflow_substitutes_and_prunes(tmp_cfg, sample_source):
+    nodes, settings = build_edit_workflow(
+        tmp_cfg, sample_source, instruction="same person, left profile",
+        negative="n", image_name="ref.png", seed=9, render_pass="draft",
+    )
+    assert "{{" not in json.dumps(nodes)
+    assert settings["STEPS"] == tmp_cfg["render"]["draft"]["qwen_edit_steps"]
+    lora_names = [n["inputs"]["lora_name"] for n in nodes.values() if n["class_type"] == "LoraLoaderModelOnly"]
+    assert lora_names == [tmp_cfg["render"]["draft"]["qwen_edit_lightning"]]
+    # positive/negative both go through the reference-latent method into the sampler
+    sampler = next(n for n in nodes.values() if n["class_type"] == "KSampler")
+    pos = nodes[sampler["inputs"]["positive"][0]]
+    neg = nodes[sampler["inputs"]["negative"][0]]
+    assert pos["class_type"] == neg["class_type"] == "FluxKontextMultiReferenceLatentMethod"
+    encode_pos = nodes[pos["inputs"]["conditioning"][0]]
+    assert encode_pos["inputs"]["prompt"] == "same person, left profile"
 
 
 def test_sidecar_roundtrip(tmp_path):

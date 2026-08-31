@@ -14,6 +14,11 @@ workflows = '../workflows'
 
 [gates]
 identity_enabled = true
+# "gate" = move sheet drifters to _rejected; "advisory" = flag only.
+# Advisory for gwen: buffalo_l is reliable frontal (intra mean 0.81) but pose-sensitive —
+# a verified same-person profile render scored 0.62 vs threshold 0.7365. Blocking would
+# strip profile poses from the training sheet. Human approves via the contact sheet.
+identity_mode = "advisory"
 frame_stride = 8          # video scoring: sample every Nth frame
 
 [training]
@@ -31,25 +36,47 @@ wan_i2v_low_fp8 = 'wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors'
 wan_i2v_high_fp8 = 'wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors'
 wan_vae = 'wan_2.1_vae.safetensors'   # the 2.1 VAE is correct for 2.2 14B models
 umt5 = 'umt5_xxl_fp8_e4m3fn_scaled.safetensors'
+# Qwen family (Comfy-Org repackaged, exact HF filenames — downloaded 2026-08-30).
+qwen_edit = 'qwen_image_edit_2511_fp8mixed.safetensors'       # 2511 has no fp8_e4m3fn; fp8mixed is its fp8 variant
+qwen_image = 'qwen_image_2512_fp8_e4m3fn.safetensors'         # T2I keyframes (matches the real export)
+qwen_text_encoder = 'qwen_2.5_vl_7b_fp8_scaled.safetensors'
+qwen_vae = 'qwen_image_vae.safetensors'
 
 [decomposer]
 qwen3_url = 'http://127.0.0.1:11434/v1'   # OpenAI-compatible (Ollama / LM Studio)
 qwen3_model = 'qwen3'
 
+[render]
+qwen_shift = 3.1          # ModelSamplingAuraFlow shift, from the verified exports
+
 [render.draft]
-steps = 8
+# Lightning/distill 4-step pass: steps/cfg values from the verified exports.
+steps = 4
 cfg = 1.0
-lightning_lora = ''       # lightning/distill LoRA filename; empty = none available yet
-lightning_strength = 0.6
+qwen_edit_steps = 4
+qwen_edit_cfg = 1.0
+qwen_t2i_steps = 4
+qwen_t2i_cfg = 1.0
+lightning_strength = 1.0  # distill LoRAs are designed for 1.0 (see DECISIONS.md)
+wan_lightning_high = 'wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors'
+wan_lightning_low = 'wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors'
+qwen_edit_lightning = 'Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors'
+qwen_t2i_lightning = 'Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors'
 
 [render.final]
-steps = 30
-cfg = 5.0
+# No lightning; steps/cfg from the verified exports (wan 20/3.5, edit 40/4, t2i 50/4).
+steps = 20
+cfg = 3.5
+qwen_edit_steps = 40
+qwen_edit_cfg = 4.0
+qwen_t2i_steps = 50
+qwen_t2i_cfg = 4.0
 
 [video]
 width = 832
 height = 480
 fps = 16
+shift = 5.0               # ModelSamplingSD3 shift for Wan (official I2V inference shift)
 
 [voice]
 engine = "chatterbox"

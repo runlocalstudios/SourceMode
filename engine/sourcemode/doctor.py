@@ -32,10 +32,22 @@ def run_doctor(cfg: dict) -> list[tuple[str, bool, str]]:
     def models():
         models_dir = Path(cfg["paths"]["models"])
         wanted = {
-            "diffusion_models": [cfg["models"]["wan_i2v_low_fp8"], cfg["models"]["wan_i2v_high_fp8"]],
-            "vae": [cfg["models"]["wan_vae"]],
-            "text_encoders": [cfg["models"]["umt5"]],
+            "diffusion_models": [
+                cfg["models"]["wan_i2v_low_fp8"],
+                cfg["models"]["wan_i2v_high_fp8"],
+                cfg["models"]["qwen_edit"],
+                cfg["models"]["qwen_image"],
+            ],
+            "vae": [cfg["models"]["wan_vae"], cfg["models"]["qwen_vae"]],
+            "text_encoders": [cfg["models"]["umt5"], cfg["models"]["qwen_text_encoder"]],
+            "loras": [
+                cfg["render"]["draft"].get("wan_lightning_high", ""),
+                cfg["render"]["draft"].get("wan_lightning_low", ""),
+                cfg["render"]["draft"].get("qwen_edit_lightning", ""),
+                cfg["render"]["draft"].get("qwen_t2i_lightning", ""),
+            ],
         }
+        wanted = {sub: [n for n in names if n] for sub, names in wanted.items()}
         missing = [
             f"{sub}/{name}"
             for sub, names in wanted.items()
@@ -44,7 +56,7 @@ def run_doctor(cfg: dict) -> list[tuple[str, bool, str]]:
         ]
         if missing:
             return False, f"missing: {', '.join(missing)}"
-        return True, f"all Wan 2.2 files present under {models_dir}"
+        return True, f"all Wan 2.2 + Qwen files present under {models_dir}"
 
     rows.append(("models", *_check(models)))
 
