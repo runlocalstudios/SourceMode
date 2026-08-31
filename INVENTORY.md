@@ -78,6 +78,34 @@ Wan 2.2 models present in `C:\ComfyUI\models\`:
 
 Config recorded in `engine/config.toml`: host 127.0.0.1, port 8188.
 
+## ComfyUI models present
+
+Surveyed 2026-08-30 (running instance: ComfyUI 0.25.1, frontend 1.45.15, Python 3.11.9, torch 2.10.0+cu128, RTX 5090 32GB). 544 GB free on C: before the Qwen downloads. Only pipeline-relevant files listed; the loras/ dir also holds ~30 legacy e2egen/personal LoRAs (chroma/flux/wan, not used by SourceMode).
+
+**diffusion_models/** (pipeline-relevant)
+- `wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors` 13.3 GB + `_fp16` 26.6 GB
+- `wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors` 13.3 GB + `_fp16` 26.6 GB
+- `wan2.2_t2v_low_noise_14B_fp16.safetensors` 26.6 GB (no t2v high-noise, no t2v fp8 — the wan22_i2v "real" export referenced these, see DECISIONS #4)
+- `wan2.2_s2v_14B_bf16.safetensors` 30.4 GB
+- `qwen_image_edit_2511_fp8mixed.safetensors` 20.5 GB — **downloaded 2026-08-30** (Comfy-Org/Qwen-Image-Edit_ComfyUI; 2511 has no fp8_e4m3fn variant)
+- `qwen_image_2512_fp8_e4m3fn.safetensors` 20.4 GB — **downloaded 2026-08-30** (Comfy-Org/Qwen-Image_ComfyUI)
+- non-pipeline: Chroma1-HD 16.6 GB, flux-2-klein 16.9 GB (non-commercial — never used), ideogram4 ×2 17.2 GB, wan22Remix 13.3 GB
+- No Z-Image present (Qwen-Image 2512 is the sole keyframe model).
+
+**text_encoders/**: `umt5_xxl_fp8_e4m3fn_scaled.safetensors` 6.3 GB, `umt5_xxl_fp16.safetensors` 10.6 GB, `qwen_2.5_vl_7b_fp8_scaled.safetensors` 9.4 GB (**downloaded 2026-08-30**), plus qwen3vl_8b/qwen_3_8b/gemma4 (unused by pipeline).
+
+**vae/**: `wan_2.1_vae.safetensors` 0.2 GB (correct for Wan 2.2 14B), `wan2.2_vae.safetensors` 1.3 GB (5B-only), `qwen_image_vae.safetensors` 0.25 GB (**downloaded 2026-08-30**).
+
+**loras/** (pipeline-relevant)
+- `wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors` 1.1 GB (already present)
+- `wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors` 1.1 GB (already present)
+- `Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors` 0.85 GB — **downloaded 2026-08-30** (lightx2v/Qwen-Image-Edit-2511-Lightning)
+- `Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors` 0.85 GB — **downloaded 2026-08-30** (lightx2v/Qwen-Image-2512-Lightning)
+
+**clip_vision/**: only flux/sdxl encoders (unused; Wan 2.2 I2V 14B needs no clip_vision).
+
+**Identity gate backend:** InsightFace buffalo_l via onnxruntime **CPUExecutionProvider** in the engine venv (CUDA EP doesn't register there; acceptable for QC — see BACKLOG). Decision record: DECISIONS #7.
+
 ## 4. musubi-tuner
 
 **Found (vendored): `C:\dev\e2egen\vendor\musubi-tuner`**, version **0.3.4** (pyproject.toml), own `.venv` present. Read-only — SourceMode invokes it in place. No standalone AI-Toolkit or diffusion-pipe install found anywhere (searched C:\dev, C:\tools, C:\AI, user dirs); fluxgym exists under Pinokio but targets Flux (non-commercial license — banned by our license invariant). → `build_image_lora_cmd` emits a TODO + config placeholder; note musubi-tuner itself ships `qwen_image_train_network.py`, the likely future path for the image LoRA (Qwen-Image is Apache 2.0).
