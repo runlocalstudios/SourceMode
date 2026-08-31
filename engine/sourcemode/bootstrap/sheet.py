@@ -2,13 +2,16 @@
 
 Builds the job list from sheet_edit_prompts, submits via the render client
 (or prints in dry-run), writes images + caption .txt files to
-characters/<id>/dataset/, then — if gates are enabled and available — scores
-each image and moves drifters below threshold to dataset/_rejected/.
-Gates annotate; the move-to-_rejected only happens when scoring actually ran.
+characters/<id>/dataset/ plus a manifest.json (per-image seed + provenance),
+then — if gates are enabled and available — scores each image. In "gate" mode
+drifters below threshold move to dataset/_rejected/; in "advisory" mode
+(config gates.identity_mode) nothing moves, low scores are only flagged.
+Gates annotate; the move only happens when scoring actually ran.
 """
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 
@@ -41,9 +44,12 @@ def bootstrap_sheet(
     if client is None:
         raise ValueError("a render client is required unless --dry-run")
 
+    advisory = cfg.get("gates", {}).get("identity_mode", "gate") == "advisory"
     dataset_dir.mkdir(parents=True, exist_ok=True)
+    manifest: dict[str, dict] = {}
     rendered = 0
     rejected = 0
+    flagged = 0
     for job in jobs:
         image_path = dataset_dir / f"{job['slug']}.png"
         caption_path = dataset_dir / f"{job['slug']}.txt"
@@ -53,14 +59,27 @@ def bootstrap_sheet(
             continue
         caption_path.write_text(job["caption"] + "\n", encoding="utf-8")
         rendered += 1
+        entry = result if isinstance(result, dict) else {"slug": job["slug"], "file": image_path.name}
+        manifest[job["slug"]] = entry
 
         if gates_enabled and scorer is not None:
             gate = scorer.score(image_path, source)
+            if gate.score is not None:
+                entry["identity_score"] = round(gate.score, 4)
             if gate.score is not None and gate.passed is False:
-                rejected_dir.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(image_path), rejected_dir / image_path.name)
-                shutil.move(str(caption_path), rejected_dir / caption_path.name)
-                rejected += 1
-                log(f"rejected {job['slug']} (score {gate.score:.3f} < threshold)")
+                if advisory:
+                    flagged += 1
+                    entry["flagged"] = True
+                    log(f"flagged {job['slug']} (score {gate.score:.3f} < threshold; advisory mode, kept)")
+                else:
+                    rejected_dir.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(image_path), rejected_dir / image_path.name)
+                    shutil.move(str(caption_path), rejected_dir / caption_path.name)
+                    rejected += 1
+                    entry["rejected"] = True
+                    log(f"rejected {job['slug']} (score {gate.score:.3f} < threshold)")
 
-    return {"jobs": len(jobs), "rendered": rendered, "rejected": rejected, "dry_run": False}
+    (dataset_dir / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+    )
+    return {"jobs": len(jobs), "rendered": rendered, "rejected": rejected, "flagged": flagged, "dry_run": False}

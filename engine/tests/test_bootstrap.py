@@ -51,6 +51,7 @@ def test_render_writes_images_and_captions(tmp_cfg, chars_root, sample_source):
 
 
 def test_gate_moves_drifters_to_rejected(tmp_cfg, chars_root, sample_source):
+    tmp_cfg["gates"]["identity_mode"] = "gate"
     summary = bootstrap_sheet(
         tmp_cfg, sample_source, chars_root, client=FakeRenderClient(), scorer=ThresholdScorer(),
         dry_run=False, gates_enabled=True, log=lambda *_: None,
@@ -63,6 +64,36 @@ def test_gate_moves_drifters_to_rejected(tmp_cfg, chars_root, sample_source):
     assert len(list(rejected.glob("*.txt"))) == 8
     # kept images do not include profiles
     assert not [p for p in dataset.glob("*.png") if "profile" in p.name]
+
+
+def test_manifest_written_with_seeds(tmp_cfg, chars_root, sample_source):
+    import json
+
+    class DictRenderClient(FakeRenderClient):
+        def render_sheet_job(self, source, job, dest):
+            ok = super().render_sheet_job(source, job, dest)
+            return {"slug": job["slug"], "file": dest.name, "seed": 1000 + len(self.calls)} if ok else None
+
+    bootstrap_sheet(
+        tmp_cfg, sample_source, chars_root, client=DictRenderClient(), scorer=None,
+        dry_run=False, gates_enabled=False, log=lambda *_: None,
+    )
+    manifest = json.loads((chars_root / "testchar" / "dataset" / "manifest.json").read_text(encoding="utf-8"))
+    assert len(manifest) == 36
+    assert all("seed" in entry for entry in manifest.values())
+
+
+def test_advisory_mode_flags_without_moving(tmp_cfg, chars_root, sample_source):
+    tmp_cfg["gates"]["identity_mode"] = "advisory"
+    summary = bootstrap_sheet(
+        tmp_cfg, sample_source, chars_root, client=FakeRenderClient(), scorer=ThresholdScorer(),
+        dry_run=False, gates_enabled=True, log=lambda *_: None,
+    )
+    assert summary["rejected"] == 0
+    assert summary["flagged"] == 8
+    dataset = chars_root / "testchar" / "dataset"
+    assert not (dataset / "_rejected").exists()
+    assert len(list(dataset.glob("*.png"))) == 36
 
 
 def test_gates_disabled_keeps_everything(tmp_cfg, chars_root, sample_source):

@@ -114,6 +114,16 @@ def source_show(character: str):
     rprint(json.dumps(src.model_dump(), indent=2))
 
 
+@source_app.command("sync")
+def source_sync(character: str):
+    """Upsert the character + source JSON into Neon (DATABASE_URL_UNPOOLED)."""
+    from .orchestrate.db import sync_character  # noqa: PLC0415
+
+    _, _, src = _load(character)
+    ok = sync_character(src, log=rprint)
+    raise typer.Exit(0 if ok else 1)
+
+
 @source_app.command("bump")
 def source_bump(character: str):
     from .source import bump_version  # noqa: PLC0415

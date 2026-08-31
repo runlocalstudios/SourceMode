@@ -28,31 +28,55 @@ def _load_repo_env() -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"'))
 
 
-def sync_results(source: CharacterSource, brief: str, results: dict, *, log=print) -> bool:
+def _connect(log):
+    """Return an open psycopg connection, or None (with the reason logged)."""
     try:
         import psycopg  # noqa: PLC0415
     except ImportError:
-        log("psycopg not installed — uv sync --extra db (skipping --sync-db)")
-        return False
+        log("psycopg not installed — uv sync --extra db (skipping db sync)")
+        return None
 
     _load_repo_env()
     url = os.environ.get("DATABASE_URL_UNPOOLED") or os.environ.get("DATABASE_URL")
     if not url:
-        log("DATABASE_URL_UNPOOLED not set (vercel env pull .env.local) — skipping --sync-db")
+        log("DATABASE_URL_UNPOOLED not set (vercel env pull .env.local) — skipping db sync")
+        return None
+    return psycopg.connect(url)
+
+
+def _upsert_character(cur, source: CharacterSource) -> int:
+    cur.execute(
+        """
+        INSERT INTO characters (slug, name, source_version, source)
+        VALUES (%s, %s, %s, %s::jsonb)
+        ON CONFLICT (slug) DO UPDATE
+          SET name = EXCLUDED.name, source_version = EXCLUDED.source_version, source = EXCLUDED.source
+        RETURNING id
+        """,
+        (source.character_id, source.name, source.version, source.model_dump_json()),
+    )
+    return cur.fetchone()[0]
+
+
+def sync_character(source: CharacterSource, *, log=print) -> bool:
+    """Upsert just the character + source JSON (dashboard listing)."""
+    conn = _connect(log)
+    if conn is None:
+        return False
+    with conn, conn.cursor() as cur:
+        character_id = _upsert_character(cur, source)
+        conn.commit()
+    log(f"synced character to Neon (slug={source.character_id}, id={character_id}, version={source.version})")
+    return True
+
+
+def sync_results(source: CharacterSource, brief: str, results: dict, *, log=print) -> bool:
+    conn = _connect(log)
+    if conn is None:
         return False
 
-    with psycopg.connect(url) as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO characters (slug, name, source_version, source)
-            VALUES (%s, %s, %s, %s::jsonb)
-            ON CONFLICT (slug) DO UPDATE
-              SET name = EXCLUDED.name, source_version = EXCLUDED.source_version, source = EXCLUDED.source
-            RETURNING id
-            """,
-            (source.character_id, source.name, source.version, source.model_dump_json()),
-        )
-        character_id = cur.fetchone()[0]
+    with conn, conn.cursor() as cur:
+        character_id = _upsert_character(cur, source)
 
         cur.execute(
             "INSERT INTO scenes (character_id, title, brief, shot_list) VALUES (%s, %s, %s, %s::jsonb) RETURNING id",
