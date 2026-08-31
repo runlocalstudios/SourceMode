@@ -2,7 +2,7 @@
 
 ## Open
 
-- **Final-pass render budget at 1024x1280:** ~2.4 h per 6 s shot (28 steps, no lightning — DECISIONS #12). Options to evaluate: lightning-final hybrid (4-8 steps at full res), 768x960 middle ground, fewer frames (97 = 4 s), or accept overnight finals. Draft pass at full res with lightning is the iteration loop.
+- Try 6-8 lightning steps in [render.medium] (currently 4): distill LoRAs tolerate it and it may buy motion smoothness for ~50% more render time.
 - **Aesthetic/artifact gate:** identity scoring misses visually-bad renders (the kitchen keyframe scored 0.554 mid-pack while being the one Jeremy rejected). Add a jank check (e.g., an aesthetic scorer or VLM pass) alongside identity, or lean on multi-candidate re-rolls.
 
 - **Wan low-noise LoRA: drop or retune (v001 is mildly identity-NEGATIVE, DECISIONS #11/#12):** the clean face-forward full-res A/B (2026-08-31, gwen_e2e_v002) scored no-LoRA min 0.314/mean 0.417 vs with-LoRA 0.220/0.365 — third consistent loss. Dropping it = null lora_paths.wan_low_noise. Retune recipe: lower LR (8e-5), drop loraplus_lr_ratio (fp16 stability — training diverged after epoch 5), max_timestep 900 (musubi docs), add short motion clips to the dataset.

@@ -2,6 +2,10 @@
 
 Append-only. Newest first.
 
+## #13 — 2026-08-31: Medium is the working pass; character video LoRA unplugged; video LoRA slots stay generic
+
+Jeremy's calls, executed same evening. **[render.medium]** = final-quality keyframes (50-step Qwen, identity lives there) + 4-step lightning video at full 1024x1280: measured 634 s for the 6 s proof shot AND it out-scored the 2.4 h final on identity (min 0.441/mean 0.540 vs 0.314/0.417 — distilled sampling drifts the face less over 145 frames). Full final stays for hero shots. **gwen v003 approved** (new `source approve` command) and synced to Neon. **lora_paths.wan_low_noise nulled** per the three-loss A/B record; the wan22_i2v template keeps both per-stage LoRA slots — a character LoRA (if retrained) takes the slot at 1.0, else a generic style/motion LoRA from `[video].lora_high/lora_low` fills it capped at MAX_OTHER_STRENGTH 0.6 (per-slot strengths: LORA_STRENGTH_HIGH/LOW).
+
 ## #12 — 2026-08-31: Video quality was the prompt pipeline, not the LoRA; final-pass 1024x1280 verified good but costs ~2.4 h per 6 s shot
 
 Jeremy called the 832x480 e2e "AI slop" in both A/B variants — root causes were pipeline, not model: the rule decomposer emitted garbled English ("…at night, the slowly,") and crammed a two-phase camera move into one I2V shot, and the resolution default ignored the proven graph's 1024x1280 (b2c53d0 fixed all three; briefs now split on "then" into single-move shots). The face-forward re-run at 1024x1280 final looks like a real shoot (stable identity, clean push-in) and scored min 0.220/mean 0.365 vs the market shot's 0.026/0.203. Cost discovered: two-stage 28-step final at 1.3 MP x 145 frames runs ~305 s/step ≈ 2.4 h/shot on the 5090 (480p was ~3 min). Final quality at this res is real but not an iteration loop — draft = lightning at full res (~20 min), final = overnight, or drop frames/res (BACKLOG). Also: a transient /history poll failure killed a run mid-render — client.wait now tolerates dropped polls (30ba2ce).
