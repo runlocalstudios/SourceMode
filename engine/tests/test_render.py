@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from sourcemode.render.client import ComfyUIClient
+from sourcemode.render.client import ComfyUIClient, ComfyUIError
 from sourcemode.render.passes import (
     build_edit_workflow,
     build_keyframe_workflow,
@@ -217,6 +217,31 @@ class FakeSession:
         if url.endswith("/view"):
             return FakeResponse(content=b"artifact-bytes")
         return FakeResponse()
+
+
+def test_client_wait_survives_transient_poll_failures():
+    class FlakySession(FakeSession):
+        def get(self, url, params=None, timeout=None):
+            if "/history/" in url and self.history_calls == 0:
+                self.history_calls += 1
+                raise TimeoutError("server busy mid-render")
+            return super().get(url, params=params, timeout=timeout)
+
+    client = ComfyUIClient(session=FlakySession(), client_id="cid")
+    entry = client.wait("pid-1", poll_s=0.0, timeout_s=5.0)
+    assert entry["status"]["status_str"] == "success"
+
+
+def test_client_wait_still_raises_on_prompt_error():
+    class ErrorSession(FakeSession):
+        def get(self, url, params=None, timeout=None):
+            if "/history/" in url:
+                return FakeResponse(payload={"pid-1": {"status": {"status_str": "error"}}})
+            return super().get(url, params=params, timeout=timeout)
+
+    client = ComfyUIClient(session=ErrorSession(), client_id="cid")
+    with pytest.raises(ComfyUIError):
+        client.wait("pid-1", poll_s=0.0, timeout_s=5.0)
 
 
 def test_client_submit_poll_fetch(tmp_path):

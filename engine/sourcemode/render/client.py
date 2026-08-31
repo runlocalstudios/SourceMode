@@ -47,18 +47,27 @@ class ComfyUIClient:
         return data["prompt_id"]
 
     def wait(self, prompt_id: str, *, poll_s: float = 2.0, timeout_s: float = 3600.0) -> dict:
-        """Poll /history until the prompt appears (finished); return its history entry."""
+        """Poll /history until the prompt appears (finished); return its history entry.
+
+        Transient poll failures (timeouts, connection resets while the GPU is
+        saturated by a long render) are tolerated and retried — a single
+        dropped request must never kill a run mid-render."""
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
-            resp = self.session.get(f"{self.base}/history/{prompt_id}", timeout=30)
-            if resp.status_code == 200:
-                history = resp.json()
-                if prompt_id in history:
-                    entry = history[prompt_id]
-                    status = entry.get("status", {})
-                    if status.get("status_str") == "error":
-                        raise ComfyUIError(f"prompt {prompt_id} errored: {status}")
-                    return entry
+            try:
+                resp = self.session.get(f"{self.base}/history/{prompt_id}", timeout=30)
+                if resp.status_code == 200:
+                    history = resp.json()
+                    if prompt_id in history:
+                        entry = history[prompt_id]
+                        status = entry.get("status", {})
+                        if status.get("status_str") == "error":
+                            raise ComfyUIError(f"prompt {prompt_id} errored: {status}")
+                        return entry
+            except ComfyUIError:
+                raise
+            except Exception:  # noqa: BLE001 — transient network/parse hiccup, keep polling
+                pass
             time.sleep(poll_s)
         raise ComfyUIError(f"timed out waiting for prompt {prompt_id}")
 
