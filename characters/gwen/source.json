@@ -1,0 +1,41 @@
+{
+  "character_id": "gwen",
+  "name": "Gwen",
+  "version": "v002",
+  "trigger_token": "gwen_ch",
+  "invariants": [
+    "hair: long wavy copper-red, centre parted",
+    "eyes: green-hazel, dark winged liner",
+    "skin: fair with freckles across nose and cheeks"
+  ],
+  "wardrobe_states": {
+    "default": ""
+  },
+  "reference_images": [
+    "references/ref-00-canonical.png",
+    "references/ref-01-supporting.png",
+    "references/ref-02-supporting.png",
+    "references/ref-03-supporting.png",
+    "references/ref-04-supporting.png"
+  ],
+  "approved_sheet": [
+    "references/ref-00-canonical.png",
+    "references/ref-01-supporting.png",
+    "references/ref-02-supporting.png",
+    "references/ref-03-supporting.png",
+    "references/ref-04-supporting.png"
+  ],
+  "identity_embedding_path": "identity_embedding.npy",
+  "identity_threshold": 0.7365,
+  "negative_block": "face patch, seams, halo, ghosting, duplicated features, plastic skin, waxy skin, beauty filter, copied reference background, text, watermark, logo, distorted hands, extra limbs",
+  "voice": {
+    "reference_clip": null,
+    "notes": "No approved voice reference yet; record/select one before voice work."
+  },
+  "lora_paths": {
+    "image_lora": null,
+    "wan_low_noise": null,
+    "wan_high_noise": null
+  },
+  "approved": true
+}

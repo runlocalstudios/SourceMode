@@ -1,0 +1,34 @@
+[project]
+name = "sourcemode-engine"
+version = "0.1.0"
+description = "SourceMode pipeline engine: consistent-character video via ComfyUI + Wan 2.2"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    "requests>=2.31",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+gates = ["insightface>=0.7", "onnxruntime-gpu>=1.17", "numpy>=1.26", "opencv-python-headless>=4.9"]
+voice = ["chatterbox-tts>=0.1"]
+db = ["psycopg[binary]>=3.1"]
+
+[project.scripts]
+sourcemode = "sourcemode.cli:app"
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sourcemode"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -ra"

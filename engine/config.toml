@@ -1,0 +1,55 @@
+# SourceMode engine config. Every key is overridable via SOURCEMODE_* env vars
+# (see sourcemode/config.py for the mapping).
+
+[comfyui]
+host = "127.0.0.1"   # local install found at C:\ComfyUI (v0.25.1), default port
+port = 8188
+
+[paths]
+models = 'C:\ComfyUI\models'
+loras = 'C:\ComfyUI\models\loras'
+outputs = 'outputs'
+characters = '../characters'
+workflows = '../workflows'
+
+[gates]
+identity_enabled = true
+frame_stride = 8          # video scoring: sample every Nth frame
+
+[training]
+musubi_tuner_path = 'C:\dev\e2egen\vendor\musubi-tuner'   # read-only vendored install, v0.3.4
+# Image-LoRA trainer: neither AI-Toolkit nor diffusion-pipe found at inventory time.
+# TODO: fill in when one is installed (musubi's qwen_image_train_network.py is the likely path).
+image_trainer_path = ''
+
+[models]
+# Training needs fp16 (fp8_scaled model FILES are unsupported by musubi-tuner).
+wan_i2v_low_fp16 = 'wan2.2_i2v_low_noise_14B_fp16.safetensors'
+wan_i2v_high_fp16 = 'wan2.2_i2v_high_noise_14B_fp16.safetensors'
+# Inference via ComfyUI uses fp8_scaled.
+wan_i2v_low_fp8 = 'wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors'
+wan_i2v_high_fp8 = 'wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors'
+wan_vae = 'wan_2.1_vae.safetensors'   # the 2.1 VAE is correct for 2.2 14B models
+umt5 = 'umt5_xxl_fp8_e4m3fn_scaled.safetensors'
+
+[decomposer]
+qwen3_url = 'http://127.0.0.1:11434/v1'   # OpenAI-compatible (Ollama / LM Studio)
+qwen3_model = 'qwen3'
+
+[render.draft]
+steps = 8
+cfg = 1.0
+lightning_lora = ''       # lightning/distill LoRA filename; empty = none available yet
+lightning_strength = 0.6
+
+[render.final]
+steps = 30
+cfg = 5.0
+
+[video]
+width = 832
+height = 480
+fps = 16
+
+[voice]
+engine = "chatterbox"

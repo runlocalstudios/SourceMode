@@ -1,0 +1,41 @@
+{
+  "_what_this_is": "Checked-in eval cases for scene decomposition. tests/test_decompose.py runs RuleBasedDecomposer against each brief and asserts shot count and camera moves.",
+  "cases": [
+    {
+      "name": "single-beat tracking",
+      "brief": "Gwen walks slowly through a rainy neon market, worried, camera tracks from behind",
+      "expected_shot_count": 1,
+      "expected_camera_moves": ["tracking"],
+      "expected_speeds": ["slowly"],
+      "expected_emotions": ["worried"]
+    },
+    {
+      "name": "three beats with push-in",
+      "brief": "Gwen enters a dim warehouse. She pauses, anxious. The camera pushes in as she opens the crate.",
+      "expected_shot_count": 3,
+      "expected_camera_moves": ["static", "static", "push-in"],
+      "expected_emotions": ["neutral", "anxious", "neutral"]
+    },
+    {
+      "name": "sprint then pan",
+      "brief": "Gwen sprints across the rooftop rapidly. The camera pans to reveal the city skyline.",
+      "expected_shot_count": 2,
+      "expected_camera_moves": ["static", "pan"],
+      "expected_speeds": ["rapidly", "steadily"]
+    },
+    {
+      "name": "semicolon split, static",
+      "brief": "Gwen sits by a window; rain streaks down the glass outside",
+      "expected_shot_count": 2,
+      "expected_camera_moves": ["static", "static"]
+    },
+    {
+      "name": "orbit then brisk exit",
+      "brief": "The camera orbits Gwen as she stands determined on the cliff edge. She turns and walks away briskly.",
+      "expected_shot_count": 2,
+      "expected_camera_moves": ["orbital arc", "static"],
+      "expected_speeds": ["steadily", "briskly"],
+      "expected_emotions": ["determined", "neutral"]
+    }
+  ]
+}

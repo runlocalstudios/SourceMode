@@ -1,0 +1,109 @@
+{
+  "_meta": {
+    "warning": "TEMPLATE-UNVERIFIED — written from the standard ComfyUI Wan 2.2 I2V two-stage (high-noise then low-noise) example structure, NOT exported from a live ComfyUI. Verify node class names/inputs against a real export before first GPU run (see BACKLOG.md).",
+    "template": "wan22_i2v",
+    "placeholders": ["MODEL_HIGH", "MODEL_LOW", "UMT5", "VAE", "POSITIVE", "NEGATIVE", "IMAGE", "LORA_HIGH", "LORA_LOW", "LORA_STRENGTH", "SEED", "STEPS", "CFG", "WIDTH", "HEIGHT", "LENGTH", "FPS", "BOUNDARY_STEP", "FILENAME_PREFIX"]
+  },
+  "nodes": {
+    "37": {
+      "class_type": "UNETLoader",
+      "inputs": { "unet_name": "{{MODEL_HIGH}}", "weight_dtype": "default" }
+    },
+    "38": {
+      "class_type": "UNETLoader",
+      "inputs": { "unet_name": "{{MODEL_LOW}}", "weight_dtype": "default" }
+    },
+    "54": {
+      "class_type": "LoraLoaderModelOnly",
+      "inputs": { "model": ["37", 0], "lora_name": "{{LORA_HIGH}}", "strength_model": "{{LORA_STRENGTH}}" }
+    },
+    "55": {
+      "class_type": "LoraLoaderModelOnly",
+      "inputs": { "model": ["38", 0], "lora_name": "{{LORA_LOW}}", "strength_model": "{{LORA_STRENGTH}}" }
+    },
+    "39": {
+      "class_type": "CLIPLoader",
+      "inputs": { "clip_name": "{{UMT5}}", "type": "wan", "device": "default" }
+    },
+    "40": {
+      "class_type": "VAELoader",
+      "inputs": { "vae_name": "{{VAE}}" }
+    },
+    "6": {
+      "class_type": "CLIPTextEncode",
+      "inputs": { "text": "{{POSITIVE}}", "clip": ["39", 0] }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": { "text": "{{NEGATIVE}}", "clip": ["39", 0] }
+    },
+    "52": {
+      "class_type": "LoadImage",
+      "inputs": { "image": "{{IMAGE}}" }
+    },
+    "50": {
+      "class_type": "WanImageToVideo",
+      "inputs": {
+        "positive": ["6", 0],
+        "negative": ["7", 0],
+        "vae": ["40", 0],
+        "start_image": ["52", 0],
+        "width": "{{WIDTH}}",
+        "height": "{{HEIGHT}}",
+        "length": "{{LENGTH}}",
+        "batch_size": 1
+      }
+    },
+    "57": {
+      "class_type": "KSamplerAdvanced",
+      "inputs": {
+        "model": ["54", 0],
+        "add_noise": "enable",
+        "noise_seed": "{{SEED}}",
+        "steps": "{{STEPS}}",
+        "cfg": "{{CFG}}",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "positive": ["50", 0],
+        "negative": ["50", 1],
+        "latent_image": ["50", 2],
+        "start_at_step": 0,
+        "end_at_step": "{{BOUNDARY_STEP}}",
+        "return_with_leftover_noise": "enable"
+      }
+    },
+    "58": {
+      "class_type": "KSamplerAdvanced",
+      "inputs": {
+        "model": ["55", 0],
+        "add_noise": "disable",
+        "noise_seed": 0,
+        "steps": "{{STEPS}}",
+        "cfg": "{{CFG}}",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "positive": ["50", 0],
+        "negative": ["50", 1],
+        "latent_image": ["57", 0],
+        "start_at_step": "{{BOUNDARY_STEP}}",
+        "end_at_step": 10000,
+        "return_with_leftover_noise": "disable"
+      }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": { "samples": ["58", 0], "vae": ["40", 0] }
+    },
+    "60": {
+      "class_type": "SaveAnimatedWEBP",
+      "inputs": {
+        "images": ["8", 0],
+        "filename_prefix": "{{FILENAME_PREFIX}}",
+        "fps": "{{FPS}}",
+        "lossless": false,
+        "quality": 90,
+        "method": "default"
+      }
+    }
+  }
+}
