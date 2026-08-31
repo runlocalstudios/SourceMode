@@ -64,19 +64,26 @@ qwen_edit_lightning = 'Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetenso
 qwen_t2i_lightning = 'Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors'
 
 [render.final]
-# No lightning; steps/cfg from the verified exports (wan 20/3.5, edit 40/4, t2i 50/4).
-steps = 20
-cfg = 3.5
+# No lightning. Wan values from Jeremy's working I2V graph (workflows/real/
+# wan22_i2v_ui.json): 28 steps, per-stage CFG 2.2 high / 1.8 low. Qwen values
+# from the verified exports (edit 40/4, t2i 50/4).
+steps = 28
+cfg = 2.0                 # fallback when a per-stage value is missing
+cfg_high = 2.2
+cfg_low = 1.8
 qwen_edit_steps = 40
 qwen_edit_cfg = 4.0
 qwen_t2i_steps = 50
 qwen_t2i_cfg = 4.0
 
 [video]
+# width/height/fps/shift/max_frames from Jeremy's working I2V graph
+# (1024x1280 portrait there; default here stays 832x480 landscape).
 width = 832
 height = 480
-fps = 16
-shift = 5.0               # ModelSamplingSD3 shift for Wan (official I2V inference shift)
+fps = 24
+shift = 8.0               # ModelSamplingSD3 shift (official inference default is 5.0)
+max_frames = 145          # 4n+1; 145 @ 24fps ~ 6s, proven on this 5090
 
 [voice]
 engine = "chatterbox"

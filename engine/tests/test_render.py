@@ -91,6 +91,8 @@ def test_snap_frames_4n_plus_1_capped():
     assert snap_frames(1.0, 16) == 13
     assert snap_frames(8.0, 16) == 81
     assert (snap_frames(3.3, 16) - 1) % 4 == 0
+    assert snap_frames(8.0, 24, max_frames=145) == 145  # raised cap (real graph runs 145)
+    assert snap_frames(60.0, 24, max_frames=145) == 145
 
 
 def test_build_video_workflow_substitutes_fully(tmp_cfg, sample_source):
@@ -114,11 +116,16 @@ def test_build_video_workflow_substitutes_fully(tmp_cfg, sample_source):
 
 
 def test_build_video_workflow_final_has_no_loras(tmp_cfg, sample_source):
-    nodes, _ = build_video_workflow(
+    nodes, settings = build_video_workflow(
         tmp_cfg, sample_source, positive="p", negative="n",
         image_name="kf.png", seed=1, render_pass="final",
     )
     assert not [n for n in nodes.values() if n["class_type"] == "LoraLoaderModelOnly"]
+    # per-stage CFG: high-noise sampler (adds noise) vs low-noise sampler
+    samplers = {n["inputs"]["add_noise"]: n for n in nodes.values() if n["class_type"] == "KSamplerAdvanced"}
+    assert samplers["enable"]["inputs"]["cfg"] == tmp_cfg["render"]["final"]["cfg_high"]
+    assert samplers["disable"]["inputs"]["cfg"] == tmp_cfg["render"]["final"]["cfg_low"]
+    assert settings["SHIFT"] == tmp_cfg["video"]["shift"]
     # samplers still chain to the models through ModelSamplingSD3
     samplers = [n for n in nodes.values() if n["class_type"] == "KSamplerAdvanced"]
     assert len(samplers) == 2

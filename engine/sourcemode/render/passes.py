@@ -25,10 +25,11 @@ from .workflow import (
 )
 
 
-def snap_frames(duration_s: float, fps: int) -> int:
-    """Wan wants 4n+1 frame counts, capped at 81 (ported constraint from e2egen video.py)."""
+def snap_frames(duration_s: float, fps: int, max_frames: int = 81) -> int:
+    """Wan wants 4n+1 frame counts. Default cap 81 (e2egen constraint); Jeremy's
+    working I2V graph runs 145 frames, so the cap is configurable via [video].max_frames."""
     frames = int(round(duration_s * fps))
-    frames = min(frames, 81)
+    frames = min(frames, max_frames)
     return max(5, (math.floor((frames - 1) / 4) * 4) + 1)
 
 
@@ -87,10 +88,11 @@ def build_video_workflow(
         "SHIFT": float(video.get("shift", 5.0)),
         "SEED": int(seed),
         "STEPS": steps,
-        "CFG": float(preset["cfg"]),
+        "CFG_HIGH": float(preset.get("cfg_high", preset["cfg"])),
+        "CFG_LOW": float(preset.get("cfg_low", preset["cfg"])),
         "WIDTH": int(width or video["width"]),
         "HEIGHT": int(height or video["height"]),
-        "LENGTH": snap_frames(duration_s, int(video["fps"])),
+        "LENGTH": snap_frames(duration_s, int(video["fps"]), int(video.get("max_frames", 81))),
         "FPS": int(video["fps"]),
         "BOUNDARY_STEP": max(1, steps // 2),
         "FILENAME_PREFIX": f"sourcemode/{source.character_id}",

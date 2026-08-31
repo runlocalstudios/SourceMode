@@ -1,8 +1,8 @@
 {
   "_meta": {
-    "verified": "Structure verified 2026-08-30 against workflows/real/wan22_i2v.api.json (ComfyUI 0.25.1 export) and /object_info on the live instance. NOTE: the export was a T2V graph referencing t2v models absent from this machine; this template keeps its two-stage KSamplerAdvanced + ModelSamplingSD3 + CreateVideo/SaveVideo structure but swaps in the present I2V models and the standard WanImageToVideo image-conditioning path (inputs verified via /object_info). See DECISIONS.md.",
+    "verified": "Structure verified 2026-08-31 against workflows/real/wan22_i2v_ui.json (Jeremy's working I2V graph: UNET -> per-stage LoRA chain -> ModelSamplingSD3 -> two-stage KSamplerAdvanced with per-stage CFG, WanImageToVideo conditioning, boundary = steps/2) and /object_info on the live instance. Output differs deliberately: CreateVideo/SaveVideo mp4-h264 instead of the export's SaveAnimatedWEBP/SaveWEBM (pipeline consumes mp4). The earlier workflows/real/wan22_i2v.api.json is a T2V graph kept for provenance only (DECISIONS #4).",
     "template": "wan22_i2v",
-    "placeholders": ["MODEL_HIGH", "MODEL_LOW", "UMT5", "VAE", "POSITIVE", "NEGATIVE", "IMAGE", "LORA_HIGH", "LORA_LOW", "LORA_STRENGTH", "LIGHTNING_HIGH", "LIGHTNING_LOW", "LIGHTNING_STRENGTH", "SHIFT", "SEED", "STEPS", "CFG", "WIDTH", "HEIGHT", "LENGTH", "FPS", "BOUNDARY_STEP", "FILENAME_PREFIX"],
+    "placeholders": ["MODEL_HIGH", "MODEL_LOW", "UMT5", "VAE", "POSITIVE", "NEGATIVE", "IMAGE", "LORA_HIGH", "LORA_LOW", "LORA_STRENGTH", "LIGHTNING_HIGH", "LIGHTNING_LOW", "LIGHTNING_STRENGTH", "SHIFT", "SEED", "STEPS", "CFG_HIGH", "CFG_LOW", "WIDTH", "HEIGHT", "LENGTH", "FPS", "BOUNDARY_STEP", "FILENAME_PREFIX"],
     "prunable_loras": "Empty/placeholder lora_name values are pruned by render.workflow.prune_placeholder_loras before submit."
   },
   "nodes": {
@@ -78,7 +78,7 @@
         "add_noise": "enable",
         "noise_seed": "{{SEED}}",
         "steps": "{{STEPS}}",
-        "cfg": "{{CFG}}",
+        "cfg": "{{CFG_HIGH}}",
         "sampler_name": "euler",
         "scheduler": "simple",
         "positive": ["50", 0],
@@ -96,7 +96,7 @@
         "add_noise": "disable",
         "noise_seed": 0,
         "steps": "{{STEPS}}",
-        "cfg": "{{CFG}}",
+        "cfg": "{{CFG_LOW}}",
         "sampler_name": "euler",
         "scheduler": "simple",
         "positive": ["50", 0],
