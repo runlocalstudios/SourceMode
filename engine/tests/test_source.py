@@ -81,7 +81,10 @@ def test_gwen_source_parses(gwen_available):
 
     gwen = load_source(REPO_ROOT / "characters", "gwen")
     assert gwen.trigger_token == "gwen_ch"
-    assert gwen.approved is True
+    # v003+ carries trained LoRA paths; approval of a bumped version is a human
+    # step, so don't assert `approved` here.
+    assert int(gwen.version[1:]) >= 3
+    assert gwen.lora_paths.image_lora
     assert len(gwen.reference_images) == 5
     for rel in gwen.reference_images:
         assert (GWEN_DIR / rel).exists(), rel

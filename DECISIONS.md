@@ -2,6 +2,18 @@
 
 Append-only. Newest first.
 
+## #11 — 2026-08-31: Wan low-noise LoRA v001 installed but measured identity-NEUTRAL; selection caught real divergence
+
+The min-score selection worked as designed: epochs 6–10 collapsed (min 0.43→0.03) after an fp16 loss spike at ~epoch 6 (avr_loss 0.001→0.03), and the ranking surfaced it immediately. Winner = epoch 1 (min 0.4334 draft / 0.3500 final). But controls show v001 buys nothing yet: same-seed baseline WITHOUT the LoRA scored min 0.4609 draft / 0.3379 final, and the e2e A/B (identical keyframes) scored no-LoRA min 0.106/mean 0.246 vs with-LoRA 0.026/0.203. Installed anyway as the plumbing proof (slot wiring, selection, A/B are now real); identity today comes from the image-LoRA keyframe + Wan's natural preservation. Retune knobs backlogged: lower LR / drop loraplus ratio (fp16 stability), max_timestep 900, motion clips in the dataset. Also learned: a tracks-her-from-behind shot inherently zeroes face-identity frames — min-score on such shots measures shot design, not the LoRA (BACKLOG: face-visibility-aware video scoring).
+
+## #10 — 2026-08-31: LoRA checkpoint selection — frontal mean for image, worst-frame min for video, ties to the earlier epoch
+
+Image-LoRA checkpoints are ranked by MEAN identity over 4 fixed frontal sample prompts (the scorer is pose-sensitive — DECISIONS/BACKLOG — so only same-pose samples are comparable), with a brightness-spread "prompt inertia" check flagging checkpoints whose 4 varied-lighting prompts render near-identically (overfit signal). Wan-LoRA checkpoints are ranked by MIN identity across sampled frames of one real I2V draft each: a video is only as good as its worst frame — a face that collapses mid-motion is a broken shot regardless of the average. All ties (3 decimals) break toward the EARLIER checkpoint: same score, less overfit risk.
+
+## #9 — 2026-08-31: musubi-tuner trains BOTH LoRAs (Qwen-Image + Wan 2.2); training-grade model files are separate downloads
+
+musubi-tuner 0.3.4 ships full Qwen-Image LoRA support (`qwen_image_train_network.py`), so one trainer + one dataset-config format covers the image and video LoRAs — AI-Toolkit/diffusion-pipe never got installed. Two file facts drove downloads (INVENTORY §4): musubi cannot train from fp8_scaled/fp8_e4m3fn FILES (needs `qwen_image_2512_bf16` + non-fp8 `qwen_2.5_vl_7b`; `--fp8_base --fp8_scaled` quantize at load), and musubi's Wan T5 loader cannot read ComfyUI's umt5 safetensors (HF-style keys — verified against the header), requiring the official `models_t5_umt5-xxl-enc-bf16.pth`. Both experts of the Wan pair train on task **i2v-A14B** (not t2v): inference is I2V, and the LoRA must match the expert weights it will patch. Only the low-noise expert is trained for now — it renders fine detail/identity; the high-noise expert (composition/motion) is deferred (BACKLOG).
+
 ## #7 — 2026-08-30: Identity-gate embedding backend = InsightFace buffalo_l (CPU provider)
 
 Option (a) from the backend ladder won on the first try: `insightface` + `onnxruntime-gpu` import and run in the engine venv (CUDA EP doesn't register there, CPU EP is fast enough for QC — see BACKLOG). `FaceAnalysis(name="buffalo_l")` detects and embeds all 5 Gwen refs. No deepface fallback needed. Weights are non-commercial: internal QC only, never shipped.
