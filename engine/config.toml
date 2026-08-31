@@ -83,9 +83,10 @@ qwen_t2i_cfg = 4.0
 
 [video]
 # width/height/fps/shift/max_frames from Jeremy's working I2V graph
-# (1024x1280 portrait there; default here stays 832x480 landscape).
-width = 832
-height = 480
+# (1024x1280 portrait — adopted as the default 2026-08-31 after the 832x480
+# e2e looked mushy; his graph proved 145 frames at this res on the 5090).
+width = 1024
+height = 1280
 fps = 24
 shift = 8.0               # ModelSamplingSD3 shift (official inference default is 5.0)
 max_frames = 145          # 4n+1; 145 @ 24fps ~ 6s, proven on this 5090

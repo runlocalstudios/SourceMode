@@ -86,12 +86,19 @@ def video_prompt(source: CharacterSource, spec: ShotSpec) -> str:
         if spec.camera_move == "orbital arc"
         else f"The camera performs a smooth {spec.camera_move}"
     )
+    # The motion text comes from the brief, which usually names the character
+    # ("Gwen walks…") or uses a pronoun ("she looks up…"); the sentence frame
+    # already says "the character", so strip the leading subject.
+    motion = re.sub(rf"^(?:{re.escape(source.name)}|she|he|they)\s+", "", spec.motion, flags=re.IGNORECASE)
+    camera_pace = (
+        "" if spec.camera_move == "static" else f", moving {spec.speed} and steady"
+    )
     blocks = [
         # 1. primary motion, explicit speed word first
-        f"The character {spec.motion} {spec.speed}, {spec.emotion} in expression and body language, "
-        f"the movement continuous and natural from the first frame to the last.",
+        f"{spec.speed.capitalize()}, the character {motion}, {spec.emotion} in expression and body "
+        f"language, the movement continuous and natural from the first frame to the last.",
         # 2. camera move, standard vocabulary
-        f"{camera}, {spec.speed} and steady, holding the {_SHOT_SIZE_WORDS[spec.shot_size]} framing "
+        f"{camera}{camera_pace}, holding the {_SHOT_SIZE_WORDS[spec.shot_size]} framing "
         f"with a {spec.lens}mm field of view throughout the shot.",
         # 3. environment / FX
         f"Setting: {spec.environment}, with depth and atmosphere behind the subject. "

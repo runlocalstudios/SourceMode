@@ -40,10 +40,44 @@ _CAMERA_KEYWORDS = [
     ("dollies in", "dolly in"), ("dolly in", "dolly in"),
     ("dollies out", "dolly out"), ("dolly out", "dolly out"), ("pulls back", "dolly out"),
     ("orbits", "orbital arc"), ("orbital", "orbital arc"), ("circles", "orbital arc"),
+    ("swings around", "orbital arc"), ("swings", "orbital arc"),
     ("crane", "crane"),
     ("push-in", "push-in"), ("pushes in", "push-in"), ("push in", "push-in"),
     ("whip-pan", "whip-pan"), ("whip pan", "whip-pan"),
 ]
+
+# The camera clause: "…, the camera tracks her from behind then swings around".
+# Leading connectors/articles are part of the clause so stripping it from the
+# motion text never leaves a dangling "the"/"as"/"and".
+_CAMERA_CLAUSE_RE = re.compile(r"(?:\b(?:the|a|an|as|while|and|then)\s+)*\bcamera\b[^,.;]*", re.I)
+# Two camera phases joined by "then" become two shots — one move per shot is
+# the only thing Wan I2V executes reliably.
+_PHASE_SPLIT_RE = re.compile(r"\b(?:and\s+)?then\b", re.I)
+# Connectors/prepositions left dangling at the end of the motion text after
+# the camera clause was cut out ("…smiles at the" -> "…smiles").
+_DANGLING_TAIL_RE = re.compile(
+    r"(?:\s*,)?\s+(?:and|then|the|a|an|as|while|at|to|toward|towards|from|into|of|with)\s*$", re.I
+)
+
+
+def _camera_moves(beat: str, low: str) -> list[str]:
+    """Camera moves for a beat: one per 'then'-joined phase of its camera
+    clause, else a whole-beat keyword scan, else static."""
+    clause = _CAMERA_CLAUSE_RE.search(beat)
+    moves: list[str] = []
+    if clause:
+        for phase in _PHASE_SPLIT_RE.split(clause.group(0)):
+            phase_low = phase.lower()
+            for kw, move in _CAMERA_KEYWORDS:
+                if kw in phase_low:
+                    moves.append(move)
+                    break
+    if not moves:
+        for kw, move in _CAMERA_KEYWORDS:
+            if kw in low:
+                moves.append(move)
+                break
+    return moves or ["static"]
 
 _EMOTION_WORDS = (
     "worried", "anxious", "calm", "happy", "joyful", "sad", "angry", "furious",
@@ -68,7 +102,8 @@ class RuleBasedDecomposer:
     def decompose(self, brief: str) -> list[ShotSpec]:
         beats = _split_beats(brief)
         shots: list[ShotSpec] = []
-        for idx, beat in enumerate(beats):
+        idx = 0
+        for beat in beats:
             low = beat.lower()
 
             speed = "steadily"
@@ -79,11 +114,7 @@ class RuleBasedDecomposer:
                     matched_speed_word = word
                     break
 
-            camera_move = "static"
-            for kw, move in _CAMERA_KEYWORDS:
-                if kw in low:
-                    camera_move = move
-                    break
+            moves = _camera_moves(beat, low)
 
             emotion = "neutral"
             for e in _EMOTION_WORDS:
@@ -100,29 +131,43 @@ class RuleBasedDecomposer:
 
             # Strip camera directions from the motion text so the two can't
             # carry contradictory camera terms; strip the detected speed and
-            # emotion words so the template doesn't restate them.
-            motion = re.sub(r"\bcamera\b[^,.;]*", "", beat, flags=re.I)
+            # emotion words so the template doesn't restate them; then clean
+            # any connector left dangling where the camera clause was cut.
+            motion = _CAMERA_CLAUSE_RE.sub("", beat)
             if matched_speed_word:
                 motion = re.sub(rf"\b{re.escape(matched_speed_word)}\b", "", motion, flags=re.I)
             if emotion != "neutral":
                 motion = re.sub(rf",?\s*\b{re.escape(emotion)}\b", "", motion, flags=re.I)
             motion = re.sub(r"\s{2,}", " ", motion).strip(" ,")
+            while True:
+                cleaned = _DANGLING_TAIL_RE.sub("", motion)
+                if cleaned == motion:
+                    break
+                motion = cleaned
+            motion = motion.strip(" ,")
             if not motion:
                 motion = beat
 
-            shots.append(
-                ShotSpec(
-                    idx=idx,
-                    shot_size="MS" if camera_move != "static" else "MCU",
-                    lens=35,
-                    camera_move=camera_move,
-                    motion=motion,
-                    speed=speed,
-                    emotion=emotion,
-                    environment=environment,
-                    duration_s=min(8.0, 4.0 + len(beat) / 40.0),
-                )
+            # One shot per camera phase; a split beat gets shorter shots.
+            duration = (
+                min(6.0, 4.0 + len(beat) / 80.0) if len(moves) > 1
+                else min(8.0, 4.0 + len(beat) / 40.0)
             )
+            for camera_move in moves:
+                shots.append(
+                    ShotSpec(
+                        idx=idx,
+                        shot_size="MS" if camera_move != "static" else "MCU",
+                        lens=35,
+                        camera_move=camera_move,
+                        motion=motion,
+                        speed=speed,
+                        emotion=emotion,
+                        environment=environment,
+                        duration_s=duration,
+                    )
+                )
+                idx += 1
         return shots
 
 

@@ -8,7 +8,7 @@ EVALS = Path(__file__).resolve().parent.parent / "evals" / "decomposer_cases.jso
 
 def test_rule_based_against_checked_in_evals():
     cases = json.loads(EVALS.read_text(encoding="utf-8"))["cases"]
-    assert len(cases) == 5
+    assert len(cases) == 6
     decomposer = RuleBasedDecomposer()
     for case in cases:
         shots = decomposer.decompose(case["brief"])
@@ -20,6 +20,35 @@ def test_rule_based_against_checked_in_evals():
             assert [s.emotion for s in shots] == case["expected_emotions"], case["name"]
         for s in shots:
             assert s.duration_s <= 8.0
+
+
+MARKET_BRIEF = (
+    "Gwen walks slowly through a rainy neon market at night, worried, "
+    "the camera tracks her from behind then swings around to her face"
+)
+
+
+def test_camera_clause_strip_leaves_no_dangling_words():
+    shots = RuleBasedDecomposer().decompose(MARKET_BRIEF)
+    for s in shots:
+        assert "camera" not in s.motion.lower()
+        assert not s.motion.rstrip().endswith((" the", " a", " an", " and", " then", " at", " to"))
+    assert shots[0].motion == "Gwen walks through a rainy neon market at night"
+
+
+def test_two_camera_phases_become_two_shots():
+    shots = RuleBasedDecomposer().decompose(MARKET_BRIEF)
+    assert [s.camera_move for s in shots] == ["tracking", "orbital arc"]
+    assert [s.idx for s in shots] == [0, 1]
+    assert shots[0].motion == shots[1].motion  # same action, camera phase differs
+    assert all(s.duration_s <= 6.0 for s in shots)  # split beats get shorter shots
+
+
+def test_trailing_preposition_cleaned_when_camera_is_object():
+    shots = RuleBasedDecomposer().decompose(
+        "Gwen looks up from her phone and smiles at the camera"
+    )
+    assert shots[0].motion == "Gwen looks up from her phone and smiles"
 
 
 def test_rule_based_is_deterministic():

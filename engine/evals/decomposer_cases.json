@@ -30,6 +30,14 @@
       "expected_camera_moves": ["static", "static"]
     },
     {
+      "name": "two camera phases split into two shots",
+      "brief": "Gwen walks slowly through a rainy neon market at night, worried, the camera tracks her from behind then swings around to her face",
+      "expected_shot_count": 2,
+      "expected_camera_moves": ["tracking", "orbital arc"],
+      "expected_speeds": ["slowly", "slowly"],
+      "expected_emotions": ["worried", "worried"]
+    },
+    {
       "name": "orbit then brisk exit",
       "brief": "The camera orbits Gwen as she stands determined on the cliff edge. She turns and walks away briskly.",
       "expected_shot_count": 2,

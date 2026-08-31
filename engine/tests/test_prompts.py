@@ -53,6 +53,21 @@ def test_video_prompt_block_order_and_length(sample_source):
     assert "slowly" in prompt  # explicit speed word
 
 
+def test_video_prompt_strips_leading_subject(sample_source):
+    # brief motion text names the character or uses a pronoun; the template
+    # frame already says "the character"
+    p1 = video_prompt(sample_source, spec(motion="Test Char walks through the market"))
+    assert "the character walks through the market" in p1
+    p2 = video_prompt(sample_source, spec(motion="she looks up from her phone and smiles"))
+    assert "the character looks up from her phone" in p2
+    assert "character she" not in p2
+
+
+def test_video_prompt_static_camera_has_no_pace_clause(sample_source):
+    p = video_prompt(sample_source, spec(camera_move="static", motion="stands quietly"))
+    assert "completely still, holding" in p  # no ", moving steadily" contradiction
+
+
 def test_video_prompt_rejects_contradictory_camera():
     s = spec(camera_move="static", motion="stands still as the camera pans across her shoulders")
     with pytest.raises(CameraContradictionError):
