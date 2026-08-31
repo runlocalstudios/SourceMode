@@ -132,7 +132,8 @@ def run_scene(
                 image_name=image_name, seed=seed + idx,
                 render_pass=render_pass, duration_s=shot["spec"]["duration_s"],
             )
-            video_path = _render(client, workflow, shot_dir / "video.webp")
+            # the wan22_i2v template ends in SaveVideo mp4-h264
+            video_path = _render(client, workflow, shot_dir / "video.mp4")
             shot_result["video"] = str(video_path) if video_path else None
             if video_path:
                 write_sidecar(

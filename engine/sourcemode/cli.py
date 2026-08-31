@@ -80,11 +80,17 @@ def run(
     candidates: int = typer.Option(4, "--candidates"),
     seed: int = typer.Option(1234, "--seed"),
     sync_db: bool = typer.Option(False, "--sync-db"),
+    no_wan_lora: bool = typer.Option(False, "--no-wan-lora", help="A/B: render video without the Wan identity LoRA (keyframe LoRA still on)."),
 ):
     """Full pipeline: compile -> keyframes -> video -> gates -> results.yaml."""
     from .orchestrate.run import run_scene  # noqa: PLC0415
 
     cfg, chars, src = _load(character)
+    if no_wan_lora:
+        src = src.model_copy(
+            update={"lora_paths": src.lora_paths.model_copy(update={"wan_low_noise": None, "wan_high_noise": None})}
+        )
+        rprint("[yellow]A/B mode:[/yellow] Wan identity LoRA disabled for this run")
     gates_enabled = cfg["gates"]["identity_enabled"] and not no_gate
     client = None
     if not dry_run:
@@ -197,6 +203,22 @@ def gates_report(
     rprint(summary)
 
 
+@gates_app.command("strip")
+def gates_strip(
+    video: Path,
+    character: str = typer.Option(..., "--character"),
+    out: Path = typer.Option(None, "--out", help="Default: <video dir>/<stem>_strip.png"),
+    stride: int = typer.Option(12, "--stride"),
+):
+    """Frame strip PNG: every Nth frame with its identity score printed under it."""
+    from .gates.strip import frame_strip  # noqa: PLC0415
+
+    cfg, chars, src = _load(character)
+    out = out or video.parent / f"{video.stem}_strip.png"
+    stats = frame_strip(video, src, _scorer(cfg, chars), out, stride=stride, fps=float(cfg["video"]["fps"]))
+    rprint(stats)
+
+
 @gates_app.command("score")
 def gates_score(
     asset: Path,
@@ -278,7 +300,7 @@ def render_shot(
     prompt_id = client.submit(workflow)
     entry = client.wait(prompt_id)
     files = client.outputs(entry)
-    dest = Path(scene_yaml).parent / f"shot_{idx:02d}" / "video.webp"
+    dest = Path(scene_yaml).parent / f"shot_{idx:02d}" / "video.mp4"
     out = client.fetch(files[0], dest) if files else None
     if out:
         write_sidecar(out, source_version=src.version, prompt_hash=shot["prompt_hash"], seed=seed,
