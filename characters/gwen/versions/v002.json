@@ -1,7 +1,7 @@
 {
   "character_id": "gwen",
   "name": "Gwen",
-  "version": "v003",
+  "version": "v002",
   "trigger_token": "gwen_ch",
   "invariants": [
     "hair: long wavy copper-red, centre parted",
@@ -33,9 +33,9 @@
     "notes": "No approved voice reference yet; record/select one before voice work."
   },
   "lora_paths": {
-    "image_lora": "sourcemode\\gwen\\gwen_image_v001.safetensors",
+    "image_lora": null,
     "wan_low_noise": null,
     "wan_high_noise": null
   },
-  "approved": false
+  "approved": true
 }

@@ -322,6 +322,10 @@ def render_smoke(
     height: int = typer.Option(None, "--height"),
     duration: float = typer.Option(2.0, "--duration", help="I2V only, seconds."),
     dry_run: bool = typer.Option(False, "--dry-run"),
+    wan_low_lora: str = typer.Option(
+        None, "--wan-low-lora",
+        help="Override the wan_low_noise LoRA (ComfyUI-relative name) — checkpoint selection renders.",
+    ),
 ):
     """Small real render straight to outputs/smoke/, with timing."""
     import time  # noqa: PLC0415
@@ -337,6 +341,10 @@ def render_smoke(
     from .render.sidecar import write_sidecar  # noqa: PLC0415
 
     cfg, chars, src = _load(character)
+    if wan_low_lora is not None:
+        src = src.model_copy(
+            update={"lora_paths": src.lora_paths.model_copy(update={"wan_low_noise": wan_low_lora})}
+        )
     neg = negative if negative is not None else src.negative_block
     client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
     if not dry_run and not client.is_reachable():
