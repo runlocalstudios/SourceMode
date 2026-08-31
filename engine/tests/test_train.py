@@ -156,6 +156,8 @@ def test_wan_cmd_low_expert_flags(cfg, sample_source, tmp_path):
     assert _flag_value(cache_te, "--t5").endswith("models_t5_umt5-xxl-enc-bf16.pth")
 
     assert _flag_value(train, "--task") == "i2v-A14B"
+    # fp16 DiT files force fp16 mixed precision (musubi wan_train_network.py:63)
+    assert _flag_value(train, "--mixed_precision") == "fp16"
     assert _flag_value(train, "--network_module") == "networks.lora_wan"
     assert _flag_value(train, "--network_args") == "loraplus_lr_ratio=4"
     assert _flag_value(train, "--learning_rate") == "1.6e-4"

@@ -74,16 +74,19 @@ def build_wan_lora_cmd(
         "--t5", str(t5),
         "--batch_size", "16",
     ]
+    # The only trainable Wan 2.2 14B files are fp16 (no bf16 repackage exists);
+    # musubi asserts mixed_precision must match the DiT file dtype
+    # (wan_train_network.py:63), so Wan trains in fp16 — unlike Qwen (bf16).
     train = [
         str(accelerate), "launch",
         "--num_cpu_threads_per_process", "1",
-        "--mixed_precision", "bf16",
+        "--mixed_precision", "fp16",
         str(musubi / "src" / "musubi_tuner" / "wan_train_network.py"),
         "--task", "i2v-A14B",
         "--dit", str(dit),
         "--dataset_config", str(toml_path),
         "--sdpa",
-        "--mixed_precision", "bf16",
+        "--mixed_precision", "fp16",
         "--fp8_base",
         "--fp8_scaled",
         "--optimizer_type", "adamw8bit",
