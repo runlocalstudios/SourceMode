@@ -34,8 +34,8 @@
   },
   "lora_paths": {
     "image_lora": "sourcemode\\gwen\\gwen_image_v001.safetensors",
-    "wan_low_noise": "sourcemode\\gwen\\gwen_wan22_low_v001.safetensors",
+    "wan_low_noise": null,
     "wan_high_noise": null
   },
-  "approved": false
+  "approved": true
 }

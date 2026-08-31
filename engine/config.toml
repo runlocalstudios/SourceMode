@@ -68,6 +68,22 @@ wan_lightning_low = 'wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors'
 qwen_edit_lightning = 'Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors'
 qwen_t2i_lightning = 'Qwen-Image-2512-Lightning-4steps-V1.0-bf16.safetensors'
 
+[render.medium]
+# The dailies pass (chosen 2026-08-31): final-quality keyframes + lightning
+# video at full resolution. ~10 min per 6 s shot vs ~2.4 h for [render.final]
+# at 1024x1280 (DECISIONS #12/#13).
+steps = 4
+cfg = 1.0
+lightning_strength = 1.0
+wan_lightning_high = 'wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors'
+wan_lightning_low = 'wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors'
+# Keyframes render at final quality — they're cheap (~1 min) and identity
+# lives there; no qwen lightning in this pass.
+qwen_t2i_steps = 50
+qwen_t2i_cfg = 4.0
+qwen_edit_steps = 40
+qwen_edit_cfg = 4.0
+
 [render.final]
 # No lightning. Wan values from Jeremy's working I2V graph (workflows/real/
 # wan22_i2v_ui.json): 28 steps, per-stage CFG 2.2 high / 1.8 low. Qwen values
@@ -87,6 +103,12 @@ qwen_t2i_cfg = 4.0
 # e2e looked mushy; his graph proved 145 frames at this res on the 5090).
 width = 1024
 height = 1280
+# Generic (non-character) LoRAs for the video stages — style/motion adapters.
+# Used only when the character has no wan_*_noise LoRA of its own; strength
+# is capped at 0.6 by the composition rule (non-identity).
+lora_high = ''
+lora_low = ''
+lora_strength = 0.6
 fps = 24
 shift = 8.0               # ModelSamplingSD3 shift (official inference default is 5.0)
 max_frames = 145          # 4n+1; 145 @ 24fps ~ 6s, proven on this 5090

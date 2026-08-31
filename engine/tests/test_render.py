@@ -115,6 +115,50 @@ def test_build_video_workflow_substitutes_fully(tmp_cfg, sample_source):
     ]
 
 
+def test_video_generic_lora_fallback(tmp_cfg, sample_source):
+    # no character wan LoRA + generic [video] LoRA configured -> generic fills
+    # the slot at the capped non-identity strength
+    tmp_cfg["video"]["lora_low"] = "styles/moody.safetensors"
+    nodes, settings = build_video_workflow(
+        tmp_cfg, sample_source, positive="p", negative="n",
+        image_name="kf.png", seed=1, render_pass="final", duration_s=2.0,
+    )
+    assert settings["LORA_LOW"] == "styles/moody.safetensors"
+    assert settings["LORA_STRENGTH_LOW"] == 0.6
+    assert settings["LORA_HIGH"] == ""  # nothing configured for high -> pruned
+    loras = [(n["inputs"]["lora_name"], n["inputs"]["strength_model"])
+             for n in nodes.values() if n["class_type"] == "LoraLoaderModelOnly"]
+    assert loras == [("styles/moody.safetensors", 0.6)]
+
+
+def test_video_character_lora_beats_generic(tmp_cfg, sample_source):
+    tmp_cfg["video"]["lora_low"] = "styles/moody.safetensors"
+    src = sample_source.model_copy(update={
+        "lora_paths": sample_source.lora_paths.model_copy(update={"wan_low_noise": "char/id.safetensors"})
+    })
+    _, settings = build_video_workflow(
+        tmp_cfg, src, positive="p", negative="n",
+        image_name="kf.png", seed=1, render_pass="final", duration_s=2.0,
+    )
+    assert settings["LORA_LOW"] == "char/id.safetensors"
+    assert settings["LORA_STRENGTH_LOW"] == 1.0
+
+
+def test_medium_pass_is_lightning_video_final_keyframes(tmp_cfg, sample_source):
+    nodes, settings = build_video_workflow(
+        tmp_cfg, sample_source, positive="p", negative="n",
+        image_name="kf.png", seed=1, render_pass="medium", duration_s=2.0,
+    )
+    assert settings["STEPS"] == 4 and settings["CFG_HIGH"] == 1.0
+    lora_names = [n["inputs"]["lora_name"] for n in nodes.values() if n["class_type"] == "LoraLoaderModelOnly"]
+    assert tmp_cfg["render"]["medium"]["wan_lightning_low"] in lora_names
+    _, kf_settings = build_keyframe_workflow(
+        tmp_cfg, sample_source, positive="p", negative="n", seed=1, render_pass="medium",
+    )
+    assert kf_settings["STEPS"] == 50 and kf_settings["CFG"] == 4.0
+    assert kf_settings["LIGHTNING"] == ""  # keyframes at final quality in medium
+
+
 def test_build_video_workflow_final_has_no_loras(tmp_cfg, sample_source):
     nodes, settings = build_video_workflow(
         tmp_cfg, sample_source, positive="p", negative="n",

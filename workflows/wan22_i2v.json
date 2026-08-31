@@ -2,7 +2,7 @@
   "_meta": {
     "verified": "Structure verified 2026-08-31 against workflows/real/wan22_i2v_ui.json (Jeremy's working I2V graph: UNET -> per-stage LoRA chain -> ModelSamplingSD3 -> two-stage KSamplerAdvanced with per-stage CFG, WanImageToVideo conditioning, boundary = steps/2) and /object_info on the live instance. Output differs deliberately: CreateVideo/SaveVideo mp4-h264 instead of the export's SaveAnimatedWEBP/SaveWEBM (pipeline consumes mp4). The earlier workflows/real/wan22_i2v.api.json is a T2V graph kept for provenance only (DECISIONS #4).",
     "template": "wan22_i2v",
-    "placeholders": ["MODEL_HIGH", "MODEL_LOW", "UMT5", "VAE", "POSITIVE", "NEGATIVE", "IMAGE", "LORA_HIGH", "LORA_LOW", "LORA_STRENGTH", "LIGHTNING_HIGH", "LIGHTNING_LOW", "LIGHTNING_STRENGTH", "SHIFT", "SEED", "STEPS", "CFG_HIGH", "CFG_LOW", "WIDTH", "HEIGHT", "LENGTH", "FPS", "BOUNDARY_STEP", "FILENAME_PREFIX"],
+    "placeholders": ["MODEL_HIGH", "MODEL_LOW", "UMT5", "VAE", "POSITIVE", "NEGATIVE", "IMAGE", "LORA_HIGH", "LORA_LOW", "LORA_STRENGTH_HIGH", "LORA_STRENGTH_LOW", "LIGHTNING_HIGH", "LIGHTNING_LOW", "LIGHTNING_STRENGTH", "SHIFT", "SEED", "STEPS", "CFG_HIGH", "CFG_LOW", "WIDTH", "HEIGHT", "LENGTH", "FPS", "BOUNDARY_STEP", "FILENAME_PREFIX"],
     "prunable_loras": "Empty/placeholder lora_name values are pruned by render.workflow.prune_placeholder_loras before submit."
   },
   "nodes": {
@@ -16,11 +16,11 @@
     },
     "54": {
       "class_type": "LoraLoaderModelOnly",
-      "inputs": { "model": ["37", 0], "lora_name": "{{LORA_HIGH}}", "strength_model": "{{LORA_STRENGTH}}" }
+      "inputs": { "model": ["37", 0], "lora_name": "{{LORA_HIGH}}", "strength_model": "{{LORA_STRENGTH_HIGH}}" }
     },
     "55": {
       "class_type": "LoraLoaderModelOnly",
-      "inputs": { "model": ["38", 0], "lora_name": "{{LORA_LOW}}", "strength_model": "{{LORA_STRENGTH}}" }
+      "inputs": { "model": ["38", 0], "lora_name": "{{LORA_LOW}}", "strength_model": "{{LORA_STRENGTH_LOW}}" }
     },
     "56": {
       "class_type": "LoraLoaderModelOnly",

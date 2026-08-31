@@ -130,6 +130,19 @@ def source_sync(character: str):
     raise typer.Exit(0 if ok else 1)
 
 
+@source_app.command("approve")
+def source_approve(character: str):
+    """Mark the current source version approved (immutable except operational fields)."""
+    from .source import save_source  # noqa: PLC0415
+
+    _, chars, src = _load(character)
+    if src.approved:
+        rprint(f"[yellow]{character} {src.version} is already approved[/yellow]")
+        raise typer.Exit(0)
+    save_source(chars, src.model_copy(update={"approved": True}))
+    rprint(f"[green]{character} {src.version} approved[/green]")
+
+
 @source_app.command("bump")
 def source_bump(character: str):
     from .source import bump_version  # noqa: PLC0415

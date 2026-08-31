@@ -55,16 +55,25 @@ def build_video_workflow(
     models = cfg["models"]
     video = cfg["video"]
 
-    lora_high = source.lora_paths.wan_high_noise or ""
-    lora_low = source.lora_paths.wan_low_noise or ""
+    # Each stage's LoRA slot: the character's identity LoRA when it has one,
+    # else the generic (style/motion) LoRA from [video] — identity runs at 1.0,
+    # generic is capped at MAX_OTHER_STRENGTH by the composition rule.
+    generic_strength = float(video.get("lora_strength", 0.6))
+
+    def _stage_lora(character_lora: str | None, generic_key: str) -> dict:
+        if character_lora:
+            return _lora_entry(character_lora, 1.0, is_identity=True)
+        return _lora_entry(video.get(generic_key, ""), generic_strength)
+
+    high = _stage_lora(source.lora_paths.wan_high_noise, "lora_high")
+    low = _stage_lora(source.lora_paths.wan_low_noise, "lora_low")
     lightning_high = preset.get("wan_lightning_high", "")
     lightning_low = preset.get("wan_lightning_low", "")
     lightning_strength = float(preset.get("lightning_strength", 1.0))
-    identity_strength = 1.0
 
     loras = [
-        _lora_entry(lora_high, identity_strength, is_identity=True),
-        _lora_entry(lora_low, identity_strength, is_identity=True),
+        high,
+        low,
         _lora_entry(lightning_high, lightning_strength, is_distill=True),
         _lora_entry(lightning_low, lightning_strength, is_distill=True),
     ]
@@ -79,9 +88,10 @@ def build_video_workflow(
         "POSITIVE": positive,
         "NEGATIVE": negative,
         "IMAGE": image_name,
-        "LORA_HIGH": lora_high,
-        "LORA_LOW": lora_low,
-        "LORA_STRENGTH": identity_strength,
+        "LORA_HIGH": high["path"],
+        "LORA_LOW": low["path"],
+        "LORA_STRENGTH_HIGH": high["strength"],
+        "LORA_STRENGTH_LOW": low["strength"],
         "LIGHTNING_HIGH": lightning_high,
         "LIGHTNING_LOW": lightning_low,
         "LIGHTNING_STRENGTH": lightning_strength,
@@ -214,9 +224,13 @@ def models_summary(settings: dict) -> dict:
 
 def loras_summary(settings: dict) -> list[dict]:
     out = []
-    for key in ("LORA_PATH", "LORA_HIGH", "LORA_LOW"):
+    for key, strength_key in (
+        ("LORA_PATH", "LORA_STRENGTH"),
+        ("LORA_HIGH", "LORA_STRENGTH_HIGH"),
+        ("LORA_LOW", "LORA_STRENGTH_LOW"),
+    ):
         if settings.get(key):
-            out.append({"name": settings[key], "strength": settings["LORA_STRENGTH"]})
+            out.append({"name": settings[key], "strength": settings.get(strength_key, settings.get("LORA_STRENGTH"))})
     for key in ("LIGHTNING", "LIGHTNING_HIGH", "LIGHTNING_LOW"):
         if settings.get(key):
             out.append({"name": settings[key], "strength": settings["LIGHTNING_STRENGTH"]})
