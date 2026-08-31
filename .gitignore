@@ -57,6 +57,10 @@ outputs/
 characters/**/dataset/
 characters/**/_rejected/
 
+# trained model weights never live in git (LoRAs go to ComfyUI models/loras/)
+*.safetensors
+*.pth
+
 .vercel
 .env*
 !.env.example

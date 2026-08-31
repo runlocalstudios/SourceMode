@@ -62,10 +62,38 @@ def run_doctor(cfg: dict) -> list[tuple[str, bool, str]]:
 
     def musubi():
         path = Path(cfg["training"]["musubi_tuner_path"])
-        ok = (path / "src" / "musubi_tuner" / "wan_train_network.py").exists()
-        return ok, str(path) + ("" if ok else " (wan_train_network.py not found)")
+        missing = [
+            script
+            for script in ("wan_train_network.py", "qwen_image_train_network.py")
+            if not (path / "src" / "musubi_tuner" / script).exists()
+        ]
+        if missing:
+            return False, f"{path} (missing: {', '.join(missing)})"
+        return True, f"{path} (wan + qwen_image trainers)"
 
     rows.append(("musubi-tuner", *_check(musubi)))
+
+    def training_models():
+        models_dir = Path(cfg["paths"]["models"])
+        wanted = {
+            "diffusion_models": [
+                cfg["models"]["wan_i2v_low_fp16"],
+                cfg["models"]["wan_i2v_high_fp16"],
+                cfg["models"]["qwen_image_bf16"],
+            ],
+            "text_encoders": [cfg["models"]["qwen_text_encoder_bf16"], cfg["models"]["wan_t5_train"]],
+        }
+        missing = [
+            f"{sub}/{name}"
+            for sub, names in wanted.items()
+            for name in names
+            if not (models_dir / sub / name).exists()
+        ]
+        if missing:
+            return False, f"missing (training needs non-fp8 files): {', '.join(missing)}"
+        return True, "bf16 DiTs + non-fp8 text encoders present for musubi-tuner"
+
+    rows.append(("training models", *_check(training_models)))
 
     def insight():
         ok = insightface_available()

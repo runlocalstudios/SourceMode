@@ -383,41 +383,99 @@ def render_smoke(
 # --- train -----------------------------------------------------------------
 
 
-@train_app.command("wan-cmd")
-def train_wan_cmd(
-    character: str,
-    dataset_dir: Path = typer.Option(..., "--dataset"),
-    expert: str = typer.Option("low", "--expert", help="low|high"),
-    run: bool = typer.Option(False, "--run", help="Actually execute (default: print only)."),
-):
-    """Build (and optionally run) the musubi-tuner Wan 2.2 LoRA training sequence."""
-    from .train.wan import build_wan_lora_cmd  # noqa: PLC0415
+def _train_common(character: str, dataset: Path | None):
+    cfg, chars, src = _load(character)
+    dataset_dir = dataset or chars / src.character_id / "dataset"
+    from .train.dataset import validate_captions  # noqa: PLC0415
 
-    cfg, _, src = _load(character)
-    plan = build_wan_lora_cmd(cfg, src, dataset_dir, expert)
-    rprint(f"[bold]dataset.toml[/bold] -> {plan['dataset_toml_path']}\n{plan['dataset_toml']}")
+    entries = validate_captions(dataset_dir, src.trigger_token)  # fails loudly
+    rprint(f"[green]captions ok[/green] {len(entries)} images, trigger {src.trigger_token!r}")
+    return cfg, chars, src, dataset_dir
+
+
+def _print_plan(plan: dict) -> None:
+    rprint(
+        f"[bold]{plan['kind']}[/bold]: {plan['n_images']} images x {plan['num_repeats']} repeats = "
+        f"{plan['steps_per_epoch']} steps/epoch x {plan['max_train_epochs']} epochs = {plan['total_steps']} steps"
+    )
+    rprint(f"[bold]dataset toml[/bold] -> {plan['dataset_toml_path']}\n{plan['dataset_toml']}")
+    if "sample_prompts" in plan:
+        rprint(f"[bold]sample prompts[/bold] -> {plan['sample_prompts_path']}\n{plan['sample_prompts']}")
     for cmd in plan["commands"]:
         rprint(" ".join(f'"{c}"' if " " in c else c for c in cmd))
-    if run:
-        import subprocess  # noqa: PLC0415
 
-        Path(plan["dataset_toml_path"]).parent.mkdir(parents=True, exist_ok=True)
-        Path(plan["dataset_toml_path"]).write_text(plan["dataset_toml"], encoding="utf-8")
-        for cmd in plan["commands"]:
-            rprint(f"[cyan]running[/cyan] {cmd[1] if len(cmd) > 1 else cmd[0]}")
-            subprocess.run(cmd, check=True)
+
+def _run_plan(chars, src, plan, dataset_dir):
+    from .train.run import execute_plan, write_manifest, write_plan_files  # noqa: PLC0415
+
+    write_plan_files(plan)
+    manifest = write_manifest(chars, src, plan, dataset_dir)
+    rprint(f"[green]manifest[/green] -> {manifest}")
+    execute_plan(plan, log=rprint)
+    rprint(f"[green]training complete[/green] checkpoints in {plan['output_dir']}")
+
+
+@train_app.command("image")
+def train_image(
+    character: str,
+    dataset: Path = typer.Option(None, "--dataset", help="Default: characters/<id>/dataset."),
+    output_dir: Path = typer.Option(None, "--output-dir", help="Default: outputs/training/<id>/lora_image."),
+    epochs: int = typer.Option(None, "--epochs", help="Default: ~2500 total steps."),
+    blocks_to_swap: int = typer.Option(0, "--blocks-to-swap", help="Retry with 16 on OOM."),
+    dry_run: bool = typer.Option(True, "--dry-run/--run", help="--run executes (blocks until training ends)."),
+    seed: int = typer.Option(42, "--seed"),
+):
+    """Qwen-Image identity LoRA via musubi-tuner: cache latents -> cache TE -> train."""
+    from .train.image import build_image_lora_cmd  # noqa: PLC0415
+
+    cfg, chars, src, dataset_dir = _train_common(character, dataset)
+    out = output_dir or outputs_dir(cfg) / "training" / src.character_id / "lora_image"
+    plan = build_image_lora_cmd(
+        cfg, src, dataset_dir, output_dir=out, max_train_epochs=epochs,
+        blocks_to_swap=blocks_to_swap, seed=seed,
+    )
+    _print_plan(plan)
+    if not dry_run:
+        _run_plan(chars, src, plan, dataset_dir)
+
+
+@train_app.command("wan")
+def train_wan(
+    character: str,
+    expert: str = typer.Option("low", "--expert", help="low|high"),
+    dataset: Path = typer.Option(None, "--dataset", help="Default: characters/<id>/dataset."),
+    output_dir: Path = typer.Option(None, "--output-dir", help="Default: outputs/training/<id>/lora_wan_<expert>."),
+    epochs: int = typer.Option(None, "--epochs", help="Default: ~2500 total steps."),
+    blocks_to_swap: int = typer.Option(0, "--blocks-to-swap", help="Retry with 10 on OOM."),
+    dry_run: bool = typer.Option(True, "--dry-run/--run", help="--run executes (blocks until training ends)."),
+    seed: int = typer.Option(42, "--seed"),
+):
+    """Wan 2.2 expert LoRA via musubi-tuner (task i2v-A14B), images-only likeness training."""
+    from .train.wan import build_wan_lora_cmd  # noqa: PLC0415
+
+    cfg, chars, src, dataset_dir = _train_common(character, dataset)
+    out = output_dir or outputs_dir(cfg) / "training" / src.character_id / f"lora_wan_{expert}"
+    plan = build_wan_lora_cmd(
+        cfg, src, dataset_dir, expert, output_dir=out, max_train_epochs=epochs,
+        blocks_to_swap=blocks_to_swap, seed=seed,
+    )
+    _print_plan(plan)
+    if not dry_run:
+        _run_plan(chars, src, plan, dataset_dir)
 
 
 @train_app.command("select")
 def train_select(
     checkpoint_dir: Path,
     character: str = typer.Option(..., "--character"),
+    by: str = typer.Option("mean", "--by", help="mean (image LoRA) | min (video LoRA, worst frame)"),
+    inertia: bool = typer.Option(True, "--inertia/--no-inertia", help="Flag near-identical samples (prompt inertia)."),
 ):
-    """Score sample images from each checkpoint and rank by identity."""
+    """Score sample images from each checkpoint and rank by identity (frontal samples only)."""
     from .train.select import rank_checkpoints  # noqa: PLC0415
 
     cfg, chars, src = _load(character)
-    ranking = rank_checkpoints(checkpoint_dir, src, _scorer(cfg, chars))
+    ranking = rank_checkpoints(checkpoint_dir, src, _scorer(cfg, chars), by=by, check_inertia=inertia)
     for row in ranking:
         rprint(row)
     if not ranking:

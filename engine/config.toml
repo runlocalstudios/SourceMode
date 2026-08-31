@@ -23,9 +23,9 @@ frame_stride = 8          # video scoring: sample every Nth frame
 
 [training]
 musubi_tuner_path = 'C:\dev\e2egen\vendor\musubi-tuner'   # read-only vendored install, v0.3.4
-# Image-LoRA trainer: neither AI-Toolkit nor diffusion-pipe found at inventory time.
-# TODO: fill in when one is installed (musubi's qwen_image_train_network.py is the likely path).
-image_trainer_path = ''
+# musubi-tuner trains BOTH LoRAs (qwen_image_train_network.py ships in 0.3.4);
+# no separate image trainer needed.
+image_trainer_path = 'C:\dev\e2egen\vendor\musubi-tuner'
 
 [models]
 # Training needs fp16 (fp8_scaled model FILES are unsupported by musubi-tuner).
@@ -41,6 +41,11 @@ qwen_edit = 'qwen_image_edit_2511_fp8mixed.safetensors'       # 2511 has no fp8_
 qwen_image = 'qwen_image_2512_fp8_e4m3fn.safetensors'         # T2I keyframes (matches the real export)
 qwen_text_encoder = 'qwen_2.5_vl_7b_fp8_scaled.safetensors'
 qwen_vae = 'qwen_image_vae.safetensors'
+# Training-grade files (musubi-tuner cannot load fp8_scaled/fp8_e4m3fn FILES;
+# ComfyUI umt5 safetensors have HF-style keys musubi's T5 can't read).
+qwen_image_bf16 = 'qwen_image_2512_bf16.safetensors'          # downloaded 2026-08-31
+qwen_text_encoder_bf16 = 'qwen_2.5_vl_7b.safetensors'         # downloaded 2026-08-31
+wan_t5_train = 'models_t5_umt5-xxl-enc-bf16.pth'              # official Wan-AI T5, downloaded 2026-08-31
 
 [decomposer]
 qwen3_url = 'http://127.0.0.1:11434/v1'   # OpenAI-compatible (Ollama / LM Studio)
