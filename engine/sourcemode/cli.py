@@ -339,6 +339,10 @@ def render_smoke(
         None, "--wan-low-lora",
         help="Override the wan_low_noise LoRA (ComfyUI-relative name) — checkpoint selection renders.",
     ),
+    image_lora: str = typer.Option(
+        None, "--image-lora",
+        help="Override the image LoRA (ComfyUI-relative name) — checkpoint comparison renders.",
+    ),
 ):
     """Small real render straight to outputs/smoke/, with timing."""
     import time  # noqa: PLC0415
@@ -354,10 +358,13 @@ def render_smoke(
     from .render.sidecar import write_sidecar  # noqa: PLC0415
 
     cfg, chars, src = _load(character)
+    overrides = {}
     if wan_low_lora is not None:
-        src = src.model_copy(
-            update={"lora_paths": src.lora_paths.model_copy(update={"wan_low_noise": wan_low_lora})}
-        )
+        overrides["wan_low_noise"] = wan_low_lora
+    if image_lora is not None:
+        overrides["image_lora"] = image_lora
+    if overrides:
+        src = src.model_copy(update={"lora_paths": src.lora_paths.model_copy(update=overrides)})
     neg = negative if negative is not None else src.negative_block
     client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
     if not dry_run and not client.is_reachable():
