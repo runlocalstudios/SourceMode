@@ -58,14 +58,23 @@ def validate_camera(spec: ShotSpec) -> None:
 
 def keyframe_prompt(source: CharacterSource, spec: ShotSpec) -> str:
     """Keyframe (image LoRA) prompt. NEVER includes facial descriptors —
-    identity is carried entirely by the trigger token + LoRA."""
+    identity is carried entirely by the trigger token + LoRA.
+
+    FRAMING LEADS, immediately after the trigger. Putting the environment
+    first lets a strong compositional noun ("cafe window") become the subject
+    and shrink the character to an incidental figure — measured on Bianca:
+    all four candidates rendered a window with a tiny unrecognisable person
+    (0.30-0.43). Framing-first matches e2egen's recorded finding (INVENTORY.md:
+    "framing must be an explicit primary field or models collapse") and the
+    hand-written prompts that scored 0.72 on the same character.
+    """
     suffix = source.wardrobe_suffix(spec.wardrobe_state)
     trigger = f"{source.trigger_token}{suffix}"
     size = _SHOT_SIZE_WORDS[spec.shot_size]
     return (
-        f"{trigger}, {spec.environment}, "
-        f"{size} composition, "
-        f"{spec.lighting}, "
+        f"{trigger}, {size}, "
+        f"{spec.lighting}, {spec.environment}, "
+        f"{spec.emotion} expression, "
         f"{spec.lens}mm lens, {spec.grade}"
     )
 

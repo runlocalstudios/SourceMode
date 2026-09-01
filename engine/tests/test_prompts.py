@@ -35,6 +35,14 @@ def test_keyframe_never_contains_invariants(sample_source):
     assert "35mm" in prompt
 
 
+def test_keyframe_leads_with_framing_not_environment(sample_source):
+    """A strong environment noun must not outrank the framing directive."""
+    prompt = keyframe_prompt(sample_source, spec(shot_size="MS", environment="cafe window in the late afternoon"))
+    assert prompt.startswith("testchar_tk, medium shot,")
+    assert prompt.index("medium shot") < prompt.index("cafe window")
+    assert "worried expression" in prompt
+
+
 def test_keyframe_wardrobe_suffix(sample_source):
     prompt = keyframe_prompt(sample_source, spec(wardrobe_state="armor"))
     assert "testchar_tk wearing scuffed armor" in prompt
