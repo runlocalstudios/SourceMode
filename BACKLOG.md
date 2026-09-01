@@ -2,6 +2,10 @@
 
 ## Open
 
+- **Decomposer emotion vocabulary is thin:** "she looks up from her book and smiles" produced emotion `neutral` because "smiles" is not in `_EMOTION_WORDS`. Add smile/grin/laugh/frown/scowl/wince etc., or map verbs to emotions.
+- **Re-check Gwen's e2e with the framing-first keyframe template** (DECISIONS #14): her scene-compiled keyframes scored 0.558/0.602 under the old environment-first ordering; hand-written framing-first prompts scored 0.72+. Her numbers on the review page predate the fix.
+- **Bootstrapped sheet vs real photos:** Bianca (34 real photos) reached 0.695 mean vs Gwen (36 bootstrapped) at 0.596, and converged in half the epochs. Consider re-training Gwen from real reference photos if any exist, or improving the bootstrap sheet's realism.
+
 - Try 6-8 lightning steps in [render.medium] (currently 4): distill LoRAs tolerate it and it may buy motion smoothness for ~50% more render time.
 - **Aesthetic/artifact gate:** identity scoring misses visually-bad renders (the kitchen keyframe scored 0.554 mid-pack while being the one Jeremy rejected). Add a jank check (e.g., an aesthetic scorer or VLM pass) alongside identity, or lean on multi-candidate re-rolls.
 

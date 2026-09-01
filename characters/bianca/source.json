@@ -1,0 +1,42 @@
+{
+  "character_id": "bianca",
+  "name": "Bianca",
+  "version": "v001",
+  "trigger_token": "bianca_ch",
+  "invariants": [
+    "hair: long bleached blonde, centre parted",
+    "eyes: brown",
+    "skin: light tan with freckles across nose and cheeks",
+    "lips: full"
+  ],
+  "wardrobe_states": {
+    "default": ""
+  },
+  "reference_images": [
+    "references/ref-00-canonical.png",
+    "references/ref-01-supporting.png",
+    "references/ref-02-supporting.png",
+    "references/ref-03-supporting.png",
+    "references/ref-04-supporting.png"
+  ],
+  "approved_sheet": [
+    "references/ref-00-canonical.png",
+    "references/ref-01-supporting.png",
+    "references/ref-02-supporting.png",
+    "references/ref-03-supporting.png",
+    "references/ref-04-supporting.png"
+  ],
+  "identity_embedding_path": "identity_embedding.npy",
+  "identity_threshold": 0.6178,
+  "negative_block": "face patch, seams, halo, ghosting, duplicated features, plastic skin, waxy skin, beauty filter, copied reference background, text, watermark, logo, distorted hands, extra limbs",
+  "voice": {
+    "reference_clip": null,
+    "notes": ""
+  },
+  "lora_paths": {
+    "image_lora": "sourcemode\\bianca\\bianca_image_v001.safetensors",
+    "wan_low_noise": null,
+    "wan_high_noise": null
+  },
+  "approved": true
+}

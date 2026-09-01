@@ -2,6 +2,16 @@
 
 Append-only. Newest first.
 
+## #14 — 2026-09-01: Second character (Bianca) validates the pipeline and exposes two real bugs
+
+Bianca ported from e2egen (34 real curated photos, `LORApicked` provenance) as the second character. **The pipeline generalised with zero code changes to run it** — only a port script. Gate calibrated to 0.7149 intra / threshold 0.6178, with Gwen scoring 0.2964 as a negative (clean separation, so the scorer discriminates between two same-style photoreal characters). Training: 34 imgs x 5 repeats = 170 steps/epoch, plateaued by epoch 4 (0.682/0.698/0.695/0.683) — **faster and higher than Gwen** (best 0.596), evidence that a real-photo dataset beats a bootstrapped Qwen-Edit sheet. Winner e5 (mean 0.695, min 0.628); 8-keyframe proof mean 0.628 with 4/8 over threshold vs Gwen's 0/8, and her profile scored 0.686 despite the dataset containing no profiles.
+
+Two bugs the second character exposed, both fixed:
+1. **Checkpoint selection ranked on raw mean** (2a88493): e4 led e5 by 0.003 (noise on 4 samples) while its worst sample was 0.106 lower. Scores within `SCORE_TOLERANCE` now tie and break on the other statistic, then toward the earlier epoch.
+2. **Keyframe template put environment before framing** (7c21eae): a strong compositional noun hijacked the subject slot — "cafe window in the late afternoon" rendered a *window* with a tiny unrecognisable person in all 4 candidates (0.30-0.43, all fail). Framing-first on the identical brief: **0.716-0.747, all pass.** This affected every scene-compiled keyframe including Gwen's (her e2e keyframes scored 0.558/0.602 vs 0.72+ for hand-written framing-first prompts) and matches e2egen's recorded finding that framing must be an explicit primary field.
+
+Also measured: single keyframe renders have a **per-seed LoRA-activation lottery** — 2 of 8 proof renders came back as a different person entirely. Both a reseed and the next checkpoint fixed them (6/6 diagnostic renders passed), and the gate caught both. The 4-candidate + best-score design in `run_scene` is the mitigation, and it held on the fixed e2e (all 4 candidates 0.69-0.75).
+
 ## #13 — 2026-08-31: Medium is the working pass; character video LoRA unplugged; video LoRA slots stay generic
 
 Jeremy's calls, executed same evening. **[render.medium]** = final-quality keyframes (50-step Qwen, identity lives there) + 4-step lightning video at full 1024x1280: measured 634 s for the 6 s proof shot AND it out-scored the 2.4 h final on identity (min 0.441/mean 0.540 vs 0.314/0.417 — distilled sampling drifts the face less over 145 frames). Full final stays for hero shots. **gwen v003 approved** (new `source approve` command) and synced to Neon. **lora_paths.wan_low_noise nulled** per the three-loss A/B record; the wan22_i2v template keeps both per-stage LoRA slots — a character LoRA (if retrained) takes the slot at 1.0, else a generic style/motion LoRA from `[video].lora_high/lora_low` fills it capped at MAX_OTHER_STRENGTH 0.6 (per-slot strengths: LORA_STRENGTH_HIGH/LOW).
