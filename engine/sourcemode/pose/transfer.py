@@ -57,8 +57,9 @@ INSTRUCTION = (
     "same as the pose we are trying to copy. Change the field of view and angle to "
     "match exactly image 2. Head tilt and eye gaze pose should match the person in image 2. "
     "Her hair is exactly as it is in image 1 and must not be restyled: identical length, "
-    "identical parting, identical colour, falling the same way. Hair that is long in image 1 "
-    "is equally long at the back of her head."
+    "identical parting, identical colour, falling the same way. It keeps exactly the length "
+    "it has in image 1, at the back of her head as well as the front, neither lengthened nor "
+    "shortened."
 )
 
 # How the hair is GATHERED is a structural detail on the side the source never
@@ -157,6 +158,32 @@ def outfit_fidelity(source: Path, candidate: Path) -> float:
         w * max(0.0, 1.0 - float(np.linalg.norm(cand_cols - c, axis=1).min()) / 120.0)
         for c, w in zip(src_cols, src_w)
     ))
+
+
+# Directory names that describe the pipeline rather than the subject, so they
+# never help identify whose asset this is.
+_GENERIC_DIRS = {"output", "outputs", "game-asset-gen", "cutouts", "candidates",
+                 "assets", "art-source", "characters"}
+
+
+def asset_label(source: Path) -> str:
+    """Name the collection a source asset belongs to, e.g. 'priyanka_weekly_casual'.
+
+    Results used to be named from the source FILENAME alone, which silently
+    destroyed work: maya and priyanka both have weekly_casual/casual_01_standing,
+    so the second run overwrote the first result and nothing said so. Found by
+    running the pose across the cast.
+
+    The label is the nearest ancestor directory that names something real (the
+    character) plus the immediate folder (the outfit), skipping pipeline
+    directories in between.
+    """
+    outfit = source.parent.name
+    for ancestor in source.parent.parents:
+        name = ancestor.name
+        if name and name.lower() not in _GENERIC_DIRS:
+            return f"{name}_{outfit}" if name != outfit else name
+    return outfit or "unlabelled"
 
 
 def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: str,
@@ -304,7 +331,11 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
             others = sorted((v for k, v in scored.items() if k != best), reverse=True)
             detail = f"  score {scored[best]:.3f} (beat {', '.join(f'{s:.2f}' for s in others)})"
 
-        final = out_dir / f"{path.stem.replace('_standing', '')}_{pose['suffix']}_{chosen}.webp"
+        # Namespaced by asset_label so two characters sharing an outfit slug
+        # cannot overwrite each other's results.
+        final_dir = out_dir / asset_label(path)
+        final_dir.mkdir(parents=True, exist_ok=True)
+        final = final_dir / f"{path.stem.replace('_standing', '')}_{pose['suffix']}_{chosen}.webp"
         cut_out(best, final, size)
         ok += 1
         log(f"  [{ok}/{len(sources)}] {chosen:20} {final.name}{detail}  {time.monotonic() - started:.0f}s")

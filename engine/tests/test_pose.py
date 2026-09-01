@@ -7,6 +7,8 @@ images that were wrong, which is exactly what a test has to catch instead.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from sourcemode.pose.library import BASE_LIMITS, POSES, gates
@@ -174,3 +176,56 @@ def test_squats_are_not_shot_from_above(pose_key):
     assert "eye level" in prompt
     for phrase in ("high angle", "looking down at", "from above her head"):
         assert phrase not in prompt, f"{pose_key} reintroduces an overhead camera: {phrase}"
+
+
+# --- output naming ---------------------------------------------------------
+
+
+def test_asset_label_separates_characters_sharing_an_outfit_slug():
+    """Results were named from the source FILENAME alone, which lost work.
+
+    maya and priyanka both have weekly_casual/casual_01_standing.png, so the
+    second transfer overwrote the first result with no warning. Found by running
+    the pose across the cast, not by a crash — nothing ever errored.
+    """
+    from pathlib import PurePath
+
+    from sourcemode.pose.transfer import asset_label
+
+    root = "C:/dev/chillafterdark/art-source/characters"
+    maya = Path(f"{root}/maya/game-asset-gen/output/weekly_casual/casual_01_standing.png")
+    priyanka = Path(f"{root}/priyanka/game-asset-gen/output/weekly_casual/casual_01_standing.png")
+    assert asset_label(maya) != asset_label(priyanka)
+    assert asset_label(maya) == "maya_weekly_casual"
+    assert PurePath(maya).name == PurePath(priyanka).name, "the filenames really do collide"
+
+
+def test_asset_label_skips_pipeline_directories():
+    """'output' and 'game-asset-gen' describe the pipeline, not the subject."""
+    from sourcemode.pose.transfer import asset_label
+
+    label = asset_label(Path("/x/characters/zara/game-asset-gen/output/casual_date/a_standing.png"))
+    assert label == "zara_casual_date"
+    for generic in ("output", "game-asset-gen", "characters"):
+        assert generic not in label
+
+
+def test_asset_label_degrades_gracefully_outside_the_game_layout():
+    """--assets takes an arbitrary folder, so this must not raise on any path."""
+    from sourcemode.pose.transfer import asset_label
+
+    assert asset_label(Path("/tmp/loose/img_standing.png"))
+    assert asset_label(Path("img_standing.png"))
+
+
+def test_hair_length_instruction_is_symmetric():
+    """The instruction used to protect only LONG hair.
+
+    "Hair that is long in image 1 is equally long at the back" says nothing
+    about short hair, and a chin-length bob came back well past the shoulders.
+    Length must be pinned in both directions — without naming a style, which
+    would introduce it.
+    """
+    text = INSTRUCTION.lower()
+    assert "neither lengthened nor shortened" in text
+    assert "hair that is long" not in text, "asymmetric phrasing reintroduced"
