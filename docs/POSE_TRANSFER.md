@@ -163,6 +163,32 @@ strip braids from characters who genuinely have one.
 So a preservation instruction may only ASSERT that something is unchanged. It
 may never enumerate what that thing might be, in either list.
 
+### The exception: `--hair`
+
+Rule 6 forbids naming a style the model must *guess* about. It does not forbid
+telling it something true that it cannot see.
+
+How hair is GATHERED lives on the side a front-facing source never shows, so a
+rear view has to invent it — and it always invents the same thing, a single
+tail. Maya's two low pigtails came back as one ponytail every time, with the
+generic "her hair is unchanged" instruction doing nothing, because the
+instruction is only about *not restyling* what is visible.
+
+`--hair "two low pigtails, one on each side, tied at jaw level"` appends a
+clause naming the real style and forbidding the observed failure (merging,
+regathering, letting it down). Verified on a full rear view, where both tails
+have to be visible: single ponytail before, two correct pigtails after.
+
+Two constraints keep it honest:
+
+- **Only pass it when it is true.** It is the stepladder noun with the safety
+  off — describing pigtails that aren't there will produce pigtails.
+- **It is opt-in.** With no `--hair`, the prompt is byte-identical to the
+  un-hinted one, so loose-haired characters cannot regress. That is asserted in
+  `test_hair_hint_absent_by_default`.
+
+Loose hair needs nothing. This is only for tied styles.
+
 ## Files
 
 | path | what |

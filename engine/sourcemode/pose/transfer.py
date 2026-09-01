@@ -60,6 +60,18 @@ INSTRUCTION = (
     "identical parting, identical colour, falling the same way. Hair that is long in image 1 "
     "is equally long at the back of her head."
 )
+
+# How the hair is GATHERED is a structural detail on the side the source never
+# shows, so a rear view has to invent it — and it defaults to a single tail.
+# Two low pigtails reliably collapsed into one ponytail with the generic
+# instruction above. The style therefore cannot be inferred; it has to be
+# stated per asset, and only when it is actually true: naming a style that is
+# not there introduces it (see the braid incident in git history).
+HAIR_HINT = (
+    " In image 1 her hair is worn in {hair}, and it stays in exactly that style from every "
+    "angle, including from behind. Do not gather it differently, do not merge it, do not let "
+    "it down."
+)
 NEGATIVE = (
     "different outfit, different clothing, wardrobe change, changed colours, "
     "restyled hair, different hairstyle, changed hair, shorter hair, cropped hair, "
@@ -147,7 +159,8 @@ def outfit_fidelity(source: Path, candidate: Path) -> float:
     ))
 
 
-def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: str) -> dict:
+def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: str,
+                   hair: str | None = None) -> dict:
     from ..config import workflows_dir  # noqa: PLC0415
     from ..render.workflow import load_template, prune_placeholder_loras, substitute  # noqa: PLC0415
 
@@ -156,7 +169,8 @@ def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: 
         "MODEL": cfg["models"]["qwen_edit"],
         "TEXT_ENCODER": cfg["models"]["qwen_text_encoder"],
         "VAE": cfg["models"]["qwen_vae"],
-        "POSITIVE": INSTRUCTION, "NEGATIVE": NEGATIVE,
+        "POSITIVE": INSTRUCTION + (HAIR_HINT.format(hair=hair) if hair else ""),
+        "NEGATIVE": NEGATIVE,
         "IMAGE": init_name, "REF_IMAGE": ref_name,
         "LORA_PATH": "", "LORA_STRENGTH": 1.0,  # no character LoRA -> slot pruned
         "ANYPOSE_BASE": ANYPOSE_BASE, "ANYPOSE_BASE_STRENGTH": ANYPOSE_STRENGTH,
@@ -234,7 +248,7 @@ def make_reference(cfg, client, pose_key: str, variant: str, library: Path,
 
 def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out_dir: Path,
              model_path: str, *, variant: str | None = None, candidates: int = 4,
-             seed: int = 8801, log=print) -> int:
+             seed: int = 8801, hair: str | None = None, log=print) -> int:
     """Run pose transfer over a list of source assets. Returns the success count."""
     pose = POSES[pose_key]
     variants = pose["variants"]
@@ -265,7 +279,8 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
         rendered: list[Path] = []
         for c in range(max(1, candidates)):
             nodes = build_workflow(cfg, init_name, uploaded_refs[chosen],
-                                   seed=seed + i * 100 + c, prefix=f"posetransfer/{path.stem}")
+                                   seed=seed + i * 100 + c, prefix=f"posetransfer/{path.stem}",
+                                   hair=hair)
             files = client.outputs(client.wait(client.submit(nodes)))
             if not files:
                 continue
