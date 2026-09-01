@@ -13,7 +13,10 @@ dependencies = [
 
 [project.optional-dependencies]
 gates = ["insightface>=0.7", "onnxruntime-gpu>=1.17", "numpy>=1.26", "opencv-python-headless>=4.9", "pillow>=10.0"]
-voice = ["chatterbox-tts>=0.1"]
+# resemble-perth (chatterbox's audio watermarker) imports pkg_resources without
+# declaring setuptools; without it perth silently sets PerthImplicitWatermarker
+# to None and chatterbox dies with "'NoneType' object is not callable".
+voice = ["chatterbox-tts>=0.1", "setuptools>=70,<81"]
 db = ["psycopg[binary]>=3.1"]
 
 [project.scripts]
@@ -21,6 +24,11 @@ sourcemode = "sourcemode.cli:app"
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
+
+# chatterbox-tts -> pkuseg 0.0.25 has a setup.py that imports numpy but never
+# declares it as a build dependency, so it fails under uv's isolated builds.
+[tool.uv.extra-build-dependencies]
+pkuseg = ["numpy"]
 
 [build-system]
 requires = ["hatchling"]

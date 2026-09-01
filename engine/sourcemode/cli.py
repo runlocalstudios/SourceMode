@@ -573,13 +573,20 @@ def voice_say(
     pace: str = typer.Option("normal", "--pace"),
     out: Path = typer.Option(None, "--out"),
     dry_run: bool = typer.Option(False, "--dry-run"),
+    device: str = typer.Option(None, "--device", help="cuda|cpu (default: auto-detect)."),
+    seed: int = typer.Option(None, "--seed", help="Repeatable take."),
 ):
-    """Synthesize speech in the character's voice (Chatterbox)."""
+    """Synthesize speech in the character's voice (Chatterbox).
+
+    With no voice.reference_clip the built-in voice is used — that's the
+    bootstrap path for giving a new character a synthetic voice.
+    """
     from .voice.chatterbox import synthesize  # noqa: PLC0415
 
     cfg, chars, src = _load(character)
     out = out or outputs_dir(cfg) / "voice" / f"{character}.wav"
-    result = synthesize(src, text, out, chars, emotion=emotion, pace=pace, dry_run=dry_run)
+    result = synthesize(src, text, out, chars, emotion=emotion, pace=pace,
+                        dry_run=dry_run, device=device, seed=seed, log=rprint)
     rprint(result)
 
 
