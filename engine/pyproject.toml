@@ -17,6 +17,9 @@ gates = ["insightface>=0.7", "onnxruntime-gpu>=1.17", "numpy>=1.26", "opencv-pyt
 # declaring setuptools; without it perth silently sets PerthImplicitWatermarker
 # to None and chatterbox dies with "'NoneType' object is not callable".
 voice = ["chatterbox-tts>=0.1", "setuptools>=70,<81"]
+# Pose transfer: mediapipe measures the pose, rembg restores the alpha cutout.
+# Both in-process — the original tool shelled out to two separate venvs.
+pose = ["mediapipe>=1.0", "rembg>=2.0", "numpy>=1.26", "pillow>=10.0"]
 db = ["psycopg[binary]>=3.1"]
 
 [project.scripts]

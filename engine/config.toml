@@ -115,3 +115,14 @@ max_frames = 145          # 4n+1; 145 @ 24fps ~ 6s, proven on this 5090
 
 [voice]
 engine = "chatterbox"
+
+[pose]
+# Pose-transfer tooling: takes an existing character render and produces the
+# same character, same outfit, in a new pose. Used by Chill After Dark's asset
+# pipeline; the game repo holds no tooling.
+library = '../pose-library'        # reference photos, one per pose+variant
+outputs = 'outputs/pose-transfer'  # results land here for review
+# MediaPipe pose landmarker (~30MB, gitignored). Download with:
+#   curl -L -o engine/models/pose_landmarker_heavy.task \
+#     https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/latest/pose_landmarker_heavy.task
+landmarker = 'models/pose_landmarker_heavy.task'

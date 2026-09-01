@@ -22,6 +22,7 @@ render_app = typer.Typer(no_args_is_help=True, help="ComfyUI rendering.")
 train_app = typer.Typer(no_args_is_help=True, help="LoRA training command builders + checkpoint selection.")
 bootstrap_app = typer.Typer(no_args_is_help=True, help="Character-sheet dataset bootstrap.")
 voice_app = typer.Typer(no_args_is_help=True, help="Voice synthesis (Chatterbox).")
+pose_app = typer.Typer(no_args_is_help=True, help="Pose transfer: same character and outfit, new pose.")
 app.add_typer(source_app, name="source")
 app.add_typer(gates_app, name="gates")
 app.add_typer(prompts_app, name="prompts")
@@ -29,6 +30,7 @@ app.add_typer(render_app, name="render")
 app.add_typer(train_app, name="train")
 app.add_typer(bootstrap_app, name="bootstrap")
 app.add_typer(voice_app, name="voice")
+app.add_typer(pose_app, name="pose")
 
 
 def _ctx():
@@ -588,6 +590,101 @@ def voice_say(
     result = synthesize(src, text, out, chars, emotion=emotion, pace=pace,
                         dry_run=dry_run, device=device, seed=seed, log=rprint)
     rprint(result)
+
+
+# --- pose ------------------------------------------------------------------
+
+
+def _pose_ctx():
+    from .config import resolve_path  # noqa: PLC0415
+
+    cfg = load_config()
+    p = cfg["pose"]
+    return cfg, resolve_path(p["library"]), str(resolve_path(p["landmarker"]))
+
+
+@pose_app.command("list")
+def pose_list():
+    """Show available poses, their variants and the metrics each one gates on."""
+    from .pose import POSES, gates  # noqa: PLC0415
+
+    _, library, _ = _pose_ctx()
+    for name, pose in POSES.items():
+        target, _, _ = gates(pose)
+        have = [v for v in pose["variants"] if (library / f"{name}_{v}.png").exists()]
+        missing = [v for v in pose["variants"] if v not in have]
+        rprint(f"[bold]{name}[/bold]  gates: {', '.join(sorted(target))}")
+        rprint(f"  references: {len(have)}/{len(pose['variants'])} present"
+               + (f" [yellow](missing: {', '.join(missing)})[/yellow]" if missing else ""))
+
+
+@pose_app.command("make-ref")
+def pose_make_ref(
+    pose: str = typer.Argument(..., help="Pose name (see `sourcemode pose list`)."),
+    variant: str = typer.Option(None, "--variant", help="Just this one variant."),
+    seed: int = typer.Option(8801, "--seed"),
+):
+    """Render this pose's reference photos, measure them, keep the best."""
+    from .pose import POSES  # noqa: PLC0415
+    from .pose.transfer import make_reference  # noqa: PLC0415
+    from .render.client import ComfyUIClient  # noqa: PLC0415
+
+    if pose not in POSES:
+        rprint(f"[red]unknown pose {pose!r}[/red] — try: {', '.join(POSES)}")
+        raise typer.Exit(2)
+    cfg, library, landmarker = _pose_ctx()
+    client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
+    if not client.is_reachable():
+        rprint("[red]ComfyUI is not reachable[/red]")
+        raise typer.Exit(2)
+    wanted = [variant] if variant else list(POSES[pose]["variants"])
+    for j, v in enumerate(wanted):
+        rprint(f"  [cyan]{v}[/cyan]:")
+        make_reference(cfg, client, pose, v, library, landmarker, seed + j * 1000, log=rprint)
+
+
+@pose_app.command("transfer")
+def pose_transfer_cmd(
+    pose: str = typer.Argument(..., help="Pose name (see `sourcemode pose list`)."),
+    assets: Path = typer.Option(..., "--assets", help="Folder of source *_standing.webp renders."),
+    out: Path = typer.Option(None, "--out", help="Where results go (default: config [pose].outputs)."),
+    variant: str = typer.Option(None, "--variant", help="Pin one variant instead of random."),
+    limit: int = typer.Option(3, "--limit"),
+    candidates: int = typer.Option(4, "--candidates", help="Renders per image; best wins."),
+    pattern: str = typer.Option("*_standing.webp", "--pattern"),
+    seed: int = typer.Option(8801, "--seed"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+):
+    """Re-pose every matching asset, keeping its outfit and identity."""
+    from .pose import POSES  # noqa: PLC0415
+    from .pose.transfer import transfer  # noqa: PLC0415
+    from .render.client import ComfyUIClient  # noqa: PLC0415
+
+    if pose not in POSES:
+        rprint(f"[red]unknown pose {pose!r}[/red] — try: {', '.join(POSES)}")
+        raise typer.Exit(2)
+    cfg, library, landmarker = _pose_ctx()
+    sources = sorted(Path(assets).glob(pattern))[:limit]
+    if not sources:
+        rprint(f"[red]no {pattern} in {assets}[/red]")
+        raise typer.Exit(2)
+
+    out = out or outputs_dir(cfg) / "pose-transfer"
+    rprint(f"{len(sources)} image(s) -> {pose}, {candidates} candidates each")
+    for s in sources:
+        rprint(f"  {s.name}")
+    if dry_run:
+        raise typer.Exit(0)
+
+    client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
+    if not client.is_reachable():
+        rprint("[red]ComfyUI is not reachable[/red]")
+        raise typer.Exit(2)
+    ok = transfer(cfg, client, sources, pose, library, Path(out), landmarker,
+                  variant=variant, candidates=candidates, seed=seed, log=rprint)
+    rprint(f"\n[green]{ok}/{len(sources)}[/green] written to {out}")
+    rprint("Review these before copying anything into a game repo.")
+    raise typer.Exit(0 if ok == len(sources) else 1)
 
 
 if __name__ == "__main__":

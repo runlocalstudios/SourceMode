@@ -64,3 +64,6 @@ characters/**/_rejected/
 .vercel
 .env*
 !.env.example
+
+# pose landmarker model (30MB, re-downloadable)
+engine/models/*.task
