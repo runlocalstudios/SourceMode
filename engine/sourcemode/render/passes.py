@@ -174,11 +174,17 @@ def build_edit_workflow(
     seed: int,
     render_pass: str,
     filename_prefix: str | None = None,
+    ref_image_name: str | None = None,
 ) -> tuple[dict, dict]:
     """Return (workflow_nodes, settings_used) for the Qwen-Image-Edit 2511 template.
 
     Output resolution is chosen by FluxKontextImageScale from the input image
     (~1MP), matching the verified export.
+
+    `ref_image_name` switches to the two-image template: image1 stays the
+    subject (identity + wardrobe) and image2 becomes a pose/composition
+    reference. Text alone does not pin a pose down reliably — a reference
+    image does, and TextEncodeQwenImageEditPlus takes image1/image2/image3.
     """
     preset = cfg["render"][render_pass]
     image_lora = source.lora_paths.image_lora or ""
@@ -214,7 +220,11 @@ def build_edit_workflow(
     }
     from ..config import workflows_dir  # noqa: PLC0415
 
-    template = load_template(workflows_dir(cfg), "qwen_image_edit")
+    name = "qwen_image_edit"
+    if ref_image_name:
+        name = "qwen_image_edit_ref"
+        settings["REF_IMAGE"] = ref_image_name
+    template = load_template(workflows_dir(cfg), name)
     return prune_placeholder_loras(substitute(template, settings)), settings
 
 
