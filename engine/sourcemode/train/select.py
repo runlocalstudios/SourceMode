@@ -6,9 +6,12 @@ Sample layouts understood:
 - subdirectories per checkpoint containing images (tests, ad-hoc layouts).
 
 Ranking: by mean (image LoRA, comparable frontal samples) or min (video LoRA,
-worst-frame-matters) identity score, rounded to 3 decimals; ties break toward
-the EARLIER checkpoint (less overfit). Works with any Scorer — inject a fake
-for tests or dry runs.
+worst-frame-matters) identity score. Scores within SCORE_TOLERANCE of each
+other are treated as TIED — with only 4 samples a 0.003 gap is noise — and the
+tie is broken by the other statistic (a checkpoint whose worst sample is much
+better is the safer pick), then toward the EARLIER checkpoint (less overfit).
+Found on Bianca: epoch 4 led on mean by 0.003 while its worst sample scored
+0.106 lower than epoch 5's. Works with any Scorer — inject a fake for tests.
 
 Prompt-inertia check: the 4 sample prompts vary background/lighting, so their
 mean color/brightness should differ. Near-identical image statistics across a
@@ -26,6 +29,8 @@ from ..source import CharacterSource
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 _SAMPLE_TOKEN = re.compile(r"_(e?\d{6})_")
 INERTIA_BRIGHTNESS_STD = 8.0  # of 0-255; below this the samples are suspiciously uniform
+# Primary scores this close are treated as tied (4-sample noise floor).
+SCORE_TOLERANCE = 0.01
 
 
 def _epoch_number(name: str) -> int:
@@ -84,10 +89,13 @@ def rank_checkpoints(
     *,
     by: str = "mean",
     check_inertia: bool = False,
+    tolerance: float = SCORE_TOLERANCE,
 ) -> list[dict]:
     """Return [{checkpoint, mean_score, min_score, n_scored, unavailable, ...}] best-first.
 
-    `by` is "mean" or "min"; ties (3 decimals) break toward earlier checkpoints.
+    `by` picks the primary statistic ("mean" or "min"). Primaries within
+    `tolerance` are tied and break on the other statistic, then on the earlier
+    checkpoint.
     """
     if by not in ("mean", "min"):
         raise ValueError(f"by must be 'mean' or 'min', got {by!r}")
@@ -115,11 +123,17 @@ def rank_checkpoints(
                 row.update(stats)
         results.append(row)
 
-    key_field = "mean_score" if by == "mean" else "min_score"
+    primary = "mean_score" if by == "mean" else "min_score"
+    secondary = "min_score" if by == "mean" else "mean_score"
 
     def sort_key(r: dict):
-        score = r[key_field]
-        return (score is None, -round(score, 3) if score is not None else 0.0, _epoch_number(r["checkpoint"]))
+        score = r[primary]
+        if score is None:
+            return (1, 0.0, 0.0, 0)
+        # Quantise to the tolerance grid so near-equal primaries share a band
+        # and the secondary statistic decides between them.
+        band = round(score / tolerance) if tolerance > 0 else score
+        return (0, -band, -(r[secondary] or 0.0), _epoch_number(r["checkpoint"]))
 
     results.sort(key=sort_key)
     return results

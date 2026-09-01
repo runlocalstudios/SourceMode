@@ -262,6 +262,33 @@ def test_select_tie_breaks_toward_earlier_checkpoint(sample_source, tmp_path):
     assert [r["checkpoint"] for r in ranking] == ["e000001", "e000002", "e000003"]
 
 
+def test_select_near_tie_prefers_better_worst_sample(sample_source, tmp_path):
+    """Bianca case: e4 led on mean by 0.003 but its worst sample was 0.106 lower."""
+    sample = tmp_path / "sample"
+    sample.mkdir()
+    for epoch in (4, 5):
+        for i in range(2):
+            (sample / f"x_e{epoch:06d}_{i:02d}_ts_1.png").write_bytes(b"x")
+
+    class Bianca:
+        # e4: 0.874/0.522 -> mean 0.698, min 0.522
+        # e5: 0.762/0.628 -> mean 0.695, min 0.628
+        def score(self, asset_path, source):
+            e4 = "e000004" in asset_path.name
+            first = "_00_" in asset_path.name
+            if e4:
+                return GateResult(score=0.874 if first else 0.522, passed=None)
+            return GateResult(score=0.762 if first else 0.628, passed=None)
+
+    ranking = rank_checkpoints(tmp_path, sample_source, Bianca())
+    assert ranking[0]["checkpoint"] == "e000005"  # near-tie on mean -> better min wins
+    assert ranking[0]["min_score"] == pytest.approx(0.628)
+
+    # a real mean gap (outside tolerance) still decides
+    strict = rank_checkpoints(tmp_path, sample_source, Bianca(), tolerance=0.0001)
+    assert strict[0]["checkpoint"] == "e000004"
+
+
 def test_select_rejects_unknown_by(sample_source, tmp_path):
     with pytest.raises(ValueError):
         rank_checkpoints(tmp_path, sample_source, MappedScorer({}), by="median")
