@@ -67,3 +67,9 @@ characters/**/_rejected/
 
 # pose landmarker model (30MB, re-downloadable)
 engine/models/*.task
+
+# pose-library working artifacts: rejected candidates and pre-overwrite backups.
+# The CHOSEN reference photos (pose-library/*.png) are committed.
+pose-library/_candidates/
+pose-library/_prev/
+pose-library/_probe/

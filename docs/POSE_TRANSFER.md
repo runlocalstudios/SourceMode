@@ -8,10 +8,14 @@ that don't have one.
 ## Run it
 
 ```
-cd C:\dev\chillafterdark
-uv run --project C:/dev/sourcemode/engine python art-source/pose_transfer.py \
-    --character maya --pose kneeling --limit 3
+cd C:\dev\sourcemode\engine
+uv run sourcemode pose list
+uv run sourcemode pose transfer kneeling \
+    --assets "C:/dev/chillafterdark/art-source/characters/maya/game-asset-gen/output/weekly_casual"
 ```
+
+The tooling lives in SourceMode. The game repo holds none of it and is pointed
+at with `--assets`, so the dependency runs the right way.
 
 Results are RGBA webp on the source's pixel grid. Copy them into the game repo
 yourself once you've reviewed them.
@@ -20,12 +24,15 @@ Useful flags:
 
 | flag | effect |
 |---|---|
-| `--pose ...` | `kneeling`, `kneeling_wide`, `standing_rear`, `standing_rear_glance` |
+| pose argument | `kneeling`, `kneeling_wide`, `standing_rear`, `standing_rear_glance`, `squat_deep_hands_knees`, `squat_deep_hands_knees_rear`, `squat_deep_hands_floor`, `squat_deep_hands_floor_rear` |
 | `--variant arms_behind` | pin one arm variant instead of choosing at random |
 | `--candidates 4` | renders per image; the best-scoring one wins |
-| `--outfits casual_01_standing,bar_02_standing` | specific outfits |
-| `--make-ref` | regenerate this pose's reference photos |
+| `--pattern '*_standing.png'` | which source files to pick up |
+| `--limit 3` | how many of them |
+| `--hair "two low pigtails"` | **only for tied hairstyles** — see below |
 | `--dry-run` | show what would run |
+
+`sourcemode pose make-ref <pose>` regenerates a pose's reference photos.
 
 Requires ComfyUI running on 127.0.0.1:8188. About 20 s per candidate, so
 ~80 s per image at the default of 4.
@@ -61,29 +68,63 @@ Then `sourcemode pose make-ref sitting_floor` renders six candidate references,
 measures each, and keeps the best one that passes every gate. Then run it
 against a character.
 
-### Backlog — four squat poses
+### The four squat poses
 
-Not built. Approved for a later session:
+Built. `squat_deep_hands_knees`, `squat_deep_hands_knees_rear`,
+`squat_deep_hands_floor`, `squat_deep_hands_floor_rear`.
 
-| pose | notes |
+Unlike the kneeling family these are shot **level and straight on**, not from
+above, and they are **glamour poses, not exercise photographs**. Both had to be
+said explicitly. An overhead camera plus a neutral description produced fitness
+stock — a muscular athlete mid-workout under flat gym light — so the negative
+now carries `gym, fitness, workout, weightlifting, muscular, bodybuilder,
+grimacing, straining` and the prompt asks for a slim, poised figure under soft
+glamour lighting. The wardrobe stays plain grey because the real outfit comes
+from `image1`; the styling that had to change is posture and lighting.
+
+Depth also had to be described **against the body**, not against geometry.
+"Hips below the level of her knees" is true of a shallow-looking gym squat;
+"bottom hovering just above her heels, the backs of her thighs folded against
+her calves" is something the model can actually see. Nothing is said about
+heels — forcing them flat fights the depth.
+
+#### Calibration, and why it is camera-bound
+
+These bands were calibrated twice, because the camera moved. That is the single
+most useful thing recorded here:
+
+| metric | from overhead | from eye level |
+|---|---|---|
+| `squat_depth`, hands on knees | +0.41 … +0.55 | −0.06 … −0.13 |
+| `foreshorten` | 0.65 … 0.77 | 1.22 … 1.30 |
+| `gaze` | −0.20 … −0.30 | −0.08 … −0.12 |
+
+Same pose, same depth, every number different — one of them inverted. The first
+set of bands was written from anatomical intuition ("deep means hips at or below
+the knees, so gate at ≤ 0") and **rejected six out of six correct references**,
+because from above the knees project lower in frame than the hips. At eye level
+the sign is finally the intuitive one. The bands belong to the camera, not to
+the pose: move the camera and re-measure.
+
+#### `hand_height`, and the metric that looked right and wasn't
+
+What separates hands-on-knees from hands-on-floor is `hand_height` — wrists
+against ankles, in thigh lengths:
+
+| pose | measured |
 |---|---|
-| `squat_deep_hands_knees` | very deep squat, hands resting on knees, facing camera |
-| `squat_deep_hands_knees_rear` | same, seen from behind |
-| `squat_deep_hands_floor` | very deep squat, hands down on the floor, facing camera |
-| `squat_deep_hands_floor_rear` | same, seen from behind |
+| hands on knees | 0.77 … 0.91 |
+| hands on floor | −0.27 … −0.20 |
 
-The rear pair reuses `body_facing` (≈ −1). What all four still need is a
-**squat-depth** gate — none of the existing metrics distinguish a deep squat
-from a shallow one. The measurement to add is hip height relative to knee
-height, normalised by thigh length: hips at or below the knees is a deep
-squat, hips well above them is a half-squat. Without it a reference passes on
-framing while standing half way up, which is the same failure the thigh-spread
-gate was added to catch.
+A full 1.0 of separation with no overlap, and a test asserts the two bands can
+never accept each other's pose.
 
-The front/rear pairs are otherwise cheap, since `standing_rear` already proves
-the rear branch works.
+`torso_bend` was the obvious choice and is **useless** here. Reaching down to
+the floor out of a deep squat leaves the shoulder-hip line vertical: it measured
+0.2–1.3° in *both* poses, so the plausible band of (10, 55) would have rejected
+every correct reference. It was caught only by measuring before trusting it.
 
-### Four rules, all learned the hard way
+### Seven rules, all learned the hard way
 
 1. **Never name a physical object to describe the camera.** "Photograph taken
    from a stepladder" put an actual stepladder in every reference, and AnyPose
@@ -96,13 +137,29 @@ the rear branch works.
    18 out of 18 perfectly good references before this was spotted.
 4. **Add a gate for whatever is specific to the pose.** `kneeling_wide` adds a
    thigh-spread angle; the rear poses add `body_facing` and `head_turn`; the
-   squats will need a depth measure. Without one, a reference passes on framing
-   while getting the pose itself wrong.
+   squats add `squat_depth` and `hand_height`.
+   Without one, a reference passes on framing while getting the pose itself wrong.
 5. **A pose's `ref_target` REPLACES the base set, it does not merge.** Limits
    calibrated on a kneeling figure are meaningless for a standing one — a
    standing torso measures ~1.8-2.3 against shoulder width where a kneeling one
    measures ~0.8. Merging silently inherited the wrong numbers and rejected 6
    out of 6 good rear references. Declare every gate a pose needs, explicitly.
+6. **Every metric measures the PICTURE, not the person — calibrate, never
+   assume.** Three metrics have now been set from intuition and all three were
+   wrong. `thigh_angle`: a real ~60° kneeling stance measures 76–99 from
+   overhead. `squat_depth`: a real deep squat measures **+0.4 to +0.55** from
+   above, not negative, because perspective puts the knees lower in frame than
+   the hips — and **−0.06 to −0.36** for the same pose at eye level.
+   `torso_bend`: the obvious way to detect hands reaching the floor, and it
+   reads 0.2–1.3° whether the hands are on the floor or on the knees, because
+   the torso stays vertical either way. Each band rejected every correct
+   reference. Generate a handful, print the numbers, *then* set the band — and
+   where a band separates two poses, generate the other pose too and check the
+   clusters actually separate.
+7. **A band belongs to a camera, not to a pose.** Moving the squats from an
+   overhead to an eye-level camera changed every threshold, one of them in sign.
+   Re-measure whenever a `ref_prompt`'s camera changes; a test asserts the squat
+   prompts never quietly reintroduce a high angle.
 
 ### The metrics
 
@@ -115,6 +172,8 @@ the rear branch works.
 | `torso_bend` | shoulder-hip line off vertical | 0 upright, 90 horizontal |
 | `body_facing` | **+1.00 facing camera, −1.00 facing away**, no overlap | derived from anatomical left/right shoulder order flipping |
 | `head_turn` | nose offset from ear midpoint, in ear spans | ~0 head square; 1.0-2.5 glancing back |
+| `squat_depth` | hips vs knees in thigh lengths, **as projected** | eye level: deep −0.06 to −0.36. Overhead: the same pose reads +0.41 to +0.55 |
+| `hand_height` | wrists vs ankles in thigh lengths | hands on floor −0.27 to −0.20; hands on knees 0.77-0.91 |
 
 `body_facing` exists because MediaPipe's `visibility` field is useless for this:
 the Tasks API returns 1.0 for every landmark, including a fully turned-away back.
@@ -149,7 +208,7 @@ Note `/art-source/` is gitignored, so none of this is version-controlled. If
 you want the tool tracked, it needs a `!art-source/*.py` exception or a move.
 
 
-## Rule 6 — never name a thing you want preserved
+## Rule 8 — never name a thing you want preserved
 
 Naming a specific noun makes the model draw it, regardless of surrounding
 grammar. "Photograph taken from a stepladder" (meaning camera position) put a

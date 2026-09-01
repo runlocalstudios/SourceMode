@@ -118,8 +118,19 @@ def measure(image_path: Path, model_path: str) -> dict | None:
         # nose offset from the ear midpoint, in ear spans: ~0 square, 1-2.5 glancing back
         "head_turn": abs(px(NOSE)[0] - (px(L_EAR)[0] + px(R_EAR)[0]) / 2) / ear_x,
         # hips relative to knees, in thigh lengths. +ve = hips ABOVE knees
-        # (shallow), <=0 = hips at or below the knees (a genuinely deep squat)
+        # (shallow), <=0 = hips at or below the knees (a genuinely deep squat).
+        # STRONGLY camera-dependent: from a high angle the knees project lower
+        # in frame than the hips, so a genuinely deep squat still reads +0.4 to
+        # +0.55. Level with the subject the same pose reads -0.06 to -0.36.
+        # Recalibrate whenever a pose's camera moves.
         "squat_depth": (knee_mid_y - hip[1]) / (thigh_l or 1.0),
+        # wrists relative to ankles, in thigh lengths. ~0 = hands down at floor
+        # level, +ve = hands carried higher up the body. This is what separates
+        # hands-on-floor from hands-on-knees; torso_bend does NOT, because
+        # reaching down to the floor from a deep squat leaves the torso vertical
+        # (measured 0.2-1.3 degrees, i.e. upright, in both poses).
+        "hand_height": (((px(L_ANK)[1] + px(R_ANK)[1]) / 2)
+                        - ((px(L_WRI)[1] + px(R_WRI)[1]) / 2)) / (thigh_l or 1.0),
     }
 
 

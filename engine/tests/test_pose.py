@@ -91,7 +91,7 @@ def test_rear_poses_gate_on_facing(pose_key):
     rear) because MediaPipe's Tasks API returns visibility 1.0 for every
     landmark, including a back that is fully turned away.
     """
-    if not pose_key.startswith("standing_rear"):
+    if "rear" not in pose_key:
         pytest.skip("not a rear pose")
     target, _, _ = gates(POSES[pose_key])
     assert "body_facing" in target
@@ -105,3 +105,72 @@ def test_pose_declares_variants_and_reference_prompt(pose_key):
     assert "{arms}" in pose["ref_prompt"], f"{pose_key} never substitutes its arm variant"
     # Rule 1: never name a physical object to describe the camera.
     assert "stepladder" not in pose["ref_prompt"].lower()
+
+
+@pytest.mark.parametrize("pose_key", [k for k in POSES if "squat" in k])
+def test_squat_poses_gate_on_depth(pose_key):
+    """Depth is the entire point of a deep squat.
+
+    Without a squat_depth gate a shallow crouch scores fine on framing and
+    proportions, which is how "very deep" quietly becomes "bending a bit".
+
+    These poses are shot at EYE LEVEL, where the sign is the intuitive one:
+    negative means the hips have dropped to or below the knees. That is only
+    true because of the camera. The identical poses shot from overhead measured
+    +0.41 to +0.55 for the same real-world depth, and a band written from
+    anatomical intuition rejected 6 of 6 correct references. The band belongs to
+    the camera, not to the pose.
+    """
+    target, limits, weights = gates(POSES[pose_key])
+    assert "squat_depth" in target
+    lo, hi = limits["squat_depth"]
+    assert lo <= target["squat_depth"] <= hi
+    assert hi <= 0.05, "upper band must exclude a squat whose hips never drop"
+    assert weights["squat_depth"] >= 1.5, "depth should outweigh framing metrics"
+
+
+@pytest.mark.parametrize("pose_key", [k for k in POSES if "squat" in k])
+def test_squats_gate_on_hand_height_not_torso_bend(pose_key):
+    """Where the hands are is what separates the two squat pairs.
+
+    torso_bend is the intuitive choice and is useless here: reaching down to the
+    floor out of a deep squat leaves the shoulder-hip line vertical, so it
+    measured 0.2-1.3 degrees in BOTH poses and a torso_bend band of (10, 55)
+    would have rejected every correct reference. hand_height (wrists vs ankles)
+    separates them by a full 1.0 with no overlap.
+    """
+    target, limits, _ = gates(POSES[pose_key])
+    assert "hand_height" in target
+    assert "torso_bend" not in target, "torso_bend does not discriminate these poses"
+    lo, hi = limits["hand_height"]
+    assert lo <= target["hand_height"] <= hi
+
+
+def test_hand_height_bands_separate_the_two_squat_pairs():
+    """The floor pair and the knees pair must not accept each other.
+
+    Measured: hands on knees 0.77-0.91, hands on floor -0.27 to -0.20. If the
+    bands overlap, the gate cannot tell the poses apart and both collapse to
+    whichever the model prefers.
+    """
+    knees = gates(POSES["squat_deep_hands_knees"])[1]["hand_height"]
+    floor = gates(POSES["squat_deep_hands_floor"])[1]["hand_height"]
+    assert floor[1] < knees[0], f"bands overlap: floor {floor} vs knees {knees}"
+
+    knees_t = gates(POSES["squat_deep_hands_knees"])[0]["hand_height"]
+    floor_t = gates(POSES["squat_deep_hands_floor"])[0]["hand_height"]
+    assert not (floor[0] <= knees_t <= floor[1]), "a hands-on-knees ref would pass the floor gate"
+    assert not (knees[0] <= floor_t <= knees[1]), "a hands-on-floor ref would pass the knees gate"
+
+
+@pytest.mark.parametrize("pose_key", [k for k in POSES if "squat" in k])
+def test_squats_are_not_shot_from_above(pose_key):
+    """These are eye-level poses; an overhead camera made them read as gym drills.
+
+    The calibrated bands are only valid for a level camera, so a prompt that
+    reintroduces a high angle silently invalidates every threshold above.
+    """
+    prompt = POSES[pose_key]["ref_prompt"].lower()
+    assert "eye level" in prompt
+    for phrase in ("high angle", "looking down at", "from above her head"):
+        assert phrase not in prompt, f"{pose_key} reintroduces an overhead camera: {phrase}"
