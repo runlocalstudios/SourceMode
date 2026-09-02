@@ -186,8 +186,60 @@ def asset_label(source: Path) -> str:
     return outfit or "unlabelled"
 
 
+# Footwear is the other thing the source cannot show. These assets are cropped
+# for the game UI, so feet are usually missing or half-cut, and the model then
+# takes whatever the reference did — every barefoot reference produced barefoot
+# results, and zara's half-visible boots became detached brown blobs beside her
+# hips once the pose moved her feet behind her.
+#
+# So footwear is CHOSEN from the outfit rather than guessed per render. A plain
+# mapping, not a model call: it costs nothing, and more importantly it is
+# deterministic, so one outfit gets the same shoes in every pose and every rerun.
+# That consistency is the point — an outfit that changes shoes between poses is
+# worse than one wearing the wrong shoes.
+#
+# Boots are deliberately absent: they are only correct when the source actually
+# shows them, and in that case the "keep what is visible" clause already wins.
+# Slippers are here for the at-home outfits that don't exist yet.
+FOOTWEAR = {
+    "workout": "clean white athletic running trainers",       # before "work" — substring clash
+    "work": "plain black high-heeled court shoes",
+    "work_alternates": "plain black high-heeled court shoes",
+    "work_options": "plain black high-heeled court shoes",
+    "fancy_dining_gallery": "elegant strappy high-heeled sandals",
+    "fancy_town": "elegant strappy high-heeled sandals",
+    "casual_date": "black platform shoes",
+    "weekly_casual": "clean white low-top sneakers",
+}
+FOOTWEAR_DEFAULT = "simple plain flat shoes"
+# Vocabulary the mapping is allowed to draw from, per the brief: sneakers,
+# slippers, platforms, high heels, and boots only when already visible.
+FOOTWEAR_VOCAB = ("sneakers", "trainers", "slippers", "platform", "heel", "flat")
+
+# Ordered so that anything genuinely visible in image 1 wins outright; the
+# chosen pair only fills in feet the source never showed.
+FOOTWEAR_HINT = (
+    " Whatever footwear can be seen in image 1 is kept exactly as it is there — the same "
+    "style, the same colour, the same height — and is completed naturally where the pose now "
+    "shows more of it. Only where image 1 shows no footwear at all does she wear {shoes}. "
+    "Her shoes are a matching pair, both the same, and sit properly on her feet."
+)
+
+
+def footwear_for(source: Path) -> str:
+    """Pick the footwear for an asset from its outfit folder. Deterministic."""
+    outfit = source.parent.name.lower()
+    if outfit in FOOTWEAR:
+        return FOOTWEAR[outfit]
+    # longest first, so "workout" is never matched by "work"
+    for key in sorted(FOOTWEAR, key=len, reverse=True):
+        if key in outfit:
+            return FOOTWEAR[key]
+    return FOOTWEAR_DEFAULT
+
+
 def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: str,
-                   hair: str | None = None) -> dict:
+                   hair: str | None = None, shoes: str | None = None) -> dict:
     from ..config import workflows_dir  # noqa: PLC0415
     from ..render.workflow import load_template, prune_placeholder_loras, substitute  # noqa: PLC0415
 
@@ -196,7 +248,8 @@ def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: 
         "MODEL": cfg["models"]["qwen_edit"],
         "TEXT_ENCODER": cfg["models"]["qwen_text_encoder"],
         "VAE": cfg["models"]["qwen_vae"],
-        "POSITIVE": INSTRUCTION + (HAIR_HINT.format(hair=hair) if hair else ""),
+        "POSITIVE": (INSTRUCTION + (HAIR_HINT.format(hair=hair) if hair else "")
+                     + (FOOTWEAR_HINT.format(shoes=shoes) if shoes else "")),
         "NEGATIVE": NEGATIVE,
         "IMAGE": init_name, "REF_IMAGE": ref_name,
         "LORA_PATH": "", "LORA_STRENGTH": 1.0,  # no character LoRA -> slot pruned
@@ -275,7 +328,8 @@ def make_reference(cfg, client, pose_key: str, variant: str, library: Path,
 
 def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out_dir: Path,
              model_path: str, *, variant: str | None = None, candidates: int = 4,
-             seed: int = 8801, hair: str | None = None, log=print) -> int:
+             seed: int = 8801, hair: str | None = None, shoes: str | None = None,
+             no_shoes: bool = False, log=print) -> int:
     """Run pose transfer over a list of source assets. Returns the success count."""
     pose = POSES[pose_key]
     variants = pose["variants"]
@@ -291,6 +345,10 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
     for i, path in enumerate(sources):
         started = time.monotonic()
         chosen = variant or rng.choice(list(variants))
+        # Explicit --shoes wins; otherwise the outfit decides, deterministically,
+        # so the same outfit wears the same pair in every pose. --no-shoes leaves
+        # feet entirely to the source and the reference, as before.
+        pick_shoes = None if no_shoes else (shoes or footwear_for(path))
         ref_path = library / f"{pose_key}_{chosen}.png"
         if not ref_path.exists():
             log(f"  !! missing reference {ref_path.name} — run make-ref first")
@@ -307,7 +365,7 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
         for c in range(max(1, candidates)):
             nodes = build_workflow(cfg, init_name, uploaded_refs[chosen],
                                    seed=seed + i * 100 + c, prefix=f"posetransfer/{path.stem}",
-                                   hair=hair)
+                                   hair=hair, shoes=pick_shoes)
             files = client.outputs(client.wait(client.submit(nodes)))
             if not files:
                 continue

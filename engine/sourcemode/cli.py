@@ -654,6 +654,8 @@ def pose_transfer_cmd(
     pattern: str = typer.Option("*_standing.webp", "--pattern"),
     seed: int = typer.Option(8801, "--seed"),
     hair: str = typer.Option(None, "--hair", help='Describe a TIED hairstyle, e.g. "two low pigtails". Only when true — naming a style that is not there introduces it.'),
+    shoes: str = typer.Option(None, "--shoes", help="Override the footwear chosen from the outfit. Visible footwear in the source is kept either way."),
+    no_shoes: bool = typer.Option(False, "--no-shoes", help="Do not specify footwear at all; leave feet to the source and the pose reference."),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ):
     """Re-pose every matching asset, keeping its outfit and identity."""
@@ -682,7 +684,8 @@ def pose_transfer_cmd(
         rprint("[red]ComfyUI is not reachable[/red]")
         raise typer.Exit(2)
     ok = transfer(cfg, client, sources, pose, library, Path(out), landmarker,
-                  variant=variant, candidates=candidates, seed=seed, hair=hair, log=rprint)
+                  variant=variant, candidates=candidates, seed=seed, hair=hair,
+                  shoes=shoes, no_shoes=no_shoes, log=rprint)
     rprint(f"\n[green]{ok}/{len(sources)}[/green] written to {out}")
     rprint("Review these before copying anything into a game repo.")
     raise typer.Exit(0 if ok == len(sources) else 1)

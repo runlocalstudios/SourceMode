@@ -229,3 +229,70 @@ def test_hair_length_instruction_is_symmetric():
     text = INSTRUCTION.lower()
     assert "neither lengthened nor shortened" in text
     assert "hair that is long" not in text, "asymmetric phrasing reintroduced"
+
+
+# --- footwear --------------------------------------------------------------
+# Assets are cropped for the game UI, so feet are usually missing or half-cut.
+# The model then copies whatever the reference did: barefoot references produced
+# barefoot results, and zara's half-visible boots became detached brown blobs
+# once the pose swung her feet behind her.
+
+
+def test_footwear_is_deterministic_per_outfit():
+    """Consistency is the whole point.
+
+    An outfit that wears different shoes in different poses is worse than one
+    wearing the wrong shoes, so the choice is a plain mapping, not a model call
+    and not a random pick.
+    """
+    from sourcemode.pose.transfer import footwear_for
+
+    a = Path("/c/zara/game-asset-gen/output/casual_date/casual_date_01_standing.png")
+    b = Path("/c/zara/game-asset-gen/output/casual_date/casual_date_07_standing.png")
+    c = Path("/c/bianca/game-asset-gen/output/casual_date/casual_date_01_standing.png")
+    assert footwear_for(a) == footwear_for(b) == footwear_for(c)
+
+
+def test_workout_is_not_swallowed_by_work():
+    """'work' is a substring of 'workout' — trainers must not become court shoes."""
+    from sourcemode.pose.transfer import footwear_for
+
+    workout = footwear_for(Path("/c/x/output/workout/a_standing.png"))
+    work = footwear_for(Path("/c/x/output/work/a_standing.png"))
+    assert workout != work
+    assert "trainer" in workout or "sneaker" in workout
+    assert "heel" in work
+
+
+def test_every_outfit_maps_into_the_agreed_vocabulary():
+    """Sneakers, slippers, platforms, heels, flats — and never boots by default.
+
+    Boots are only ever correct when the source already shows them, and that
+    case is handled by the "keep what is visible" clause instead.
+    """
+    from sourcemode.pose.transfer import FOOTWEAR, FOOTWEAR_DEFAULT, FOOTWEAR_VOCAB
+
+    for outfit, shoes in {**FOOTWEAR, "_default": FOOTWEAR_DEFAULT}.items():
+        assert any(v in shoes.lower() for v in FOOTWEAR_VOCAB), f"{outfit}: {shoes!r} off-vocabulary"
+        assert "boot" not in shoes.lower(), f"{outfit}: boots must never be the default"
+
+
+def test_footwear_hint_keeps_visible_shoes_before_choosing_any():
+    """Order matters: anything genuinely visible must win over the chosen pair.
+
+    zara wears knee-high boots that the asset crops mid-calf; telling her to put
+    on platforms would override real information the source does show.
+    """
+    from sourcemode.pose.transfer import FOOTWEAR_HINT
+
+    filled = FOOTWEAR_HINT.format(shoes="black platform shoes")
+    keep = filled.lower().index("kept exactly as it is")
+    choose = filled.lower().index("black platform shoes")
+    assert keep < choose, "the chosen pair is stated before the preservation clause"
+    assert "only where" in filled.lower()
+
+
+def test_footwear_hint_absent_by_default_in_the_static_instruction():
+    """--no-shoes must leave the prompt exactly as it was before this feature."""
+    assert "shoe" not in INSTRUCTION.lower()
+    assert "{shoes}" not in INSTRUCTION

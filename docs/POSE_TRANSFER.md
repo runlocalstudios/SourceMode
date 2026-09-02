@@ -30,6 +30,7 @@ Useful flags:
 | `--pattern '*_standing.png'` | which source files to pick up |
 | `--limit 3` | how many of them |
 | `--hair "two low pigtails"` | **only for tied hairstyles** — see below |
+| `--shoes "..."` / `--no-shoes` | override or disable the footwear chosen from the outfit |
 | `--dry-run` | show what would run |
 
 `sourcemode pose make-ref <pose>` regenerates a pose's reference photos.
@@ -207,6 +208,47 @@ against what you see, not against the anatomical number.
 Note `/art-source/` is gitignored, so none of this is version-controlled. If
 you want the tool tracked, it needs a `!art-source/*.py` exception or a move.
 
+
+## Footwear
+
+These assets are cropped for the game UI, so feet are usually missing or cut
+mid-boot. The model then copies whatever the pose reference did — every barefoot
+reference produced barefoot results, and zara's half-visible boots became
+detached brown blobs once a kneeling pose swung her feet behind her.
+
+Footwear is therefore **chosen from the outfit**, by a plain mapping in
+`transfer.py`:
+
+| outfit | footwear |
+|---|---|
+| `weekly_casual` | clean white low-top sneakers |
+| `casual_date` | black platform shoes |
+| `work`, `work_alternates`, `work_options` | plain black high-heeled court shoes |
+| `fancy_town`, `fancy_dining_gallery` | elegant strappy high-heeled sandals |
+| `workout` | clean white athletic running trainers |
+| anything else | simple plain flat shoes |
+
+Three things about that table are deliberate.
+
+It is a **mapping, not a model call** — free, and more importantly deterministic,
+so one outfit wears the same pair in every pose and every rerun. An outfit whose
+shoes change between poses is worse than one wearing the wrong shoes.
+
+**Boots never appear in it.** Boots are only right when the source already shows
+them, and that case is handled by preservation instead. A test enforces this.
+
+**`workout` is listed before `work`** and matched longest-first, because `work`
+is a substring of `workout` and trainers would otherwise become court shoes.
+
+Anything visible in the source still wins outright — the hint keeps visible
+footwear first and only *then* names a pair for feet the source never showed.
+`--shoes "..."` overrides the mapping; `--no-shoes` disables the clause entirely
+and leaves feet to the source and the reference, exactly as before the feature.
+
+Verified: priya's `work` squat went from bare feet to clean black court heels,
+and zara's boots went from shapeless brown masses to structured boots with
+visible soles and buckles. The tan reads darker than the source, which is the
+remaining rough edge — heavily occluded feet are still the hardest case.
 
 ## Rule 8 — never name a thing you want preserved
 
