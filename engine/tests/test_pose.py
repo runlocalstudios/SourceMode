@@ -360,3 +360,95 @@ def test_refine_pose_tolerance_is_tight():
 
     assert 0 < REFINE_POSE_TOLERANCE <= 0.1
     assert REFINE_MIN_GAIN > 0, "must require a real gain, not a tie, to replace the first pass"
+
+
+# --- face identity ---------------------------------------------------------
+# The pose reference is a photograph of a DIFFERENT woman, handed to the model
+# as image2 on every render, so her identity competes with the character's.
+# Masking her face is worth ~+0.07 face similarity on both characters tested.
+
+
+def test_identity_points_exclude_the_ears():
+    """Ears carry head ANGLE, not identity.
+
+    The prompt asks the model to copy the reference's head tilt and gaze, and
+    those cues live in the head outline. Masking the ears too would remove the
+    identity and take the head angle with it.
+    """
+    from sourcemode.pose.face import EARS, IDENTITY_POINTS
+
+    assert not set(EARS) & set(IDENTITY_POINTS)
+    for i in EARS:
+        assert i not in IDENTITY_POINTS
+
+
+def test_face_box_returns_none_when_no_person(tmp_path):
+    """A reference that cannot be measured is still a usable reference."""
+    from PIL import Image
+
+    from sourcemode.pose.face import face_box
+
+    p = tmp_path / "flat.png"
+    Image.new("RGB", (256, 256), (128, 128, 128)).save(p)
+    assert face_box(p, "models/pose_landmarker_heavy.task") is None
+
+
+def test_mask_reference_face_still_writes_when_no_face(tmp_path):
+    """Never drop the reference just because no face was found.
+
+    Returning False must still leave a usable file at dest, otherwise the
+    transfer would upload nothing and fail far from the cause.
+    """
+    from PIL import Image
+
+    from sourcemode.pose.face import mask_reference_face
+
+    src, dest = tmp_path / "s.png", tmp_path / "d.png"
+    Image.new("RGB", (256, 256), (128, 128, 128)).save(src)
+    assert mask_reference_face(src, dest, "models/pose_landmarker_heavy.task") is False
+    assert dest.exists()
+    assert Image.open(dest).size == (256, 256)
+
+
+def test_paste_face_preserves_canvas_and_changes_only_the_box(tmp_path):
+    """Compositing must not move or resize the image it is patching."""
+    from PIL import Image
+
+    from sourcemode.pose.face import paste_face
+
+    base = tmp_path / "base.png"
+    Image.new("RGB", (400, 600), (10, 200, 10)).save(base)
+    patch = Image.new("RGB", (128, 128), (200, 10, 10))
+    out = tmp_path / "out.png"
+    paste_face(base, patch, (100, 100, 228, 228), out, feather=12)
+
+    res = Image.open(out).convert("RGB")
+    assert res.size == (400, 600)
+    assert res.getpixel((10, 10)) == (10, 200, 10), "outside the box must be untouched"
+    r, g, _ = res.getpixel((164, 164))
+    assert r > g, "centre of the box should be the patch"
+
+
+def test_face_module_uses_no_insightface():
+    """Identity generation must stay commercially clean.
+
+    InstantID, PuLID and IP-Adapter FaceID are all built on InsightFace, whose
+    weights are non-commercial, and this output ships in the game. InsightFace
+    is allowed only for scoring candidates in QC tooling.
+    """
+    import ast
+    from pathlib import Path as P
+
+    # Parse imports rather than grep the text: the module docstring names these
+    # deliberately, to record WHY they are not used.
+    src = P(__file__).parent.parent / "sourcemode" / "pose" / "face.py"
+    tree = ast.parse(src.read_text(encoding="utf-8"))
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(a.name.split(".")[0] for a in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    for banned in ("insightface", "instantid", "pulid", "ip_adapter", "ipadapter"):
+        assert banned not in {m.lower() for m in imported}, \
+            f"{banned} must not be used to generate pixels"

@@ -209,6 +209,62 @@ Note `/art-source/` is gitignored, so none of this is version-controlled. If
 you want the tool tracked, it needs a `!art-source/*.py` exception or a move.
 
 
+## Facial identity
+
+Immersion is the bar: a character who kneels and reads as a stranger breaks the
+scene. Two fixes, both measured, both commercially clean.
+
+### 1. Mask the reference's face (default, free)
+
+The pose reference is **a photograph of a different woman**, and it is handed to
+the model as image2 on every single render. Her face competes with the
+character's for the whole generation. Nothing in the prompt out-argues an actual
+photograph of a different face.
+
+`mask_reference_face()` greys out the inner face of the reference before upload.
+Only the inner face — ears, head silhouette and hair edges stay, because the
+prompt asks for the reference's head TILT and gaze, and those cues live in the
+outline. Mask the whole head and the head angle goes with it.
+
+Gates still measure the ORIGINAL reference: the thresholds were calibrated on a
+reference that has a face, and the mask exists for the generator, not the ruler.
+
+Disable with `--no-mask-ref` (A/B only).
+
+### 2. `--refine`, second pass (opt-in, ~2x time)
+
+See below. It stacks with masking.
+
+### Measured, two characters, same seed and variant
+
+| | vivienne / work_03 | sunny / casual_date_03 |
+|---|---|---|
+| as shipped in the batch | 0.373 | 0.378 |
+| A — reference face visible | 0.388 | 0.485 |
+| B — **reference face masked** | 0.458 | 0.552 |
+| C — **masked + refine** | **0.534** | **0.565** |
+
+Masking is worth about **+0.07 on both**, for no extra generation time. Refine
+adds more on top, and visibly restores the smile and face shape — the batch
+renders had neutralised both.
+
+### What was rejected, and why
+
+**InstantID, PuLID, IP-Adapter FaceID** — the usual best-in-class answers, and
+all three are built on **InsightFace, whose weights are non-commercial**. This
+output ships in the game. Per CLAUDE.md, InsightFace stays QC-only: it scores
+which candidate to keep, it never generates a shipped pixel. A test parses
+`face.py`'s imports to enforce that.
+
+**Anything Flux-based** (InfiniteYou, PuLID-FLUX) — Flux dev is non-commercial.
+
+Still open, and the strongest remaining option: a **per-character identity
+LoRA**. A face LoRA carries texture — pores, asymmetry, freckles — that
+embedding methods average away. SourceMode already trains these (musubi-tuner,
+Qwen-Image, proven on gwen and bianca), and the AnyPose workflow already has an
+unused `LORA_PATH` slot wired for exactly this. It costs a training run per
+character.
+
 ## `--refine`: a second pass for the face
 
 The pose pass regenerates the whole figure, so the face is redrawn from scratch

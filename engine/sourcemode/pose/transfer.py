@@ -24,6 +24,7 @@ import random
 import time
 from pathlib import Path
 
+from .face import crop_face, mask_reference_face, paste_face
 from .library import POSES, gates
 from .metrics import measure, pose_similarity, score_against
 
@@ -452,7 +453,8 @@ def make_reference(cfg, client, pose_key: str, variant: str, library: Path,
 def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out_dir: Path,
              model_path: str, *, variant: str | None = None, candidates: int = 4,
              seed: int = 8801, hair: str | None = None, shoes: str | None = None,
-             no_shoes: bool = False, refine: bool = False, log=print) -> int:
+             no_shoes: bool = False, refine: bool = False, mask_reference: bool = True,
+             log=print) -> int:
     """Run pose transfer over a list of source assets. Returns the success count."""
     pose = POSES[pose_key]
     variants = pose["variants"]
@@ -477,7 +479,18 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
             log(f"  !! missing reference {ref_path.name} — run make-ref first")
             continue
         if chosen not in uploaded_refs:
-            uploaded_refs[chosen] = client.upload_image(ref_path)
+            # The reference is a photograph of a DIFFERENT woman, and her face
+            # is handed to the model on every render, competing with the
+            # character's. Mask it. Gates still measure the ORIGINAL, which
+            # still has the face the metrics were calibrated on.
+            to_upload = ref_path
+            if mask_reference:
+                masked = tmp / f"{ref_path.stem}_masked.png"
+                if mask_reference_face(ref_path, masked, model_path):
+                    to_upload = masked
+                else:
+                    log(f"  !! no face found in {ref_path.name}; using it unmasked")
+            uploaded_refs[chosen] = client.upload_image(to_upload)
             ref_metrics[chosen] = measure(ref_path, model_path)
 
         plate = tmp / f"{path.stem}_plate.png"

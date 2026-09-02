@@ -657,6 +657,7 @@ def pose_transfer_cmd(
     shoes: str = typer.Option(None, "--shoes", help="Override the footwear chosen from the outfit. Visible footwear in the source is kept either way."),
     no_shoes: bool = typer.Option(False, "--no-shoes", help="Do not specify footwear at all; leave feet to the source and the pose reference."),
     refine: bool = typer.Option(False, "--refine", help="Second pass: restore face and hair from the source asset. Declines if it cannot improve on the first pass."),
+    no_mask_ref: bool = typer.Option(False, "--no-mask-ref", help="Feed the pose reference with its own face intact (identity competes; for A/B only)."),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ):
     """Re-pose every matching asset, keeping its outfit and identity."""
@@ -693,7 +694,8 @@ def pose_transfer_cmd(
         raise typer.Exit(2)
     ok = transfer(cfg, client, sources, pose, library, Path(out), landmarker,
                   variant=variant, candidates=candidates, seed=seed, hair=hair,
-                  shoes=shoes, no_shoes=no_shoes, refine=refine, log=rprint)
+                  shoes=shoes, no_shoes=no_shoes, refine=refine,
+                  mask_reference=not no_mask_ref, log=rprint)
     rprint(f"\n[green]{ok}/{len(sources)}[/green] written to {out}")
     rprint("Review these before copying anything into a game repo.")
     raise typer.Exit(0 if ok == len(sources) else 1)
