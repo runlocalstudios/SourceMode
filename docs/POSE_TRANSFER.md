@@ -231,6 +231,33 @@ reference that has a face, and the mask exists for the generator, not the ruler.
 
 Disable with `--no-mask-ref` (A/B only).
 
+### 1b. `--skeleton`: a stick figure as image3 (opt-in, free)
+
+A skeleton is the only pose conditioning with **zero identity** in it — no face,
+no hair, no body type, no skin. Rendered from the MediaPipe landmarks already
+computed for gating, so no DWPose or ControlNet-aux dependency.
+
+It is passed as **image3 alongside** the masked photo, not instead of it. The
+photo carries depth, foreshortening and how a body actually folds; a stick
+figure carries none of that, which is precisely why AnyPose exists — its author
+built it to skip OpenPose because skeleton conditioning "can still result in
+depth being incorrect or the pose not fully matching". 2511 also regressed the
+skeleton conditioning 2509 had. Photo for form, skeleton for joints, mask for
+identity.
+
+It measured better on both characters, on face *and* pose:
+
+| | face | pose match |
+|---|---|---|
+| vivienne — masked photo only | 0.458 | 0.938 |
+| vivienne — **+ skeleton** | 0.481 | 0.935 |
+| sunny — masked photo only | 0.552 | 0.917 |
+| sunny — **+ skeleton** | **0.612** | **0.946** |
+
+The skeleton draws no eyes and no mouth — only nose and ears, and only to place
+and tilt the head circle. Drawing a face would reintroduce exactly what masking
+removed, and a test enforces it.
+
 ### 2. `--refine`, second pass (opt-in, ~2x time)
 
 See below. It stacks with masking.
@@ -241,8 +268,14 @@ See below. It stacks with masking.
 |---|---|---|
 | as shipped in the batch | 0.373 | 0.378 |
 | A — reference face visible | 0.388 | 0.485 |
-| B — **reference face masked** | 0.458 | 0.552 |
-| C — **masked + refine** | **0.534** | **0.565** |
+| B — reference face masked | 0.458 | 0.552 |
+| C — masked + refine | 0.534 | 0.565 |
+| D — masked + skeleton | 0.481 | 0.612 |
+| E — **masked + skeleton + refine** | **0.525** | **0.637** |
+
+For scale: cross-character scores land near 0.27, and a *verified same-person*
+off-frontal render scored 0.62 during the original gate calibration. Sunny's
+0.637 is at that mark; the shipped batch at 0.378 was not close.
 
 Masking is worth about **+0.07 on both**, for no extra generation time. Refine
 adds more on top, and visibly restores the smile and face shape — the batch

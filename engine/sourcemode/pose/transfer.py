@@ -26,6 +26,7 @@ from pathlib import Path
 
 from .face import crop_face, mask_reference_face, paste_face
 from .library import POSES, gates
+from .skeleton import draw_skeleton
 from .metrics import measure, pose_similarity, score_against
 
 ANYPOSE_BASE = r"anypose\2511-AnyPose-base-000006250.safetensors"
@@ -363,7 +364,8 @@ def footwear_for(source: Path) -> str:
 
 
 def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: str,
-                   hair: str | None = None, shoes: str | None = None) -> dict:
+                   hair: str | None = None, shoes: str | None = None,
+                   skeleton_name: str | None = None) -> dict:
     from ..config import workflows_dir  # noqa: PLC0415
     from ..render.workflow import load_template, prune_placeholder_loras, substitute  # noqa: PLC0415
 
@@ -387,6 +389,16 @@ def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: 
         "FILENAME_PREFIX": prefix,
     }
     nodes = prune_placeholder_loras(substitute(load_template(workflows_dir(cfg), "qwen_image_edit_anypose"), settings))
+    if skeleton_name:
+        # image3 = stick figure. Added here rather than in the template so the
+        # template stays valid when no skeleton is used: an unfilled LoadImage
+        # would fail the whole graph. Mirrors the existing
+        # LoadImage -> FluxKontextImageScale -> image slot wiring.
+        nodes["902"] = {"class_type": "LoadImage", "inputs": {"image": skeleton_name}}
+        nodes["903"] = {"class_type": "FluxKontextImageScale", "inputs": {"image": ["902", 0]}}
+        for nid, node in nodes.items():
+            if node["class_type"] == "TextEncodeQwenImageEditPlus":
+                node["inputs"]["image3"] = ["903", 0]
     loaded = {n["inputs"]["lora_name"] for n in nodes.values() if n["class_type"] == "LoraLoaderModelOnly"}
     assert ANYPOSE_BASE in loaded and ANYPOSE_HELPER in loaded, f"AnyPose LoRAs missing: {loaded}"
     return nodes
@@ -454,7 +466,7 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
              model_path: str, *, variant: str | None = None, candidates: int = 4,
              seed: int = 8801, hair: str | None = None, shoes: str | None = None,
              no_shoes: bool = False, refine: bool = False, mask_reference: bool = True,
-             log=print) -> int:
+             skeleton: bool = False, log=print) -> int:
     """Run pose transfer over a list of source assets. Returns the success count."""
     pose = POSES[pose_key]
     variants = pose["variants"]
@@ -464,6 +476,7 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
         d.mkdir(parents=True, exist_ok=True)
 
     uploaded_refs: dict[str, str] = {}
+    uploaded_skels: dict[str, str] = {}
     ref_metrics: dict[str, dict] = {}
     ok = 0
 
@@ -492,6 +505,12 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
                     log(f"  !! no face found in {ref_path.name}; using it unmasked")
             uploaded_refs[chosen] = client.upload_image(to_upload)
             ref_metrics[chosen] = measure(ref_path, model_path)
+            if skeleton:
+                skel = tmp / f"{ref_path.stem}_skeleton.png"
+                if draw_skeleton(ref_path, model_path, skel):
+                    uploaded_skels[chosen] = client.upload_image(skel)
+                else:
+                    log(f"  !! could not build a skeleton for {ref_path.name}")
 
         plate = tmp / f"{path.stem}_plate.png"
         size = composite_on_plate(path, plate)
@@ -501,7 +520,8 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
         for c in range(max(1, candidates)):
             nodes = build_workflow(cfg, init_name, uploaded_refs[chosen],
                                    seed=seed + i * 100 + c, prefix=f"posetransfer/{path.stem}",
-                                   hair=hair, shoes=pick_shoes)
+                                   hair=hair, shoes=pick_shoes,
+                                   skeleton_name=uploaded_skels.get(chosen))
             files = client.outputs(client.wait(client.submit(nodes)))
             if not files:
                 continue

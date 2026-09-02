@@ -452,3 +452,62 @@ def test_face_module_uses_no_insightface():
     for banned in ("insightface", "instantid", "pulid", "ip_adapter", "ipadapter"):
         assert banned not in {m.lower() for m in imported}, \
             f"{banned} must not be used to generate pixels"
+
+
+# --- skeleton conditioning -------------------------------------------------
+
+
+def test_skeleton_draws_no_face():
+    """A skeleton exists to carry pose with ZERO identity.
+
+    Drawing eyes or a mouth would reintroduce exactly what masking the
+    reference's face removed. Only nose and ears are used, and only to place
+    and tilt the head circle.
+    """
+    from sourcemode.pose.face import EYES, MOUTH
+    from sourcemode.pose.skeleton import HEAD_POINTS, JOINTS, LIMBS
+
+    used = set(HEAD_POINTS) | set(JOINTS) | {i for e, _ in LIMBS for i in e}
+    assert not used & set(EYES), "skeleton must not draw eyes"
+    assert not used & set(MOUTH), "skeleton must not draw a mouth"
+
+
+def test_skeleton_limbs_reference_real_landmarks():
+    from sourcemode.pose.skeleton import JOINTS, LIMBS
+
+    for (a, b), colour in LIMBS:
+        assert 0 <= a <= 32 and 0 <= b <= 32, f"bad landmark index {a},{b}"
+        assert len(colour) == 3
+    assert set(JOINTS) <= set(range(33))
+
+
+def test_draw_skeleton_returns_false_without_a_person(tmp_path):
+    from PIL import Image
+
+    from sourcemode.pose.skeleton import draw_skeleton
+
+    src = tmp_path / "flat.png"
+    Image.new("RGB", (256, 256), (128, 128, 128)).save(src)
+    assert draw_skeleton(src, "models/pose_landmarker_heavy.task", tmp_path / "o.png") is False
+
+
+def test_workflow_adds_image3_only_when_a_skeleton_is_given():
+    """An unfilled LoadImage would fail the whole graph.
+
+    The skeleton nodes are added programmatically for exactly this reason: the
+    template must stay valid for the default path, which passes no skeleton.
+    """
+    from sourcemode.config import load_config
+    from sourcemode.pose.transfer import build_workflow
+
+    cfg = load_config()
+    plain = build_workflow(cfg, "a.png", "b.png", 1, "p/")
+    assert not any("image3" in n["inputs"] for n in plain.values()
+                   if n["class_type"] == "TextEncodeQwenImageEditPlus")
+
+    with_skel = build_workflow(cfg, "a.png", "b.png", 1, "p/", skeleton_name="s.png")
+    encoders = [n for n in with_skel.values()
+                if n["class_type"] == "TextEncodeQwenImageEditPlus"]
+    assert encoders and all("image3" in n["inputs"] for n in encoders)
+    loaders = {n["inputs"]["image"] for n in with_skel.values() if n["class_type"] == "LoadImage"}
+    assert "s.png" in loaders
