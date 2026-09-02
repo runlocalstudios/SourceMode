@@ -365,11 +365,16 @@ def footwear_for(source: Path) -> str:
 
 def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: str,
                    hair: str | None = None, shoes: str | None = None,
-                   skeleton_name: str | None = None) -> dict:
+                   skeleton_name: str | None = None, render_pass: str = "draft") -> dict:
     from ..config import workflows_dir  # noqa: PLC0415
     from ..render.workflow import load_template, prune_placeholder_loras, substitute  # noqa: PLC0415
 
-    preset = cfg["render"]["draft"]  # AnyPose is tuned for the 4-step lightning path
+    # AnyPose's card recommends the 4-step lightning path, and that is the
+    # default. But distillation is also where skin texture goes: the pose pass
+    # alone strips ~17% of the face's high-frequency detail against the source,
+    # which is the "airbrushed" look. render_pass="medium" drops lightning and
+    # runs full steps at real CFG so that can be traded off deliberately.
+    preset = cfg["render"][render_pass]
     settings = {
         "MODEL": cfg["models"]["qwen_edit"],
         "TEXT_ENCODER": cfg["models"]["qwen_text_encoder"],
@@ -381,7 +386,9 @@ def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: 
         "LORA_PATH": "", "LORA_STRENGTH": 1.0,  # no character LoRA -> slot pruned
         "ANYPOSE_BASE": ANYPOSE_BASE, "ANYPOSE_BASE_STRENGTH": ANYPOSE_STRENGTH,
         "ANYPOSE_HELPER": ANYPOSE_HELPER, "ANYPOSE_HELPER_STRENGTH": ANYPOSE_STRENGTH,
-        "LIGHTNING": preset["qwen_edit_lightning"], "LIGHTNING_STRENGTH": 1.0,
+        # empty lightning prunes the node entirely (see prune_placeholder_loras)
+        "LIGHTNING": preset.get("qwen_edit_lightning", ""),
+        "LIGHTNING_STRENGTH": 1.0 if preset.get("qwen_edit_lightning") else 0.0,
         "SHIFT": float(cfg["render"]["qwen_shift"]),
         "SEED": seed,
         "STEPS": int(preset["qwen_edit_steps"]),
@@ -466,7 +473,7 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
              model_path: str, *, variant: str | None = None, candidates: int = 4,
              seed: int = 8801, hair: str | None = None, shoes: str | None = None,
              no_shoes: bool = False, refine: bool = False, mask_reference: bool = True,
-             skeleton: bool = False, log=print) -> int:
+             skeleton: bool = False, render_pass: str = "draft", log=print) -> int:
     """Run pose transfer over a list of source assets. Returns the success count."""
     pose = POSES[pose_key]
     variants = pose["variants"]
@@ -521,7 +528,8 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
             nodes = build_workflow(cfg, init_name, uploaded_refs[chosen],
                                    seed=seed + i * 100 + c, prefix=f"posetransfer/{path.stem}",
                                    hair=hair, shoes=pick_shoes,
-                                   skeleton_name=uploaded_skels.get(chosen))
+                                   skeleton_name=uploaded_skels.get(chosen),
+                                   render_pass=render_pass)
             files = client.outputs(client.wait(client.submit(nodes)))
             if not files:
                 continue

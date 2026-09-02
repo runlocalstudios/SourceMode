@@ -209,6 +209,63 @@ Note `/art-source/` is gitignored, so none of this is version-controlled. If
 you want the tool tracked, it needs a `!art-source/*.py` exception or a move.
 
 
+## The airbrushed face
+
+Every output has smoother skin than its source. Measured as high-frequency
+energy in the face crop, over 24 assets:
+
+| | face texture | vs source |
+|---|---|---|
+| source asset | 0.1841 | — |
+| after the pose pass | 0.1527 | **-17%** |
+| after pose + refine | 0.1442 | **-22%** |
+
+Worst cases lose 31-35%, and they are all Sunny — whose sources have the most
+texture to lose (freckles). Vivienne's low-texture sources lose almost nothing.
+The loss is proportional to how much detail was there, which is the signature of
+a resampling/regeneration problem rather than a settings problem.
+
+### What was ruled out, with numbers
+
+**Sampling steps are not the cause.** The obvious suspect was the 4-step
+lightning distillation. Running the same asset at `--pass medium` (40 steps, no
+lightning, CFG 4.0) changed texture not at all — 0.1581 vs 0.1574 — for roughly
+**15x the render time** (440 s vs ~30 s). It does improve face identity
+(0.638 -> 0.697), so the option is kept, but it is not the fix for this.
+
+**Resolution is a real but minor cause.** `FluxKontextImageScale` snaps to a
+~1MP bucket (832x1248) while the assets are 1.57MP (1023x1537), so ~35% of the
+pixels are discarded before the model runs and LANCZOS cannot restore them.
+Rendering near native at 1024x1536 recovers only part of it:
+
+| | bucket | native |
+|---|---|---|
+| workout_03 | -35% | -31% |
+| fancy_town_03 | -33% | -27% |
+
+**The remaining ~27-31% is inherent to regenerating the face.** Any pipeline
+that redraws the figure through this model will smooth the skin.
+
+### What actually matters
+
+The absolute smoothness may matter less than the MISMATCH. Standing assets never
+go through this pipeline, so a crisp standing render sits next to a smooth
+kneeling one and the character's skin changes when she kneels. That
+inconsistency is what reads as wrong.
+
+Unexplored options, roughly in order of promise:
+
+1. **Frequency-separation transfer** — lift the high-frequency residual from the
+   source face and add it back onto the output. Deterministic, no new model, no
+   licence. Needs the two faces aligned, which a pose change makes non-trivial.
+2. **Match the standing assets to the posed ones** rather than the reverse, so
+   the whole cast is consistent. Cheap, and attacks the mismatch rather than the
+   smoothness.
+3. **A detail-restoring upscaler** (SeedVR2 and similar). Licence needs checking
+   before it can touch shipped assets.
+4. **Per-character identity LoRA** — a face LoRA carries pores and asymmetry that
+   nothing embedding-based preserves.
+
 ## Facial identity
 
 Immersion is the bar: a character who kneels and reads as a stranger breaks the
