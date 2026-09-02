@@ -328,12 +328,24 @@ def test_refine_instruction_names_no_hairstyle():
         assert style not in REFINE_NEGATIVE.lower(), f"{style} named in REFINE_NEGATIVE"
 
 
-def test_refine_instruction_pins_the_body_and_only_edits_the_head():
-    from sourcemode.pose.transfer import REFINE_INSTRUCTION
+def test_refine_instruction_pins_geometry_to_image1_and_identity_to_image2():
+    """The refine inputs are FACE CROPS, so the body is out of frame by design.
+
+    What must hold instead: the head angle belongs to image 1 (the pose) and
+    the identity and skin belong to image 2 (the source), and the anti-airbrush
+    language is present — smoothing is the pass's own failure mode.
+    """
+    from sourcemode.pose.transfer import REFINE_INSTRUCTION, REFINE_NEGATIVE
 
     low = REFINE_INSTRUCTION.lower()
-    assert "same pose" in low and "only her head" in low
-    assert "do not move her" in low
+    assert "angle" in low and "image 1" in low, "head geometry must be pinned to image 1"
+    assert "skin texture as image 2" in low, "texture must come from the source"
+    assert "not smoothed" in low
+    neg = REFINE_NEGATIVE.lower()
+    for term in ("airbrushed", "smoothed skin", "beauty filter"):
+        assert term in neg, f"{term} missing from the refine negative"
+    # Rule 8 still applies: texture is referenced, never named as features.
+    assert "freckle" not in low and "pore" not in low
 
 
 def test_refine_declines_without_insightface(monkeypatch, tmp_path):
@@ -511,3 +523,41 @@ def test_workflow_adds_image3_only_when_a_skeleton_is_given():
     assert encoders and all("image3" in n["inputs"] for n in encoders)
     loaders = {n["inputs"]["image"] for n in with_skel.values() if n["class_type"] == "LoadImage"}
     assert "s.png" in loaders
+
+
+# --- face graft ------------------------------------------------------------
+
+
+def test_graft_alignment_points_exclude_ears():
+    """Ear projections swing hard with yaw and would shear the affine."""
+    from sourcemode.pose.face import EARS, _ALIGN_POINTS
+
+    assert not set(EARS) & set(_ALIGN_POINTS)
+    assert 0 in _ALIGN_POINTS, "nose anchors the warp"
+    assert len(_ALIGN_POINTS) >= 3, "an affine needs three correspondences"
+
+
+def test_graft_returns_none_without_faces(tmp_path):
+    """No landmarks on either side must mean 'keep the posed image', not a crash."""
+    from PIL import Image
+
+    from sourcemode.pose.face import graft_source_face
+
+    a, b = tmp_path / "a.png", tmp_path / "b.png"
+    Image.new("RGB", (256, 256), (128, 128, 128)).save(a)
+    Image.new("RGB", (256, 256), (128, 128, 128)).save(b)
+    out = tmp_path / "out.png"
+    assert graft_source_face(a, b, out, "models/pose_landmarker_heavy.task") is None
+    assert not out.exists(), "on None the caller keeps the posed image untouched"
+
+
+def test_refine_sweep_is_moderate():
+    """The heal must repair, not redraw.
+
+    Identity lives in the grafted pixels; denoise strong enough to redraw the
+    person (~0.85+) is exactly where the crop got re-framed and the head turned.
+    """
+    from sourcemode.pose.transfer import REFINE_DENOISE_SWEEP
+
+    assert all(0.2 <= d <= 0.6 for d in REFINE_DENOISE_SWEEP), REFINE_DENOISE_SWEEP
+    assert len(set(REFINE_DENOISE_SWEEP)) == len(REFINE_DENOISE_SWEEP)

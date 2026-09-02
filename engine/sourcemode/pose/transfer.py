@@ -24,7 +24,7 @@ import random
 import time
 from pathlib import Path
 
-from .face import crop_face, mask_reference_face, paste_face
+from .face import crop_face, graft_source_face, mask_reference_face, paste_face
 from .library import POSES, gates
 from .skeleton import draw_skeleton
 from .metrics import measure, pose_similarity, score_against
@@ -98,21 +98,38 @@ NEGATIVE = (
 #
 # Still no hairstyle is ever named — the reference image carries the style, and
 # naming one introduces it (see the braid incident).
+# Both inputs are FACE CROPS: image1 is her face in the new pose (often tilted
+# up toward the camera), image2 is her face in the source asset. Geometry stays
+# with image1, identity and skin belong to image2. Texture is stated as "the
+# same skin texture as image 2" and never as named features — writing "freckles"
+# here would stamp freckles onto every character (Rule 8).
 REFINE_INSTRUCTION = (
-    "Image 1 and image 2 are the same woman. Keep image 1 exactly as it is: the same pose, the "
-    "same position of her arms and legs, the same clothing and shoes, the same framing, the "
-    "same background. Do not move her and do not change her outfit. "
-    "Correct only her head. Her face must match image 2 exactly — the same facial features, "
-    "the same face shape, the same skin tone. Her hair must match image 2 exactly: worn the "
-    "same way, gathered exactly as image 2 shows it, the same length, the same colour, the same "
-    "parting, and any hair ties, clips or accessories in image 2 are present and identical."
+    "Image 1 and image 2 are close-up photographs of the same woman's face. Redraw image 1 so "
+    "she is unmistakably the woman in image 2: identical facial features, identical face shape, "
+    "identical eyes, nose and mouth, identical skin tone, and exactly the same natural skin "
+    "texture as image 2 — her skin is real skin, not smoothed or retouched. Her expression "
+    "matches image 2. Keep the head at exactly the angle and tilt it has in image 1, looking in "
+    "the same direction as image 1, with the lighting of image 1. Her hair keeps the style, "
+    "parting, colour and length shown in image 2, framing the face as the angle of image 1 "
+    "requires. Photorealistic, sharp focus."
 )
 REFINE_NEGATIVE = (
-    "different pose, moved arms, moved legs, changed body position, different clothing, "
-    "different outfit, changed background, different person, different face, different "
-    "hairstyle, changed hair colour, blurry, deformed, distorted hands, extra limbs, "
-    "cartoon, anime, watermark, text"
+    "different person, different face, changed face shape, different head angle, head turned, "
+    "looking in a different direction, different hairstyle, changed hair colour, "
+    "airbrushed, smoothed skin, plastic skin, porcelain skin, retouched, beauty filter, "
+    "doll-like, wax figure, blurry, deformed, cartoon, anime, watermark, text"
 )
+FACE_CROP_PX = 896
+# Partial denoise anchors the crop's own geometry, and the right strength varies
+# per image. At 1.0 the model turned heads to image2's angle and dragged its
+# background into the crop (identity 0.71-0.84, every candidate failed the pose
+# gate); at 0.55 geometry held but identity barely moved. So the candidates ARE
+# the sweep: one render per strength, the pose gate discards geometry breaks,
+# and identity picks the winner among survivors.
+# Heal strengths for the grafted face. Identity is already in the pixels, so
+# the heal stays moderate: enough to fix perspective and the seam, not enough
+# to redraw the person.
+REFINE_DENOISE_SWEEP = (0.35, 0.45, 0.55)
 # A refine that improves the face but quietly straightens the pose is a
 # regression, so pose similarity is allowed to fall only this far.
 REFINE_POSE_TOLERANCE = 0.05
@@ -122,8 +139,15 @@ REFINE_MIN_GAIN = 0.005
 
 
 def build_refine_workflow(cfg: dict, posed_name: str, source_name: str, seed: int,
-                          prefix: str) -> dict:
-    """Two-image identity restore. Deliberately NOT the AnyPose graph."""
+                          prefix: str, denoise: float = 1.0) -> dict:
+    """Two-image identity restore. Deliberately NOT the AnyPose graph.
+
+    denoise < 1 anchors the sampler on image1's own latent (the graph is
+    already img2img: the KSampler's latent is a VAEEncode of image1). At full
+    denoise the model follows image2's head angle and even drags image2's
+    background into the crop; partially denoised, image1's geometry survives
+    while the reference conditioning rewrites identity and skin.
+    """
     from ..config import workflows_dir  # noqa: PLC0415
     from ..render.workflow import load_template, prune_placeholder_loras, substitute  # noqa: PLC0415
 
@@ -145,6 +169,9 @@ def build_refine_workflow(cfg: dict, posed_name: str, source_name: str, seed: in
     }
     nodes = prune_placeholder_loras(
         substitute(load_template(workflows_dir(cfg), "qwen_image_edit_ref"), settings))
+    for n in nodes.values():
+        if n["class_type"] == "KSampler":
+            n["inputs"]["denoise"] = denoise
     loaded = {n["inputs"].get("lora_name") for n in nodes.values()
               if n["class_type"] == "LoraLoaderModelOnly"}
     assert ANYPOSE_BASE not in loaded, "refine must not run the AnyPose LoRAs"
@@ -154,56 +181,86 @@ def build_refine_workflow(cfg: dict, posed_name: str, source_name: str, seed: in
 def refine_head(cfg, client, posed: Path, source_plate: Path, source_asset: Path,
                 work: Path, model_path: str, *, candidates: int = 3, seed: int = 0,
                 log=print) -> tuple[Path, str]:
-    """Restore face and hair from the source. Returns (best, note).
+    """Graft the source face on, then let the model heal it.
 
-    Returns the ORIGINAL posed image when no candidate is a genuine improvement.
-    A second pass that makes things worse is worse than no second pass, and this
-    one can decline.
+    Ordering is the whole trick, learned by measuring the reverse. With geometry
+    in the init latent and identity imported by the model, identity only
+    transferred above ~0.85 denoise — exactly where the model also re-framed the
+    crop and turned the head, so every strong candidate failed the pose gate.
+
+    So: warp the SOURCE face onto the posed head first (landmark affine — real
+    pixels, real pores, real freckles), then run a moderate-denoise heal on the
+    face crop to fix perspective, lighting and the seam. The heal never has to
+    invent identity, only repair geometry, which is the part diffusion is
+    actually good at here.
+
+    Every candidate — including the raw graft — is scored on the full pasted
+    composite for identity AND pose, and the original posed image wins unless
+    something genuinely beats it.
     """
+    from PIL import Image  # noqa: PLC0415
+
     from ..gates.identity import cosine, embed_image, insightface_available  # noqa: PLC0415
 
     if not insightface_available():
         return posed, "refine skipped (no insightface)"
-
     ref_emb = embed_image(source_asset)
-    base_emb = embed_image(posed)
     if ref_emb is None:
         return posed, "refine skipped (no face in source)"
+
+    grafted = work / f"{posed.stem}_graft.png"
+    box = graft_source_face(source_asset, posed, grafted, model_path)
+    if box is None:
+        return posed, "refine skipped (no graft: face not found)"
+
+    src_crop, _ = crop_face(source_asset, model_path, pad=1.15, size=FACE_CROP_PX)
+    graft_crop, crop_box = crop_face(grafted, model_path, pad=1.15, size=FACE_CROP_PX)
+    if src_crop is None or graft_crop is None:
+        return posed, "refine skipped (no face crop)"
+    gc = work / f"{posed.stem}_graftcrop.png"; graft_crop.save(gc)
+    sc = work / f"{posed.stem}_srcface.png"; src_crop.save(sc)
+    graft_name, src_name = client.upload_image(gc), client.upload_image(sc)
+
+    base_emb = embed_image(posed)
     base_id = cosine(ref_emb, base_emb) if base_emb is not None else 0.0
     base_pose = measure(posed, model_path)
 
-    posed_name = client.upload_image(posed)
-    source_name = client.upload_image(source_plate)
+    def judge(candidate: Path, tag: str):
+        emb = embed_image(candidate)
+        if emb is None:
+            return None, f"{tag}:noface"
+        ident = cosine(ref_emb, emb)
+        pose_keep = 1.0
+        m = measure(candidate, model_path)
+        if m and base_pose:
+            pose_keep = pose_similarity(m, base_pose)["score"]
+        drifted = pose_keep < 1 - REFINE_POSE_TOLERANCE
+        return (None if drifted else ident), f"{tag}:{ident:.3f}{'/posedrift' if drifted else ''}"
 
-    best, best_id = posed, base_id
-    tried = []
-    for c in range(max(1, candidates)):
-        nodes = build_refine_workflow(cfg, posed_name, source_name, seed + c * 61,
-                                      prefix=f"poserefine/{posed.stem}")
+    best, best_id, tried = posed, base_id, []
+    # the raw graft is a free candidate: right pixels, possibly wrong perspective
+    ident, note = judge(grafted, "graft")
+    tried.append(note)
+    if ident is not None and ident > best_id + REFINE_MIN_GAIN:
+        best, best_id = grafted, ident
+
+    for c, denoise in enumerate(REFINE_DENOISE_SWEEP[:max(1, candidates)]):
+        nodes = build_refine_workflow(cfg, graft_name, src_name, seed + c * 61,
+                                      prefix=f"poserefine/{posed.stem}", denoise=denoise)
         files = client.outputs(client.wait(client.submit(nodes)))
         if not files:
             continue
-        cand = work / f"{posed.stem}_refine{c}.png"
-        client.fetch(files[0], cand)
-
-        emb = embed_image(cand)
-        if emb is None:
-            tried.append("noface")
-            continue
-        ident = cosine(ref_emb, emb)
-        # reject anything that straightened the pose while fixing the face
-        pose_keep = 1.0
-        m = measure(cand, model_path)
-        if m and base_pose:
-            pose_keep = pose_similarity(m, base_pose)["score"]
-        tried.append(f"{ident:.3f}{'' if pose_keep >= 1 - REFINE_POSE_TOLERANCE else '/posedrift'}")
-        if pose_keep < 1 - REFINE_POSE_TOLERANCE:
-            continue
-        if ident > best_id + REFINE_MIN_GAIN:
-            best, best_id = cand, ident
+        raw = work / f"{posed.stem}_heal{c}_face.png"
+        client.fetch(files[0], raw)
+        composite = work / f"{posed.stem}_heal{c}.png"
+        paste_face(grafted, Image.open(raw), crop_box, composite)
+        ident, note = judge(composite, f"d{denoise:.2f}")
+        tried.append(note)
+        if ident is not None and ident > best_id + REFINE_MIN_GAIN:
+            best, best_id = composite, ident
 
     if best is posed:
-        return posed, f"refine declined (face {base_id:.3f}; tried {', '.join(tried) or 'none'})"
+        return posed, f"refine declined (face {base_id:.3f}; tried {', '.join(tried)})"
     return best, f"refine {base_id:.3f}->{best_id:.3f}"
 
 

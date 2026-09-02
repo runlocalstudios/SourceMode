@@ -128,3 +128,96 @@ def paste_face(base_path: Path, patch, box: tuple, dest: Path, *, feather: int =
     base.paste(patch, (x0, y0), mask)
     dest.parent.mkdir(parents=True, exist_ok=True)
     base.save(dest)
+
+
+# Landmark indices used to solve the graft affine. Eyes, nose and mouth give
+# five well-spread correspondences; ears are excluded because their projected
+# position swings hard with yaw and would shear the warp.
+_ALIGN_POINTS = (0, 2, 5, 9, 10)  # nose, left eye, right eye, mouth corners
+
+
+def graft_source_face(source_asset: Path, posed: Path, dest: Path, model_path: str,
+                      *, feather_frac: float = 0.18):
+    """Warp the SOURCE face onto the posed head, geometrically, in real pixels.
+
+    The reference-conditioned refine had the dependency backwards: geometry sat
+    in the init latent and identity had to be imported by the model — and the
+    denoise strong enough to import identity (~0.85+) was also strong enough to
+    re-frame the crop and turn the head, so every strong candidate failed the
+    pose gate. Here the identity is in the pixels from the start — pores and
+    freckles included, which no generation pass managed to reproduce — and the
+    model's only job afterwards is the HEAL: perspective, lighting, seams.
+
+    The mask is two-zone, learned in three steps. A generous face ellipse
+    grafts identity at 0.82-0.88 but its rim crosses hair whose edge pixels are
+    genuinely MIXED with backdrop colour, so magenta and blue halos rode in
+    past both the chroma key and the heal. A skin-only ellipse killed the halos
+    and the identity with them (0.65-0.75) — forehead and jaw carry face shape.
+    So the inner 70% of the ellipse grafts unconditionally, the rim grafts only
+    pixels that pass a strict backdrop test, and any kept pixel still tinted
+    toward the backdrop is despilled toward its own luminance.
+
+    Returns the face box on the posed image, or None when either face is
+    missing; on None, dest is not written and the caller keeps the posed image.
+    """
+    import numpy as np  # noqa: PLC0415
+    from PIL import Image, ImageChops, ImageDraw, ImageFilter  # noqa: PLC0415
+
+    src_found = landmarks(source_asset, model_path)
+    dst_found = landmarks(posed, model_path)
+    if src_found is None or dst_found is None:
+        return None
+    (slm, (sw, sh)), (dlm, (dw, dh)) = src_found, dst_found
+
+    src_pts = np.array([[slm[i].x * sw, slm[i].y * sh] for i in _ALIGN_POINTS])
+    dst_pts = np.array([[dlm[i].x * dw, dlm[i].y * dh] for i in _ALIGN_POINTS])
+
+    # PIL's AFFINE transform wants the DEST->SRC mapping; solve least squares.
+    ones = np.ones((len(dst_pts), 1))
+    A, *_ = np.linalg.lstsq(np.hstack([dst_pts, ones]), src_pts, rcond=None)
+    coeffs = (A[0, 0], A[1, 0], A[2, 0], A[0, 1], A[1, 1], A[2, 1])
+
+    src_img = Image.open(source_asset).convert("RGB")
+    posed_img = Image.open(posed).convert("RGB")
+
+    # The assets carry their chroma backdrop baked into the RGB. Key it out:
+    # sample the border for the backdrop colour, mask by distance from it.
+    arr = np.asarray(src_img, dtype=float)
+    border = np.concatenate([arr[0], arr[-1], arr[:, 0], arr[:, -1]])
+    bg = np.median(border, axis=0)
+    dist = np.sqrt(((arr - bg) ** 2).sum(axis=2))
+    subject = Image.fromarray(((dist > 60) * 255).astype("uint8"), "L")
+    subject = subject.filter(ImageFilter.MinFilter(5))  # eat matte-edge slivers
+    strict = Image.fromarray(((dist > 110) * 255).astype("uint8"), "L")
+    strict = strict.filter(ImageFilter.MinFilter(7))
+
+    # Despill BEFORE warping: a pixel still tinted toward the backdrop hue is
+    # pulled to its own luminance, so keyed-through hair strands keep their
+    # shape but lose the backdrop colour.
+    spill = np.clip((150.0 - dist) / 150.0, 0.0, 1.0)[..., None] * 0.85
+    luma = arr.mean(axis=2, keepdims=True)
+    despilled = Image.fromarray(np.clip(arr * (1 - spill) + luma * spill, 0, 255).astype("uint8"))
+
+    warped = despilled.transform((dw, dh), Image.AFFINE, coeffs, resample=Image.BICUBIC)
+    subject_w = subject.transform((dw, dh), Image.AFFINE, coeffs, resample=Image.BILINEAR)
+    strict_w = strict.transform((dw, dh), Image.AFFINE, coeffs, resample=Image.BILINEAR)
+
+    box = face_box(posed, model_path, pad=0.55)
+    if box is None:
+        return None
+    x0, y0, x1, y1 = box
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    inner = (cx - (cx - x0) * 0.70, cy - (cy - y0) * 0.70,
+             cx + (x1 - cx) * 0.70, cy + (y1 - cy) * 0.70)
+
+    mask = Image.new("L", (dw, dh), 0)
+    ImageDraw.Draw(mask).ellipse(box, fill=255)
+    mask = ImageChops.multiply(ImageChops.multiply(mask, subject_w), strict_w)
+    ImageDraw.Draw(mask).ellipse(inner, fill=255)
+    mask = ImageChops.multiply(mask, subject_w)  # inner zone still never grafts pure backdrop
+    mask = mask.filter(ImageFilter.GaussianBlur(max(4, int((x1 - x0) * feather_frac))))
+
+    posed_img.paste(warped, (0, 0), mask)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    posed_img.save(dest)
+    return box

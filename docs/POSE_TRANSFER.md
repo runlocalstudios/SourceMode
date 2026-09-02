@@ -266,6 +266,48 @@ Unexplored options, roughly in order of promise:
 4. **Per-character identity LoRA** — a face LoRA carries pores and asymmetry that
    nothing embedding-based preserves.
 
+## Graft-then-heal: how the face is actually kept
+
+The generation-based attempts topped out low, and the sweep showed why: with
+geometry in the init latent, identity only transferred above ~0.85 denoise —
+exactly where the model also re-framed the crop and turned the head, so every
+strong candidate failed the pose gate. Identity import and geometry override
+switch on together; no denoise value holds both.
+
+So the dependency is flipped. `--refine` now:
+
+1. **Grafts the real source face onto the posed head** — a landmark affine
+   (nose, eyes, mouth; ears excluded, their projection shears with yaw) warps
+   the source's actual pixels into place. Pores and freckles come along because
+   they are literally the same pixels; no generation pass ever reproduced them.
+2. **Heals the crop at moderate denoise** (0.35/0.45/0.55 sweep) — perspective,
+   lighting, seams. The heal never has to invent identity, only repair
+   geometry, which is the part diffusion is good at here.
+3. **Gates every candidate on the full composite** — identity must beat the
+   un-refined image by a real margin and pose similarity must hold. The raw
+   graft competes too, and the original still wins if nothing beats it.
+
+The graft mask is two-zone, learned in three steps: a generous ellipse carried
+backdrop-tinted hair edges in as magenta halos; a skin-only ellipse killed the
+halos and the identity with it (forehead and jaw carry face shape). The inner
+70% grafts unconditionally, the rim only what passes a strict chroma test, and
+kept pixels still tinted toward the backdrop are despilled to their own
+luminance.
+
+Measured on the four worst shipped faces:
+
+| | shipped | graft + heal | texture shipped → new (source) |
+|---|---|---|---|
+| sunny / workout_03 | 0.638 | **0.795** | 0.158 → **0.223** (0.242) |
+| sunny / fancy_town_03 | 0.569 | **0.852** | 0.175 → **0.222** (0.260) |
+| sunny / casual_date_03 | 0.622 | **0.856** | 0.162 → **0.194** (0.241) |
+| vivienne / work_03 | 0.401 | **0.853** | flat-texture source, ~level |
+
+For scale: Gwen's genuine same-person frontal mean was 0.81. These are at or
+above it, with the pose gate passing, and the freckles are visibly back.
+Remaining known artifact: occasional faint pale wisps at hair tips where
+despilled strands meet the feather — small, review-level, not halo-level.
+
 ## Facial identity
 
 Immersion is the bar: a character who kneels and reads as a stranger breaks the
