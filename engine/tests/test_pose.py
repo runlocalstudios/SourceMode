@@ -296,3 +296,67 @@ def test_footwear_hint_absent_by_default_in_the_static_instruction():
     """--no-shoes must leave the prompt exactly as it was before this feature."""
     assert "shoe" not in INSTRUCTION.lower()
     assert "{shoes}" not in INSTRUCTION
+
+
+# --- refine pass -----------------------------------------------------------
+
+
+def test_refine_workflow_never_loads_anypose():
+    """AnyPose exists to MOVE a pose, which is what the refine pass must not do.
+
+    The refine pass runs qwen_image_edit_ref, not the AnyPose graph: image1 is
+    the posed result (pinning pose, body and wardrobe) and image2 is the source
+    (supplying face and hair). If AnyPose leaked in it would re-pose the result
+    against its own reference.
+    """
+    from sourcemode.config import load_config
+    from sourcemode.pose.transfer import ANYPOSE_BASE, ANYPOSE_HELPER, build_refine_workflow
+
+    nodes = build_refine_workflow(load_config(), "posed.png", "source.png", 1, "t/")
+    loras = {n["inputs"].get("lora_name") for n in nodes.values()
+             if n["class_type"] == "LoraLoaderModelOnly"}
+    assert ANYPOSE_BASE not in loras and ANYPOSE_HELPER not in loras
+    assert any(n["class_type"] == "LoadImage" for n in nodes.values())
+
+
+def test_refine_instruction_names_no_hairstyle():
+    """The reference image carries the style; naming one introduces it."""
+    from sourcemode.pose.transfer import REFINE_INSTRUCTION, REFINE_NEGATIVE
+
+    for style in ("pigtail", "ponytail", "braid", "bun", "updo"):
+        assert style not in REFINE_INSTRUCTION.lower(), f"{style} named in REFINE_INSTRUCTION"
+        assert style not in REFINE_NEGATIVE.lower(), f"{style} named in REFINE_NEGATIVE"
+
+
+def test_refine_instruction_pins_the_body_and_only_edits_the_head():
+    from sourcemode.pose.transfer import REFINE_INSTRUCTION
+
+    low = REFINE_INSTRUCTION.lower()
+    assert "same pose" in low and "only her head" in low
+    assert "do not move her" in low
+
+
+def test_refine_declines_without_insightface(monkeypatch, tmp_path):
+    """No scorer means no way to tell better from worse, so it must not guess.
+
+    A second pass that cannot be evaluated is not free — it would ship whatever
+    the model produced. Returning the first-pass image is the correct answer.
+    """
+    import sourcemode.gates.identity as ident
+    from sourcemode.pose.transfer import refine_head
+
+    monkeypatch.setattr(ident, "insightface_available", lambda: False)
+    posed = tmp_path / "posed.png"
+    posed.write_bytes(b"x")
+    best, note = refine_head(None, None, posed, tmp_path / "s.png", tmp_path / "a.png",
+                             tmp_path, "model.task", log=lambda *a: None)
+    assert best == posed
+    assert "skipped" in note
+
+
+def test_refine_pose_tolerance_is_tight():
+    """A refine that fixes the face but straightens the pose is a regression."""
+    from sourcemode.pose.transfer import REFINE_MIN_GAIN, REFINE_POSE_TOLERANCE
+
+    assert 0 < REFINE_POSE_TOLERANCE <= 0.1
+    assert REFINE_MIN_GAIN > 0, "must require a real gain, not a tie, to replace the first pass"

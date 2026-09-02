@@ -82,6 +82,129 @@ NEGATIVE = (
 )
 
 
+# --- second pass: put the original head back --------------------------------
+# The pose pass regenerates the whole figure, so the face and hair are redrawn
+# from scratch every time. Hair is where that shows: pigtails came back loose on
+# roughly 8 of 11 checked assets, and a hair bow vanished. Saying it harder in
+# the pose prompt does not fix it — by then the model is solving a different
+# problem (match this pose) and the hair is collateral.
+#
+# So identity is restored in a SEPARATE pass. image1 is the posed result, which
+# pins the pose, body and wardrobe; image2 is the original asset, which supplies
+# the face and hair. It runs through qwen_image_edit_ref, NOT the AnyPose graph:
+# AnyPose exists to move a pose and is exactly what must not happen here.
+#
+# Still no hairstyle is ever named — the reference image carries the style, and
+# naming one introduces it (see the braid incident).
+REFINE_INSTRUCTION = (
+    "Image 1 and image 2 are the same woman. Keep image 1 exactly as it is: the same pose, the "
+    "same position of her arms and legs, the same clothing and shoes, the same framing, the "
+    "same background. Do not move her and do not change her outfit. "
+    "Correct only her head. Her face must match image 2 exactly — the same facial features, "
+    "the same face shape, the same skin tone. Her hair must match image 2 exactly: worn the "
+    "same way, gathered exactly as image 2 shows it, the same length, the same colour, the same "
+    "parting, and any hair ties, clips or accessories in image 2 are present and identical."
+)
+REFINE_NEGATIVE = (
+    "different pose, moved arms, moved legs, changed body position, different clothing, "
+    "different outfit, changed background, different person, different face, different "
+    "hairstyle, changed hair colour, blurry, deformed, distorted hands, extra limbs, "
+    "cartoon, anime, watermark, text"
+)
+# A refine that improves the face but quietly straightens the pose is a
+# regression, so pose similarity is allowed to fall only this far.
+REFINE_POSE_TOLERANCE = 0.05
+# InsightFace scores which candidate to keep. Its weights are non-commercial, so
+# this is tooling only: it selects an image, it never ships inside one.
+REFINE_MIN_GAIN = 0.005
+
+
+def build_refine_workflow(cfg: dict, posed_name: str, source_name: str, seed: int,
+                          prefix: str) -> dict:
+    """Two-image identity restore. Deliberately NOT the AnyPose graph."""
+    from ..config import workflows_dir  # noqa: PLC0415
+    from ..render.workflow import load_template, prune_placeholder_loras, substitute  # noqa: PLC0415
+
+    preset = cfg["render"]["draft"]
+    settings = {
+        "MODEL": cfg["models"]["qwen_edit"],
+        "TEXT_ENCODER": cfg["models"]["qwen_text_encoder"],
+        "VAE": cfg["models"]["qwen_vae"],
+        "POSITIVE": REFINE_INSTRUCTION,
+        "NEGATIVE": REFINE_NEGATIVE,
+        "IMAGE": posed_name, "REF_IMAGE": source_name,
+        "LORA_PATH": "", "LORA_STRENGTH": 1.0,
+        "LIGHTNING": preset["qwen_edit_lightning"], "LIGHTNING_STRENGTH": 1.0,
+        "SHIFT": float(cfg["render"]["qwen_shift"]),
+        "SEED": seed,
+        "STEPS": int(preset["qwen_edit_steps"]),
+        "CFG": float(preset["qwen_edit_cfg"]),
+        "FILENAME_PREFIX": prefix,
+    }
+    nodes = prune_placeholder_loras(
+        substitute(load_template(workflows_dir(cfg), "qwen_image_edit_ref"), settings))
+    loaded = {n["inputs"].get("lora_name") for n in nodes.values()
+              if n["class_type"] == "LoraLoaderModelOnly"}
+    assert ANYPOSE_BASE not in loaded, "refine must not run the AnyPose LoRAs"
+    return nodes
+
+
+def refine_head(cfg, client, posed: Path, source_plate: Path, source_asset: Path,
+                work: Path, model_path: str, *, candidates: int = 3, seed: int = 0,
+                log=print) -> tuple[Path, str]:
+    """Restore face and hair from the source. Returns (best, note).
+
+    Returns the ORIGINAL posed image when no candidate is a genuine improvement.
+    A second pass that makes things worse is worse than no second pass, and this
+    one can decline.
+    """
+    from ..gates.identity import cosine, embed_image, insightface_available  # noqa: PLC0415
+
+    if not insightface_available():
+        return posed, "refine skipped (no insightface)"
+
+    ref_emb = embed_image(source_asset)
+    base_emb = embed_image(posed)
+    if ref_emb is None:
+        return posed, "refine skipped (no face in source)"
+    base_id = cosine(ref_emb, base_emb) if base_emb is not None else 0.0
+    base_pose = measure(posed, model_path)
+
+    posed_name = client.upload_image(posed)
+    source_name = client.upload_image(source_plate)
+
+    best, best_id = posed, base_id
+    tried = []
+    for c in range(max(1, candidates)):
+        nodes = build_refine_workflow(cfg, posed_name, source_name, seed + c * 61,
+                                      prefix=f"poserefine/{posed.stem}")
+        files = client.outputs(client.wait(client.submit(nodes)))
+        if not files:
+            continue
+        cand = work / f"{posed.stem}_refine{c}.png"
+        client.fetch(files[0], cand)
+
+        emb = embed_image(cand)
+        if emb is None:
+            tried.append("noface")
+            continue
+        ident = cosine(ref_emb, emb)
+        # reject anything that straightened the pose while fixing the face
+        pose_keep = 1.0
+        m = measure(cand, model_path)
+        if m and base_pose:
+            pose_keep = pose_similarity(m, base_pose)["score"]
+        tried.append(f"{ident:.3f}{'' if pose_keep >= 1 - REFINE_POSE_TOLERANCE else '/posedrift'}")
+        if pose_keep < 1 - REFINE_POSE_TOLERANCE:
+            continue
+        if ident > best_id + REFINE_MIN_GAIN:
+            best, best_id = cand, ident
+
+    if best is posed:
+        return posed, f"refine declined (face {base_id:.3f}; tried {', '.join(tried) or 'none'})"
+    return best, f"refine {base_id:.3f}->{best_id:.3f}"
+
+
 def composite_on_plate(src: Path, dest: Path) -> tuple[int, int]:
     """RGBA cutout -> flat grey plate. Returns the source size."""
     from PIL import Image  # noqa: PLC0415
@@ -329,7 +452,7 @@ def make_reference(cfg, client, pose_key: str, variant: str, library: Path,
 def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out_dir: Path,
              model_path: str, *, variant: str | None = None, candidates: int = 4,
              seed: int = 8801, hair: str | None = None, shoes: str | None = None,
-             no_shoes: bool = False, log=print) -> int:
+             no_shoes: bool = False, refine: bool = False, log=print) -> int:
     """Run pose transfer over a list of source assets. Returns the success count."""
     pose = POSES[pose_key]
     variants = pose["variants"]
@@ -391,6 +514,11 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
 
         # Namespaced by asset_label so two characters sharing an outfit slug
         # cannot overwrite each other's results.
+        if refine:
+            best, note = refine_head(cfg, client, best, plate, path, tmp, model_path,
+                                     seed=seed + i * 100, log=log)
+            detail += f"  {note}"
+
         final_dir = out_dir / asset_label(path)
         final_dir.mkdir(parents=True, exist_ok=True)
         final = final_dir / f"{path.stem.replace('_standing', '')}_{pose['suffix']}_{chosen}.webp"

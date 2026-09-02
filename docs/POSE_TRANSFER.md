@@ -209,6 +209,58 @@ Note `/art-source/` is gitignored, so none of this is version-controlled. If
 you want the tool tracked, it needs a `!art-source/*.py` exception or a move.
 
 
+## `--refine`: a second pass for the face
+
+The pose pass regenerates the whole figure, so the face is redrawn from scratch
+every time and drifts from the source. `--refine` adds an opt-in second pass:
+
+- **image1** is the posed result — it pins the pose, body and wardrobe
+- **image2** is the original asset — it supplies the face and hair
+
+It runs `qwen_image_edit_ref`, deliberately **not** the AnyPose graph. AnyPose
+exists to move a pose and is exactly what must not happen here; a test asserts
+its LoRAs can never load in this pass.
+
+**It can decline, and often should.** Candidates are scored on face similarity
+to the source, and a candidate is only accepted if it beats the first pass by a
+real margin *and* leaves pose similarity within `REFINE_POSE_TOLERANCE`. A pass
+that fixes the face while quietly straightening the pose is a regression. With
+no scorer available it returns the first-pass image rather than guessing.
+
+Measured on four kneeling results:
+
+| asset | face before | after |
+|---|---|---|
+| vivienne / work_03 | 0.376 | **0.499** |
+| vivienne / fancy_town_03 | 0.440 | **0.555** |
+| vivienne / workout_06 | 0.618 | declined |
+| sunny / work_08 | 0.551 | declined |
+
+Note what this is and isn't for. It was built to fix hairstyle loss, and that
+turned out to be a false alarm (see below) — hair already survives. What it
+actually buys is **face identity**, which drifts considerably further than hair
+does: a first-pass face at 0.376 similarity is a visibly different person.
+
+InsightFace does the scoring. Its weights are non-commercial, so this stays
+tooling: it selects which generated image to keep and never ships inside one.
+
+### Tied hair: a false alarm worth recording
+
+A batch review reported that most tied hairstyles were lost. **That was a
+measurement error.** Re-checking all 23 tied-hair assets properly: Sunny 9 of 9
+held, Vivienne 13 of 14. Pigtails, buns, braids, clips and a bow all survive a
+front-facing kneel.
+
+The bad check cropped a fixed fraction of the FRAME (top 34%). The kneeling
+figure sits smaller and lower in frame than the standing source, so that crop
+cut the pigtails off entirely, and at thumbnail size they simply were not there
+to see. Crop relative to the subject's alpha bounding box, not the frame.
+
+Hair preservation is also **seed-dependent** — the same asset lost its pigtails
+in one run and kept them in another. Candidate scoring currently weighs pose and
+outfit only, so nothing steers it toward the candidate that kept the hairstyle.
+That is the real remaining gap.
+
 ## Footwear
 
 These assets are cropped for the game UI, so feet are usually missing or cut
