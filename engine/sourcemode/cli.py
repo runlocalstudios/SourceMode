@@ -651,7 +651,7 @@ def pose_transfer_cmd(
     variant: str = typer.Option(None, "--variant", help="Pin one variant instead of random."),
     limit: int = typer.Option(3, "--limit"),
     candidates: int = typer.Option(4, "--candidates", help="Renders per image; best wins."),
-    pattern: str = typer.Option("*_standing.webp", "--pattern"),
+    pattern: str = typer.Option("*_standing.*", "--pattern", help="Which source files to pick up; image extensions only."),
     seed: int = typer.Option(8801, "--seed"),
     hair: str = typer.Option(None, "--hair", help='Describe a TIED hairstyle, e.g. "two low pigtails". Only when true — naming a style that is not there introduces it.'),
     shoes: str = typer.Option(None, "--shoes", help="Override the footwear chosen from the outfit. Visible footwear in the source is kept either way."),
@@ -667,9 +667,16 @@ def pose_transfer_cmd(
         rprint(f"[red]unknown pose {pose!r}[/red] — try: {', '.join(POSES)}")
         raise typer.Exit(2)
     cfg, library, landmarker = _pose_ctx()
-    sources = sorted(Path(assets).glob(pattern))[:limit]
+    # The default pattern is extension-agnostic on purpose: it used to be
+    # *_standing.webp while the game's assets are .png, so a whole batch matched
+    # nothing, exited 2 per folder, and looked from the log like it had run.
+    sources = [p for p in sorted(Path(assets).glob(pattern))
+               if p.suffix.lower() in {".png", ".webp", ".jpg", ".jpeg"}][:limit]
     if not sources:
-        rprint(f"[red]no {pattern} in {assets}[/red]")
+        have = {p.suffix.lower() for p in Path(assets).glob("*") if p.is_file()}
+        rprint(f"[red]no files matching {pattern} in {assets}[/red]")
+        if have:
+            rprint(f"[yellow]that folder contains: {', '.join(sorted(have))}[/yellow]")
         raise typer.Exit(2)
 
     out = out or outputs_dir(cfg) / "pose-transfer"
