@@ -561,3 +561,28 @@ def test_refine_sweep_is_moderate():
 
     assert all(0.2 <= d <= 0.6 for d in REFINE_DENOISE_SWEEP), REFINE_DENOISE_SWEEP
     assert len(set(REFINE_DENOISE_SWEEP)) == len(REFINE_DENOISE_SWEEP)
+
+
+def test_character_lora_slot_loads_and_prunes():
+    """--lora fills the wired-but-dormant LORA_PATH slot; empty must still prune.
+
+    Pruning is what keeps the pre-LoRA behaviour byte-identical for characters
+    without one, and loading is the whole point of training them.
+    """
+    from sourcemode.config import load_config
+    from sourcemode.pose.transfer import build_workflow
+
+    cfg = load_config()
+    plain = build_workflow(cfg, "a.png", "b.png", 1, "p/")
+    with_lora = build_workflow(cfg, "a.png", "b.png", 1, "p/",
+                               lora=r"sourcemode\sunny\sunny_edit2511.safetensors",
+                               lora_strength=0.7)
+    def loras(nodes):
+        return {n["inputs"]["lora_name"] for n in nodes.values()
+                if n["class_type"] == "LoraLoaderModelOnly"}
+    assert r"sourcemode\sunny\sunny_edit2511.safetensors" not in loras(plain)
+    assert r"sourcemode\sunny\sunny_edit2511.safetensors" in loras(with_lora)
+    strengths = [n["inputs"].get("strength_model") for n in with_lora.values()
+                 if n["class_type"] == "LoraLoaderModelOnly"
+                 and n["inputs"]["lora_name"].endswith("sunny_edit2511.safetensors")]
+    assert strengths == [0.7]

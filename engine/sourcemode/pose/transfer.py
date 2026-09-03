@@ -422,7 +422,8 @@ def footwear_for(source: Path) -> str:
 
 def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: str,
                    hair: str | None = None, shoes: str | None = None,
-                   skeleton_name: str | None = None, render_pass: str = "draft") -> dict:
+                   skeleton_name: str | None = None, render_pass: str = "draft",
+                   lora: str | None = None, lora_strength: float = 0.7) -> dict:
     from ..config import workflows_dir  # noqa: PLC0415
     from ..render.workflow import load_template, prune_placeholder_loras, substitute  # noqa: PLC0415
 
@@ -440,7 +441,8 @@ def build_workflow(cfg: dict, init_name: str, ref_name: str, seed: int, prefix: 
                      + (FOOTWEAR_HINT.format(shoes=shoes) if shoes else "")),
         "NEGATIVE": NEGATIVE,
         "IMAGE": init_name, "REF_IMAGE": ref_name,
-        "LORA_PATH": "", "LORA_STRENGTH": 1.0,  # no character LoRA -> slot pruned
+        # Character identity LoRA. Empty -> slot pruned (the pre-LoRA behaviour).
+        "LORA_PATH": lora or "", "LORA_STRENGTH": lora_strength,
         "ANYPOSE_BASE": ANYPOSE_BASE, "ANYPOSE_BASE_STRENGTH": ANYPOSE_STRENGTH,
         "ANYPOSE_HELPER": ANYPOSE_HELPER, "ANYPOSE_HELPER_STRENGTH": ANYPOSE_STRENGTH,
         # empty lightning prunes the node entirely (see prune_placeholder_loras)
@@ -530,7 +532,8 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
              model_path: str, *, variant: str | None = None, candidates: int = 4,
              seed: int = 8801, hair: str | None = None, shoes: str | None = None,
              no_shoes: bool = False, refine: bool = False, mask_reference: bool = True,
-             skeleton: bool = False, render_pass: str = "draft", log=print) -> int:
+             skeleton: bool = False, render_pass: str = "draft",
+             lora: str | None = None, lora_strength: float = 0.7, log=print) -> int:
     """Run pose transfer over a list of source assets. Returns the success count."""
     pose = POSES[pose_key]
     variants = pose["variants"]
@@ -586,7 +589,7 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
                                    seed=seed + i * 100 + c, prefix=f"posetransfer/{path.stem}",
                                    hair=hair, shoes=pick_shoes,
                                    skeleton_name=uploaded_skels.get(chosen),
-                                   render_pass=render_pass)
+                                   render_pass=render_pass, lora=lora, lora_strength=lora_strength)
             files = client.outputs(client.wait(client.submit(nodes)))
             if not files:
                 continue

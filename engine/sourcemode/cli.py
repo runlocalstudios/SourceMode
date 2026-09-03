@@ -75,6 +75,8 @@ def doctor():
 def run(
     character: str,
     brief: str = typer.Option(..., "--brief"),
+    lora: str = typer.Option(None, "--lora", help="Character identity LoRA (path relative to ComfyUI loras dir)."),
+    lora_strength: float = typer.Option(0.7, "--lora-strength"),
     render_pass: str = typer.Option("draft", "--pass"),
     decomposer: str = typer.Option("rules", "--decomposer", help="rules|qwen3"),
     dry_run: bool = typer.Option(False, "--dry-run"),
@@ -282,6 +284,8 @@ def prompts_compile(
 def render_shot(
     scene_yaml: Path,
     idx: int = typer.Option(..., "--idx"),
+    lora: str = typer.Option(None, "--lora", help="Character identity LoRA (path relative to ComfyUI loras dir)."),
+    lora_strength: float = typer.Option(0.7, "--lora-strength"),
     render_pass: str = typer.Option("draft", "--pass"),
     dry_run: bool = typer.Option(False, "--dry-run"),
     image: str = typer.Option("keyframe_placeholder.png", "--image", help="ComfyUI input image name for I2V."),
@@ -331,6 +335,8 @@ def render_smoke(
     character: str = typer.Option("gwen", "--character"),
     image: Path = typer.Option(None, "--image", help="Local input image (required for edit/i2v)."),
     negative: str = typer.Option(None, "--negative", help="Default: the character's negative_block."),
+    lora: str = typer.Option(None, "--lora", help="Character identity LoRA (path relative to ComfyUI loras dir)."),
+    lora_strength: float = typer.Option(0.7, "--lora-strength"),
     render_pass: str = typer.Option("draft", "--pass"),
     seed: int = typer.Option(42, "--seed"),
     width: int = typer.Option(None, "--width"),
@@ -658,6 +664,8 @@ def pose_transfer_cmd(
     no_shoes: bool = typer.Option(False, "--no-shoes", help="Do not specify footwear at all; leave feet to the source and the pose reference."),
     refine: bool = typer.Option(False, "--refine", help="Second pass: restore face and hair from the source asset. Declines if it cannot improve on the first pass."),
     no_mask_ref: bool = typer.Option(False, "--no-mask-ref", help="Feed the pose reference with its own face intact (identity competes; for A/B only)."),
+    lora: str = typer.Option(None, "--lora", help="Character identity LoRA (path relative to ComfyUI loras dir)."),
+    lora_strength: float = typer.Option(0.7, "--lora-strength"),
     render_pass: str = typer.Option("draft", "--pass", help="draft = 4-step lightning (fast, smoother skin). medium = full steps, no lightning (slower, keeps texture)."),
     skeleton: bool = typer.Option(False, "--skeleton", help="Also pass a stick figure as image3: zero identity, but no depth. Use WITH the masked photo, not instead of it."),
     dry_run: bool = typer.Option(False, "--dry-run"),
@@ -698,7 +706,7 @@ def pose_transfer_cmd(
                   variant=variant, candidates=candidates, seed=seed, hair=hair,
                   shoes=shoes, no_shoes=no_shoes, refine=refine,
                   mask_reference=not no_mask_ref, skeleton=skeleton,
-                  render_pass=render_pass, log=rprint)
+                  render_pass=render_pass, lora=lora, lora_strength=lora_strength, log=rprint)
     rprint(f"\n[green]{ok}/{len(sources)}[/green] written to {out}")
     rprint("Review these before copying anything into a game repo.")
     raise typer.Exit(0 if ok == len(sources) else 1)
