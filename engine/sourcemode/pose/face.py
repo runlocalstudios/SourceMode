@@ -221,3 +221,59 @@ def graft_source_face(source_asset: Path, posed: Path, dest: Path, model_path: s
     dest.parent.mkdir(parents=True, exist_ok=True)
     posed_img.save(dest)
     return box
+
+
+def match_exposure(patch, base_region):
+    """Rebalance a regenerated patch to the exposure of what it replaces.
+
+    A regenerated face carries its own lighting, so pasting it leaves a visible
+    brightness step at the seam — the halo left over once the warp and the
+    backdrop spill were solved. Per-channel mean/std matching is enough: it is
+    a compositing correction, so it must never touch the model or the identity.
+    """
+    import numpy as np  # noqa: PLC0415
+    from PIL import Image  # noqa: PLC0415
+
+    p = np.asarray(patch.convert("RGB"), dtype=float)
+    b = np.asarray(base_region.convert("RGB"), dtype=float)
+    out = np.empty_like(p)
+    for c in range(3):
+        ps, bs = p[..., c].std(), b[..., c].std()
+        scale = 1.0 if ps < 1e-6 else min(max(bs / ps, 0.6), 1.6)  # clamp: no contrast blowouts
+        out[..., c] = (p[..., c] - p[..., c].mean()) * scale + b[..., c].mean()
+    return Image.fromarray(np.clip(out, 0, 255).astype("uint8"))
+
+
+def paste_face_oval(base_path: Path, patch, crop_box: tuple, dest: Path, model_path: str,
+                    *, exposure_match: bool = True):
+    """Paste only the FACE OVAL of a healed crop, exposure-matched.
+
+    The square crop carries regenerated background and hair at its corners; a
+    rectangular paste therefore drags an invented scene into the render. Taking
+    the oval means only skin and features transfer, and everything the pose pass
+    got right — hair, wardrobe, background — is left untouched.
+    """
+    from PIL import Image, ImageDraw, ImageFilter  # noqa: PLC0415
+
+    base = Image.open(base_path).convert("RGB")
+    x0, y0, x1, y1 = crop_box
+    w, h = x1 - x0, y1 - y0
+    patch = patch.convert("RGB").resize((w, h), Image.LANCZOS)
+
+    tmp = dest.parent / f"{dest.stem}_probe.png"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    patch.save(tmp)
+    fb = face_box(tmp, model_path, pad=0.65)
+    tmp.unlink(missing_ok=True)
+    if fb is None:
+        fb = (int(w * 0.20), int(h * 0.15), int(w * 0.80), int(h * 0.85))
+
+    if exposure_match:
+        patch = match_exposure(patch, base.crop((x0, y0, x1, y1)))
+
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).ellipse(fb, fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(max(6, (fb[2] - fb[0]) // 10)))
+    base.paste(patch, (x0, y0), mask)
+    base.save(dest)
+    return dest

@@ -586,3 +586,38 @@ def test_character_lora_slot_loads_and_prunes():
                  if n["class_type"] == "LoraLoaderModelOnly"
                  and n["inputs"]["lora_name"].endswith("sunny_edit2511.safetensors")]
     assert strengths == [0.7]
+
+
+def test_refine_regen_needs_high_denoise_graft_needs_low():
+    """The two modes are opposites, and swapping them breaks both.
+
+    Regen carries identity in the WEIGHTS, so it needs denoise high enough for
+    the model to assert them (~0.8+). Graft already has identity in the pixels,
+    so it needs denoise low enough not to redraw the person. Measured: regen at
+    0.65-0.80 moved identity by nothing (0.758 vs 0.761 base).
+    """
+    from sourcemode.pose.transfer import REFINE_DENOISE_SWEEP, REGEN_DENOISE_SWEEP
+
+    assert min(REGEN_DENOISE_SWEEP) >= 0.8, "regen must be able to assert the LoRA"
+    assert max(REFINE_DENOISE_SWEEP) <= 0.6, "graft heal must not redraw the face"
+    assert min(REGEN_DENOISE_SWEEP) > max(REFINE_DENOISE_SWEEP)
+
+
+def test_regen_source_crop_is_wider_than_target_crop():
+    """A tight source crop cut the updo out of the reference and lost the style."""
+    from sourcemode.pose.transfer import REGEN_SRC_PAD
+
+    assert REGEN_SRC_PAD > 1.15
+
+
+def test_match_exposure_neutralises_a_brightness_step(tmp_path):
+    """The seam halo was a compositing error, so it gets a compositing fix."""
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.pose.face import match_exposure
+
+    base = Image.fromarray(np.full((64, 64, 3), 120, dtype="uint8"))
+    bright = Image.fromarray(np.full((64, 64, 3), 210, dtype="uint8"))
+    fixed = np.asarray(match_exposure(bright, base), dtype=float)
+    assert abs(fixed.mean() - 120) < 6, f"exposure not matched: {fixed.mean():.1f}"

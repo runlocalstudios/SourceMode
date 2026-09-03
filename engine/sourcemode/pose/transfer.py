@@ -24,7 +24,8 @@ import random
 import time
 from pathlib import Path
 
-from .face import crop_face, graft_source_face, mask_reference_face, paste_face
+from .face import (crop_face, graft_source_face, mask_reference_face, paste_face,
+                   paste_face_oval)
 from .library import POSES, gates
 from .skeleton import draw_skeleton
 from .metrics import measure, pose_similarity, score_against
@@ -130,6 +131,16 @@ FACE_CROP_PX = 896
 # the heal stays moderate: enough to fix perspective and the seam, not enough
 # to redraw the person.
 REFINE_DENOISE_SWEEP = (0.35, 0.45, 0.55)
+# With a character LoRA the identity lives in the WEIGHTS, so the face can be
+# REGENERATED rather than warped into place. That is what removes the
+# distortion: a 2D affine cannot rotate a face in 3D, and grafting onto a head
+# tilted up to camera smears it — 0.87 identity, visibly wrong geometry. High
+# denoise is needed (identity only asserts above ~0.8) and is safe here exactly
+# because the weights, not the init latent, carry who she is.
+REGEN_DENOISE_SWEEP = (0.85, 0.95)
+# Source crop wider than the target crop so an updo or ponytail is inside the
+# reference at all; a tight crop cost the hairstyle.
+REGEN_SRC_PAD = 1.6
 # A refine that improves the face but quietly straightens the pose is a
 # regression, so pose similarity is allowed to fall only this far.
 REFINE_POSE_TOLERANCE = 0.05
@@ -139,7 +150,9 @@ REFINE_MIN_GAIN = 0.005
 
 
 def build_refine_workflow(cfg: dict, posed_name: str, source_name: str, seed: int,
-                          prefix: str, denoise: float = 1.0) -> dict:
+                          prefix: str, denoise: float = 1.0,
+                          lora: str | None = None, lora_strength: float = 0.7,
+                          instruction: str | None = None) -> dict:
     """Two-image identity restore. Deliberately NOT the AnyPose graph.
 
     denoise < 1 anchors the sampler on image1's own latent (the graph is
@@ -156,10 +169,12 @@ def build_refine_workflow(cfg: dict, posed_name: str, source_name: str, seed: in
         "MODEL": cfg["models"]["qwen_edit"],
         "TEXT_ENCODER": cfg["models"]["qwen_text_encoder"],
         "VAE": cfg["models"]["qwen_vae"],
-        "POSITIVE": REFINE_INSTRUCTION,
+        "POSITIVE": instruction or REFINE_INSTRUCTION,
         "NEGATIVE": REFINE_NEGATIVE,
         "IMAGE": posed_name, "REF_IMAGE": source_name,
-        "LORA_PATH": "", "LORA_STRENGTH": 1.0,
+        # With a character LoRA, identity comes from the WEIGHTS — which is what
+        # lets the heal regenerate at high denoise instead of warping pixels.
+        "LORA_PATH": lora or "", "LORA_STRENGTH": lora_strength,
         "LIGHTNING": preset["qwen_edit_lightning"], "LIGHTNING_STRENGTH": 1.0,
         "SHIFT": float(cfg["render"]["qwen_shift"]),
         "SEED": seed,
@@ -180,23 +195,23 @@ def build_refine_workflow(cfg: dict, posed_name: str, source_name: str, seed: in
 
 def refine_head(cfg, client, posed: Path, source_plate: Path, source_asset: Path,
                 work: Path, model_path: str, *, candidates: int = 3, seed: int = 0,
-                log=print) -> tuple[Path, str]:
-    """Graft the source face on, then let the model heal it.
+                lora: str | None = None, lora_strength: float = 1.0,
+                hair: str | None = None, log=print) -> tuple[Path, str]:
+    """Restore the face. Two strategies, chosen by whether a LoRA exists.
 
-    Ordering is the whole trick, learned by measuring the reverse. With geometry
-    in the init latent and identity imported by the model, identity only
-    transferred above ~0.85 denoise — exactly where the model also re-framed the
-    crop and turned the head, so every strong candidate failed the pose gate.
+    WITH a character LoRA (preferred): regenerate the face crop at high denoise
+    with the LoRA loaded. Identity comes from the weights, geometry from the
+    crop's own latent, and nothing is pasted from another photograph — so no
+    warp, no seam and no backdrop spill, by construction. Only the face OVAL is
+    composited back, exposure-matched, so the hair, wardrobe and background the
+    pose pass got right survive untouched.
 
-    So: warp the SOURCE face onto the posed head first (landmark affine — real
-    pixels, real pores, real freckles), then run a moderate-denoise heal on the
-    face crop to fix perspective, lighting and the seam. The heal never has to
-    invent identity, only repair geometry, which is the part diffusion is
-    actually good at here.
+    WITHOUT one: graft the source face and heal it. That path reaches similar
+    identity numbers but distorts geometry on tilted heads, which is why it is
+    now the fallback rather than the design.
 
-    Every candidate — including the raw graft — is scored on the full pasted
-    composite for identity AND pose, and the original posed image wins unless
-    something genuinely beats it.
+    Either way every candidate is judged on the full composite for identity AND
+    pose, and the un-refined image wins unless something genuinely beats it.
     """
     from PIL import Image  # noqa: PLC0415
 
@@ -208,19 +223,6 @@ def refine_head(cfg, client, posed: Path, source_plate: Path, source_asset: Path
     if ref_emb is None:
         return posed, "refine skipped (no face in source)"
 
-    grafted = work / f"{posed.stem}_graft.png"
-    box = graft_source_face(source_asset, posed, grafted, model_path)
-    if box is None:
-        return posed, "refine skipped (no graft: face not found)"
-
-    src_crop, _ = crop_face(source_asset, model_path, pad=1.15, size=FACE_CROP_PX)
-    graft_crop, crop_box = crop_face(grafted, model_path, pad=1.15, size=FACE_CROP_PX)
-    if src_crop is None or graft_crop is None:
-        return posed, "refine skipped (no face crop)"
-    gc = work / f"{posed.stem}_graftcrop.png"; graft_crop.save(gc)
-    sc = work / f"{posed.stem}_srcface.png"; src_crop.save(sc)
-    graft_name, src_name = client.upload_image(gc), client.upload_image(sc)
-
     base_emb = embed_image(posed)
     base_id = cosine(ref_emb, base_emb) if base_emb is not None else 0.0
     base_pose = measure(posed, model_path)
@@ -228,40 +230,79 @@ def refine_head(cfg, client, posed: Path, source_plate: Path, source_asset: Path
     def judge(candidate: Path, tag: str):
         emb = embed_image(candidate)
         if emb is None:
-            return None, f"{tag}:noface"
+            return None, tag + ":noface"
         ident = cosine(ref_emb, emb)
-        pose_keep = 1.0
+        keep = 1.0
         m = measure(candidate, model_path)
         if m and base_pose:
-            pose_keep = pose_similarity(m, base_pose)["score"]
-        drifted = pose_keep < 1 - REFINE_POSE_TOLERANCE
-        return (None if drifted else ident), f"{tag}:{ident:.3f}{'/posedrift' if drifted else ''}"
+            keep = pose_similarity(m, base_pose)["score"]
+        drifted = keep < 1 - REFINE_POSE_TOLERANCE
+        suffix = "/posedrift" if drifted else ""
+        return (None if drifted else ident), "%s:%.3f%s" % (tag, ident, suffix)
 
     best, best_id, tried = posed, base_id, []
-    # the raw graft is a free candidate: right pixels, possibly wrong perspective
-    ident, note = judge(grafted, "graft")
-    tried.append(note)
-    if ident is not None and ident > best_id + REFINE_MIN_GAIN:
-        best, best_id = grafted, ident
 
-    for c, denoise in enumerate(REFINE_DENOISE_SWEEP[:max(1, candidates)]):
-        nodes = build_refine_workflow(cfg, graft_name, src_name, seed + c * 61,
-                                      prefix=f"poserefine/{posed.stem}", denoise=denoise)
-        files = client.outputs(client.wait(client.submit(nodes)))
-        if not files:
-            continue
-        raw = work / f"{posed.stem}_heal{c}_face.png"
-        client.fetch(files[0], raw)
-        composite = work / f"{posed.stem}_heal{c}.png"
-        paste_face(grafted, Image.open(raw), crop_box, composite)
-        ident, note = judge(composite, f"d{denoise:.2f}")
+    if lora:
+        target_crop, cbox = crop_face(posed, model_path, pad=1.15, size=FACE_CROP_PX)
+        src_crop, _ = crop_face(source_asset, model_path, pad=REGEN_SRC_PAD, size=FACE_CROP_PX)
+        if target_crop is None or src_crop is None:
+            return posed, "refine skipped (no face crop)"
+        tc = work / (posed.stem + "_tcrop.png"); target_crop.save(tc)
+        sc = work / (posed.stem + "_srcface.png"); src_crop.save(sc)
+        tn, sn = client.upload_image(tc), client.upload_image(sc)
+        instruction = REFINE_INSTRUCTION + (
+            " She wears %s, exactly as in image 2." % hair if hair else "")
+        for i, denoise in enumerate(REGEN_DENOISE_SWEEP[:max(1, candidates)]):
+            nodes = build_refine_workflow(cfg, tn, sn, seed + i * 61,
+                                          prefix="poserefine/" + posed.stem, denoise=denoise,
+                                          lora=lora, lora_strength=lora_strength,
+                                          instruction=instruction)
+            files = client.outputs(client.wait(client.submit(nodes)))
+            if not files:
+                continue
+            raw = work / ("%s_regen%d_face.png" % (posed.stem, i))
+            client.fetch(files[0], raw)
+            composite = work / ("%s_regen%d.png" % (posed.stem, i))
+            paste_face_oval(posed, Image.open(raw), cbox, composite, model_path)
+            ident, note = judge(composite, "d%.2f" % denoise)
+            tried.append(note)
+            if ident is not None and ident > best_id + REFINE_MIN_GAIN:
+                best, best_id = composite, ident
+    else:
+        grafted = work / (posed.stem + "_graft.png")
+        box = graft_source_face(source_asset, posed, grafted, model_path)
+        if box is None:
+            return posed, "refine skipped (no graft: face not found)"
+        src_crop, _ = crop_face(source_asset, model_path, pad=1.15, size=FACE_CROP_PX)
+        graft_crop, crop_box = crop_face(grafted, model_path, pad=1.15, size=FACE_CROP_PX)
+        if src_crop is None or graft_crop is None:
+            return posed, "refine skipped (no face crop)"
+        gc = work / (posed.stem + "_graftcrop.png"); graft_crop.save(gc)
+        sc = work / (posed.stem + "_srcface.png"); src_crop.save(sc)
+        gn, sn = client.upload_image(gc), client.upload_image(sc)
+        ident, note = judge(grafted, "graft")
         tried.append(note)
         if ident is not None and ident > best_id + REFINE_MIN_GAIN:
-            best, best_id = composite, ident
+            best, best_id = grafted, ident
+        for c, denoise in enumerate(REFINE_DENOISE_SWEEP[:max(1, candidates)]):
+            nodes = build_refine_workflow(cfg, gn, sn, seed + c * 61,
+                                          prefix="poserefine/" + posed.stem, denoise=denoise)
+            files = client.outputs(client.wait(client.submit(nodes)))
+            if not files:
+                continue
+            raw = work / ("%s_heal%d_face.png" % (posed.stem, c))
+            client.fetch(files[0], raw)
+            composite = work / ("%s_heal%d.png" % (posed.stem, c))
+            paste_face(grafted, Image.open(raw), crop_box, composite)
+            ident, note = judge(composite, "d%.2f" % denoise)
+            tried.append(note)
+            if ident is not None and ident > best_id + REFINE_MIN_GAIN:
+                best, best_id = composite, ident
 
+    mode = "regen" if lora else "graft"
     if best is posed:
-        return posed, f"refine declined (face {base_id:.3f}; tried {', '.join(tried)})"
-    return best, f"refine {base_id:.3f}->{best_id:.3f}"
+        return posed, "refine declined [%s] (face %.3f; tried %s)" % (mode, base_id, ", ".join(tried))
+    return best, "refine [%s] %.3f->%.3f" % (mode, base_id, best_id)
 
 
 def composite_on_plate(src: Path, dest: Path) -> tuple[int, int]:
@@ -617,7 +658,8 @@ def transfer(cfg, client, sources: list[Path], pose_key: str, library: Path, out
         # cannot overwrite each other's results.
         if refine:
             best, note = refine_head(cfg, client, best, plate, path, tmp, model_path,
-                                     seed=seed + i * 100, log=log)
+                                     seed=seed + i * 100, lora=lora,
+                                     lora_strength=lora_strength, hair=hair, log=log)
             detail += f"  {note}"
 
         final_dir = out_dir / asset_label(path)
