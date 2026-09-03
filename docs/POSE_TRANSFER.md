@@ -266,6 +266,64 @@ Unexplored options, roughly in order of promise:
 4. **Per-character identity LoRA** — a face LoRA carries pores and asymmetry that
    nothing embedding-based preserves.
 
+## Identity: the validated stack
+
+Architecture, after validating it against the alternatives:
+
+| layer | carries | why here |
+|---|---|---|
+| character LoRA (trained on edit-2511) | **identity** | the industry answer; identity belongs in weights, not per-image surgery |
+| pose graph: masked reference + skeleton | **pose** | reference face masked so it cannot compete; skeleton adds joints without identity |
+| source image1 | **wardrobe** | outfit-from-pixels, the thing pure-LoRA studios struggle with |
+| `--refine` regen pass | **face repair** | regenerates the face crop with the LoRA loaded; declines when it cannot improve |
+
+Validated on 12 assets spanning every outfit, measured against the same 12 from
+the shipped pipeline:
+
+| | shipped | full stack |
+|---|---|---|
+| mean face identity | 0.609 | **0.813** |
+| improved | — | **12 of 12** |
+| best / worst | — | 0.909 / 0.668 |
+
+For scale: cross-character sits near 0.27, and Gwen's genuine same-person
+frontal mean was 0.81.
+
+### Why the refine regenerates instead of grafting
+
+Grafting the source face reached similar numbers and looked wrong: a 2D affine
+cannot rotate a face in 3D, so warping a frontal source onto a head tilted up to
+camera smears it. With identity in the weights the face can simply be
+regenerated — no warp, no seam, no backdrop spill, by construction.
+
+The two modes need opposite denoise, and a test pins it: regen needs >=0.8 for
+the weights to assert identity; the graft heal needs <=0.6 or it redraws the
+person it was meant to preserve.
+
+### The bobblehead, and the rule it cost
+
+At regen denoise the model RE-FRAMES the face inside its square crop, so pasting
+the patch back at the crop's scale enlarges the head. `paste_face_oval` now
+rescales the patch so the face lands at the size and position the original
+occupied.
+
+This shipped once, because of a worse mistake. The validation was declining 8 of
+12 for "posedrift" while `head` (ear span / shoulder width) jumped 0.44->0.62. I
+read that as ear-detection noise and disabled the proportion term. It was not
+noise — it was the metric correctly reporting a 40% larger head, and it was the
+only thing catching the defect.
+
+**When a gate rejects something, look at the picture before you change the
+gate.** That was done for the squats and saved the calibration; skipped here and
+broke it. Three metrics in this module have now been misread the same way —
+`thigh_angle` and `squat_depth` as anatomy when they measure projection, `head`
+as noise when it was measuring a real defect.
+
+Verification that actually catches this: check head proportion numerically
+against the pre-refine base AND review at FULL FRAME. Face crops hid the
+bobbleheads completely — a zoomed face looks fine while the body under it is
+wrong.
+
 ## Graft-then-heal: how the face is actually kept
 
 The generation-based attempts topped out low, and the sweep showed why: with
