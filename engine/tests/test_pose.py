@@ -621,3 +621,32 @@ def test_match_exposure_neutralises_a_brightness_step(tmp_path):
     bright = Image.fromarray(np.full((64, 64, 3), 210, dtype="uint8"))
     fixed = np.asarray(match_exposure(bright, base), dtype=float)
     assert abs(fixed.mean() - 120) < 6, f"exposure not matched: {fixed.mean():.1f}"
+
+
+def test_proportion_term_is_active_by_default():
+    """The proportion term is the bobblehead check. Do not disable it casually.
+
+    It was once switched off for the face-refine pass on the theory that `head`
+    moving 0.44->0.62 was ear-detection noise. It was not noise: the refine was
+    enlarging the head 40%, and bobbleheads shipped the moment the term went
+    away. body_only exists, but only for callers that guarantee head size some
+    other way.
+    """
+    from sourcemode.pose.metrics import pose_similarity
+
+    ref = {"thigh_angle": 80.0, "torso_bend": 2.0, "body_facing": 1.0,
+           "head_turn": 0.03, "head": 0.44}
+    bobble = {**ref, "head": 0.62}
+    assert pose_similarity(bobble, ref)["score"] < 0.96, "a 40% larger head must be penalised"
+    assert pose_similarity(bobble, ref, body_only=True)["score"] > \
+        pose_similarity(bobble, ref)["score"], "body_only must be the laxer of the two"
+
+
+def test_refine_gate_uses_the_proportion_term():
+    """transfer.py must not pass body_only into the refine's pose check."""
+    from pathlib import Path as P
+
+    src = (P(__file__).parent.parent / "sourcemode" / "pose" / "transfer.py").read_text(encoding="utf-8")
+    idx = src.index("def refine_head(")
+    body = src[idx:src.index("def composite_on_plate(")]
+    assert "body_only=True" not in body, "the refine is exactly what can inflate a head"

@@ -260,10 +260,36 @@ def paste_face_oval(base_path: Path, patch, crop_box: tuple, dest: Path, model_p
     w, h = x1 - x0, y1 - y0
     patch = patch.convert("RGB").resize((w, h), Image.LANCZOS)
 
-    tmp = dest.parent / f"{dest.stem}_probe.png"
     dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.parent / f"{dest.stem}_probe.png"
     patch.save(tmp)
     fb = face_box(tmp, model_path, pad=0.65)
+
+    # SCALE-ALIGN before anything else. At the denoise this pass needs (0.85+)
+    # the model re-frames the face inside its square crop, so pasting the patch
+    # back at the crop's scale enlarges the head — measured as a 40% jump in
+    # ear-span/shoulder-width, i.e. a bobblehead. Rescale the patch so its face
+    # lands at the size and position the original face occupied.
+    base_probe = dest.parent / f"{dest.stem}_baseprobe.png"
+    base.crop((x0, y0, x1, y1)).save(base_probe)
+    ref_fb = face_box(base_probe, model_path, pad=0.65)
+    base_probe.unlink(missing_ok=True)
+    if fb is not None and ref_fb is not None:
+        pw, rw = fb[2] - fb[0], ref_fb[2] - ref_fb[0]
+        scale = rw / pw if pw > 4 else 1.0
+        if abs(scale - 1.0) > 0.02:
+            scale = min(max(scale, 0.4), 2.5)
+            nw, nh = max(8, int(w * scale)), max(8, int(h * scale))
+            resized = patch.resize((nw, nh), Image.LANCZOS)
+            # keep the face centre where the reference face centre is
+            pcx = (fb[0] + fb[2]) / 2 * scale
+            pcy = (fb[1] + fb[3]) / 2 * scale
+            rcx, rcy = (ref_fb[0] + ref_fb[2]) / 2, (ref_fb[1] + ref_fb[3]) / 2
+            canvas = Image.new("RGB", (w, h), (128, 128, 128))
+            canvas.paste(resized, (int(rcx - pcx), int(rcy - pcy)))
+            patch = canvas
+            patch.save(tmp)
+            fb = face_box(tmp, model_path, pad=0.65) or ref_fb
     tmp.unlink(missing_ok=True)
     if fb is None:
         fb = (int(w * 0.20), int(h * 0.15), int(w * 0.80), int(h * 0.85))

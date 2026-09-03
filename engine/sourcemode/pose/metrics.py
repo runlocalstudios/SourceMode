@@ -144,13 +144,20 @@ def score_against(candidate: dict, target: dict, limits: dict, weights: dict) ->
     return total
 
 
-def pose_similarity(candidate: dict, reference: dict, tolerance_deg: float = 45.0) -> dict:
+def pose_similarity(candidate: dict, reference: dict, tolerance_deg: float = 45.0,
+                    body_only: bool = False) -> dict:
     """How closely a rendered candidate matches the reference pose (0..1).
 
     Joint angles are compared rather than positions: the reference photo and
     the character have different proportions and framing, so only angles are
     comparable. Body facing and head turn are included because a candidate can
     match every joint angle while facing the wrong way.
+
+    body_only drops the head-PROPORTION term. Use it ONLY when the head size is
+    independently guaranteed. It was once switched on for the face-refine pass on
+    the theory that `head` moving 0.44->0.62 was ear-detection noise; it was not.
+    The refine was genuinely enlarging the head 40% and the proportion term was
+    the only thing catching it. Bobbleheads shipped the moment it was disabled.
     """
     joints = ("thigh_angle", "torso_bend")
     parts = {}
@@ -159,8 +166,15 @@ def pose_similarity(candidate: dict, reference: dict, tolerance_deg: float = 45.
     parts["facing"] = max(0.0, 1.0 - abs(candidate["body_facing"] - reference["body_facing"]) / 2.0)
     parts["head_turn"] = max(0.0, 1.0 - abs(candidate["head_turn"] - reference["head_turn"]) / 2.0)
     parts["proportion"] = max(0.0, 1.0 - abs(candidate["head"] - reference["head"]) / 0.25)
-    score = (
-        0.30 * parts["thigh_angle"] + 0.20 * parts["torso_bend"]
-        + 0.25 * parts["facing"] + 0.15 * parts["head_turn"] + 0.10 * parts["proportion"]
-    )
+    if body_only:
+        # same weights, renormalised over the 0.90 that is not `proportion`
+        score = (
+            0.30 * parts["thigh_angle"] + 0.20 * parts["torso_bend"]
+            + 0.25 * parts["facing"] + 0.15 * parts["head_turn"]
+        ) / 0.90
+    else:
+        score = (
+            0.30 * parts["thigh_angle"] + 0.20 * parts["torso_bend"]
+            + 0.25 * parts["facing"] + 0.15 * parts["head_turn"] + 0.10 * parts["proportion"]
+        )
     return {"score": round(score, 4), **{k: round(v, 4) for k, v in parts.items()}}

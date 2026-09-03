@@ -235,6 +235,8 @@ def refine_head(cfg, client, posed: Path, source_plate: Path, source_asset: Path
         keep = 1.0
         m = measure(candidate, model_path)
         if m and base_pose:
+            # NOT body_only: the proportion term is the bobblehead check, and
+            # the refine is exactly what can inflate a head.
             keep = pose_similarity(m, base_pose)["score"]
         drifted = keep < 1 - REFINE_POSE_TOLERANCE
         suffix = "/posedrift" if drifted else ""
