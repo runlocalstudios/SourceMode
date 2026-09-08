@@ -650,3 +650,76 @@ def test_refine_gate_uses_the_proportion_term():
     idx = src.index("def refine_head(")
     body = src[idx:src.index("def composite_on_plate(")]
     assert "body_only=True" not in body, "the refine is exactly what can inflate a head"
+
+
+# --- native single-pass generation -----------------------------------------
+# The pipeline that works. Everything asserted here is a property that one of
+# the five failed surgical approaches violated.
+
+
+def test_native_workflow_loads_the_lora_and_no_anypose():
+    """Identity must come from the WEIGHTS, and nothing may move the pose.
+
+    AnyPose exists to transfer a pose from a reference photograph of another
+    woman — the thing whose identity competed with the character's for the whole
+    generation. It has no place in a single-pass graph.
+    """
+    from sourcemode.config import load_config
+    from sourcemode.pose.native import build_native_workflow
+    from sourcemode.pose.transfer import ANYPOSE_BASE, ANYPOSE_HELPER
+
+    lora = r"sourcemode\sunny\sunny_edit2511-000012.safetensors"
+    nodes = build_native_workflow(load_config(), "img.png", "p", 1, "t/", lora=lora)
+    loras = {n["inputs"].get("lora_name") for n in nodes.values()
+             if n["class_type"] == "LoraLoaderModelOnly"}
+    assert lora in loras
+    assert ANYPOSE_BASE not in loras and ANYPOSE_HELPER not in loras
+    assert sum(1 for n in nodes.values() if n["class_type"] == "LoadImage") == 1, \
+        "single pass takes ONE image; a second is a reference photo by another name"
+
+
+def test_native_renders_near_source_resolution():
+    """The ~1MP bucket is where the skin texture died.
+
+    Assets are ~1.57MP; FluxKontextImageScale snaps to 832x1248 and LANCZOS
+    cannot restore what the downscale removed. Measured 31-35% loss of
+    high-frequency face detail.
+    """
+    from sourcemode.config import load_config
+    from sourcemode.pose.native import NATIVE_H, NATIVE_W, build_native_workflow
+
+    nodes = build_native_workflow(load_config(), "img.png", "p", 1, "t/", lora="x.safetensors")
+    assert not any(n["class_type"] == "FluxKontextImageScale" for n in nodes.values())
+    scales = [n for n in nodes.values() if n["class_type"] == "ImageScale"]
+    assert scales and scales[0]["inputs"]["width"] == NATIVE_W
+    assert scales[0]["inputs"]["height"] == NATIVE_H
+    assert NATIVE_W * NATIVE_H > 1_400_000, "must beat the ~1MP bucket it replaces"
+
+
+def test_native_runs_full_steps_not_lightning():
+    """Quality path. The 4-step distill exists for iteration, not for output."""
+    from sourcemode.config import load_config
+    from sourcemode.pose.native import build_native_workflow
+
+    nodes = build_native_workflow(load_config(), "img.png", "p", 1, "t/", lora="x.safetensors")
+    ks = [n for n in nodes.values() if n["class_type"] == "KSampler"]
+    assert ks and int(ks[0]["inputs"]["steps"]) >= 20
+    assert float(ks[0]["inputs"]["cfg"]) > 1.0, "cfg 1.0 is the lightning preset"
+
+
+def test_native_negative_forbids_every_artifact_the_stack_produced():
+    """Each term here names a defect that actually shipped."""
+    from sourcemode.pose.native import NEGATIVE
+
+    for artifact in ("airbrushed", "smoothed skin", "bobblehead", "oversized head",
+                     "green tint", "doll-like"):
+        assert artifact in NEGATIVE, f"{artifact} was a real failure; keep it excluded"
+
+
+def test_native_prompt_leads_with_the_trigger():
+    """Whatever leads the prompt dominates it — the same rule as the camera."""
+    from sourcemode.pose.native import compose_prompt
+
+    p = compose_prompt("sunny_ch", "She is kneeling.", "wearing a blue top")
+    assert p.startswith("sunny_ch")
+    assert "kneeling" in p and "blue top" in p

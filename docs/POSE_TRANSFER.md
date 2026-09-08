@@ -1,4 +1,91 @@
-# Pose transfer
+# Pose generation
+
+**Read this first: the pose-TRANSFER pipeline below is superseded.** Character
+poses are now generated in a single native pass (`sourcemode/pose/native.py`).
+The transfer stack is kept because its gates, references, metrics and hard-won
+prompt rules are still correct and still used — but it is no longer how assets
+are made.
+
+## Why the transfer stack was retired
+
+Five surgical approaches were built and measured. Each was defeated by an
+artifact it could not fix without creating another:
+
+| approach | reached | defeated by |
+|---|---|---|
+| AnyPose + reference photograph | 0.61 identity | whole figure regenerated; airbrushed skin every time |
+| whole-frame refine | ~0.62 | face is a few hundred pixels of a 1MP budget; identity barely moved |
+| face-crop refine, reference-conditioned | — | identity only transfers above ~0.85 denoise, exactly where the head turns |
+| landmark-affine graft + heal | 0.87 | a 2D affine cannot rotate a face in 3D — visible warp on tilted heads |
+| regenerate-and-paste with LoRA | 0.81 | bobbleheads, then green-screen bleed; each fix revealed the next seam |
+
+The pattern: every stage compensated for damage done by the previous one, and
+every compensation had its own failure mode. The stack never converged because
+the architecture had too many seams — not because any single stage was wrong.
+
+Two measurements make the case concretely. The pose pass alone stripped **17% of
+the source's facial texture** and pose+refine stripped **22%**, with worst cases
+at 31-35%; that is the "airbrushed" look, and it came from resampling, not from
+settings. And **41% of the pixels were discarded before the model ever ran** —
+assets are ~1.57MP, `FluxKontextImageScale` snaps to an 832x1248 bucket, and
+LANCZOS cannot put back what the downscale removed.
+
+## What replaced it
+
+One pass. Source asset for wardrobe and framing, trained character LoRA for
+identity, prompt for the pose, near-native resolution, full steps. Nothing cut
+out, downscaled, warped, grafted, healed, pasted or keyed.
+
+| | mean identity | above 0.75 |
+|---|---|---|
+| old surgical stack | 0.609 -> 0.813 (with artifacts) | — |
+| **native, sunny** | **0.820** | 27/30 |
+| **native, vivienne** | **0.834** | 30/30 |
+
+Cross-character similarity is ~0.27 and a genuine same-person frontal set
+measured 0.81, so these are at real-photograph level — and with no bobbleheads,
+halos, warp, seams or chroma bleed, because those failure modes no longer have
+anywhere to occur.
+
+**Volume plus selection is the workflow.** Generate 30, keep the best few. That
+is how this is done at production scale; nothing tries to salvage a weak render.
+
+**The one thing given up:** outfits are prompt-described, so they are faithful in
+character but not pixel-identical. Guaranteeing exact wardrobe is the entire
+reason the surgical stack existed, and that guarantee is what cost the quality.
+
+## Character LoRAs are the load-bearing part
+
+Identity lives in the weights. Trained on Qwen-Image-Edit-2511 directly
+(`--model_version edit-2511`), so there is no cross-checkpoint transfer
+assumption. Reference photos dominate quality:
+
+| character | reference photos | closeups | native result |
+|---|---|---|---|
+| sunny | 242 | 63 | 0.820 |
+| vivienne | 263 | 56 | 0.834 |
+| vivienne (46 game assets only) | 0 | 0 | **0.489** best epoch |
+| priyanka | 165 | 10 | in progress |
+
+Vivienne was trained twice with the same recipe and only the reference data
+changed: **0.489 -> 0.834**. That is the whole story on data. Source homogeneity
+is NOT the driver — measured across 25 characters, sunny (0.945 cohesion) and
+vivienne (0.939) had the *most* near-duplicate game assets on the roster and
+still produced the best LoRAs.
+
+Training gotchas that cost real hours, so they are paid once:
+- musubi logs Japanese to stdout; Windows redirects default to cp1252 and the
+  print kills training. Run with `PYTHONUTF8=1`.
+- edit-2511's control-latent stream does NOT fit 32GB at `blocks_to_swap 0` even
+  though plain T2I did: 628 s/it of sysmem thrash versus 8.5 s/it at 16.
+
+---
+
+# Appendix: the pose-transfer stack (superseded)
+
+Everything below documents the retired pipeline. The gates, metrics, reference
+library and prompt rules remain valid and are still used to build and score pose
+references; the transfer/refine machinery is not.
 
 Takes an existing `*_standing.webp` character asset and produces the same
 character, in the same outfit, in a new pose. No character LoRA required —
