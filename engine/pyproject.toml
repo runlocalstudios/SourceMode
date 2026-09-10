@@ -21,6 +21,8 @@ voice = ["chatterbox-tts>=0.1", "setuptools>=70,<81"]
 # Both in-process — the original tool shelled out to two separate venvs.
 pose = ["mediapipe>=1.0", "rembg>=2.0", "numpy>=1.26", "pillow>=10.0"]
 db = ["psycopg[binary]>=3.1"]
+# Live readout service (sourcemode monitor serve); psutil finds the trainer process.
+monitor = ["fastapi>=0.110", "uvicorn>=0.29", "psutil>=5.9"]
 
 [project.scripts]
 sourcemode = "sourcemode.cli:app"

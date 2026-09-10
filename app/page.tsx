@@ -32,6 +32,10 @@ export default async function Dashboard() {
     <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 720, margin: "3rem auto", padding: "0 1rem" }}>
       <h1>SourceMode</h1>
       <p style={{ color: "#666" }}>Consistent-character video pipeline — control panel</p>
+      <p>
+        <a href="/monitor">GPU box →</a>{" "}
+        <span style={{ color: "#666" }}>live utilisation, VRAM and training progress (needs the local engine monitor)</span>
+      </p>
 
       <h2 style={{ marginTop: "2rem" }}>Characters</h2>
       {!dbOk && <p style={{ color: "#b00" }}>Database unavailable (DATABASE_URL not set or unreachable).</p>}

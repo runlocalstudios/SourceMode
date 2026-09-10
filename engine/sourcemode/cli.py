@@ -23,6 +23,7 @@ train_app = typer.Typer(no_args_is_help=True, help="LoRA training command builde
 bootstrap_app = typer.Typer(no_args_is_help=True, help="Character-sheet dataset bootstrap.")
 voice_app = typer.Typer(no_args_is_help=True, help="Voice synthesis (Chatterbox).")
 pose_app = typer.Typer(no_args_is_help=True, help="Pose transfer: same character and outfit, new pose.")
+monitor_app = typer.Typer(no_args_is_help=True, help="Live readout of the GPU box for the control panel.")
 app.add_typer(source_app, name="source")
 app.add_typer(gates_app, name="gates")
 app.add_typer(prompts_app, name="prompts")
@@ -31,6 +32,31 @@ app.add_typer(train_app, name="train")
 app.add_typer(bootstrap_app, name="bootstrap")
 app.add_typer(voice_app, name="voice")
 app.add_typer(pose_app, name="pose")
+app.add_typer(monitor_app, name="monitor")
+
+
+@monitor_app.command("serve")
+def monitor_serve(
+    host: str = typer.Option(None, "--host", help="Bind address (default from [monitor] in config.toml)."),
+    port: int = typer.Option(None, "--port"),
+):
+    """Serve GPU / ComfyUI / training status over HTTP for the control panel."""
+    from .monitor.service import serve  # noqa: PLC0415
+
+    cfg, _ = _ctx()
+    rprint(f"monitor on http://{host or cfg['monitor']['host']}:{port or cfg['monitor']['port']}  (Ctrl-C to stop)")
+    serve(cfg, host=host, port=port)
+
+
+@monitor_app.command("status")
+def monitor_status():
+    """One status sample, as JSON — what the service would report right now."""
+    import json  # noqa: PLC0415
+
+    from .monitor.sampler import Sampler  # noqa: PLC0415
+
+    cfg, _ = _ctx()
+    print(json.dumps(Sampler(cfg).sample_once(), indent=2, default=str))
 
 
 def _ctx():

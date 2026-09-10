@@ -116,6 +116,16 @@ max_frames = 145          # 4n+1; 145 @ 24fps ~ 6s, proven on this 5090
 [voice]
 engine = "chatterbox"
 
+[monitor]
+# Live readout of the GPU box (`sourcemode monitor serve`): GPU, ComfyUI queue,
+# musubi training progress. Binds to localhost; set host to the Tailscale
+# address (or SOURCEMODE_MONITOR_HOST) to reach it from other devices.
+host = "127.0.0.1"
+port = 8787
+sample_s = 2.0
+# Where LoRA training logs live; the newest *.log here is the run being tracked.
+training_log_dir = 'outputs/training'
+
 [pose]
 # Pose-transfer tooling: takes an existing character render and produces the
 # same character, same outfit, in a new pose. Used by Chill After Dark's asset
