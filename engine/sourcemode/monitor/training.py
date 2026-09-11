@@ -20,8 +20,11 @@ STEPS_RE = re.compile(
 # is hard-wrapped at the console width, so "from " and the path, or "epoch数:"
 # and its number, can land on different lines.
 DATASET_RE = re.compile(r"Load\s+dataset\s+config\s+from\s+(?P<path>\S+)")
-EPOCHS_RE = re.compile(r"num\s+epochs\s+/\s+epoch数:\s*(?P<n>\d+)")
-BATCHES_RE = re.compile(r"num\s+batches\s+per\s+epoch\s+/\s+1epochのバッチ数:\s*(?P<n>\d+)")
+# The Japanese half of musubi's bilingual labels ("epoch数", "1epochのバッチ数")
+# arrives as "??" when the launching console's codepage can't encode it, so
+# match it as any run of non-space characters before the colon.
+EPOCHS_RE = re.compile(r"num\s+epochs\s+/\s+\S+:\s*(?P<n>\d+)")
+BATCHES_RE = re.compile(r"num\s+batches\s+per\s+epoch\s+/\s+\S+:\s*(?P<n>\d+)")
 TRAINER_MARKERS = ("qwen_image_train_network", "wan_train_network")
 
 

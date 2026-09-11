@@ -98,6 +98,9 @@ def test_parse_run_info_survives_console_wrapping():
         "  num epochs / \r\nepoch数: 20\r\n"
     )
     assert parse_run_info(wrapped) == {"character": "gabi_v2", "epochs": 20, "batches_per_epoch": 83}
+    # and the console codepage may have replaced the Japanese labels with "?"
+    mojibake = "  num batches per epoch / 1epoch?????: 83\r\n  num epochs / epoch?: 20\r\n"
+    assert parse_run_info(mojibake) == {"character": None, "epochs": 20, "batches_per_epoch": 83}
 
 
 def test_decode_log_handles_odd_utf16_slices():
