@@ -142,8 +142,10 @@ def place(cutouts: list[dict], plan: dict, staging: Path, *, pick: dict[str, str
         cands = rank_candidates(by_slot.get(slot["id"], []))
         chosen = None
         if slot["id"] in pick:
-            chosen = next((c for c in cands if Path(c["outputs"].get("webp", c["outputs"]["png"])).name == pick[slot["id"]]
-                           or Path(c["source"]).name == pick[slot["id"]]), None)
+            wanted = pick[slot["id"]]
+            chosen = next((c for c in cands
+                           if wanted in {Path(v).name for v in c["outputs"].values()} | {Path(c["source"]).name}),
+                          None)
         chosen = chosen or (cands[0] if cands else None)
         if chosen is None:
             mapping["missing"].append(slot["id"])
