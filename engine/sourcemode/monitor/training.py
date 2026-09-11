@@ -140,11 +140,15 @@ def decode_log(head: bytes, tail: bytes) -> str:
     return (head + sep + tail).decode(enc, errors="replace")
 
 
-def read_tail(path: Path, max_bytes: int = 200_000) -> str:
-    """Head plus tail of a log: the header is near the front, tqdm lines at the end."""
+def read_tail(path: Path, max_bytes: int = 200_000, head_bytes: int = 150_000) -> str:
+    """Head plus tail of a log: the header is near the front, tqdm lines at the end.
+
+    The head must be generous: musubi dumps the whole dataset config before the
+    epoch count, and a two-dataset config in UTF-16 put "num epochs" at byte
+    ~82 000 (gabi_v2) — past a 20 KB head and short of a 200 KB tail."""
     size = path.stat().st_size
     with path.open("rb") as f:
-        head = f.read(min(size, 20_000))
+        head = f.read(min(size, head_bytes))
         f.seek(size - max_bytes if size > max_bytes else 0)
         tail = f.read()
     return decode_log(head, tail)

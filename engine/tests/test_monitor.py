@@ -103,6 +103,20 @@ def test_parse_run_info_survives_console_wrapping():
     assert parse_run_info(mojibake) == {"character": None, "epochs": 20, "batches_per_epoch": 83}
 
 
+def test_sample_training_header_deep_in_a_big_log(tmp_path: Path):
+    """The epoch count came 80 KB in (after a long config dump) on a 700 KB log."""
+    body = ("INFO:musubi_tuner.training.trainer_base:Load dataset config from "
+            "C:/x/lora-datasets/gabi_v2/dataset_qwen_edit.toml\n"
+            + "config line\n" * 6000                      # ~72 KB of dump
+            + "  num batches per epoch / 1epochのバッチ数: 83\n  num epochs / epoch数: 20\n"
+            + "steps:  50%|█████     | 830/1660 [2:00:00<2:00:00,  8.70s/it, avr_loss=0.05]\r" * 8000)
+    (tmp_path / "big.log").write_text(body, encoding="utf-8")
+    assert (tmp_path / "big.log").stat().st_size > 600_000
+    t = sample_training(tmp_path, running=True)
+    assert t["character"] == "gabi_v2" and t["epochs"] == 20 and t["epoch"] == 10
+    assert t["progress"]["step"] == 830
+
+
 def test_decode_log_handles_odd_utf16_slices():
     from sourcemode.monitor.training import decode_log
     full = b"\xff\xfe" + "steps:  10%|█| 1/10 [00:01<00:09,  1.00s/it]".encode("utf-16-le")
