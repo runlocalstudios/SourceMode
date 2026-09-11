@@ -106,6 +106,96 @@ def test_cutout_batch_mirrors_folders_so_same_named_shots_do_not_collide(tmp_pat
     assert len({r["report"]["bbox"][0] for r in res}) == 2          # genuinely different images kept
 
 
+def test_cutout_carries_slot_identity_from_render_sidecar_or_folder(tmp_path: Path):
+    from sourcemode.assets.cutout import source_meta
+    d = tmp_path / "priyanka" / "renders" / "casual_date_03_standing"; d.mkdir(parents=True)
+    src = d / "shot_00_s7100.png"; figure().save(src)
+    m = source_meta(src)                                    # folder name alone is enough
+    assert m["asset"] == {"character": "priyanka", "category": "casual_date", "look": 3, "pose": "standing"}
+    src.with_suffix(".json").write_text(json.dumps({"asset": {"character": "priyanka", "category": "casual_date",
+                                                              "look": 3, "pose": "standing", "shot": 0}, "score": 0.81}))
+    r = cutout_file(src, tmp_path / "out", remover=fake_remover, model="fake")
+    assert r["asset"]["look"] == 3 and r["score"] == 0.81   # sidecar wins and adds the score
+    loose = tmp_path / "loose.png"; figure().save(loose)
+    assert "asset" not in cutout_file(loose, tmp_path / "out2", remover=fake_remover, model="fake")
+
+
+# ------------------------------------------------------------------ catalog
+
+def test_runtime_names_follow_the_game_contract():
+    from sourcemode.assets.catalog import look_id, parse_runtime_name, runtime_name
+    assert runtime_name("casual", 3) == "casual_03_standing.webp"
+    assert runtime_name("fancy_dining_gallery", 12, "sitting") == "fancy_dining_gallery_12_sitting.webp"
+    assert runtime_name("weekly_casual", 1) == "casual_01_standing.webp"      # art-source alias -> runtime prefix
+    assert look_id("work", 5) == "work_05"
+    assert parse_runtime_name("fancy_dining_gallery_02_standing.webp") == {"category": "fancy_dining_gallery", "look": 2, "pose": "standing"}
+    assert parse_runtime_name("casual_07_sitting.webp")["pose"] == "sitting"
+    assert parse_runtime_name("profile.webp") is None
+    assert parse_runtime_name("work_03.webp") is None                        # legacy, no pose
+    import pytest
+    with pytest.raises(ValueError):
+        runtime_name("casual", 1, "kneeling")
+
+
+def test_existing_looks_reads_a_shipped_outfits_folder(tmp_path: Path):
+    from sourcemode.assets.catalog import existing_looks
+    for n in ("casual_01_standing.webp", "casual_07_standing.webp", "work_05_standing.webp", "profile.webp"):
+        (tmp_path / n).write_bytes(b"x")
+    assert existing_looks(tmp_path) == {"casual": 7, "work": 5}
+    assert existing_looks(tmp_path / "nope") == {}
+
+
+def test_plan_assigns_look_numbers_once_and_can_extend_a_pack():
+    from sourcemode.assets.catalog import PACK_28, make_plan, plan_slots
+    plan = make_plan("priyanka", looks={"work": [{"outfit": "a blazer", "hair": "a bun"}]},
+                     lora="sourcemode\\priyanka\\priyanka_v1.safetensors", source_asset="x.png")
+    slots = plan_slots(plan)
+    assert len(slots) == sum(PACK_28.values()) == 28
+    assert [s["id"] for s in slots if s["category"] == "casual"] == [f"casual_{i:02d}" for i in range(1, 8)]
+    work = [s for s in slots if s["category"] == "work"]
+    assert work[0]["outfit"] == "a blazer" and work[1]["outfit"] == ""      # unfilled looks stay blank
+    assert work[0]["filename"] == "work_01_standing.webp"
+    ext = make_plan("priyanka", counts={"casual": 2}, start_after={"casual": 7})
+    assert [s["id"] for s in plan_slots(ext)] == ["casual_08", "casual_09"]
+
+
+def test_place_picks_best_per_slot_and_names_by_contract(tmp_path: Path):
+    from sourcemode.assets.catalog import make_plan, mapping_sheet, pack_registration, place
+    plan = make_plan("sunny", counts={"casual": 1, "work": 1})
+    def cut(cat, look, name, score, flags=()):
+        p = tmp_path / "cut" / name; p.parent.mkdir(exist_ok=True, parents=True)
+        im = Image.new("RGBA", (40, 60), (0, 0, 0, 0)); im.paste((255, 0, 0, 255), (10, 10, 30, 60))
+        im.save(p, "WEBP", exact=True)                    # a real cutout: transparent margin, opaque figure
+        return {"source": f"C:/r/{cat}_{look:02d}_standing/{name.replace('.webp', '.png')}", "outputs": {"webp": str(p)},
+                "asset": {"character": "sunny", "category": cat, "look": look, "pose": "standing"},
+                "score": score, "report": {"flags": list(flags), "partial": 0.01}}
+    cuts = [cut("casual", 1, "a.webp", 0.90, flags=("hollow",)),  # best score but flagged -> loses
+            cut("casual", 1, "b.webp", 0.80),
+            cut("work", 1, "c.webp", 0.70)]
+    m = place(cuts, plan, tmp_path / "staging")
+    files = sorted(p.name for p in (tmp_path / "staging" / "sunny" / "outfits").iterdir())
+    assert files == ["casual_01_standing.webp", "work_01_standing.webp"]
+    casual = next(s for s in m["slots"] if s["id"] == "casual_01")
+    assert casual["from"].endswith("b.png") and casual["candidates"] == 2 and m["missing"] == []
+    assert Image.open(tmp_path / "staging" / "sunny" / "outfits" / "casual_01_standing.webp").mode == "RGBA"
+    # a human override beats the ranking
+    m2 = place(cuts, plan, tmp_path / "staging2", pick={"casual_01": "a.webp"})
+    assert next(s for s in m2["slots"] if s["id"] == "casual_01")["from"].endswith("a.png")
+    # empty slot is reported, not invented
+    m3 = place(cuts[:2], plan, tmp_path / "staging3")
+    assert m3["missing"] == ["work_01"]
+    sheet = mapping_sheet(m, tmp_path / "staging", tmp_path / "staging" / "sunny" / "review.jpg")
+    assert sheet.exists()
+    assert pack_registration(plan, work_locations=["coffeeShop"]) == "  sunny: { id: 'sunny', workLocations: ['coffeeShop'] },"
+
+
+def test_shot_prompt_names_the_look_and_a_keyable_background():
+    from sourcemode.assets.render import shot_prompt
+    p = shot_prompt("priyanka", {"outfit": "a red dress", "hair": "a high ponytail", "pose": "standing"})
+    assert p.startswith("priyanka_ch. ") and "a red dress" in p and "a high ponytail" in p
+    assert "medium grey background" in p and "glasses" not in p
+
+
 def test_collect_skips_plates_and_non_images(tmp_path: Path):
     (tmp_path / "a.png").write_bytes(b"x"); (tmp_path / "_plate.png").write_bytes(b"x")
     (tmp_path / "scores.json").write_bytes(b"x"); (tmp_path / "sub").mkdir(); (tmp_path / "sub" / "b.PNG").write_bytes(b"x")

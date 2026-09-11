@@ -135,6 +135,25 @@ def fit_canvas(img: Image.Image, size: tuple[int, int], anchor: str = "bottom") 
 
 # ----------------------------------------------------------------- files
 
+def source_meta(src: Path) -> dict | None:
+    """Slot identity for a render: its render sidecar if it has one, else the
+    <category>_<NN>_<pose> folder it sits in. None for a loose image."""
+    from .catalog import parse_runtime_name  # noqa: PLC0415
+
+    side = src.with_suffix(".json")
+    if side.exists():
+        try:
+            data = json.loads(side.read_text(encoding="utf-8"))
+            if isinstance(data.get("asset"), dict):
+                return {"asset": data["asset"], "score": data.get("score")}
+        except (OSError, ValueError):
+            pass
+    parsed = parse_runtime_name(src.parent.name + ".x")
+    if parsed:
+        return {"asset": {"character": src.parents[2].name if len(src.parents) > 2 else None, **parsed}, "score": None}
+    return None
+
+
 def cutout_file(src: Path, out_dir: Path, *, remover: Remover, model: str,
                 size: tuple[int, int] | None = None, webp: bool = False,
                 webp_quality: int = 92, root: Path | None = None) -> dict:
@@ -171,6 +190,10 @@ def cutout_file(src: Path, out_dir: Path, *, remover: Remover, model: str,
         "report": report,
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
+    meta = source_meta(src)
+    if meta:
+        sidecar["asset"] = meta["asset"]
+        sidecar["score"] = meta.get("score")
     (out_dir / f"{src.stem}.json").write_text(json.dumps(sidecar, indent=1), encoding="utf-8")
     return sidecar
 

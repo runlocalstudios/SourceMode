@@ -37,6 +37,104 @@ app.add_typer(monitor_app, name="monitor")
 app.add_typer(assets_app, name="assets")
 
 
+@assets_app.command("plan")
+def assets_plan(
+    character: str = typer.Argument(..., help="Character id as the game knows it (e.g. priyanka)."),
+    out: Path = typer.Option(..., "--out", help="Where to write the plan JSON."),
+    lora: str = typer.Option(None, "--lora", help="Identity LoRA (relative to ComfyUI loras dir)."),
+    source_asset: Path = typer.Option(None, "--source", help="A 2:3 render of her to condition on (wardrobe/framing)."),
+    reference: Path = typer.Option(None, "--reference", help="Closeup used to score identity."),
+    looks: Path = typer.Option(None, "--looks", help='JSON {category: [{"outfit":..., "hair":...}, ...]} in look order.'),
+    game_root: Path = typer.Option(None, "--game-root", help="Game repo; existing looks are read so new numbers extend, not collide."),
+    pose: str = typer.Option("standing", "--pose"),
+    pack: str = typer.Option("28", "--pack", help="28 = the standard six-category pack; or category=count,... e.g. casual=2,work=1"),
+):
+    """Decide look numbers up front: the plan is where <category>_<NN> identities are born."""
+    import json  # noqa: PLC0415
+
+    from .assets.catalog import PACK_28, existing_looks, make_plan, plan_slots  # noqa: PLC0415
+
+    counts = PACK_28 if pack == "28" else {k: int(v) for k, v in (kv.split("=") for kv in pack.split(","))}
+    start_after = existing_looks(game_root / "src" / "assets" / "characters" / character / "outfits") if game_root else {}
+    look_map = json.loads(looks.read_text(encoding="utf-8")) if looks else None
+    plan = make_plan(character, counts=counts, pose=pose, lora=lora,
+                     source_asset=str(source_asset) if source_asset else None,
+                     reference=str(reference) if reference else None, looks=look_map, start_after=start_after)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(plan, indent=1), encoding="utf-8")
+    slots = plan_slots(plan)
+    blank = sum(1 for s in slots if not s["outfit"] or not s["hair"])
+    rprint(f"plan for [cyan]{character}[/cyan]: {len(slots)} looks -> {out}")
+    if start_after:
+        rprint(f"  extending shipped looks: {start_after}")
+    if blank:
+        rprint(f"  [yellow]{blank} looks have no outfit/hair yet[/yellow] — fill them in before `assets render`")
+
+
+@assets_app.command("render")
+def assets_render(
+    plan: Path = typer.Option(..., "--plan"),
+    out: Path = typer.Option(Path("outputs/game-assets"), "--out"),
+    shots: int = typer.Option(4, "--shots", help="Candidates per look; the best one is placed."),
+    seed: int = typer.Option(7100, "--seed"),
+    only: str = typer.Option(None, "--only", help="Comma list of look ids, e.g. casual_01,work_03"),
+    render_pass: str = typer.Option("medium", "--pass"),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+):
+    """Render every look in the plan at the game's 2:3 grid with a keyable background; sidecars carry the slot."""
+    import json  # noqa: PLC0415
+
+    from .assets.catalog import plan_slots  # noqa: PLC0415
+    from .assets.render import render_plan, shot_prompt  # noqa: PLC0415
+
+    cfg, _ = _ctx()
+    p = json.loads(plan.read_text(encoding="utf-8"))
+    want = set(only.split(",")) if only else None
+    if dry_run:
+        for s in plan_slots(p):
+            if not want or s["id"] in want:
+                rprint(f"[cyan]{s['id']}[/cyan] x{shots}: {shot_prompt(p['character'], s)[:110]}…")
+        return
+    from .render.client import ComfyUIClient  # noqa: PLC0415
+
+    client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
+    if not client.is_reachable():
+        rprint("[red]ComfyUI is not reachable[/red]")
+        raise typer.Exit(2)
+    res = render_plan(cfg, client, p, out, shots=shots, seed=seed, render_pass=render_pass, log=rprint, only=want)
+    rprint(f"{len(res)} shots in {out / p['character'] / 'renders'}")
+
+
+@assets_app.command("place")
+def assets_place(
+    plan: Path = typer.Option(..., "--plan"),
+    cutouts: Path = typer.Option(..., "--cutouts", help="Folder of `assets cutout` results (sidecars are read)."),
+    out: Path = typer.Option(Path("outputs/game-assets"), "--out", help="Staging root; files land in <out>/<char>/outfits/."),
+    pick: str = typer.Option(None, "--pick", help="Overrides: look_id=filename,... e.g. casual_03=shot_02_s7374.png"),
+    work_locations: str = typer.Option(None, "--work-locations", help="Comma list for the wardrobePacks.js line."),
+):
+    """Name and sort the best cutout of every look into the game's outfits layout, with a mapping sheet."""
+    import json  # noqa: PLC0415
+
+    from .assets.catalog import mapping_sheet, pack_registration, place  # noqa: PLC0415
+
+    p = json.loads(plan.read_text(encoding="utf-8"))
+    sides = [json.loads(f.read_text(encoding="utf-8")) for f in sorted(cutouts.rglob("*.json"))]
+    sides = [s for s in sides if "outputs" in s]
+    picks = dict(kv.split("=") for kv in pick.split(",")) if pick else None
+    m = place(sides, p, out, pick=picks)
+    for s in m["slots"]:
+        sc = f" {s['score']:.3f}" if s.get("score") is not None else ""
+        fl = f" [yellow]{' '.join(s['flags'])}[/yellow]" if s["flags"] else ""
+        ov = " (override)" if s["overridden"] else ""
+        rprint(f"  {s['file']:38} <- {Path(s['from']).name}{sc}{fl}{ov}  ({s['candidates']} candidates)")
+    if m["missing"]:
+        rprint(f"[yellow]missing:[/yellow] {', '.join(m['missing'])}")
+    sheet = mapping_sheet(m, out, out / p["character"] / "review" / "mapping_checkerboard.jpg")
+    rprint(f"staged {len(m['slots'])} files in {out / p['character'] / 'outfits'}   sheet: {sheet}")
+    rprint("wardrobePacks.js line:\n" + pack_registration(p, work_locations=work_locations.split(",") if work_locations else None))
+
+
 @assets_app.command("cutout")
 def assets_cutout(
     inputs: list[Path] = typer.Argument(..., help="Renders (files or folders) to cut out."),
