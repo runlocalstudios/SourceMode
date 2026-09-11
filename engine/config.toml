@@ -116,6 +116,13 @@ max_frames = 145          # 4n+1; 145 @ 24fps ~ 6s, proven on this 5090
 [voice]
 engine = "chatterbox"
 
+[assets]
+# `sourcemode assets cutout`: background removal for in-game assets.
+# isnet-general-use is a good default on people; birefnet-portrait is sharper on
+# hair at ~900 MB. The game consumes RGBA WebP at game_size (src/assets/...).
+cutout_model = "isnet-general-use"
+game_size = [1024, 1536]
+
 [monitor]
 # Live readout of the GPU box (`sourcemode monitor serve`): GPU, ComfyUI queue,
 # musubi training progress. Binds to localhost; set host to the Tailscale

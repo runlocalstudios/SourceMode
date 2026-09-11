@@ -24,6 +24,7 @@ bootstrap_app = typer.Typer(no_args_is_help=True, help="Character-sheet dataset 
 voice_app = typer.Typer(no_args_is_help=True, help="Voice synthesis (Chatterbox).")
 pose_app = typer.Typer(no_args_is_help=True, help="Pose transfer: same character and outfit, new pose.")
 monitor_app = typer.Typer(no_args_is_help=True, help="Live readout of the GPU box for the control panel.")
+assets_app = typer.Typer(no_args_is_help=True, help="In-game asset production: background removal, review sheets.")
 app.add_typer(source_app, name="source")
 app.add_typer(gates_app, name="gates")
 app.add_typer(prompts_app, name="prompts")
@@ -33,6 +34,52 @@ app.add_typer(bootstrap_app, name="bootstrap")
 app.add_typer(voice_app, name="voice")
 app.add_typer(pose_app, name="pose")
 app.add_typer(monitor_app, name="monitor")
+app.add_typer(assets_app, name="assets")
+
+
+@assets_app.command("cutout")
+def assets_cutout(
+    inputs: list[Path] = typer.Argument(..., help="Renders (files or folders) to cut out."),
+    out: Path = typer.Option(..., "--out", help="Folder for the RGBA results and sidecars."),
+    model: str = typer.Option(None, "--model", help="rembg model (default [assets].cutout_model; birefnet-portrait for sharper hair)."),
+    size: str = typer.Option(None, "--size", help="Fit onto a transparent canvas, e.g. 1024x1536 (the game's asset grid). Default: keep the render's size."),
+    game: bool = typer.Option(False, "--game", help="Shorthand for --size <[assets].game_size> --webp."),
+    webp: bool = typer.Option(False, "--webp", help="Also write RGBA WebP next to the PNG."),
+    no_matting: bool = typer.Option(False, "--no-matting", help="Skip alpha matting (faster, harder hair edges)."),
+    sheet: bool = typer.Option(True, "--sheet/--no-sheet", help="Write a checkerboard review sheet in --out/_review."),
+    pattern: str = typer.Option("*.png", "--pattern", help="Which files to pick up inside folders."),
+    dry_run: bool = typer.Option(False, "--dry-run"),
+):
+    """Remove the background from renders -> RGBA PNG (+WebP), alpha report, review sheet.
+
+    The report only annotates: flags are hollow / clipped / islands / tiny; nothing is rejected."""
+    from .assets.cutout import checkerboard_sheet, collect, cutout_batch, parse_size, rembg_remover  # noqa: PLC0415
+
+    cfg, _ = _ctx()
+    acfg = cfg.get("assets", {})
+    model = model or acfg.get("cutout_model", "isnet-general-use")
+    target = parse_size(size) or (tuple(acfg.get("game_size", (1024, 1536))) if game else None)
+    webp = webp or game
+    files = collect(inputs, pattern)
+    if not files:
+        rprint(f"[red]no images matched[/red] {pattern!r} in {', '.join(map(str, inputs))}")
+        raise typer.Exit(2)
+    rprint(f"{len(files)} renders -> {out}  model={model}  canvas={target or 'as rendered'}  webp={webp}")
+    if dry_run:
+        for f in files:
+            rprint(f"  {f}")
+        return
+    try:
+        remover = rembg_remover(model, matting=not no_matting)
+    except ImportError:
+        rprint("[red]rembg is not installed[/red] — `uv sync --inexact --extra assets`")
+        raise typer.Exit(2)
+    results = cutout_batch(files, out, remover=remover, model=model, size=target, webp=webp, log=rprint)
+    flagged = [r for r in results if r["report"]["flags"]]
+    rprint(f"done: {len(results)} cut, {len(flagged)} flagged for a look")
+    if sheet:
+        pngs = [Path(r["outputs"]["png"]) for r in results]
+        rprint(f"review sheet: {checkerboard_sheet(pngs, out / '_review' / 'cutouts.png')}")
 
 
 @monitor_app.command("serve")

@@ -326,15 +326,12 @@ def cut_out(src: Path, dest: Path, size: tuple[int, int] | None = None) -> None:
     and clothing edges; matting refines the boundary band instead of keying it.
     """
     from PIL import Image  # noqa: PLC0415
-    from rembg import remove  # noqa: PLC0415
 
-    out = remove(
-        Image.open(src).convert("RGBA"),
-        alpha_matting=True,
-        alpha_matting_foreground_threshold=240,
-        alpha_matting_background_threshold=10,
-        alpha_matting_erode_size=10,
-    )
+    from ..assets.cutout import rembg_remover  # noqa: PLC0415
+
+    # One rembg call site for the project (assets.cutout); this keeps the u2net
+    # model the pose results were validated with.
+    out = rembg_remover("u2net", matting=True)(Image.open(src))
     if size and out.size != size:
         # Qwen rescales to ~1MP; restore the asset grid so results drop straight in
         out = out.resize(size, Image.LANCZOS)
