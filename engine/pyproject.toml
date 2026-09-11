@@ -30,7 +30,10 @@ monitor = ["fastapi>=0.110", "uvicorn>=0.29", "psutil>=5.9"]
 sourcemode = "sourcemode.cli:app"
 
 [dependency-groups]
-dev = ["pytest>=8.0"]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=8.0",
+]
 
 # chatterbox-tts -> pkuseg 0.0.25 has a setup.py that imports numpy but never
 # declares it as a build dependency, so it fails under uv's isolated builds.

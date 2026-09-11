@@ -34,6 +34,9 @@ def create_app(cfg: dict, sampler: Sampler | None = None):
     def healthz() -> dict:
         return {"ok": True}
 
+    from ..assets.review import review_router  # noqa: PLC0415
+
+    app.include_router(review_router(cfg))
     return app
 
 

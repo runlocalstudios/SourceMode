@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSql } from "../lib/db";
 
 export const dynamic = "force-dynamic";
@@ -33,8 +34,12 @@ export default async function Dashboard() {
       <h1>SourceMode</h1>
       <p style={{ color: "#666" }}>Consistent-character video pipeline — control panel</p>
       <p>
-        <a href="/monitor">GPU box →</a>{" "}
+        <Link href="/monitor">GPU box →</Link>{" "}
         <span style={{ color: "#666" }}>live utilisation, VRAM and training progress (needs the local engine monitor)</span>
+      </p>
+      <p>
+        <Link href="/assets">Asset review →</Link>{" "}
+        <span style={{ color: "#666" }}>click the cutout that ships for each look; places into the staging outfits folder</span>
       </p>
 
       <h2 style={{ marginTop: "2rem" }}>Characters</h2>

@@ -122,6 +122,9 @@ engine = "chatterbox"
 # hair at ~900 MB. The game consumes RGBA WebP at game_size (src/assets/...).
 cutout_model = "isnet-general-use"
 game_size = [1024, 1536]
+# Where plans, renders, cutouts and the staged outfits/ folder live per character;
+# the control panel's /assets review reads and writes here (never the game repo).
+staging = 'outputs/game-assets'
 
 [monitor]
 # Live readout of the GPU box (`sourcemode monitor serve`): GPU, ComfyUI queue,
