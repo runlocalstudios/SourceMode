@@ -34,14 +34,20 @@ type Data = {
   placed: string[];
 };
 type Mapping = { slots: { id: string; file: string; from: string }[]; missing: string[]; sheet?: string };
+type Size = "comfortable" | "large";
+/** Which group and which candidate the full-screen viewer is on. group -1 = unassigned. */
+type Viewer = { group: number; index: number };
 
 const ACCENT = "#2f6fed";
 const MUTED = "#6b7280";
 const CHECKER =
   "linear-gradient(45deg,#d9d9d9 25%,transparent 25%),linear-gradient(-45deg,#d9d9d9 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d9d9d9 75%),linear-gradient(-45deg,transparent 75%,#d9d9d9 75%)";
+// Review is about judging quality on a real screen: "comfortable" is ~5 across a
+// 1440px window at 480px source thumbnails; "large" is ~3 across at 720px.
+const SIZES: Record<Size, { thumb: number; min: number }> = { comfortable: { thumb: 480, min: 300 }, large: { thumb: 720, min: 440 } };
 
 const api = (path: string) => `/api/engine/assets${path}`;
-const img = (p: string, w = 240) => api(`/file?p=${encodeURIComponent(p)}&w=${w}`);
+const img = (p: string, w?: number) => api(`/file?p=${encodeURIComponent(p)}${w ? `&w=${w}` : ""}`);
 
 export default function ReviewClient({ character }: { character: string }) {
   const [data, setData] = useState<Data | null>(null);
@@ -50,9 +56,28 @@ export default function ReviewClient({ character }: { character: string }) {
   const [loose, setLoose] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<"save" | "place" | null>(null);
   const [mapping, setMapping] = useState<Mapping | null>(null);
-  const [zoom, setZoom] = useState<Candidate | null>(null);
+  const [viewer, setViewer] = useState<Viewer | null>(null);
+  // Lazy initialiser rather than an effect: the toggle only renders once data has
+  // loaded (client-side), so a stored "large" can't mismatch the server render.
+  const [size, setSize] = useState<Size>(() => {
+    try {
+      const s = localStorage.getItem("sourcemode.review.size");
+      return s === "large" ? "large" : "comfortable";
+    } catch {
+      return "comfortable";
+    }
+  });
   const [refresh, setRefresh] = useState(0);
   const reload = () => setRefresh((k) => k + 1);
+
+  const chooseSize = (s: Size) => {
+    setSize(s);
+    try {
+      localStorage.setItem("sourcemode.review.size", s);
+    } catch {
+      /* no storage */
+    }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -77,25 +102,63 @@ export default function ReviewClient({ character }: { character: string }) {
     };
   }, [character, refresh]);
 
+  // Groups the viewer steps through: every slot with candidates, then unassigned.
+  const groups = useMemo(() => {
+    type Group = { key: string; title: string; cands: Candidate[]; slot: Slot | null };
+    if (!data) return [] as Group[];
+    const g: Group[] = data.slots.filter((s) => s.candidates.length > 0).map((s) => ({ key: s.id, title: s.id, cands: s.candidates, slot: s }));
+    if (data.unassigned.length) g.push({ key: "_unassigned", title: "unassigned", cands: data.unassigned, slot: null });
+    return g;
+  }, [data]);
+
+  const pickInGroup = (g: (typeof groups)[number], c: Candidate) => {
+    if (g.slot) setPicks((p) => ({ ...p, [g.slot!.id]: c.file }));
+    else
+      setLoose((prev) => {
+        const n = new Set(prev);
+        if (n.has(c.png)) n.delete(c.png);
+        else n.add(c.png);
+        return n;
+      });
+  };
+  const isPicked = (g: (typeof groups)[number], c: Candidate) => (g.slot ? picks[g.slot.id] === c.file : loose.has(c.png));
+
   useEffect(() => {
-    if (!zoom) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setZoom(null);
+    if (!viewer) return;
+    const onKey = (e: KeyboardEvent) => {
+      const g = groups[viewer.group];
+      if (!g) return;
+      if (e.key === "Escape") setViewer(null);
+      else if (e.key === "ArrowRight") setViewer({ group: viewer.group, index: (viewer.index + 1) % g.cands.length });
+      else if (e.key === "ArrowLeft") setViewer({ group: viewer.group, index: (viewer.index - 1 + g.cands.length) % g.cands.length });
+      else if (e.key === "ArrowDown" && viewer.group + 1 < groups.length) setViewer({ group: viewer.group + 1, index: 0 });
+      else if (e.key === "ArrowUp" && viewer.group > 0) setViewer({ group: viewer.group - 1, index: 0 });
+      else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        pickInGroup(g, g.cands[viewer.index]);
+      } else return;
+      e.preventDefault();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [zoom]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewer, groups]);
 
   const body = useMemo(() => ({ picks: { ...picks, _unassigned: Array.from(loose) } }), [picks, loose]);
   const chosen = data ? data.slots.filter((s) => picks[s.id]).length : 0;
   const dirty = data ? data.slots.some((s) => (s.picked ?? "") !== (picks[s.id] ?? "") || s.auto) : false;
 
+  const postPicks = () =>
+    fetch(api(`/${encodeURIComponent(character)}/picks`), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
   const save = async () => {
     setBusy("save");
     try {
-      const r = await fetch(api(`/${encodeURIComponent(character)}/picks`), {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const r = await postPicks();
       if (!r.ok) throw new Error(`save failed (${r.status})`);
       reload();
     } catch (e) {
@@ -109,11 +172,7 @@ export default function ReviewClient({ character }: { character: string }) {
     if (!window.confirm(`Write ${chosen} looks to the staging outfits folder for ${character}?`)) return;
     setBusy("place");
     try {
-      await fetch(api(`/${encodeURIComponent(character)}/picks`), {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      await postPicks();
       const r = await fetch(api(`/${encodeURIComponent(character)}/place`), { method: "POST" });
       if (!r.ok) throw new Error(r.status === 409 ? "no plan for this character" : `place failed (${r.status})`);
       setMapping((await r.json()) as Mapping);
@@ -125,8 +184,11 @@ export default function ReviewClient({ character }: { character: string }) {
     }
   };
 
+  const dims = SIZES[size];
+  const grid: React.CSSProperties = { display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${dims.min}px, 1fr))`, gap: 12, marginTop: 10 };
+
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 1400, margin: "0 auto", padding: "16px 16px 96px", color: "#111" }}>
+    <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 1800, margin: "0 auto", padding: "16px 16px 96px", color: "#111" }}>
       <header style={{ display: "flex", alignItems: "baseline", gap: 14, flexWrap: "wrap" }}>
         <Link href="/assets" style={{ color: MUTED, fontSize: 14 }}>
           ← all characters
@@ -139,10 +201,20 @@ export default function ReviewClient({ character }: { character: string }) {
             {data.placed.length > 0 && ` · ${data.placed.length} placed`}
           </span>
         )}
+        {data && (
+          <span style={{ marginLeft: "auto", display: "flex", gap: 6, alignItems: "center", fontSize: 13, color: MUTED }}>
+            size
+            {(["comfortable", "large"] as Size[]).map((s) => (
+              <button key={s} onClick={() => chooseSize(s)} style={{ ...btn(size === s), padding: "4px 10px", fontSize: 13 }}>
+                {s}
+              </button>
+            ))}
+          </span>
+        )}
       </header>
       <p style={{ color: MUTED, fontSize: 14, marginTop: 6 }}>
-        Click the cutout that should ship for each look. The top-ranked one is pre-selected (best identity score, unflagged first). Click a
-        thumbnail&apos;s magnifier to see it full size.
+        Click the cutout that should ship for each look; the top-ranked one is pre-selected (unflagged first, then identity score). The 🔍 opens the
+        full-resolution viewer: ← → step through a look, ↑ ↓ change look, Enter picks, Esc closes.
       </p>
 
       {error && (
@@ -154,60 +226,56 @@ export default function ReviewClient({ character }: { character: string }) {
         </div>
       )}
 
-      {data && data.slots.length === 0 && data.unassigned.length === 0 && (
-        <p>No cutouts under the staging folder for {character} yet.</p>
-      )}
+      {data && data.slots.length === 0 && data.unassigned.length === 0 && <p>No cutouts under the staging folder for {character} yet.</p>}
 
-      {data?.slots.map((s) => (
-        <section key={s.id} style={{ marginTop: 22 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-            <h2 style={{ margin: 0, fontSize: 17 }}>
-              {s.id}
-              <span style={{ color: MUTED, fontWeight: 400 }}> → {s.filename ?? `${s.id}_${s.pose}.webp`}</span>
-            </h2>
-            {(s.outfit || s.hair) && (
-              <span style={{ color: MUTED, fontSize: 13 }}>
-                {s.outfit}
-                {s.hair && ` · ${s.hair}`}
-              </span>
-            )}
-            {s.candidates.length === 0 && <span style={{ color: "#b91c1c", fontSize: 13 }}>no candidates</span>}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10, marginTop: 10 }}>
-            {s.candidates.map((c) => (
-              <Card
-                key={c.file}
-                c={c}
-                selected={picks[s.id] === c.file}
-                onSelect={() => setPicks((p) => ({ ...p, [s.id]: c.file }))}
-                onZoom={() => setZoom(c)}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+      {data?.slots.map((s) => {
+        const gi = groups.findIndex((g) => g.key === s.id);
+        return (
+          <section key={s.id} style={{ marginTop: 22 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+              <h2 style={{ margin: 0, fontSize: 17 }}>
+                {s.id}
+                <span style={{ color: MUTED, fontWeight: 400 }}> → {s.filename ?? `${s.id}_${s.pose}.webp`}</span>
+              </h2>
+              {(s.outfit || s.hair) && (
+                <span style={{ color: MUTED, fontSize: 13 }}>
+                  {s.outfit}
+                  {s.hair && ` · ${s.hair}`}
+                </span>
+              )}
+              {s.candidates.length === 0 && <span style={{ color: "#b91c1c", fontSize: 13 }}>no candidates</span>}
+            </div>
+            <div style={grid}>
+              {s.candidates.map((c, i) => (
+                <Card
+                  key={c.file}
+                  c={c}
+                  thumb={dims.thumb}
+                  selected={picks[s.id] === c.file}
+                  onSelect={() => setPicks((p) => ({ ...p, [s.id]: c.file }))}
+                  onZoom={() => setViewer({ group: gi, index: i })}
+                />
+              ))}
+            </div>
+          </section>
+        );
+      })}
 
       {data && data.unassigned.length > 0 && (
         <section style={{ marginTop: 26 }}>
           <h2 style={{ margin: 0, fontSize: 17 }}>
             Unassigned <span style={{ color: MUTED, fontWeight: 400 }}>— cutouts without a look slot; tick to keep for later</span>
           </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: 10, marginTop: 10 }}>
-            {data.unassigned.map((c) => (
+          <div style={grid}>
+            {data.unassigned.map((c, i) => (
               <Card
                 key={c.png}
                 c={c}
+                thumb={dims.thumb}
                 selected={loose.has(c.png)}
                 multi
-                onSelect={() =>
-                  setLoose((prev) => {
-                    const n = new Set(prev);
-                    if (n.has(c.png)) n.delete(c.png);
-                    else n.add(c.png);
-                    return n;
-                  })
-                }
-                onZoom={() => setZoom(c)}
+                onSelect={() => pickInGroup(groups[groups.length - 1], c)}
+                onZoom={() => setViewer({ group: groups.length - 1, index: i })}
               />
             ))}
           </div>
@@ -222,7 +290,7 @@ export default function ReviewClient({ character }: { character: string }) {
             <>
               {" "}
               ·{" "}
-              <a href={img(mapping.sheet, 480)} target="_blank" rel="noreferrer">
+              <a href={img(mapping.sheet)} target="_blank" rel="noreferrer">
                 mapping sheet
               </a>
             </>
@@ -246,6 +314,7 @@ export default function ReviewClient({ character }: { character: string }) {
             alignItems: "center",
             justifyContent: "center",
             flexWrap: "wrap",
+            zIndex: 10,
           }}
         >
           <span style={{ color: MUTED, fontSize: 14 }}>
@@ -261,15 +330,82 @@ export default function ReviewClient({ character }: { character: string }) {
         </footer>
       )}
 
-      {zoom && (
-        <div onClick={() => setZoom(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "grid", placeItems: "center", zIndex: 50 }}>
-          <div style={{ background: "#fff", backgroundImage: CHECKER, backgroundSize: "24px 24px", backgroundPosition: "0 0,0 12px,12px -12px,-12px 0", padding: 8, borderRadius: 8, maxHeight: "92vh" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={api(`/file?p=${encodeURIComponent(zoom.png)}`)} alt={zoom.file} style={{ maxHeight: "88vh", maxWidth: "92vw", display: "block" }} />
-          </div>
-        </div>
+      {viewer && groups[viewer.group] && (
+        <FullView
+          group={groups[viewer.group]}
+          index={viewer.index}
+          groupPos={`${viewer.group + 1} / ${groups.length}`}
+          picked={isPicked(groups[viewer.group], groups[viewer.group].cands[viewer.index])}
+          onPick={() => pickInGroup(groups[viewer.group], groups[viewer.group].cands[viewer.index])}
+          onStep={(d) => setViewer({ group: viewer.group, index: (viewer.index + d + groups[viewer.group].cands.length) % groups[viewer.group].cands.length })}
+          onClose={() => setViewer(null)}
+        />
       )}
     </main>
+  );
+}
+
+function FullView({
+  group,
+  index,
+  groupPos,
+  picked,
+  onPick,
+  onStep,
+  onClose,
+}: {
+  group: { title: string; cands: Candidate[]; slot: Slot | null };
+  index: number;
+  groupPos: string;
+  picked: boolean;
+  onPick: () => void;
+  onStep: (d: number) => void;
+  onClose: () => void;
+}) {
+  const c = group.cands[index];
+  const next = group.cands[(index + 1) % group.cands.length];
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,10,12,.9)", zIndex: 50, display: "flex", flexDirection: "column" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 16px", color: "#fff", flexWrap: "wrap" }}>
+        <strong style={{ fontSize: 16 }}>{group.title}</strong>
+        <span style={{ opacity: 0.75 }}>look {groupPos}</span>
+        <span style={{ opacity: 0.75 }}>
+          {index + 1} / {group.cands.length} · {c.file.replace(/\.png$/, "")}
+        </span>
+        {c.score != null && <span title="identity vs closeup reference">score {c.score.toFixed(3)}</span>}
+        {c.flags.map((f) => (
+          <span key={f} style={{ background: "#fef3c7", color: "#92400e", borderRadius: 999, padding: "1px 8px", fontWeight: 600, fontSize: 12 }}>
+            {f}
+          </span>
+        ))}
+        {group.slot?.outfit && <span style={{ opacity: 0.6, fontSize: 13 }}>{group.slot.outfit}</span>}
+        <span style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button onClick={() => onStep(-1)} style={vbtn(false)} title="Previous (←)">
+            ←
+          </button>
+          <button onClick={() => onStep(1)} style={vbtn(false)} title="Next (→)">
+            →
+          </button>
+          <button onClick={onPick} style={vbtn(!picked)} title="Enter">
+            {group.slot ? (picked ? "✓ ships" : "Pick this") : picked ? "✓ kept" : "Keep"}
+          </button>
+          <button onClick={onClose} style={vbtn(false)} title="Esc">
+            ✕
+          </button>
+        </span>
+      </div>
+      <div onClick={(e) => e.stopPropagation()} style={{ flex: 1, minHeight: 0, display: "grid", placeItems: "center", padding: "0 16px 16px" }}>
+        <div style={{ height: "100%", maxWidth: "100%", backgroundImage: CHECKER, backgroundColor: "#fff", backgroundSize: "28px 28px", backgroundPosition: "0 0,0 14px,14px -14px,-14px 0", borderRadius: 8, overflow: "hidden", boxShadow: picked ? `0 0 0 4px ${ACCENT}` : "none" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={img(c.png)} alt={c.file} style={{ height: "100%", width: "auto", maxWidth: "100%", objectFit: "contain", display: "block" }} />
+        </div>
+      </div>
+      {/* warm the cache for the next step */}
+      {next && next !== c && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={img(next.png)} alt="" aria-hidden style={{ position: "absolute", width: 1, height: 1, opacity: 0, pointerEvents: "none" }} />
+      )}
+    </div>
   );
 }
 
@@ -285,10 +421,24 @@ function btn(primary: boolean): React.CSSProperties {
   };
 }
 
-function Card({ c, selected, multi, onSelect, onZoom }: { c: Candidate; selected: boolean; multi?: boolean; onSelect: () => void; onZoom: () => void }) {
+function vbtn(primary: boolean): React.CSSProperties {
+  return {
+    padding: "6px 14px",
+    borderRadius: 8,
+    border: primary ? "none" : "1px solid rgba(255,255,255,.35)",
+    background: primary ? ACCENT : "rgba(255,255,255,.08)",
+    color: "#fff",
+    fontWeight: 600,
+    cursor: "pointer",
+    fontSize: 14,
+  };
+}
+
+function Card({ c, thumb, selected, multi, onSelect, onZoom }: { c: Candidate; thumb: number; selected: boolean; multi?: boolean; onSelect: () => void; onZoom: () => void }) {
   return (
     <div
       onClick={onSelect}
+      onDoubleClick={onZoom}
       role={multi ? "checkbox" : "radio"}
       aria-checked={selected}
       tabIndex={0}
@@ -304,9 +454,9 @@ function Card({ c, selected, multi, onSelect, onZoom }: { c: Candidate; selected
     >
       <div style={{ position: "relative", backgroundImage: CHECKER, backgroundSize: "20px 20px", backgroundPosition: "0 0,0 10px,10px -10px,-10px 0", backgroundColor: "#f5f5f5", aspectRatio: "2 / 3" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={img(c.png, 240)} alt={c.file} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+        <img src={img(c.png, thumb)} alt={c.file} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
         {selected && (
-          <span style={{ position: "absolute", top: 6, left: 6, background: ACCENT, color: "#fff", borderRadius: 999, fontSize: 12, padding: "2px 8px", fontWeight: 700 }}>
+          <span style={{ position: "absolute", top: 8, left: 8, background: ACCENT, color: "#fff", borderRadius: 999, fontSize: 12, padding: "2px 8px", fontWeight: 700 }}>
             {multi ? "keep" : "ships"}
           </span>
         )}
@@ -315,13 +465,13 @@ function Card({ c, selected, multi, onSelect, onZoom }: { c: Candidate; selected
             e.stopPropagation();
             onZoom();
           }}
-          title="Full size"
-          style={{ position: "absolute", top: 6, right: 6, border: "none", background: "rgba(255,255,255,.9)", borderRadius: 6, padding: "2px 7px", cursor: "pointer" }}
+          title="Full size (or double-click)"
+          style={{ position: "absolute", top: 8, right: 8, border: "none", background: "rgba(255,255,255,.92)", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 14 }}
         >
           🔍
         </button>
       </div>
-      <div style={{ padding: "6px 8px", fontSize: 12, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+      <div style={{ padding: "6px 10px", fontSize: 13, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
         <span style={{ color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.file.replace(/\.png$/, "")}</span>
         <span style={{ display: "flex", gap: 4, flexShrink: 0 }}>
           {c.score != null && <b title="identity vs closeup reference">{c.score.toFixed(3)}</b>}

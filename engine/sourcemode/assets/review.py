@@ -22,7 +22,7 @@ from PIL import Image
 
 from .catalog import look_id, mapping_sheet, place, plan_slots, rank_candidates
 
-THUMB_WIDTHS = (160, 240, 360, 480)
+THUMB_WIDTHS = (160, 240, 360, 480, 720)   # 720 is the "large" review grid; full size has no w
 
 
 def staging_root(cfg: dict) -> Path:
