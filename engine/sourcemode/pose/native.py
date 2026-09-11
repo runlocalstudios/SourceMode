@@ -77,7 +77,10 @@ LOOK = ("Photorealistic, natural skin texture with visible pores and freckles, s
 NEGATIVE = (
     "different person, different face, changed hair, deformed, distorted hands, extra limbs, "
     "airbrushed, smoothed skin, plastic skin, doll-like, bobblehead, oversized head, "
-    "green tint, colour cast, blurry, low quality, cartoon, anime, watermark, text, nude"
+    # No nudity terms here by design (2026-09-11): the negative block is for
+    # QUALITY and identity drift only. Wardrobe — including its absence — is
+    # stated in the positive prompt by the caller, per shot.
+    "green tint, colour cast, blurry, low quality, cartoon, anime, watermark, text"
 )
 
 

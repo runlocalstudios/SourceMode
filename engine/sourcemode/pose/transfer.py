@@ -80,7 +80,7 @@ NEGATIVE = (
     "different outfit, different clothing, wardrobe change, changed colours, "
     "restyled hair, different hairstyle, changed hair, shorter hair, cropped hair, "
     "hair length changed, different hair colour, "
-    "nude, explicit, worst quality, low quality, deformed, ugly, extra limbs, "
+    "worst quality, low quality, deformed, ugly, extra limbs, "
     "distorted hands, blurry, cartoon, anime, watermark, text"
 )
 

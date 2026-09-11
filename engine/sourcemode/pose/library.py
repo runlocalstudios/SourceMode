@@ -60,11 +60,11 @@ _KNEEL_NEGATIVE = (
     "chin thrown back, staring upward past the camera, eyes rolled up, close-up, cropped "
     "head, tight framing, wide angle lens distortion, huge head, oversized head, bobblehead, "
     "chibi, doll proportions, distorted anatomy, ladder, stepladder, step stool, stool, "
-    "chair, furniture, props, equipment, objects on the floor, nude, topless, naked, text, watermark"
+    "chair, furniture, props, equipment, objects on the floor, text, watermark"
 )
 _REAR_NEGATIVE_TAIL = (
     "close-up, cropped, huge head, bobblehead, distorted anatomy, ladder, stool, chair, "
-    "furniture, props, nude, topless, naked, text, watermark"
+    "furniture, props, text, watermark"
 )
 
 _SQUAT_ARMS_KNEES = {
@@ -106,7 +106,7 @@ _SQUAT_NEGATIVE = (
     "close-up, cropped head, tight framing, wide angle lens distortion, huge head, "
     "oversized head, bobblehead, chibi, doll proportions, distorted anatomy, "
     "ladder, stepladder, step stool, stool, chair, furniture, props, "
-    "objects on the floor, nude, topless, naked, text, watermark"
+    "objects on the floor, text, watermark"
 )
 # Unlike the kneeling family, these are shot LEVEL and straight on, not from
 # above. An overhead camera made them read as gym mobility drills and flattened
