@@ -16,9 +16,12 @@ STEPS_RE = re.compile(
     r"\[(?P<elapsed>[\d:]+)<(?P<remaining>[\d:?]+),\s*(?P<rate>[\d.?]+)(?P<unit>s/it|it/s)"
     r"(?:,\s*avr_loss=(?P<loss>[\d.]+))?"
 )
-DATASET_RE = re.compile(r"Load dataset config from (?P<path>\S+)")
-EPOCHS_RE = re.compile(r"num epochs / epoch数:\s*(?P<n>\d+)")
-BATCHES_RE = re.compile(r"num batches per epoch / 1epochのバッチ数:\s*(?P<n>\d+)")
+# \s+ rather than literal spaces: a log captured through a PowerShell redirect
+# is hard-wrapped at the console width, so "from " and the path, or "epoch数:"
+# and its number, can land on different lines.
+DATASET_RE = re.compile(r"Load\s+dataset\s+config\s+from\s+(?P<path>\S+)")
+EPOCHS_RE = re.compile(r"num\s+epochs\s+/\s+epoch数:\s*(?P<n>\d+)")
+BATCHES_RE = re.compile(r"num\s+batches\s+per\s+epoch\s+/\s+1epochのバッチ数:\s*(?P<n>\d+)")
 TRAINER_MARKERS = ("qwen_image_train_network", "wan_train_network")
 
 
@@ -108,6 +111,32 @@ def trainer_running(process_iter=None) -> bool | None:
         return None
 
 
+def decode_log(head: bytes, tail: bytes) -> str:
+    """Decode by BOM. A log written through PowerShell 5.1's `*>` redirect is
+    UTF-16LE; decoding that as UTF-8 yields NUL-interleaved text that matches
+    nothing, and the readout silently shows a run with no progress (gabi_v2,
+    2026-09-10). Odd-length UTF-16 slices are trimmed to a code-unit boundary."""
+    if head.startswith(b"\xff\xfe"):
+        enc, head = "utf-16-le", head[2:]
+        if len(head) % 2:
+            head = head[:-1]
+        if len(tail) % 2:
+            tail = tail[1:]
+        sep = "\n".encode(enc)
+    elif head.startswith(b"\xfe\xff"):
+        enc, head = "utf-16-be", head[2:]
+        if len(head) % 2:
+            head = head[:-1]
+        if len(tail) % 2:
+            tail = tail[1:]
+        sep = "\n".encode(enc)
+    else:
+        enc, sep = "utf-8", b"\n"
+        if head.startswith(b"\xef\xbb\xbf"):
+            head = head[3:]
+    return (head + sep + tail).decode(enc, errors="replace")
+
+
 def read_tail(path: Path, max_bytes: int = 200_000) -> str:
     """Head plus tail of a log: the header is near the front, tqdm lines at the end."""
     size = path.stat().st_size
@@ -115,7 +144,7 @@ def read_tail(path: Path, max_bytes: int = 200_000) -> str:
         head = f.read(min(size, 20_000))
         f.seek(size - max_bytes if size > max_bytes else 0)
         tail = f.read()
-    return (head + b"\n" + tail).decode("utf-8", errors="replace")
+    return decode_log(head, tail)
 
 
 def sample_training(log_dir: Path, *, running: bool | None = None) -> dict:

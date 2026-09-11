@@ -48,4 +48,4 @@ Next.js coding guidance for agents: @AGENTS.md
 - Engine: `cd engine && uv run pytest -m "not gpu"` / `uv run sourcemode --help` / `uv run sourcemode doctor`
   - Plain `uv run pytest` also runs the GPU integration tests against a live ComfyUI — never while a training run holds the card.
 - Monitor (live GPU/ComfyUI/training readout for the control panel): `uv run sourcemode monitor serve` (:8787), `uv run sourcemode monitor status` for one JSON sample; page at `/monitor` when the web app runs locally.
-- Always-on: `engine/scripts/register-autostart.ps1` registers ComfyUI, the monitor and the web app as logon tasks (`unregister-autostart.ps1` undoes it). Training logs go in `engine/outputs/training/*.log` so the monitor can track them.
+- Always-on: `engine/scripts/register-autostart.ps1` registers ComfyUI, the monitor and the web app as logon tasks (`unregister-autostart.ps1` undoes it). Training logs go in `engine/outputs/training/*.log` so the monitor can track them. PowerShell's `*>` redirect writes UTF-16; the monitor decodes by BOM, but prefer `Start-Process -RedirectStandardOutput` (raw UTF-8) in task scripts.

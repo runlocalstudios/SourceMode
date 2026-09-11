@@ -81,6 +81,33 @@ def test_sample_training_unknown_process_infers_from_log(tmp_path: Path, monkeyp
     assert sample_training(tmp_path)["active"] is False
 
 
+def test_sample_training_reads_utf16_log(tmp_path: Path):
+    """PowerShell `*>` writes UTF-16LE with a BOM; the gabi_v2 run was invisible until this."""
+    (tmp_path / "gabi_v2.log").write_bytes(b"\xff\xfe" + GABI_LOG.encode("utf-16-le"))
+    t = sample_training(tmp_path, running=True)
+    assert t["character"] == "gabi" and t["epochs"] == 20
+    assert t["progress"]["step"] == 216 and t["progress"]["eta_s"] == 12309
+
+
+def test_parse_run_info_survives_console_wrapping():
+    """A PowerShell-redirected log is hard-wrapped at ~80 columns mid-line."""
+    wrapped = (
+        "INFO:musubi_tuner.training.trainer_base:Load dataset config from \r\n"
+        "C:\\dev\\sourcemode\\engine\\outputs\\lora-datasets\\gabi_v2\\dataset_qwen_edit.toml\r\n"
+        "  num batches per epoch / 1epochのバッチ数: \r\n83\r\n"
+        "  num epochs / \r\nepoch数: 20\r\n"
+    )
+    assert parse_run_info(wrapped) == {"character": "gabi_v2", "epochs": 20, "batches_per_epoch": 83}
+
+
+def test_decode_log_handles_odd_utf16_slices():
+    from sourcemode.monitor.training import decode_log
+    full = b"\xff\xfe" + "steps:  10%|█| 1/10 [00:01<00:09,  1.00s/it]".encode("utf-16-le")
+    # a tail slice that starts mid code-unit must not shift every character
+    text = decode_log(full[:20], full[21:])
+    assert "1/10" in text
+
+
 def test_sample_training_no_logs(tmp_path: Path):
     t = sample_training(tmp_path / "missing", running=False)
     assert t == {"active": False, "process": False, "log": None, "character": None,
