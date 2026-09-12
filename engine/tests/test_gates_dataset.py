@@ -165,3 +165,19 @@ def test_gate_dataset_annotates_by_default_and_blocks_only_when_asked(tmp_path):
         gate_dataset(tmp_path, trigger="char_ch", block=True, measure_face=fake)
     assert "face_resolution" in str(e.value)
     assert e.value.report["failed"]
+
+
+def test_a_dataset_with_no_captions_at_all_fails_loudly():
+    """Every caption check lives behind `if caps`, so an uncaptioned set once passed
+    them all by silence. It must fail instead."""
+    m = good()
+    m.captions = {}
+    r = evaluate(m, trigger="char_ch")
+    assert "caption_present" in r["failed"]
+    assert "12 of 12" in next(f["detail"] for f in r["findings"] if f["check"] == "caption_present")
+
+
+def test_partially_captioned_dataset_fails_caption_present():
+    m = good()
+    m.captions.pop("img_00.png")
+    assert "caption_present" in evaluate(m, trigger="char_ch")["failed"]

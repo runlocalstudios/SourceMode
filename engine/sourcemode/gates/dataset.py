@@ -93,6 +93,12 @@ def evaluate(m: DatasetMeasurements, trigger: str = "", thresholds: dict | None 
                             + ", ".join(m.no_face[:5]), len(m.no_face)))
 
     caps = list(m.captions.values())
+    # A dataset with no captions at all must fail loudly: every caption check below
+    # lives inside `if caps`, so silence here would read as a pass.
+    out.append(_finding(
+        "caption_present", len(caps) >= m.n_images,
+        f"{m.n_images - len(caps)} of {m.n_images} image(s) have no caption" if len(caps) < m.n_images
+        else f"all {m.n_images} images captioned", m.n_images - len(caps)))
     if caps:
         uniq = len(set(caps)) / len(caps)
         out.append(_finding(
@@ -110,9 +116,6 @@ def evaluate(m: DatasetMeasurements, trigger: str = "", thresholds: dict | None 
             bad = [n for n, c in m.captions.items() if not c.startswith(trigger)]
             out.append(_finding("caption_trigger", not bad,
                                 f"{len(bad)} caption(s) do not start with {trigger!r}", len(bad)))
-        missing = m.n_images - len(caps)
-        if missing > 0:
-            out.append(_finding("caption_present", False, f"{missing} image(s) have no caption", missing))
 
     out.append(_finding(
         "self_pairs", len(m.self_pair_names) <= t["max_self_pairs"],
