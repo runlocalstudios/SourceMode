@@ -125,6 +125,17 @@ def test_decode_log_handles_odd_utf16_slices():
     assert "1/10" in text
 
 
+def test_sample_training_reads_stderr_companion(tmp_path: Path):
+    """Start-Process -RedirectStandardOutput/-RedirectStandardError splits the streams:
+    header in name.log, tqdm progress (stderr) in name.log.err."""
+    header, progress = GABI_LOG.split("steps:", 1)
+    (tmp_path / "sunny_t2i.log").write_text(header, encoding="utf-8")
+    (tmp_path / "sunny_t2i.log.err").write_text("steps:" + progress, encoding="utf-8")
+    t = sample_training(tmp_path, running=True)
+    assert t["character"] == "gabi" and t["epochs"] == 20
+    assert t["progress"]["step"] == 216 and t["epoch"] == 3
+
+
 def test_sample_training_no_logs(tmp_path: Path):
     t = sample_training(tmp_path / "missing", running=False)
     assert t == {"active": False, "process": False, "log": None, "character": None,

@@ -169,6 +169,13 @@ def sample_training(log_dir: Path, *, running: bool | None = None) -> dict:
     if log is None:
         return out
     text = read_tail(log)
+    # A launcher that redirects stdout and stderr separately (PowerShell
+    # Start-Process) puts musubi's header in <name>.log and tqdm's progress —
+    # which goes to stderr — in <name>.log.err. Read both.
+    err = log.with_name(log.name + ".err")
+    if err.exists():
+        text = text + "\n" + read_tail(err)
+        out["log_mtime"] = max(log.stat().st_mtime, err.stat().st_mtime)
     info = parse_run_info(text)
     prog = parse_progress(text)
     out["character"] = info["character"]
