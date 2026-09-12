@@ -711,6 +711,35 @@ def train_select(
         rprint("[yellow]no checkpoint sample images found[/yellow]")
 
 
+@train_app.command("check-dataset")
+def train_check_dataset(
+    dataset_dir: Path,
+    trigger: str = typer.Option("", "--trigger", help="Trigger token every caption must start with."),
+    bucket: int = typer.Option(1024, "--bucket", help="Training bucket (longest side) the trainer will use."),
+    render: str = typer.Option("1024x1536", "--render", help="Size you will generate at, WxH."),
+    block: bool = typer.Option(False, "--block", help="Exit non-zero if any check fails."),
+):
+    """Gate the TRAINING SET before spending a night on it: face resolution, caption
+    variety, self-identical pairs, angle spread, identity coherence, resolution match."""
+    from .gates.dataset import DatasetGateError, gate_dataset  # noqa: PLC0415
+
+    w, _, h = render.partition("x")
+    try:
+        report = gate_dataset(dataset_dir, trigger=trigger, bucket_px=bucket,
+                              render_size=(int(w), int(h)), block=block)
+    except DatasetGateError as e:
+        for finding in e.report["findings"]:
+            rprint(f"[{'green' if finding['passed'] else 'red'}]"
+                   f"{'PASS' if finding['passed'] else 'FAIL'}[/] {finding['check']}: {finding['detail']}")
+        rprint(f"[red]{dataset_dir} is not fit to train on[/red]")
+        raise typer.Exit(1) from e
+    for finding in report["findings"]:
+        rprint(f"[{'green' if finding['passed'] else 'yellow'}]"
+               f"{'PASS' if finding['passed'] else 'FAIL'}[/] {finding['check']}: {finding['detail']}")
+    rprint(f"score [bold]{report['score']}[/bold] over {report['n_images']} images"
+           + ("" if report["passed"] else f" — failing: {', '.join(report['failed'])}"))
+
+
 # --- bootstrap -------------------------------------------------------------
 
 
