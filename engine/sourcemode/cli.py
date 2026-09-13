@@ -717,6 +717,8 @@ def train_check_dataset(
     trigger: str = typer.Option("", "--trigger", help="Trigger token every caption must start with."),
     bucket: int = typer.Option(1024, "--bucket", help="Training bucket (longest side) the trainer will use."),
     render: str = typer.Option("1024x1536", "--render", help="Size you will generate at, WxH."),
+    no_upscale: bool = typer.Option(True, "--no-upscale/--upscale",
+                                    help="Mirror bucket_no_upscale: never blow an image up to fill the bucket."),
     block: bool = typer.Option(False, "--block", help="Exit non-zero if any check fails."),
 ):
     """Gate the TRAINING SET before spending a night on it: face resolution, caption
@@ -726,7 +728,7 @@ def train_check_dataset(
     w, _, h = render.partition("x")
     try:
         report = gate_dataset(dataset_dir, trigger=trigger, bucket_px=bucket,
-                              render_size=(int(w), int(h)), block=block)
+                              render_size=(int(w), int(h)), no_upscale=no_upscale, block=block)
     except DatasetGateError as e:
         for finding in e.report["findings"]:
             rprint(f"[{'green' if finding['passed'] else 'red'}]"

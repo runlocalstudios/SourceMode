@@ -67,6 +67,7 @@ class DatasetMeasurements:
     no_face: list[str] = field(default_factory=list)
     bucket_px: int = 1024
     render_size: tuple[int, int] | None = None
+    no_upscale: bool = True          # mirrors bucket_no_upscale in the dataset TOML
 
 
 def _finding(check: str, passed: bool, detail: str, value=None) -> dict:
@@ -84,7 +85,8 @@ def evaluate(m: DatasetMeasurements, trigger: str = "", thresholds: dict | None 
         tiny = sum(1 for v in px if v < t["min_face_px_floor"])
         out.append(_finding(
             "face_resolution", med >= t["min_median_face_px"],
-            f"median face {med:.0f}px at the {m.bucket_px}px bucket "
+            f"median face {med:.0f}px at the {m.bucket_px}px bucket"
+            f"{' (no upscale)' if m.no_upscale else ''} "
             f"(~{med / 8:.0f}px in latent); need >= {t['min_median_face_px']}px", med))
         out.append(_finding(
             "tiny_faces", tiny / len(px) <= t["max_tiny_face_frac"],
@@ -188,6 +190,7 @@ def measure_dataset(
     *,
     bucket_px: int = 1024,
     render_size: tuple[int, int] | None = None,
+    no_upscale: bool = True,
     measure_face: Callable[[Path, int], FaceMetrics | None] | None = None,
 ) -> DatasetMeasurements:
     """Walk a musubi dataset dir (image*/ + optional control*/ + .txt captions).
@@ -195,8 +198,8 @@ def measure_dataset(
     measure_face is injectable so this is testable without InsightFace.
     """
     dataset_dir = Path(dataset_dir)
-    measure_face = measure_face or _insightface_measurer()
-    m = DatasetMeasurements(bucket_px=bucket_px, render_size=render_size)
+    measure_face = measure_face or _insightface_measurer(no_upscale)
+    m = DatasetMeasurements(bucket_px=bucket_px, render_size=render_size, no_upscale=no_upscale)
     image_dirs = sorted(d for d in dataset_dir.glob("image*") if d.is_dir()) or [dataset_dir]
     for idir in image_dirs:
         cdir = dataset_dir / idir.name.replace("image", "control")
@@ -227,7 +230,7 @@ def _same_image(a: Path, b: Path, tol: float = 3.0) -> bool:
     return bool(abs(ia - ib).mean() < tol)
 
 
-def _insightface_measurer() -> Callable[[Path, int], FaceMetrics | None]:
+def _insightface_measurer(no_upscale: bool = True) -> Callable[[Path, int], FaceMetrics | None]:
     def measure(path: Path, bucket_px: int) -> FaceMetrics | None:
         import numpy as np  # noqa: PLC0415
         from PIL import Image  # noqa: PLC0415
@@ -238,7 +241,12 @@ def _insightface_measurer() -> Callable[[Path, int], FaceMetrics | None]:
         if app is None:
             return None
         im = Image.open(path).convert("RGB")
-        scale = bucket_px / max(im.size)                     # what the trainer will see
+        # What the trainer will actually see. With bucket_no_upscale the image is
+        # never blown up to fill the bucket, so reporting the upscaled face width
+        # would overstate the real detail (gabi read 597px when it trains at 398).
+        scale = bucket_px / max(im.size)
+        if no_upscale:
+            scale = min(scale, 1.0)
         im = im.resize((max(1, round(im.width * scale)), max(1, round(im.height * scale))))
         faces = app.get(np.asarray(im)[:, :, ::-1])
         if not faces:

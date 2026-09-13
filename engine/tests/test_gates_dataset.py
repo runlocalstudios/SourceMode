@@ -201,3 +201,36 @@ def test_a_genuinely_varied_set_passes_coverage():
         f.yaw_deg = -40 + i * 4                          # gabi-like spread
     r = evaluate(m, trigger="char_ch")
     assert checks(r)["angle_coverage"] is True and r["passed"]
+
+
+def test_no_upscale_reports_the_face_size_actually_trained(tmp_path):
+    """bucket_no_upscale means a 1024 crop is never blown up to a 1536 bucket, so
+    the gate must not report the upscaled width (gabi read 597px, trains at 398)."""
+    from sourcemode.gates.dataset import _insightface_measurer
+    import sourcemode.gates.dataset as ds
+
+    idir = tmp_path / "image_dir"; idir.mkdir()
+    Image.new("RGB", (1024, 1024), (30, 30, 30)).save(idir / "a.png")
+    (idir / "a.txt").write_text("char_ch, a caption long enough to pass the detail check here ok", encoding="utf-8")
+    seen = {}
+
+    class FakeFace:
+        bbox = (0, 0, 400.0, 500.0)
+        pose = (0.0, 0.0, 0.0)
+        normed_embedding = emb(1, 0.3)
+
+    class FakeApp:
+        def get(self, arr):
+            seen["w"] = arr.shape[1]          # the width the trainer would see
+            return [FakeFace()]
+
+    ds._get_face_app = lambda: FakeApp()      # noqa: SLF001
+    import sourcemode.gates.identity as ident
+    ident._get_face_app = lambda: FakeApp()   # noqa: SLF001
+
+    measure_dataset(tmp_path, bucket_px=1536, no_upscale=True,
+                    measure_face=_insightface_measurer(no_upscale=True))
+    assert seen["w"] == 1024                  # not upscaled to 1536
+    measure_dataset(tmp_path, bucket_px=1536, no_upscale=False,
+                    measure_face=_insightface_measurer(no_upscale=False))
+    assert seen["w"] == 1536                  # upscaled when the TOML allows it
