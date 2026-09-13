@@ -37,6 +37,11 @@ THRESHOLDS = {
     "min_caption_words": 8,         # excluding the trigger token
     "max_self_pairs": 0,            # control == target trains "change nothing"
     "min_yaw_range_deg": 30.0,      # a wardrobe pack needs her at an angle
+    # Range alone is satisfied by two outliers: priyanka's curated 33 spanned 34 deg
+    # on THREE off-axis images and would have trained a frontal-only LoRA. Require a
+    # real share of the set to be turned away from camera.
+    "offangle_deg": 10.0,
+    "min_offangle_frac": 0.25,
     "min_centroid_cosine": 0.60,    # below this an image is a different person
     "max_pairwise_cosine": 0.92,    # above this the set is near-identical shots
     "max_duplicate_frac": 0.10,
@@ -131,6 +136,12 @@ def evaluate(m: DatasetMeasurements, trigger: str = "", thresholds: dict | None 
             "angle_spread", rng >= t["min_yaw_range_deg"],
             f"head yaw spans {rng:.0f} deg ({min(yaws):.0f} to {max(yaws):.0f}); "
             f"need >= {t['min_yaw_range_deg']:.0f} to render her turned away from camera", rng))
+        off = sum(1 for v in yaws if abs(v) > t["offangle_deg"])
+        out.append(_finding(
+            "angle_coverage", off / len(yaws) >= t["min_offangle_frac"],
+            f"{off}/{len(yaws)} images are turned more than {t['offangle_deg']:.0f} deg off axis "
+            f"({off / len(yaws):.0%}); need >= {t['min_offangle_frac']:.0%} or the LoRA only "
+            f"learns her facing camera", off / len(yaws)))
 
     embs = [f.embedding for f in m.faces if f.embedding is not None]
     if len(embs) >= 3:

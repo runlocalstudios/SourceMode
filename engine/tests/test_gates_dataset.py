@@ -181,3 +181,23 @@ def test_partially_captioned_dataset_fails_caption_present():
     m = good()
     m.captions.pop("img_00.png")
     assert "caption_present" in evaluate(m, trigger="char_ch")["failed"]
+
+
+def test_angle_range_alone_is_not_enough_coverage():
+    """priyanka's curated 33 spanned 34 deg on THREE off-axis images and passed the
+    range check. Coverage must count how many images are actually turned."""
+    m = good(33)
+    for i, f in enumerate(m.faces):
+        f.yaw_deg = -17.0 if i == 0 else (14.0 if i == 1 else (-12.0 if i == 2 else 0.0 + i * 0.1))
+    r = evaluate(m, trigger="char_ch")
+    assert checks(r)["angle_spread"] is True            # range 31 deg -- passes on outliers
+    assert "angle_coverage" in r["failed"]              # but only 3/33 are turned
+    assert "3/33" in next(f["detail"] for f in r["findings"] if f["check"] == "angle_coverage")
+
+
+def test_a_genuinely_varied_set_passes_coverage():
+    m = good(20)
+    for i, f in enumerate(m.faces):
+        f.yaw_deg = -40 + i * 4                          # gabi-like spread
+    r = evaluate(m, trigger="char_ch")
+    assert checks(r)["angle_coverage"] is True and r["passed"]
