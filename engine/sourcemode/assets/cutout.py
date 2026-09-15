@@ -47,45 +47,77 @@ Remover = Callable[[Image.Image], Image.Image]
 _sessions: dict[str, object] = {}
 
 
-def chroma_remover(key: tuple[int, int, int] = MAGENTA, *, inner: float = 60.0,
-                   outer: float = 140.0, despill: float = 1.0) -> Remover:
-    """Key a known background colour to alpha, with despill.
+def key_spill(rgb: np.ndarray, key: tuple[int, int, int]) -> np.ndarray:
+    """How much of `key` a pixel is, as 0..1, independent of brightness.
 
-    inner/outer are RGB distances from `key`: at or below `inner` a pixel is fully
-    background, at or above `outer` fully foreground, and between them alpha ramps
-    so hair edges stay soft.
+    Two production failures come from getting this wrong, and they are the same
+    failure. A plain difference like min(R,B) - G scores shadowed magenta in an
+    enclosed gap, say (40,2,44), at 38 - and crimson clothing (180,20,60) at 40.
+    Indistinguishable: tighten the threshold to key the gap and red garments get
+    keyed too, which is the tarnished red from earlier Codex batches.
 
-    Despill matters more than the key itself. A magenta backdrop bounces magenta
-    into hair and shoulder edges; left alone it survives as a purple fringe once
-    composited. For a magenta key that shows up as R and B both exceeding G, so the
-    excess is pulled back toward G (and the mirror for a green key).
+    What separates them is balance. Real magenta has R and B roughly equal at any
+    brightness; crimson is 180 red against 60 blue. So combine "both ends far above
+    the middle channel" with "both ends similar to each other":
+
+        magenta (255,0,255) -> 1.00      crimson  (180,20,60) -> 0.22
+        shadowed(40,2,44)   -> 0.86      hot red  (255,0,40)  -> 0.16
+                                         skin/black           -> 0.00
+    """
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    if key == MAGENTA:
+        lo, hi, mid = np.minimum(r, b), np.maximum(r, b), g
+    elif key == GREEN:
+        lo = hi = g
+        mid = np.maximum(r, b)
+    else:
+        k = np.asarray(key, dtype=np.float32)
+        return np.clip(1.0 - np.sqrt(((rgb - k) ** 2).sum(axis=2)) / 255.0, 0.0, 1.0)
+    safe_lo = np.maximum(lo, 1.0)
+    purity = np.clip((lo - mid) / safe_lo, 0.0, 1.0)      # ends clear of the middle channel
+    balance = np.clip(lo / np.maximum(hi, 1.0), 0.0, 1.0)  # ...and close to each other
+    return purity * balance
+
+
+def chroma_remover(key: tuple[int, int, int] = MAGENTA, *, inner: float = 0.40,
+                   outer: float = 0.70, despill: float = 1.0) -> Remover:
+    """Key a backdrop we rendered ourselves to alpha, with correct despill.
+
+    Alpha comes from `key_spill` (0..1), so it is brightness-invariant: every
+    magenta pixel keys whether lit or in shadow, including regions fully enclosed
+    by the figure - the gap between an arm and a hip. A learned matte cannot do
+    this; it predicts a filled silhouette and leaves interior gaps opaque.
+    `inner`/`outer` are keyness thresholds: below inner fully figure, above outer
+    fully background, ramping between so hair stays soft.
+
+    Despill is unpremultiply, not subtraction. An edge pixel is a mix,
+    observed = a*foreground + (1-a)*key, so the foreground is recovered as
+    (observed - (1-a)*key) / a. Where a == 1 that is exactly the observed colour,
+    which is why saturated reds come through untouched; subtracting the magenta
+    excess from every pixel instead turns crimson (180,20,60) into (140,20,20) -
+    the tarnished red seen in earlier Codex batches.
     """
 
     def _remove(img: Image.Image) -> Image.Image:
         rgb = np.asarray(img.convert("RGB"), dtype=np.float32)
-        k = np.asarray(key, dtype=np.float32)
-        dist = np.sqrt(((rgb - k) ** 2).sum(axis=2))
-        alpha = np.clip((dist - inner) / max(outer - inner, 1e-6), 0.0, 1.0)
+        spill = key_spill(rgb, key)
+        alpha = 1.0 - np.clip((spill - inner) / max(outer - inner, 1e-6), 0.0, 1.0)
 
-        out = rgb.copy()
+        out = rgb
         if despill > 0:
-            r, g, b = out[..., 0], out[..., 1], out[..., 2]
-            if key == MAGENTA:
-                excess = np.minimum(r, b) - g                  # magenta spill
-                m = excess > 0
-                out[..., 0][m] -= despill * excess[m]
-                out[..., 2][m] -= despill * excess[m]
-            elif key == GREEN:
-                excess = g - np.maximum(r, b)
-                m = excess > 0
-                out[..., 1][m] -= despill * excess[m]
+            k = np.asarray(key, dtype=np.float32)
+            a = alpha[..., None]
+            safe = np.maximum(a, 1e-3)
+            recovered = (rgb - (1.0 - a) * k) / safe
+            # Blend by `despill` so it can be dialled back, and never touch pixels
+            # the key considers fully background.
+            out = np.where(a > 0, rgb + despill * (recovered - rgb), rgb)
         out = np.clip(out, 0, 255)
 
         rgba = np.dstack([out, alpha * 255.0]).astype(np.uint8)
         return Image.fromarray(rgba, mode="RGBA")
 
     return _remove
-
 
 def rembg_remover(model: str = DEFAULT_MODEL, *, matting: bool = True) -> Remover:
     """The real thing. Sessions are cached so a batch loads the model once."""

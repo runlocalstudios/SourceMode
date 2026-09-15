@@ -221,19 +221,57 @@ def test_chroma_remover_keys_magenta_and_keeps_the_figure():
     assert a[30, 20] == 255                              # figure fully opaque
 
 
-def test_chroma_remover_despills_magenta_from_edges():
-    """Magenta bounced into hair must not survive as a purple fringe."""
+def test_shadowed_magenta_in_an_enclosed_gap_still_keys():
+    """The production failure: the gap between an arm and a hip is magenta in
+    shadow, and an RGB-distance key leaves it as an opaque blob."""
     import numpy as np
     from PIL import Image
 
     from sourcemode.assets.cutout import chroma_remover
 
-    im = Image.new("RGB", (8, 8), (255, 0, 255))
-    im.putpixel((4, 4), (90, 40, 90))                     # dark hair carrying magenta spill
+    im = Image.new("RGB", (30, 30), (255, 0, 255))
+    im.paste((190, 150, 130), (5, 5, 25, 25))            # the figure
+    for xy, shade in (((12, 12), (120, 0, 120)), ((13, 12), (70, 0, 70)), ((14, 12), (40, 2, 44))):
+        im.putpixel(xy, shade)                            # enclosed gap, progressively darker
+    a = np.asarray(chroma_remover()(im))[:, :, 3]
+    assert a[12, 12] == 0 and a[12, 13] == 0 and a[12, 14] == 0
+    assert a[20, 20] == 255                               # the figure around it is untouched
+
+
+def test_saturated_red_clothing_is_not_tarnished():
+    """The other production failure: red garments came out dark and orange because
+    despill subtracted the magenta excess from every pixel."""
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import chroma_remover
+
+    reds = [(200, 30, 30), (180, 20, 60), (220, 40, 70), (255, 0, 40)]
+    im = Image.new("RGB", (len(reds) * 4 + 8, 12), (255, 0, 255))
+    for i, c in enumerate(reds):
+        im.paste(c, (4 + i * 4, 4, 8 + i * 4, 8))
     out = np.asarray(chroma_remover(despill=1.0)(im))
-    r, g, b = out[4, 4, :3]
-    assert r <= g + 1 and b <= g + 1                      # spill pulled back toward green
-    assert np.asarray(chroma_remover(despill=0.0)(im))[4, 4, 0] == 90   # opt out works
+    for i, c in enumerate(reds):
+        px = out[6, 6 + i * 4]
+        assert tuple(int(v) for v in px[:3]) == c, f"{c} shifted to {tuple(px[:3])}"
+        assert px[3] == 255
+
+
+def test_chroma_remover_despills_only_partial_edge_pixels():
+    """Spill is removed where a pixel is a mix of figure and backdrop, and nowhere else."""
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import chroma_remover
+
+    im = Image.new("RGB", (6, 6), (255, 0, 255))
+    im.putpixel((3, 3), (210, 90, 210))                   # hair half-covering the backdrop
+    out = np.asarray(chroma_remover(despill=1.0)(im))
+    a = out[3, 3, 3]
+    assert 0 < a < 255                                     # partial coverage
+    r, g, b = (int(v) for v in out[3, 3, :3])
+    assert r < 210 and b < 210                             # magenta pulled back out of it
+    assert np.asarray(chroma_remover(despill=0.0)(im))[3, 3, 0] == 210   # opt out works
 
 
 def test_chroma_remover_supports_a_green_key():
@@ -248,14 +286,21 @@ def test_chroma_remover_supports_a_green_key():
     assert a[0, 0] == 0 and a[4, 4] == 255
 
 
-def test_chroma_remover_ramps_alpha_on_soft_edges():
-    """Partial coverage between inner and outer keeps hair soft rather than jagged."""
+
+
+def test_the_key_separates_shadowed_magenta_from_red_clothing():
+    """The two production failures are one discriminator problem: a difference-based
+    score gives shadowed magenta 38 and crimson 40, indistinguishable. Keyness,
+    which also requires R and B to be balanced, must separate them cleanly."""
     import numpy as np
-    from PIL import Image
 
-    from sourcemode.assets.cutout import chroma_remover
+    from sourcemode.assets.cutout import MAGENTA, key_spill
 
-    im = Image.new("RGB", (4, 4), (255, 0, 255))
-    im.putpixel((1, 1), (255, 100, 255))                  # halfway off the key
-    a = np.asarray(chroma_remover(inner=60.0, outer=140.0)(im))[:, :, 3]
-    assert 0 < a[1, 1] < 255
+    def k(c):
+        return float(key_spill(np.array([[c]], dtype=np.float32), MAGENTA)[0, 0])
+
+    backdrop = [(255, 0, 255), (120, 0, 120), (70, 0, 70), (40, 2, 44)]
+    garments = [(180, 20, 60), (255, 0, 40), (200, 30, 30), (255, 255, 255), (0, 0, 0)]
+    assert min(k(c) for c in backdrop) > 0.70, "shadowed magenta must key"
+    assert max(k(c) for c in garments) < 0.40, "no garment may key"
+    assert k((190, 150, 130)) == 0.0 and k((20, 15, 18)) < 0.4
