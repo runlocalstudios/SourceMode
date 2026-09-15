@@ -144,6 +144,8 @@ def assets_cutout(
     game: bool = typer.Option(False, "--game", help="Shorthand for --size <[assets].game_size> --webp."),
     webp: bool = typer.Option(False, "--webp", help="Also write RGBA WebP next to the PNG."),
     no_matting: bool = typer.Option(False, "--no-matting", help="Skip alpha matting (faster, harder hair edges)."),
+    chroma: str = typer.Option(None, "--chroma", help="Key a known backdrop instead of using rembg: magenta (#FF00FF) or green (#00FF00). Use this whenever we rendered the plate ourselves."),
+    despill: float = typer.Option(1.0, "--despill", help="How hard to pull keyed-colour spill out of hair edges (0 disables)."),
     sheet: bool = typer.Option(True, "--sheet/--no-sheet", help="Write a checkerboard review sheet in --out/_review."),
     pattern: str = typer.Option("*.png", "--pattern", help="Which files to pick up inside folders."),
     dry_run: bool = typer.Option(False, "--dry-run"),
@@ -151,7 +153,9 @@ def assets_cutout(
     """Remove the background from renders -> RGBA PNG (+WebP), alpha report, review sheet.
 
     The report only annotates: flags are hollow / clipped / islands / tiny; nothing is rejected."""
-    from .assets.cutout import checkerboard_sheet, collect, cutout_batch, parse_size, rembg_remover  # noqa: PLC0415
+    from .assets.cutout import (  # noqa: PLC0415
+        GREEN, MAGENTA, checkerboard_sheet, chroma_remover, collect, cutout_batch, parse_size, rembg_remover,
+    )
 
     cfg, _ = _ctx()
     acfg = cfg.get("assets", {})
@@ -162,16 +166,25 @@ def assets_cutout(
     if not files:
         rprint(f"[red]no images matched[/red] {pattern!r} in {', '.join(map(str, inputs))}")
         raise typer.Exit(2)
+    if chroma:
+        model = f"chroma:{chroma}"
     rprint(f"{len(files)} renders -> {out}  model={model}  canvas={target or 'as rendered'}  webp={webp}")
     if dry_run:
         for f in files:
             rprint(f"  {f}")
         return
-    try:
-        remover = rembg_remover(model, matting=not no_matting)
-    except ImportError:
-        rprint("[red]rembg is not installed[/red] — `uv sync --inexact --extra assets`")
-        raise typer.Exit(2)
+    if chroma:
+        keys = {"magenta": MAGENTA, "green": GREEN}
+        if chroma.lower() not in keys:
+            rprint(f"[red]--chroma must be one of {', '.join(keys)}[/red]")
+            raise typer.Exit(2)
+        remover = chroma_remover(keys[chroma.lower()], despill=despill)
+    else:
+        try:
+            remover = rembg_remover(model, matting=not no_matting)
+        except ImportError:
+            rprint("[red]rembg is not installed[/red] — `uv sync --inexact --extra assets`")
+            raise typer.Exit(2)
     results = cutout_batch(files, out, remover=remover, model=model, size=target, webp=webp, log=rprint)
     flagged = [r for r in results if r["report"]["flags"]]
     rprint(f"done: {len(results)} cut, {len(flagged)} flagged for a look")

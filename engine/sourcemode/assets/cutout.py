@@ -1,7 +1,13 @@
 """Background removal for game assets.
 
     render (flat studio background)  ->  rembg matte  ->  RGBA PNG (+ WebP)
-                                                      ->  sidecar JSON: source, model, report
+    render (magenta chroma key)      ->  chroma key   ->  sidecar JSON: source, model, report
+
+Two removers. `rembg_remover` is a learned matte for renders on an uncontrolled
+background. `chroma_remover` is for renders we shot ourselves against #FF00FF
+(the Codex convention - it appears in no character's wardrobe palette; #00FF00 is
+the fallback if one ever wears magenta). When we control the background the key is
+exact, instant and needs no model, so prefer it.
 
 The game consumes RGBA WebP at 1024x1536 (src/assets/characters/<c>/outfits/
 <outfit>_NN_standing.webp). Renders may be another aspect (the photo sets are
@@ -34,8 +40,51 @@ MATTING = {"alpha_matting_foreground_threshold": 240,
            "alpha_matting_background_threshold": 10,
            "alpha_matting_erode_size": 10}
 
+MAGENTA = (255, 0, 255)                    # Codex chroma key
+GREEN = (0, 255, 0)                        # fallback when magenta clashes with wardrobe
+
 Remover = Callable[[Image.Image], Image.Image]
 _sessions: dict[str, object] = {}
+
+
+def chroma_remover(key: tuple[int, int, int] = MAGENTA, *, inner: float = 60.0,
+                   outer: float = 140.0, despill: float = 1.0) -> Remover:
+    """Key a known background colour to alpha, with despill.
+
+    inner/outer are RGB distances from `key`: at or below `inner` a pixel is fully
+    background, at or above `outer` fully foreground, and between them alpha ramps
+    so hair edges stay soft.
+
+    Despill matters more than the key itself. A magenta backdrop bounces magenta
+    into hair and shoulder edges; left alone it survives as a purple fringe once
+    composited. For a magenta key that shows up as R and B both exceeding G, so the
+    excess is pulled back toward G (and the mirror for a green key).
+    """
+
+    def _remove(img: Image.Image) -> Image.Image:
+        rgb = np.asarray(img.convert("RGB"), dtype=np.float32)
+        k = np.asarray(key, dtype=np.float32)
+        dist = np.sqrt(((rgb - k) ** 2).sum(axis=2))
+        alpha = np.clip((dist - inner) / max(outer - inner, 1e-6), 0.0, 1.0)
+
+        out = rgb.copy()
+        if despill > 0:
+            r, g, b = out[..., 0], out[..., 1], out[..., 2]
+            if key == MAGENTA:
+                excess = np.minimum(r, b) - g                  # magenta spill
+                m = excess > 0
+                out[..., 0][m] -= despill * excess[m]
+                out[..., 2][m] -= despill * excess[m]
+            elif key == GREEN:
+                excess = g - np.maximum(r, b)
+                m = excess > 0
+                out[..., 1][m] -= despill * excess[m]
+        out = np.clip(out, 0, 255)
+
+        rgba = np.dstack([out, alpha * 255.0]).astype(np.uint8)
+        return Image.fromarray(rgba, mode="RGBA")
+
+    return _remove
 
 
 def rembg_remover(model: str = DEFAULT_MODEL, *, matting: bool = True) -> Remover:

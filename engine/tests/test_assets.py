@@ -203,3 +203,59 @@ def test_collect_skips_plates_and_non_images(tmp_path: Path):
     assert got == ["a.png"] or set(got) == {"a.png", "b.PNG"}
     assert "_plate.png" not in got and "scores.json" not in got
     assert collect([tmp_path / "a.png", tmp_path / "scores.json"]) == [tmp_path / "a.png"]
+
+
+def test_chroma_remover_keys_magenta_and_keeps_the_figure():
+    """A render we shot ourselves on #FF00FF keys exactly, with no model."""
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import MAGENTA, chroma_remover
+
+    im = Image.new("RGB", (40, 60), MAGENTA)
+    im.paste((180, 140, 120), (10, 10, 30, 50))          # a skin-toned figure
+    out = chroma_remover()(im)
+    a = np.asarray(out)[:, :, 3]
+    assert out.mode == "RGBA"
+    assert a[0, 0] == 0 and a[59, 39] == 0               # background fully transparent
+    assert a[30, 20] == 255                              # figure fully opaque
+
+
+def test_chroma_remover_despills_magenta_from_edges():
+    """Magenta bounced into hair must not survive as a purple fringe."""
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import chroma_remover
+
+    im = Image.new("RGB", (8, 8), (255, 0, 255))
+    im.putpixel((4, 4), (90, 40, 90))                     # dark hair carrying magenta spill
+    out = np.asarray(chroma_remover(despill=1.0)(im))
+    r, g, b = out[4, 4, :3]
+    assert r <= g + 1 and b <= g + 1                      # spill pulled back toward green
+    assert np.asarray(chroma_remover(despill=0.0)(im))[4, 4, 0] == 90   # opt out works
+
+
+def test_chroma_remover_supports_a_green_key():
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import GREEN, chroma_remover
+
+    im = Image.new("RGB", (8, 8), GREEN)
+    im.paste((200, 30, 30), (2, 2, 6, 6))                 # a magenta-wearing character's red top
+    a = np.asarray(chroma_remover(GREEN)(im))[:, :, 3]
+    assert a[0, 0] == 0 and a[4, 4] == 255
+
+
+def test_chroma_remover_ramps_alpha_on_soft_edges():
+    """Partial coverage between inner and outer keeps hair soft rather than jagged."""
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import chroma_remover
+
+    im = Image.new("RGB", (4, 4), (255, 0, 255))
+    im.putpixel((1, 1), (255, 100, 255))                  # halfway off the key
+    a = np.asarray(chroma_remover(inner=60.0, outer=140.0)(im))[:, :, 3]
+    assert 0 < a[1, 1] < 255
