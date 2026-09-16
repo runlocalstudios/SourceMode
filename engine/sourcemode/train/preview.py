@@ -101,9 +101,14 @@ def caption_report(captions: list[str]) -> dict:
     pixel-budget finding again.
 
     What survives, and matters more than coverage: an attribute must VARY IN THE
-    IMAGES. jojo names hair in all 99 captions and wears it loose in all 99, so
-    the caption buys nothing. Writing a word down does not make a constant
-    variable. That is what the "attributes vary" check is for.
+    IMAGES. Writing a word down does not make a constant variable. That is what
+    the "attributes vary" check is for, and it is the check that would have caught
+    gabi, whose 69 images are loose and down in about 65 of them.
+
+    It would NOT have flagged jojo, and I wrongly said it should: her 99 images do
+    carry ponytails, pigtails, buns, braids and updos matching their captions,
+    because the shot plan asked for them. I had judged her set from the first 32
+    files sorted by name. Build the sheet of all of it.
     """
     n = len(captions)
     low = [c.lower() for c in captions]
