@@ -55,11 +55,32 @@ def test_verdicts_persist_and_summarise_per_arm(tmp_path: Path):
     assert s["arms"] == [{"arm": "A", "n": 3, "judged": 2, "keep": 1, "rate": 0.5},
                          {"arm": "B", "n": 3, "judged": 1, "keep": 0, "rate": 0.0}]
     assert s["groups"]["0"] == {"A": "keep", "B": "reject"}
-    assert list_sets(tmp_path) == [{"id": "exp", "title": "t", "question": "", "priority": 1, "n": 6, "judged": 3}]
+    assert list_sets(tmp_path) == [{"id": "exp", "title": "t", "question": "", "priority": 1,
+                                    "n": 6, "judged": 3, "done": False}]
     with pytest.raises(ValueError):
         record_verdict(tmp_path, "exp", "A_0", "meh")
     with pytest.raises(KeyError):
         record_verdict(tmp_path, "exp", "Z_9", "keep")
+
+
+def test_unfinished_sets_sort_above_complete_ones(tmp_path: Path):
+    """The list is ordered by what still needs work, not by priority alone.
+
+    Started-but-unfinished leads (most complete first), then untouched, then done.
+    Priority only breaks ties inside a band, so a finished high-priority set can
+    no longer sit above a set that still needs judging.
+    """
+    for sid in ("done", "half", "fresh", "nearly"):
+        make_set(tmp_path, sid, sid, make_items(tmp_path), priority=1 if sid == "done" else 50)
+    for i in ("A_0", "A_1", "A_2", "B_0", "B_1", "B_2"):
+        record_verdict(tmp_path, "done", i, "keep")
+    record_verdict(tmp_path, "half", "A_0", "keep")
+    record_verdict(tmp_path, "half", "A_1", "keep")
+    for i in ("A_0", "A_1", "A_2", "B_0", "B_1"):
+        record_verdict(tmp_path, "nearly", i, "keep")
+
+    assert [s["id"] for s in list_sets(tmp_path)] == ["nearly", "half", "fresh", "done"]
+    assert [s["done"] for s in list_sets(tmp_path)] == [False, False, False, True]
 
 
 def test_router_serves_page_files_and_verdicts(tmp_path: Path):

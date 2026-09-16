@@ -70,14 +70,33 @@ def load_verdicts(root: Path, set_id: str) -> dict:
 
 
 def list_sets(root: Path) -> list[dict]:
+    """Unfinished sets first, then finished ones.
+
+    The list grows with every experiment and became hard to scan, so ordering is
+    by what still needs work: partially judged sets lead (closest to done first),
+    then untouched ones, then everything complete. `done` lets the page draw a
+    divider at the boundary.
+    """
     out = []
     for p in sorted((root / "sets").glob("*.json")) if (root / "sets").exists() else []:
         s = json.loads(p.read_text(encoding="utf-8"))
         v = load_verdicts(root, s["id"])
+        n = len(s["items"])
+        judged = sum(1 for it in s["items"] if it["id"] in v)
         out.append({"id": s["id"], "title": s["title"], "question": s.get("question", ""),
-                    "priority": s.get("priority", 50), "n": len(s["items"]),
-                    "judged": sum(1 for it in s["items"] if it["id"] in v)})
-    return sorted(out, key=lambda s: (s["priority"], s["id"]))
+                    "priority": s.get("priority", 50), "n": n, "judged": judged,
+                    "done": judged >= n})
+
+    def order(s):
+        if s["done"]:
+            return (2, s["priority"], s["id"])
+        started = s["judged"] > 0
+        # started-but-unfinished first, most-complete leading; then untouched
+        return (0 if started else 1,
+                -(s["judged"] / s["n"]) if started else 0,
+                s["priority"], s["id"])
+
+    return sorted(out, key=order)
 
 
 def set_payload(root: Path, set_id: str) -> dict | None:
@@ -141,7 +160,7 @@ def summary(root: Path, set_id: str) -> dict | None:
             "arms": sorted(arms.values(), key=lambda a: a["arm"]), "groups": groups}
 
 
-PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>SourceMode judge</title>
+PAGE = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>SourceMode judge</title>
 <style>
  html,body{margin:0;height:100%;background:#111;color:#ddd;font:14px system-ui,sans-serif}
  #bar{height:44px;display:flex;align-items:center;gap:14px;padding:0 14px;background:#1b1b1b;border-bottom:1px solid #333}
@@ -153,6 +172,22 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>SourceMode jud
  .keep{background:#1f7a3a}.reject{background:#8a2a2a}
  #keys{margin-left:auto;color:#888}
  kbd{background:#2a2a2a;border:1px solid #555;border-radius:3px;padding:1px 6px;color:#eee}
+ /* Phone: thumb-sized verdict buttons in the bottom corners, no keyboard needed. */
+ .tap{position:fixed;bottom:18px;width:84px;height:84px;border-radius:50%;border:none;
+      font-size:38px;line-height:84px;text-align:center;color:#fff;opacity:.92;
+      -webkit-tap-highlight-color:transparent;touch-action:manipulation;z-index:5;padding:0;cursor:pointer}
+ #no{left:18px;background:#8a2a2a}#yes{right:18px;background:#1f7a3a}
+ #undo{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);z-index:5;
+       background:#2a2a2aE0;border:1px solid #555;color:#ccc;border-radius:20px;padding:8px 18px;font-size:15px}
+ @media (max-width:820px){
+   #keys{display:none}
+   #bar{height:38px;gap:8px;padding:0 8px;font-size:13px}
+   #bar select{font-size:13px;max-width:52vw}
+   #stage{height:calc(100% - 38px)}
+   #ref{max-height:20vh;max-width:30vw;right:6px;bottom:112px}
+   #img{max-height:100%;object-fit:contain}
+ }
+ @media (min-width:821px){ .tap,#undo{display:none} }
  #done{position:absolute;inset:0;background:#111;overflow:auto;padding:30px;display:none}
  table{border-collapse:collapse;margin-top:14px}td,th{border:1px solid #333;padding:6px 12px;text-align:left}
  button{background:#2a2a2a;color:#ddd;border:1px solid #555;padding:6px 12px;cursor:pointer;border-radius:3px}
@@ -169,13 +204,26 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><title>SourceMode jud
  <img id="ref" alt="" style="display:none">
  <div id="done"></div>
 </div>
+<button class="tap" id="no" aria-label="not her">&#10007;</button>
+<button class="tap" id="yes" aria-label="her">&#10003;</button>
+<button id="undo">&#8592; back</button>
 <script>
 const $=id=>document.getElementById(id);
 let sets=[], cur=null, idx=0, showRef=true;
 const fileUrl=(s,i)=>`/judge/file?set=${encodeURIComponent(s)}&id=${encodeURIComponent(i)}`;
 async function fetchSets(){sets=await (await fetch('/judge/sets',{cache:'no-store'})).json();
   const p=$('pick'); const keep=p.value; p.innerHTML='';
-  for(const s of sets){const o=document.createElement('option');o.value=s.id;o.textContent=`${s.title}  (${s.judged}/${s.n})`;p.appendChild(o);}
+  // /judge/sets returns unfinished first. Draw one disabled divider at the
+  // boundary so a long list can be scanned for what still needs work.
+  let split=false;
+  for(const s of sets){
+    if(s.done&&!split){split=true;
+      const d=document.createElement('option');
+      d.disabled=true;d.textContent='─'.repeat(24)+' complete '+'─'.repeat(24);
+      p.appendChild(d);}
+    const o=document.createElement('option');o.value=s.id;
+    o.textContent=(s.done?'✓ ':'')+`${s.title}  (${s.judged}/${s.n})`;
+    p.appendChild(o);}
   if(keep) p.value=keep;}
 async function loadSets(){
   await fetchSets();
@@ -192,6 +240,7 @@ async function openSet(id){
 }
 function show(){
   $('done').style.display='none';
+  for(const id of ['yes','no','undo']) $(id).style.visibility='';
   if(idx>=cur.items.length){return tally();}
   const it=cur.items[idx];
   $('img').style.display=''; $('img').src=fileUrl(cur.id,it.id);
@@ -217,6 +266,7 @@ async function tally(){
   await fetchSets();
   const rem=sets.filter(x=>x.judged<x.n&&x.id!==cur.id); if(rem.length) h+=`<p style="color:#888">${rem.length} set(s) still to judge</p>`;
   $('done').innerHTML=h; $('done').style.display='';
+  for(const id of ['yes','no','undo']) $(id).style.visibility='hidden';
 }
 function nextSet(){const n=sets.find(x=>x.judged<x.n&&x.id!==cur.id)||sets[0]; if(n){$('pick').value=n.id;openSet(n.id);}}
 document.addEventListener('keydown',e=>{
@@ -231,7 +281,14 @@ document.addEventListener('keydown',e=>{
   else return; e.preventDefault();
 });
 $('pick').addEventListener('change',e=>openSet(e.target.value));
-$('img').addEventListener('click',e=>{const x=e.offsetX/e.target.clientWidth; verdict(x<0.5?'reject':'keep');});
+$('img').addEventListener('click',e=>{
+  if(window.innerWidth<=820) return;           // phone uses the buttons, not half-taps
+  const x=e.offsetX/e.target.clientWidth; verdict(x<0.5?'reject':'keep');});
+for(const [id,v] of [['yes','keep'],['no','reject']]){
+  const b=$(id);
+  b.addEventListener('click',ev=>{ev.preventDefault();verdict(v);});
+}
+$('undo').addEventListener('click',ev=>{ev.preventDefault(); if(idx>0){idx--;show();}});
 loadSets();
 </script></body></html>"""
 
