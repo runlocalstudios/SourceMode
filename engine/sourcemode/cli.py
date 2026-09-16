@@ -759,6 +759,72 @@ def train_check_dataset(
            + ("" if report["passed"] else f" — failing: {', '.join(report['failed'])}"))
 
 
+@train_app.command("preview")
+def train_preview(
+    dataset_dir: Path,
+    trigger: str = typer.Option("", "--trigger", help="Trigger token every caption should start with."),
+    render: str = typer.Option("1024x1536", "--render", help="Size you will generate at, WxH."),
+    name: str = typer.Option(None, "--name", help="Preview id; defaults to the directory name."),
+    quick: bool = typer.Option(False, "--quick", help="Skip face measurement (no InsightFace)."),
+):
+    """Build the human read of a training set: every image beside its caption.
+
+    Open the printed URL, look at the pictures, then approve. Nothing trains on an
+    unapproved set - see `train approved`.
+    """
+    from .config import load_config  # noqa: PLC0415
+    from .train.preview import build_preview, preview_root  # noqa: PLC0415
+
+    cfg = load_config()
+    w, _, h = render.partition("x")
+    doc = build_preview(preview_root(cfg), dataset_dir, dataset_id=name, trigger=trigger,
+                        render_size=(int(w), int(h)), measure=not quick)
+    flagged = [im for im in doc["images"] if im["missing"] or im["uncaptioned"]]
+    rprint(f"[bold]{doc['id']}[/bold]: {doc['n']} images, fingerprint {doc['fingerprint']}")
+    if doc.get("gate"):
+        g = doc["gate"]
+        rprint(f"gate [{'green' if g['passed'] else 'red'}]{'pass' if g['passed'] else 'FAIL'}[/]"
+               f" score {g['score']}")
+        for f in g["findings"]:
+            if not f["passed"]:
+                rprint(f"  [red]FAIL[/red] {f['check']}: {f['detail']}")
+    if flagged:
+        counts: dict[str, int] = {}
+        for im in flagged:
+            for m in (im["missing"] or (["caption"] if im["uncaptioned"] else [])):
+                counts[m] = counts.get(m, 0) + 1
+        rprint("captions never naming: " + ", ".join(
+            f"[yellow]{k}[/yellow] on {v}/{doc['n']}" for k, v in sorted(counts.items(), key=lambda kv: -kv[1])))
+    host = cfg["monitor"]["host"]
+    host = "127.0.0.1" if host == "0.0.0.0" else host  # noqa: S104
+    rprint(f"review it: http://{host}:{cfg['monitor']['port']}/dataset#{doc['id']}")
+
+
+@train_app.command("approved")
+def train_approved(
+    dataset_id: str,
+    quiet: bool = typer.Option(False, "--quiet", help="Print nothing; exit code only."),
+):
+    """Exit 0 only if this training set has been previewed and approved as it stands.
+
+    Training scripts call this first. Approval is bound to a fingerprint of the
+    images and captions, so editing either revokes it rather than carrying forward.
+    """
+    from .config import load_config  # noqa: PLC0415
+    from .train.preview import approval_state, preview_root  # noqa: PLC0415
+
+    st = approval_state(preview_root(load_config()), dataset_id)
+    if not quiet:
+        if st["approved"]:
+            rprint(f"[green]approved[/green] {dataset_id} at {st['at']} ({st['fingerprint']})")
+        elif st["stale"]:
+            rprint(f"[red]STALE[/red] {dataset_id}: approved as {st['approved_fingerprint']},"
+                   f" now {st['fingerprint']} - images or captions changed since")
+        else:
+            rprint(f"[red]not approved[/red] {dataset_id} - run `sourcemode train preview` and review it")
+    raise typer.Exit(0 if st["approved"] else 1)
+
+
 # --- bootstrap -------------------------------------------------------------
 
 

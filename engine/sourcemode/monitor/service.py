@@ -36,9 +36,11 @@ def create_app(cfg: dict, sampler: Sampler | None = None):
 
     from ..assets.judge import judge_router  # noqa: PLC0415
     from ..assets.review import review_router  # noqa: PLC0415
+    from ..train.preview import preview_router  # noqa: PLC0415
 
     app.include_router(review_router(cfg))
     app.include_router(judge_router(cfg))
+    app.include_router(preview_router(cfg))
     return app
 
 
