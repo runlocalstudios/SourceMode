@@ -203,10 +203,10 @@ def monitor_serve(
     port: int = typer.Option(None, "--port"),
 ):
     """Serve GPU / ComfyUI / training status over HTTP for the control panel."""
-    from .monitor.service import serve  # noqa: PLC0415
+    from .monitor.service import monitor_host, serve  # noqa: PLC0415
 
     cfg, _ = _ctx()
-    rprint(f"monitor on http://{host or cfg['monitor']['host']}:{port or cfg['monitor']['port']}  (Ctrl-C to stop)")
+    rprint(f"monitor on http://{monitor_host(cfg, host)}:{port or cfg['monitor']['port']}  (Ctrl-C to stop)")
     serve(cfg, host=host, port=port)
 
 

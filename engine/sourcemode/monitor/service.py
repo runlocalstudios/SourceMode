@@ -42,8 +42,22 @@ def create_app(cfg: dict, sampler: Sampler | None = None):
     return app
 
 
+def monitor_host(cfg: dict, host: str | None = None) -> str:
+    """Bind address: explicit argument, then SOURCEMODE_MONITOR_HOST, then config.
+
+    The env var is how this box reaches a phone over Tailscale without the repo
+    shipping a wide-open default - the service has no auth, so the committed value
+    stays loopback and the machine that wants remote access opts in locally.
+    `start-monitor.ps1` has documented this override since it was written, but
+    nothing read it, so setting it did nothing.
+    """
+    import os  # noqa: PLC0415
+
+    return host or os.environ.get("SOURCEMODE_MONITOR_HOST") or cfg["monitor"]["host"]
+
+
 def serve(cfg: dict, host: str | None = None, port: int | None = None) -> None:
     import uvicorn  # noqa: PLC0415
 
-    uvicorn.run(create_app(cfg), host=host or cfg["monitor"]["host"],
+    uvicorn.run(create_app(cfg), host=monitor_host(cfg, host),
                 port=port or int(cfg["monitor"]["port"]), log_level="warning")

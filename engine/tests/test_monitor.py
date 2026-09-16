@@ -202,3 +202,20 @@ def test_summarise_priorities():
     assert summarise({"util_pct": 80}, idle_training, {"reachable": False})["kind"] == "busy"
     # unreadable GPU must never be reported as idle
     assert summarise(None, idle_training, {"reachable": False})["kind"] == "unknown"
+
+
+def test_monitor_host_prefers_the_argument_then_the_env_var(monkeypatch):
+    """The committed default stays loopback because the service has no auth.
+
+    A box that wants remote judging opts in with SOURCEMODE_MONITOR_HOST rather
+    than the repo shipping a wide-open bind address. start-monitor.ps1 documented
+    this override from the start, but nothing read it.
+    """
+    from sourcemode.monitor.service import monitor_host
+
+    cfg = {"monitor": {"host": "127.0.0.1"}}
+    monkeypatch.delenv("SOURCEMODE_MONITOR_HOST", raising=False)
+    assert monitor_host(cfg) == "127.0.0.1"
+    monkeypatch.setenv("SOURCEMODE_MONITOR_HOST", "0.0.0.0")
+    assert monitor_host(cfg) == "0.0.0.0"
+    assert monitor_host(cfg, "100.76.82.42") == "100.76.82.42"   # argument still wins
