@@ -47,7 +47,43 @@ Remover = Callable[[Image.Image], Image.Image]
 _sessions: dict[str, object] = {}
 
 
-def key_spill(rgb: np.ndarray, key: tuple[int, int, int]) -> np.ndarray:
+def sample_backdrop(img: Image.Image, band: int = 40) -> tuple[tuple[int, int, int], float]:
+    """The backdrop colour actually present, read off the border, with its uniformity.
+
+    Asking a diffusion model for #FF00FF does not get you #FF00FF: "bright magenta
+    chroma-key" produced (243,5,159) and (218,11,84) on consecutive seeds. What it
+    does produce is *uniform* (mean deviation 2-4), so detect the colour instead of
+    assuming it. Returns ((r,g,b), deviation); a high deviation means the border is
+    not a clean backdrop and the caller should not key blind.
+    """
+    a = np.asarray(img.convert("RGB"), dtype=np.float32)
+    edge = np.concatenate([a[:band].reshape(-1, 3), a[-band:].reshape(-1, 3),
+                           a[:, :band].reshape(-1, 3), a[:, -band:].reshape(-1, 3)])
+    med = np.median(edge, axis=0)
+    dev = float(np.median(np.abs(edge - med).mean(axis=1)))
+    return tuple(int(v) for v in med), dev
+
+
+def chromaticity(rgb: np.ndarray) -> np.ndarray:
+    """Colour direction with brightness divided out, so a shadowed backdrop still
+    matches the lit one."""
+    total = np.maximum(rgb.sum(axis=-1, keepdims=True), 1.0)
+    return rgb / total
+
+
+def key_distance(rgb: np.ndarray, key: tuple[int, int, int]) -> np.ndarray:
+    """Chromaticity distance to an arbitrary sampled backdrop colour, 0 = identical.
+
+    Used when the backdrop is whatever the model produced rather than a colour we
+    chose. Brightness-invariant, so magenta or green in shadow inside an enclosed
+    gap matches the lit backdrop around it.
+    """
+    k = chromaticity(np.asarray(key, dtype=np.float32).reshape(1, 1, 3))
+    return np.sqrt(((chromaticity(rgb) - k) ** 2).sum(axis=-1))
+
+
+def key_spill(rgb: np.ndarray, key: tuple[int, int, int], *,
+              floor: float = 20.0) -> np.ndarray:
     """How much of `key` a pixel is, as 0..1, independent of brightness.
 
     Two production failures come from getting this wrong, and they are the same
@@ -76,11 +112,156 @@ def key_spill(rgb: np.ndarray, key: tuple[int, int, int]) -> np.ndarray:
     safe_lo = np.maximum(lo, 1.0)
     purity = np.clip((lo - mid) / safe_lo, 0.0, 1.0)      # ends clear of the middle channel
     balance = np.clip(lo / np.maximum(hi, 1.0), 0.0, 1.0)  # ...and close to each other
+    # Purity is a ratio, so at very low luminance a couple of counts of sensor or
+    # codec noise reads as high keyness: 2.9% of near-black pixels in val's black
+    # latex scored above the keying threshold and came out punched full of holes.
+    # A backdrop we lit ourselves is never near-black, so ramp keyness away below
+    # `floor`. The ramp ends well under the darkest backdrop the enclosed-gap case
+    # needs - shadowed magenta at (40,2,44) has lo = 40 and is untouched.
+    if floor > 0:
+        lit = np.clip((lo - floor * 0.4) / (floor * 0.6), 0.0, 1.0)
+        return purity * balance * lit
     return purity * balance
 
 
+def auto_chroma_remover(*, inner: float = 0.045, outer: float = 0.12,
+                        despill: float = 1.0, max_dev: float = 18.0) -> Remover:
+    """Key whatever uniform backdrop the plate actually has, detected per image.
+
+    Use this when the backdrop is a colour someone else chose and it is not exactly
+    the one they meant. Val's green plates measure (45,227,36) through (94,229,63) -
+    the yellower ones score only 0.60 on the fixed green test, landing in the soft
+    edge ramp and leaving a haze. Sampling the border instead sidesteps the whole
+    question of which green was intended.
+
+    inner/outer are chromaticity distances, so a shadowed backdrop inside an
+    enclosed gap still matches the lit backdrop around it. Despill is unpremultiply,
+    leaving fully opaque pixels byte-identical.
+    """
+
+    def _remove(img: Image.Image) -> Image.Image:
+        rgb = np.asarray(img.convert("RGB"), dtype=np.float32)
+        key, dev = sample_backdrop(img)
+        if dev > max_dev:                     # border is not a clean backdrop
+            return img.convert("RGBA")
+        d = key_distance(rgb, key)
+        alpha = np.clip((d - inner) / max(outer - inner, 1e-6), 0.0, 1.0)
+        a = alpha[..., None]
+        recovered = despill_unpremultiply(rgb, alpha, key)
+        out = np.clip(np.where(a > 0, rgb + despill * (recovered - rgb), rgb), 0, 255)
+        return Image.fromarray(np.dstack([out, alpha * 255.0]).astype(np.uint8), "RGBA")
+
+    return _remove
+
+
+def despill_unpremultiply(rgb: np.ndarray, alpha: np.ndarray,
+                          key: tuple[int, int, int]) -> np.ndarray:
+    """Recover the foreground colour of a keyed pixel, removing no more key than
+    the pixel actually shows.
+
+    Unpremultiply assumes alpha is true coverage, but ours is a keyness ramp. Where
+    the two disagree it over-subtracts: across val's eleven plates 72,437 of 86,230
+    partial-alpha pixels came out more than 25 counts VIOLET, a GREEN backdrop
+    having pushed them magenta. The mirror of the red tarnish, and just as wrong.
+
+    So the amount of key removed from each of its strong channels is capped at the
+    excess that channel actually carries over the channels the key leaves alone.
+    The cap is applied BEFORE the division by alpha, which is what makes it hold
+    afterwards too: removing more than the excess is what inverts a pixel past
+    neutral into the key's complement, and no backdrop can do that.
+    """
+    k = np.asarray(key, dtype=np.float32)
+    a = alpha[..., None]
+    want = (1.0 - a) * k                       # what plain unpremultiply removes
+    strong = k > k.mean()
+    if strong.any() and not strong.all():
+        floor = rgb[..., ~strong].min(axis=-1)[..., None]
+        room = np.maximum(rgb - floor, 0.0)    # the excess actually present
+        want = np.where(strong, np.minimum(want, room), want)
+    return (rgb - want) / np.maximum(a, 1e-3)
+
+
+def suppress_edge_spill(rgba: np.ndarray, key: tuple[int, int, int], *,
+                        band_px: float = 48.0, strength: float = 1.0) -> np.ndarray:
+    """Remove key-colour dominance from OPAQUE pixels near the matte edge.
+
+    Unpremultiply only corrects pixels the key rated partially transparent. A hair
+    strand that came out fully opaque but caught bounce off the backdrop keeps it:
+    val's auburn curls held 22,789 opaque pixels with green above both other
+    channels, reading as olive against the checkerboard.
+
+    Limited to a band around the edge because that is where bounce physically
+    lands - a green garment in the middle of a torso is further away and untouched,
+    which is the same reason despill must never be applied globally.
+    """
+    from scipy import ndimage  # noqa: PLC0415
+
+    rgb, alpha = rgba[..., :3].astype(np.float32), rgba[..., 3]
+    dist = ndimage.distance_transform_edt(alpha > 0)
+    weight = np.clip(1.0 - (dist - band_px) / max(band_px * 0.5, 1e-6), 0.0, 1.0)
+    weight[alpha == 0] = 0.0
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    if key == GREEN:
+        excess = g - np.maximum(r, b)
+        m = excess > 0
+        rgb[..., 1] = np.where(m, g - strength * weight * excess, g)
+    elif key == MAGENTA:
+        excess = np.minimum(r, b) - g
+        m = excess > 0
+        rgb[..., 0] = np.where(m, r - strength * weight * excess, r)
+        rgb[..., 2] = np.where(m, b - strength * weight * excess, b)
+    return np.dstack([np.clip(rgb, 0, 255), alpha]).astype(np.uint8)
+
+
+def fill_alpha_holes(rgba: np.ndarray, max_area: int = 400,
+                     opaque_at: int = 250) -> tuple[np.ndarray, int]:
+    """Make small interior islands of non-opaque pixels fully opaque.
+
+    A chroma key punches holes inside dark hair and dark clothing wherever a pixel
+    happens to score as key-coloured - val's curls came out speckled, and her black
+    latex dress had 5.6% of its area non-opaque, reading as white dots on any light
+    background. A genuine gap between curls connects to the outside of the
+    silhouette; an isolated interior island of a few hundred pixels does not, so it
+    is safe to close.
+
+    `opaque_at` is the threshold for "this pixel is part of the figure". It counts
+    PARTIAL alpha as a hole, not just near-transparent: the speckles are mostly
+    alpha 129-250, which an `alpha < 128` test misses entirely, and in the latex
+    those outnumbered the near-transparent ones ten to one.
+
+    Filled pixels take the colour of the nearest opaque pixel. Their own RGB is
+    unreliable - a fully keyed pixel is pure backdrop, and one at alpha 0.01 has
+    been unpremultiplied by a near-zero divisor - and interior islands are small
+    enough that the nearest opaque neighbour is the same strand or fabric.
+    """
+    from scipy import ndimage  # noqa: PLC0415
+
+    alpha = rgba[..., 3]
+    holes = alpha < opaque_at
+    # 8-connectivity: a diagonal chain of transparent pixels is a real gap that
+    # reaches the outside, and labelling it as enclosed would fill a genuine hole.
+    labels, n = ndimage.label(holes, structure=ndimage.generate_binary_structure(2, 2))
+    if n == 0:
+        return rgba, 0
+    border = set(np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]])))
+    border.discard(0)
+    sizes = ndimage.sum(holes, labels, index=np.arange(1, n + 1))
+    fill = np.zeros(n + 1, dtype=bool)
+    for i in range(1, n + 1):
+        if i not in border and sizes[i - 1] <= max_area:
+            fill[i] = True
+    mask = fill[labels]
+    out = rgba.copy()
+    if mask.any():
+        _, (iy, ix) = ndimage.distance_transform_edt(mask, return_indices=True)
+        out[..., :3][mask] = rgba[..., :3][iy[mask], ix[mask]]
+        out[..., 3][mask] = 255
+    return out, int(mask.sum())
+
+
 def chroma_remover(key: tuple[int, int, int] = MAGENTA, *, inner: float = 0.40,
-                   outer: float = 0.70, despill: float = 1.0) -> Remover:
+                   outer: float = 0.70, despill: float = 1.0,
+                   edge_spill_px: float = 0.0) -> Remover:
     """Key a backdrop we rendered ourselves to alpha, with correct despill.
 
     Alpha comes from `key_spill` (0..1), so it is brightness-invariant: every
@@ -105,19 +286,20 @@ def chroma_remover(key: tuple[int, int, int] = MAGENTA, *, inner: float = 0.40,
 
         out = rgb
         if despill > 0:
-            k = np.asarray(key, dtype=np.float32)
             a = alpha[..., None]
-            safe = np.maximum(a, 1e-3)
-            recovered = (rgb - (1.0 - a) * k) / safe
+            recovered = despill_unpremultiply(rgb, alpha, key)
             # Blend by `despill` so it can be dialled back, and never touch pixels
             # the key considers fully background.
             out = np.where(a > 0, rgb + despill * (recovered - rgb), rgb)
         out = np.clip(out, 0, 255)
 
         rgba = np.dstack([out, alpha * 255.0]).astype(np.uint8)
+        if edge_spill_px > 0:
+            rgba = suppress_edge_spill(rgba, key, band_px=edge_spill_px, strength=despill)
         return Image.fromarray(rgba, mode="RGBA")
 
     return _remove
+
 
 def rembg_remover(model: str = DEFAULT_MODEL, *, matting: bool = True) -> Remover:
     """The real thing. Sessions are cached so a batch loads the model once."""

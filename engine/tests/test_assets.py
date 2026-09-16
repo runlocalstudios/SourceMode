@@ -273,7 +273,10 @@ def test_chroma_remover_despills_only_partial_edge_pixels():
     a = out[3, 3, 3]
     assert 0 < a < 255                                     # partial coverage
     r, g, b = (int(v) for v in out[3, 3, :3])
-    assert r < 210 and b < 210                             # magenta pulled back out of it
+    # The pixel must stop being magenta-dominated. Not "r below its observed value":
+    # unpremultiply brightens every channel, so the meaningful test is the cast.
+    assert r - g <= 0 and b - g <= 0, f"still magenta-dominated ({r},{g},{b})"
+    assert (210 - 90) - (r - g) > 100                       # and the cast really was removed
     assert np.asarray(chroma_remover(despill=0.0)(im))[3, 3, 0] == 210   # opt out works
 
 
@@ -307,6 +310,106 @@ def test_the_key_separates_shadowed_magenta_from_red_clothing():
     assert min(k(c) for c in backdrop) > 0.70, "shadowed magenta must key"
     assert max(k(c) for c in garments) < 0.40, "no garment may key"
     assert k((190, 150, 130)) == 0.0 and k((20, 15, 18)) < 0.4
+
+
+def test_despill_never_pushes_a_pixel_to_the_key_complement():
+    """Despill may remove the key's colour, never invert past neutral.
+
+    Our alpha is a keyness ramp, not true coverage, so unpremultiply over-subtracts
+    wherever the two disagree: 72,437 of 86,230 partial-alpha pixels across val's
+    plates came out more than 25 counts violet from a GREEN backdrop. The mirror of
+    the red tarnish, and just as wrong.
+    """
+    import numpy as np
+
+    from sourcemode.assets.cutout import GREEN, MAGENTA, chroma_remover, despill_unpremultiply
+
+    # A dark green-lit edge pixel at half coverage. Plain unpremultiply removes
+    # 0.5 * 255 of green, far more green than the pixel has, and the result clips
+    # to a pure magenta. Capped at the excess it stops exactly at neutral.
+    rgb = np.array([[[30.0, 120.0, 40.0]]])
+    a = np.array([[0.5]])
+    out = despill_unpremultiply(rgb, a, GREEN)
+    assert out[0, 0, 1] >= min(out[0, 0, 0], out[0, 0, 2]), "must not invert past neutral"
+    assert out[0, 0, 1] == 60.0, "G capped at the 30-count excess, then /0.5"
+    assert out[0, 0, 0] == 60.0 and out[0, 0, 2] == 80.0, "weak channels only brightened"
+
+    # a pixel with no excess loses no colour at all, only the brightening
+    flat = np.array([[[80.0, 80.0, 80.0]]])
+    assert despill_unpremultiply(flat, a, GREEN)[0, 0].tolist() == [160.0, 160.0, 160.0]
+
+    # a magenta key caps R and B, not G
+    m = np.array([[[210.0, 90.0, 210.0]]])
+    mo = despill_unpremultiply(m, a, MAGENTA)
+    assert mo[0, 0, 0] <= mo[0, 0, 1] and mo[0, 0, 2] <= mo[0, 0, 1], "magenta pulled out"
+
+    # end to end: a real plate's edge pixel stays out of the violets
+    from PIL import Image
+    im = Image.new("RGB", (6, 6), (0, 255, 0))
+    im.putpixel((3, 3), (60, 110, 70))                 # dark hair partly over the backdrop
+    px = np.asarray(chroma_remover(GREEN, inner=0.25, outer=0.45, despill=1.0)(im))[3, 3]
+    r, g, b = (int(v) for v in px[:3])
+    assert 0 < px[3] < 255, "must be a partial edge pixel for this to test anything"
+    assert g >= min(r, b), f"despill produced violet ({r},{g},{b})"
+
+
+def test_key_spill_ignores_near_black_pixels():
+    """Purity is a ratio, so noise in a dark pixel reads as high keyness.
+
+    Val's black latex dress had 2.9% of its near-black pixels score above the
+    keying threshold on a couple of counts of green bias, and shipped punched
+    full of holes that showed as white dots on a light background. The floor must
+    not reach the darkest backdrop the enclosed-gap case needs.
+    """
+    import numpy as np
+
+    from sourcemode.assets.cutout import GREEN, MAGENTA, key_spill
+
+    def k(c, key=GREEN, **kw):
+        return float(key_spill(np.array([[c]], dtype=np.float32), key, **kw)[0, 0])
+
+    # black latex with a few counts of green bias: was keying, must not
+    for c in ((2, 5, 3), (6, 11, 7), (1, 4, 2), (8, 14, 9)):
+        assert k(c) < 0.25, f"{c} scored {k(c):.2f} and would punch a hole"
+    # lit and shadowed backdrop both still key
+    assert k((0, 255, 0)) > 0.9 and k((20, 120, 25)) > 0.5
+    # the magenta enclosed-gap case from the despill work is untouched
+    assert k((40, 2, 44), MAGENTA) > 0.70
+    # opting out restores the old ratio-only behaviour
+    assert k((2, 5, 3), floor=0.0) > 0.25
+
+
+def test_fill_alpha_holes_closes_partial_alpha_speckles():
+    """The speckles are mostly partial alpha, which an `alpha < 128` test misses.
+
+    In val's latex dress, alpha 129-250 pixels outnumbered near-transparent ones
+    ten to one, so the original hole filling closed almost none of the defect.
+    Filled pixels must also lose their backdrop colour, since a keyed pixel's own
+    RGB is either pure backdrop or an unpremultiply by a near-zero divisor.
+    """
+    import numpy as np
+
+    from sourcemode.assets.cutout import fill_alpha_holes
+
+    a = np.zeros((40, 40, 4), dtype=np.uint8)
+    a[5:35, 5:35] = [20, 20, 20, 255]          # a dark opaque figure
+    a[10, 10] = [0, 255, 0, 200]               # partial speckle, backdrop-coloured
+    a[20:22, 20:22] = [0, 255, 0, 160]         # a small partial island
+    a[15, 15] = [0, 255, 0, 0]                 # a fully transparent pinhole
+    a[0:5, :] = [0, 255, 0, 0]                 # the real backdrop, touching the border
+
+    out, n = fill_alpha_holes(a)
+    assert n == 6, f"filled {n}, expected the speckle, the 2x2 island and the pinhole"
+    assert out[10, 10, 3] == 255 and out[20, 20, 3] == 255 and out[15, 15, 3] == 255
+    assert tuple(out[10, 10, :3]) == (20, 20, 20), "filled pixel kept its backdrop colour"
+    assert out[0, 0, 3] == 0, "the real backdrop must stay transparent"
+
+    # a genuine gap reaching the outside stays open however small
+    b = np.zeros((40, 40, 4), dtype=np.uint8)
+    b[:, :] = [20, 20, 20, 255]
+    b[0:30, 20] = [0, 0, 0, 0]                 # a slit from the top edge inward
+    out2, n2 = fill_alpha_holes(b)
+    assert n2 == 0 and out2[10, 20, 3] == 0
 
 
 def test_auto_chroma_keys_a_backdrop_that_is_not_the_intended_colour():
