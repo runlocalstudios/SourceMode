@@ -31,9 +31,16 @@ LOOK = ("Photorealistic, natural skin texture, sharp focus, soft even studio lig
         "Natural realistic human proportions, correct anatomy.")
 
 
-def shot_prompt(character: str, slot: dict) -> str:
+def shot_prompt(character: str, slot: dict, trigger: str | None = None) -> str:
+    """The trigger is the bare character name unless the plan overrides it.
+
+    It used to be hardcoded as `<character>_ch`, which silently disagreed with
+    any LoRA trained on a different token and put a dead string in the prompt.
+    The older LoRAs do use the `_ch` suffix, so a plan can still name its own.
+    """
     pose = SITTING if slot["pose"] == "sitting" else STANDING
-    return (f"{character}_ch. {FRAMING}{pose} She is wearing {slot['outfit']}, {slot['hair']}. {LOOK}")
+    return (f"{trigger or character}. {FRAMING}{pose} "
+            f"She is wearing {slot['outfit']}, {slot['hair']}. {LOOK}")
 
 
 def render_plan(cfg: dict, client, plan: dict, out: Path, *, shots: int = 4, seed: int = 7100,
@@ -59,7 +66,7 @@ def render_plan(cfg: dict, client, plan: dict, out: Path, *, shots: int = 4, see
     for si, slot in enumerate(slots):
         sdir = root / slot_dirname(slot)
         sdir.mkdir(exist_ok=True)
-        prompt = shot_prompt(character, slot)
+        prompt = shot_prompt(character, slot, plan.get("trigger"))
         (sdir / "prompt.txt").write_text(prompt, encoding="utf-8")
         for k in range(shots):
             s = seed + si * 1000 + k * 137

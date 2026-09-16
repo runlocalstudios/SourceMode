@@ -93,7 +93,7 @@ def assets_render(
     if dry_run:
         for s in plan_slots(p):
             if not want or s["id"] in want:
-                rprint(f"[cyan]{s['id']}[/cyan] x{shots}: {shot_prompt(p['character'], s)[:110]}…")
+                rprint(f"[cyan]{s['id']}[/cyan] x{shots}: {shot_prompt(p['character'], s, p.get('trigger'))[:110]}…")
         return
     from .render.client import ComfyUIClient  # noqa: PLC0415
 
@@ -144,7 +144,7 @@ def assets_cutout(
     game: bool = typer.Option(False, "--game", help="Shorthand for --size <[assets].game_size> --webp."),
     webp: bool = typer.Option(False, "--webp", help="Also write RGBA WebP next to the PNG."),
     no_matting: bool = typer.Option(False, "--no-matting", help="Skip alpha matting (faster, harder hair edges)."),
-    chroma: str = typer.Option(None, "--chroma", help="Key a known backdrop instead of using rembg: magenta (#FF00FF) or green (#00FF00). Use this whenever we rendered the plate ourselves."),
+    chroma: str = typer.Option(None, "--chroma", help="Key the backdrop instead of using rembg: magenta (#FF00FF), green (#00FF00), or auto to detect whatever uniform colour the plate actually has."),
     despill: float = typer.Option(1.0, "--despill", help="How hard to pull keyed-colour spill out of hair edges (0 disables)."),
     sheet: bool = typer.Option(True, "--sheet/--no-sheet", help="Write a checkerboard review sheet in --out/_review."),
     pattern: str = typer.Option("*.png", "--pattern", help="Which files to pick up inside folders."),
@@ -154,7 +154,8 @@ def assets_cutout(
 
     The report only annotates: flags are hollow / clipped / islands / tiny; nothing is rejected."""
     from .assets.cutout import (  # noqa: PLC0415
-        GREEN, MAGENTA, checkerboard_sheet, chroma_remover, collect, cutout_batch, parse_size, rembg_remover,
+        GREEN, MAGENTA, auto_chroma_remover, checkerboard_sheet, chroma_remover, collect,
+        cutout_batch, parse_size, rembg_remover,
     )
 
     cfg, _ = _ctx()
@@ -175,10 +176,13 @@ def assets_cutout(
         return
     if chroma:
         keys = {"magenta": MAGENTA, "green": GREEN}
-        if chroma.lower() not in keys:
-            rprint(f"[red]--chroma must be one of {', '.join(keys)}[/red]")
+        if chroma.lower() == "auto":
+            remover = auto_chroma_remover(despill=despill)
+        elif chroma.lower() in keys:
+            remover = chroma_remover(keys[chroma.lower()], despill=despill)
+        else:
+            rprint(f"[red]--chroma must be auto, {' or '.join(keys)}[/red]")
             raise typer.Exit(2)
-        remover = chroma_remover(keys[chroma.lower()], despill=despill)
     else:
         try:
             remover = rembg_remover(model, matting=not no_matting)

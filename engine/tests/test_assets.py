@@ -191,9 +191,12 @@ def test_place_picks_best_per_slot_and_names_by_contract(tmp_path: Path):
 
 def test_shot_prompt_names_the_look_and_a_keyable_background():
     from sourcemode.assets.render import shot_prompt
-    p = shot_prompt("priyanka", {"outfit": "a red dress", "hair": "a high ponytail", "pose": "standing"})
-    assert p.startswith("priyanka_ch. ") and "a red dress" in p and "a high ponytail" in p
+    slot = {"outfit": "a red dress", "hair": "a high ponytail", "pose": "standing"}
+    p = shot_prompt("priyanka", slot)
+    assert p.startswith("priyanka. ") and "a red dress" in p and "a high ponytail" in p
     assert "medium grey background" in p and "glasses" not in p
+    # the trigger is the bare name by default, but a plan can name an older token
+    assert shot_prompt("priyanka", slot, "priyanka_ch").startswith("priyanka_ch. ")
 
 
 def test_collect_skips_plates_and_non_images(tmp_path: Path):
@@ -304,3 +307,99 @@ def test_the_key_separates_shadowed_magenta_from_red_clothing():
     assert min(k(c) for c in backdrop) > 0.70, "shadowed magenta must key"
     assert max(k(c) for c in garments) < 0.40, "no garment may key"
     assert k((190, 150, 130)) == 0.0 and k((20, 15, 18)) < 0.4
+
+
+def test_auto_chroma_keys_a_backdrop_that_is_not_the_intended_colour():
+    """Val's plates were meant to be #00FF00 and arrived as (45,227,36) through
+    (94,229,63). The fixed green test scores the yellower ones only 0.60, which
+    leaves a haze; detecting the actual colour sidesteps it."""
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import auto_chroma_remover
+
+    for backdrop in [(45, 227, 36), (94, 229, 63), (72, 226, 47)]:
+        im = Image.new("RGB", (40, 60), backdrop)
+        im.paste((190, 150, 130), (10, 10, 30, 50))          # the figure
+        a = np.asarray(auto_chroma_remover()(im))[:, :, 3]
+        assert a[0, 0] == 0, f"{backdrop} not keyed"
+        assert a[30, 20] == 255, f"{backdrop} ate the figure"
+
+
+def test_auto_chroma_leaves_the_image_alone_when_the_border_is_not_a_backdrop():
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import auto_chroma_remover
+
+    rng = np.random.default_rng(0)
+    noisy = Image.fromarray(rng.integers(0, 255, (40, 40, 3), dtype=np.uint8))
+    out = auto_chroma_remover()(noisy)
+    assert out.mode == "RGBA"
+    assert (np.asarray(out)[:, :, 3] == 255).all()            # nothing keyed
+
+
+def test_edge_spill_suppression_clears_green_from_opaque_hair():
+    """Unpremultiply only fixes partial pixels. An opaque hair strand carrying
+    bounce off a green backdrop keeps it and reads as olive - val's curls held
+    22,789 such pixels."""
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import GREEN, chroma_remover
+
+    im = Image.new("RGB", (80, 80), GREEN)
+    im.paste((54, 61, 25), (30, 30, 50, 50))          # green-contaminated dark hair
+    plain = np.asarray(chroma_remover(GREEN, inner=0.25, outer=0.45)(im))
+    fixed = np.asarray(chroma_remover(GREEN, inner=0.25, outer=0.45, edge_spill_px=48)(im))
+    r, g, b = (int(v) for v in plain[40, 40, :3])
+    assert g > max(r, b), "fixture should start with green dominant"
+    r2, g2, b2 = (int(v) for v in fixed[40, 40, :3])
+    assert g2 <= max(r2, b2) + 1, f"green still dominant: {(r2, g2, b2)}"
+    assert fixed[40, 40, 3] == 255                      # still opaque
+
+
+def test_edge_spill_leaves_a_green_garment_alone_away_from_the_edge():
+    """Band-limited on purpose: a genuinely green garment in the middle of a torso
+    must survive, the same reason despill is never applied globally."""
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import GREEN, chroma_remover
+
+    im = Image.new("RGB", (400, 400), GREEN)
+    im.paste((150, 120, 110), (60, 60, 340, 340))     # a large figure
+    im.paste((40, 160, 60), (170, 170, 230, 230))     # green top, far from any edge
+    out = np.asarray(chroma_remover(GREEN, inner=0.25, outer=0.45, edge_spill_px=24)(im))
+    r, g, b = (int(v) for v in out[200, 200, :3])
+    assert (r, g, b) == (40, 160, 60), f"green garment altered to {(r, g, b)}"
+
+
+def test_fill_alpha_holes_closes_interior_speckles_but_not_real_gaps():
+    """A chroma key punches transparent dots inside dark hair; those read as light
+    flecks once composited. A real gap between curls reaches the outside."""
+    import numpy as np
+
+    from sourcemode.assets.cutout import fill_alpha_holes
+
+    rgba = np.zeros((100, 100, 4), dtype=np.uint8)
+    rgba[..., 3] = 0
+    rgba[20:80, 20:80, 3] = 255                  # the figure
+    rgba[40:44, 40:44, 3] = 0                    # a speckle inside it (16 px)
+    rgba[20:80, 0:25, 3] = 0                     # a gap open to the left border
+    out, filled = fill_alpha_holes(rgba, max_area=400)
+    assert filled == 16
+    assert out[42, 42, 3] == 255                 # speckle closed
+    assert out[50, 10, 3] == 0                   # border-connected gap untouched
+
+
+def test_fill_alpha_holes_respects_max_area():
+    import numpy as np
+
+    from sourcemode.assets.cutout import fill_alpha_holes
+
+    rgba = np.zeros((200, 200, 4), dtype=np.uint8)
+    rgba[..., 3] = 255
+    rgba[80:130, 80:130, 3] = 0                  # a 2500 px interior region
+    out, filled = fill_alpha_holes(rgba, max_area=400)
+    assert filled == 0 and out[100, 100, 3] == 0
