@@ -88,9 +88,22 @@ def caption_report(captions: list[str]) -> dict:
     """Every caption failure mode we have actually been bitten by. Pure.
 
     Coverage alone is not enough, which is why this exists alongside
-    `missing_attributes`. Measured across our three characters, hair coverage
-    rank-ordered the results exactly: sunny 10% named and 40% keep, gabi 35% and
-    60%, jojo 100% and 70%.
+    `missing_attributes`.
+
+    Calibration, because I got this wrong once already. Coverage is standard
+    practice and cheap, not something our data demonstrates. I claimed hair
+    coverage explained our results, by absorption: uncaptioned hair binds to the
+    trigger and later prompts fight it. gabi's training images are ~90% loose
+    hair, so absorption predicts that prompting loose is the easy case. It is the
+    hard one - 38% against a ponytail's 68%, controlled for framing, n=110 each.
+    The prediction is backwards, so absorption is not the mechanism there. Most
+    likely the ponytail simply leaves more of the face visible, which is the
+    pixel-budget finding again.
+
+    What survives, and matters more than coverage: an attribute must VARY IN THE
+    IMAGES. jojo names hair in all 99 captions and wears it loose in all 99, so
+    the caption buys nothing. Writing a word down does not make a constant
+    variable. That is what the "attributes vary" check is for.
     """
     n = len(captions)
     low = [c.lower() for c in captions]
@@ -106,7 +119,8 @@ def caption_report(captions: list[str]) -> dict:
         out.append(_finding(
             f"names {attr}", coverage[attr] >= 0.9,
             f"{named}/{n} captions name {attr}"
-            + ("" if coverage[attr] >= 0.9 else "; what is not captioned becomes the identity"),
+            + ("" if coverage[attr] >= 0.9 else
+               "; standard practice is that what is not captioned binds to the trigger"),
             round(coverage[attr], 3)))
 
     # 2. the inverse: identity traits must NOT be captioned
