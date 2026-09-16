@@ -45,6 +45,140 @@ VARIABLE = {
 }
 
 
+# Descriptors of WHO SHE IS. Captioning these keeps them variable, which is the
+# exact inverse of the coverage problem and just as damaging: the trigger never
+# learns the trait. Matched as phrases, not bare words - "eyes closed" is a pose,
+# "blue eyes" is identity.
+IDENTITY_TERMS = {
+    "hair colour or length": ("blonde", "brunette", "dark hair", "black hair", "red hair",
+                              "auburn", "burgundy hair", "long hair", "short hair",
+                              "long dark", "curly hair", "straight hair", "wavy hair",
+                              "shoulder-length"),
+    "eyes": ("blue eyes", "brown eyes", "green eyes", "hazel eyes", "dark eyes", "wide eyes"),
+    "skin or features": ("freckles", "dimples", "beauty mark", "olive skin", "fair skin",
+                         "pale skin", "tanned skin", "complexion"),
+    "face shape": ("jawline", "cheekbones", "round face", "oval face", "high forehead",
+                   "full lips", "thin lips", "button nose"),
+    "age": ("year-old", "years old", "mid twenties", "in her twenties", "in her thirties"),
+    "build": ("slim build", "curvy", "petite", "athletic build", "slender"),
+}
+
+# Closed vocabularies for the attributes we control the wording of. Used to spot an
+# attribute that is named on every image and yet always says the same thing, which
+# is absorbed into the trigger exactly as if it had never been named.
+VALUE_VOCAB = {
+    "hair": ("loose", "braid", "ponytail", "bun", "updo", "clipped", "tucked", "headband",
+             "gathered", "twisted", "pinned"),
+    "framing": ("tight head portrait", "head-and-shoulders", "head-and-chest", "waist-up",
+                "thighs up", "full length", "close-up"),
+    "angle": ("facing the camera", "turned slightly", "three-quarter", "almost to profile",
+              "full profile", "over her shoulder", "from above", "from below"),
+}
+
+CONSTANT_SHARE = 0.60     # one value on more than this share is effectively constant
+REPEATED_SHARE = 0.50     # a phrase on more than this share binds to the trigger
+MIN_WORDS = 12            # below this a caption cannot name the six attributes at all
+
+
+def _finding(check: str, passed: bool, detail: str, value=None) -> dict:
+    return {"check": check, "passed": passed, "detail": detail, "value": value}
+
+
+def caption_report(captions: list[str], *, render_phrases: tuple[str, ...] = ()) -> dict:
+    """Every caption failure mode we have actually been bitten by. Pure.
+
+    Coverage alone is not enough, which is why this exists alongside
+    `missing_attributes`. Measured across our three characters, hair coverage
+    rank-ordered the results exactly: sunny 10% named and 40% keep, gabi 35% and
+    60%, jojo 100% and 70%.
+    """
+    n = len(captions)
+    low = [c.lower() for c in captions]
+    out: list[dict] = []
+    if not n:
+        return {"n": 0, "findings": [_finding("captions", False, "no captions at all")]}
+
+    # 1. coverage: anything the render pipeline varies must be named
+    coverage = {}
+    for attr in VARIABLE:
+        named = sum(1 for c in captions if attr not in missing_attributes(c))
+        coverage[attr] = named / n
+        out.append(_finding(
+            f"names {attr}", coverage[attr] >= 0.9,
+            f"{named}/{n} captions name {attr}"
+            + ("" if coverage[attr] >= 0.9 else "; what is not captioned becomes the identity"),
+            round(coverage[attr], 3)))
+
+    # 2. the inverse: identity traits must NOT be captioned
+    leaks = []
+    for cat, terms in IDENTITY_TERMS.items():
+        hits = {t: sum(t in c for c in low) for t in terms}
+        hits = {t: v for t, v in hits.items() if v}
+        if hits:
+            leaks.append({"category": cat, "terms": hits})
+    out.append(_finding(
+        "no identity in captions", not leaks,
+        "clean" if not leaks else "; ".join(
+            f"{l['category']}: " + ", ".join(f"{t!r} x{v}" for t, v in l["terms"].items())
+            for l in leaks) + " - captioned traits stay variable and are never learned",
+        leaks))
+
+    # 3. named but constant
+    constants = []
+    for attr, vocab in VALUE_VOCAB.items():
+        counts = {w: sum(w in c for c in low) for w in vocab}
+        counts = {w: v for w, v in counts.items() if v}
+        if counts:
+            top, cnt = max(counts.items(), key=lambda kv: kv[1])
+            if cnt / n > CONSTANT_SHARE:
+                constants.append({"attr": attr, "value": top, "share": round(cnt / n, 3)})
+    out.append(_finding(
+        "attributes vary", not constants,
+        "each named attribute takes several values" if not constants else "; ".join(
+            f"{c['attr']} is {c['value']!r} on {c['share']:.0%} - named but effectively constant"
+            for c in constants),
+        constants))
+
+    # 4. a phrase on most captions binds to the trigger
+    grams: dict[str, int] = {}
+    for c in low:
+        w = "".join(ch if ch.isalpha() or ch == " " else " " for ch in c).split()
+        for k in (4, 5):
+            for i in range(len(w) - k + 1):
+                g = " ".join(w[i:i + k])
+                grams[g] = grams.get(g, 0) + 1
+    repeated = sorted(((g, v) for g, v in grams.items() if v / n > REPEATED_SHARE),
+                      key=lambda kv: -kv[1])[:5]
+    out.append(_finding(
+        "no boilerplate phrase", not repeated,
+        "no phrase on a majority of captions" if not repeated else "; ".join(
+            f"{g!r} on {v / n:.0%}" for g, v in repeated),
+        [{"phrase": g, "share": round(v / n, 3)} for g, v in repeated]))
+
+    # 5. the words you will prompt with must be words it was trained on
+    unseen = [p for p in render_phrases if not any(p.lower() in c for c in low)]
+    if render_phrases:
+        out.append(_finding(
+            "render vocabulary was taught", not unseen,
+            "every render phrase appears in training" if not unseen else
+            ", ".join(repr(p) for p in unseen[:4])
+            + " never appear in any caption, so the LoRA was never taught them",
+            unseen))
+
+    # 6. length
+    words = sorted(len(c.split()) for c in captions)
+    short = sum(1 for w in words if w < MIN_WORDS)
+    out.append(_finding(
+        "captions long enough", short == 0,
+        f"median {words[n // 2]} words, shortest {words[0]}"
+        + ("" if short == 0 else f"; {short} under {MIN_WORDS} words cannot name the attributes"),
+        words[n // 2]))
+
+    failed = [f["check"] for f in out if not f["passed"]]
+    return {"n": n, "findings": out, "coverage": coverage, "passed": not failed,
+            "failed": failed, "median_words": words[n // 2]}
+
+
 def preview_root(cfg: dict) -> Path:
     from ..config import ENGINE_ROOT  # noqa: PLC0415
 
@@ -118,7 +252,7 @@ def collect_images(dataset_dir: Path) -> list[dict]:
 
 def build_preview(root: Path, dataset_dir: Path, *, dataset_id: str | None = None,
                   trigger: str = "", render_size: tuple[int, int] | None = None,
-                  measure: bool = True) -> dict:
+                  measure: bool = True, render_phrases: tuple[str, ...] = ()) -> dict:
     """Measure the set and write the preview. `measure=False` skips InsightFace."""
     dataset_dir = Path(dataset_dir)
     ds_id = dataset_id or dataset_dir.name
@@ -135,8 +269,10 @@ def build_preview(root: Path, dataset_dir: Path, *, dataset_id: str | None = Non
             if im["name"] in px:
                 im["face_px"], im["yaw_deg"] = int(px[im["name"]][0]), round(float(px[im["name"]][1]), 1)
 
+    captions = caption_report([im["caption"] for im in images], render_phrases=tuple(render_phrases or ()))
     doc = {
         "id": ds_id,
+        "captions": captions,
         "dataset_dir": str(dataset_dir),
         "trigger": trigger,
         "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -199,6 +335,7 @@ def list_previews(root: Path) -> list[dict]:
         flagged = sum(1 for im in doc["images"] if im["missing"] or im["uncaptioned"])
         out.append({"id": doc["id"], "n": doc["n"], "built_at": doc["built_at"],
                     "gate_passed": bool(doc.get("gate", {}).get("passed")),
+                    "caption_failed": doc.get("captions", {}).get("failed", []),
                     "flagged": flagged, **st})
     return sorted(out, key=lambda s: (s["approved"], s["id"]))
 
@@ -276,6 +413,9 @@ async function open(id){
   let h=`<b>${cur.id}</b> - ${cur.n} images, trigger <code>${cur.trigger||'(none)'}</code>`;
   if(g.findings){h+=`<div style="margin-top:6px">gate: <b style="color:${g.passed?'#7fbf7f':'#ff9d9d'}">${g.passed?'pass':'FAIL'}</b></div>`;
     for(const f of g.findings) if(!f.passed) h+=`<div class="finding f">x ${f.check}: ${f.detail}</div>`;}
+  const cr=cur.captions||{};
+  if(cr.findings){h+=`<div style="margin-top:8px">captions: <b style="color:${cr.passed?'#7fbf7f':'#ff9d9d'}">${cr.passed?'pass':'FAIL'}</b> · median ${cr.median_words} words</div>`;
+    for(const f of cr.findings) h+=`<div class="finding ${f.passed?'p':'f'}">${f.passed?'✓':'x'} ${f.check}: ${f.detail}</div>`;}
   $('sum').innerHTML=h;
   let out='';
   for(const im of cur.images){

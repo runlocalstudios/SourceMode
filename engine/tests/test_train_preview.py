@@ -141,3 +141,73 @@ def test_router_serves_the_page_images_and_approval(tmp_path: Path):
     assert c.get("/dataset/missing").status_code == 404
     assert c.post("/dataset/ds/approve", json={"approved": True}).json()["approved"] is True
     assert c.get("/dataset/ds").json()["approval"]["approved"] is True
+
+
+def test_caption_report_flags_an_uncaptioned_variable_attribute():
+    """Gabi's actual failure: hair named on 35% of captions, so hair became identity.
+
+    Measured across our three characters, hair coverage rank-ordered the results
+    exactly: sunny named it on 10% and peaked at 40%, gabi 35% and 60%, jojo 100%
+    and 70%.
+    """
+    from sourcemode.train.preview import caption_report
+
+    no_hair = ("gabi, on a balcony above a city skyline, wearing a knit sweater, "
+               "turned three-quarters to the camera, gentle smile, flat overcast daylight")
+    r = caption_report([no_hair] * 4 + [CAPTION] * 6)
+    assert "names hair" in r["failed"] and not r["passed"]
+    assert r["coverage"]["hair"] == 0.6
+    assert "names outfit" not in r["failed"]
+
+
+def test_caption_report_flags_identity_traits_that_were_captioned():
+    """The inverse failure, never audited until now: a captioned trait stays
+    variable, so the trigger never learns it."""
+    from sourcemode.train.preview import caption_report
+
+    leaky = ("jojo, a waist-up portrait, her long dark hair worn loose, blue eyes, "
+             "freckles across her nose, wearing a red top, facing the camera, "
+             "soft smile, lit by window daylight, against a blurred kitchen")
+    r = caption_report([leaky] * 5)
+    assert "no identity in captions" in r["failed"]
+    cats = {l["category"] for f in r["findings"] if f["check"] == "no identity in captions"
+            for l in f["value"]}
+    assert {"hair colour or length", "eyes"} <= cats
+    # "eyes closed" is a pose, not identity, and must not trip it
+    clean = CAPTION + ", her eyes closed"
+    assert "no identity in captions" not in caption_report([clean] * 5)["failed"]
+
+
+def test_caption_report_flags_an_attribute_that_never_varies():
+    """Naming an attribute is not enough. Sunny's angle said 'facing the camera'
+    on 67% of captions, which is absorbed exactly as if it were never named."""
+    from sourcemode.train.preview import caption_report
+
+    same = CAPTION.replace("turned slightly toward her left", "facing the camera")
+    r = caption_report([same] * 9 + [CAPTION])
+    const = next(f for f in r["findings"] if f["check"] == "attributes vary")
+    assert not const["passed"] and const["value"][0]["attr"] in {"angle", "hair"}
+
+
+def test_caption_report_flags_render_vocabulary_that_was_never_taught():
+    """Gabi: zero of 69 captions named framing, while 21 of her 28 looks were
+    rendered asking for 'from the thighs up'. The model was never taught the words
+    we prompt it with, so framing fell back to base behaviour and the face came
+    out 122px."""
+    from sourcemode.train.preview import caption_report
+
+    r = caption_report([CAPTION] * 5, render_phrases=("from the thighs up", "a head-and-shoulders portrait"))
+    f = next(x for x in r["findings"] if x["check"] == "render vocabulary was taught")
+    assert not f["passed"] and f["value"] == ["from the thighs up"]
+    ok = caption_report([CAPTION] * 5, render_phrases=("a head-and-shoulders portrait",))
+    assert next(x for x in ok["findings"] if x["check"] == "render vocabulary was taught")["passed"]
+
+
+def test_caption_report_flags_boilerplate_and_short_captions():
+    from sourcemode.train.preview import caption_report
+
+    r = caption_report(["jojo, wearing a red top, lit by soft window daylight, facing the camera"] * 6)
+    assert "no boilerplate phrase" in r["failed"]
+    short = caption_report(["jojo, a red top"] * 4)
+    assert "captions long enough" in short["failed"]
+    assert caption_report([])["n"] == 0
