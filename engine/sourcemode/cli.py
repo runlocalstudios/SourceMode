@@ -766,11 +766,6 @@ def train_preview(
     render: str = typer.Option("1024x1536", "--render", help="Size you will generate at, WxH."),
     name: str = typer.Option(None, "--name", help="Preview id; defaults to the directory name."),
     quick: bool = typer.Option(False, "--quick", help="Skip face measurement (no InsightFace)."),
-    render_prompts: Path = typer.Option(
-        None, "--render-prompts",
-        help="Wardrobe descriptions.json or a .txt of phrases: checks the words you will "
-             "prompt with were actually taught. gabi had ZERO of 69 captions naming framing "
-             "while 21 of her looks asked for 'from the thighs up'."),
 ):
     """Build the human read of a training set: every image beside its caption.
 
@@ -782,19 +777,8 @@ def train_preview(
 
     cfg = load_config()
     w, _, h = render.partition("x")
-    phrases: tuple[str, ...] = ()
-    if render_prompts:
-        raw = render_prompts.read_text(encoding="utf-8")
-        if render_prompts.suffix.lower() == ".json":
-            import json as _json  # noqa: PLC0415
-
-            data = _json.loads(raw)
-            phrases = tuple(sorted({str(x[k]) for x in data for k in ("framing", "hair")
-                                    if isinstance(x, dict) and x.get(k)}))
-        else:
-            phrases = tuple(ln.strip() for ln in raw.splitlines() if ln.strip())
     doc = build_preview(preview_root(cfg), dataset_dir, dataset_id=name, trigger=trigger,
-                        render_size=(int(w), int(h)), measure=not quick, render_phrases=phrases)
+                        render_size=(int(w), int(h)), measure=not quick)
     flagged = [im for im in doc["images"] if im["missing"] or im["uncaptioned"]]
     rprint(f"[bold]{doc['id']}[/bold]: {doc['n']} images, fingerprint {doc['fingerprint']}")
     if doc.get("gate"):

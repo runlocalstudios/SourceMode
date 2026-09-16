@@ -84,7 +84,7 @@ def _finding(check: str, passed: bool, detail: str, value=None) -> dict:
     return {"check": check, "passed": passed, "detail": detail, "value": value}
 
 
-def caption_report(captions: list[str], *, render_phrases: tuple[str, ...] = ()) -> dict:
+def caption_report(captions: list[str]) -> dict:
     """Every caption failure mode we have actually been bitten by. Pure.
 
     Coverage alone is not enough, which is why this exists alongside
@@ -155,17 +155,20 @@ def caption_report(captions: list[str], *, render_phrases: tuple[str, ...] = ())
             f"{g!r} on {v / n:.0%}" for g, v in repeated),
         [{"phrase": g, "share": round(v / n, 3)} for g, v in repeated]))
 
-    # 5. the words you will prompt with must be words it was trained on
-    unseen = [p for p in render_phrases if not any(p.lower() in c for c in low)]
-    if render_phrases:
-        out.append(_finding(
-            "render vocabulary was taught", not unseen,
-            "every render phrase appears in training" if not unseen else
-            ", ".join(repr(p) for p in unseen[:4])
-            + " never appear in any caption, so the LoRA was never taught them",
-            unseen))
+    # There was a fifth check here, asserting that phrases used at render time must
+    # appear in the training captions. It was wrong and it is gone. Jeremy asked the
+    # obvious question - Qwen already knows what "from the thighs up" means - and the
+    # renders settle it: asked for full length, the model produced full length with
+    # the feet in frame and the face at 12% of frame width; asked for thighs up, 19%.
+    # The instruction was understood and obeyed both times.
+    # Nor is it distribution shift. gabi's training crops span 2.2-2.7x face width,
+    # so BOTH render framings sit outside them, yet thighs-up keeps 52% and full
+    # length keeps 12%. What separates them is the 122px face against the 229px one.
+    # Caption coverage still matters for attributes ON the subject - her hair was
+    # absorbed and prompting against it costs real keep rate - but composition is
+    # not that, and a check without a mechanism is worse than no check.
 
-    # 6. length
+    # 5. length
     words = sorted(len(c.split()) for c in captions)
     short = sum(1 for w in words if w < MIN_WORDS)
     out.append(_finding(
@@ -252,7 +255,7 @@ def collect_images(dataset_dir: Path) -> list[dict]:
 
 def build_preview(root: Path, dataset_dir: Path, *, dataset_id: str | None = None,
                   trigger: str = "", render_size: tuple[int, int] | None = None,
-                  measure: bool = True, render_phrases: tuple[str, ...] = ()) -> dict:
+                  measure: bool = True) -> dict:
     """Measure the set and write the preview. `measure=False` skips InsightFace."""
     dataset_dir = Path(dataset_dir)
     ds_id = dataset_id or dataset_dir.name
@@ -269,7 +272,7 @@ def build_preview(root: Path, dataset_dir: Path, *, dataset_id: str | None = Non
             if im["name"] in px:
                 im["face_px"], im["yaw_deg"] = int(px[im["name"]][0]), round(float(px[im["name"]][1]), 1)
 
-    captions = caption_report([im["caption"] for im in images], render_phrases=tuple(render_phrases or ()))
+    captions = caption_report([im["caption"] for im in images])
     doc = {
         "id": ds_id,
         "captions": captions,

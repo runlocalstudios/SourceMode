@@ -189,18 +189,28 @@ def test_caption_report_flags_an_attribute_that_never_varies():
     assert not const["passed"] and const["value"][0]["attr"] in {"angle", "hair"}
 
 
-def test_caption_report_flags_render_vocabulary_that_was_never_taught():
-    """Gabi: zero of 69 captions named framing, while 21 of her 28 looks were
-    rendered asking for 'from the thighs up'. The model was never taught the words
-    we prompt it with, so framing fell back to base behaviour and the face came
-    out 122px."""
+def test_render_framing_is_not_a_caption_problem():
+    """Regression for a wrong mechanism I shipped and Jeremy caught.
+
+    caption_report used to fail a set when a phrase the render prompt uses did not
+    appear in any training caption, on the theory that the LoRA "was never taught"
+    it. Qwen already knows what "from the thighs up" means, and the renders proved
+    it: asked for full length it produced full length, feet in frame, face at 12%
+    of frame width; asked for thighs up, 19%. Both were obeyed.
+
+    Nor was it distribution shift. gabi's training crops span 2.2-2.7x face width,
+    so BOTH framings sit outside them, yet thighs-up kept 52% and full length 12%.
+    The discriminator is the 122px face against the 229px one.
+
+    caption_report must therefore take captions and nothing else.
+    """
+    import inspect
+
     from sourcemode.train.preview import caption_report
 
-    r = caption_report([CAPTION] * 5, render_phrases=("from the thighs up", "a head-and-shoulders portrait"))
-    f = next(x for x in r["findings"] if x["check"] == "render vocabulary was taught")
-    assert not f["passed"] and f["value"] == ["from the thighs up"]
-    ok = caption_report([CAPTION] * 5, render_phrases=("a head-and-shoulders portrait",))
-    assert next(x for x in ok["findings"] if x["check"] == "render vocabulary was taught")["passed"]
+    assert list(inspect.signature(caption_report).parameters) == ["captions"]
+    r = caption_report([CAPTION] * 5)
+    assert not any("vocabulary" in f["check"] for f in r["findings"])
 
 
 def test_caption_report_flags_boilerplate_and_short_captions():
