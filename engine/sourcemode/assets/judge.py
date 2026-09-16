@@ -20,11 +20,30 @@ one key to keep or reject. The tally per arm falls out of the verdicts.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import random
 from pathlib import Path
 
 VERDICTS = ("keep", "reject")
+
+
+def content_hash(path: Path) -> str | None:
+    """Short content digest of an item image, or None if it is not readable.
+
+    Verdicts are keyed by item id, so regenerating a set under the same ids used
+    to silently inherit judgements made on different pixels. That happened three
+    times in one session - once on a jojo epoch sweep where verdicts recorded at
+    17:44 were still attached to images rewritten at 19:09.
+    """
+    try:
+        h = hashlib.sha1(usedforsecurity=False)
+        with Path(path).open("rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        return h.hexdigest()[:16]
+    except OSError:
+        return None
 
 
 def judge_root(cfg: dict) -> Path:
@@ -45,14 +64,35 @@ def make_set(root: Path, set_id: str, title: str, items: list[dict], *, question
     if len(set(ids)) != len(ids):
         raise ValueError(f"{set_id}: duplicate item ids")
     order = list(ids); random.Random(seed).shuffle(order)
+    prior = {it["id"]: it.get("hash") for it in (load_set(root, set_id) or {}).get("items", [])}
+    rows = [{**it, "path": str(it["path"]), "hash": content_hash(it["path"])} for it in items]
     d = root / "sets"; d.mkdir(parents=True, exist_ok=True)
     out = d / f"{set_id}.json"
     out.write_text(json.dumps({
         "id": set_id, "title": title, "question": question, "priority": priority,
         "reference": str(reference) if reference else None,
-        "items": [{**it, "path": str(it["path"])} for it in items], "order": order,
+        "items": rows, "order": order,
     }, indent=1), encoding="utf-8")
+    drop_stale_verdicts(root, set_id, {r["id"]: r["hash"] for r in rows}, prior)
     return out
+
+
+def drop_stale_verdicts(root: Path, set_id: str, now: dict, prior: dict) -> list[str]:
+    """Forget verdicts whose image changed content since they were recorded.
+
+    Only acts where both digests are known: a manifest written before hashing
+    existed carries no prior hash, and an unreadable file yields none, so those
+    verdicts are left alone rather than thrown away on a guess.
+    """
+    v = load_verdicts(root, set_id)
+    stale = [i for i, h in prior.items()
+             if h and now.get(i) and now[i] != h and i in v]
+    if stale:
+        for i in stale:
+            v.pop(i, None)
+        d = root / "verdicts"; d.mkdir(parents=True, exist_ok=True)
+        (d / f"{set_id}.json").write_text(json.dumps(v, indent=1), encoding="utf-8")
+    return stale
 
 
 def load_set(root: Path, set_id: str) -> dict | None:

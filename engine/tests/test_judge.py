@@ -7,7 +7,8 @@ import pytest
 from PIL import Image
 
 from sourcemode.assets.judge import (
-    item_path, list_sets, load_set, make_set, record_verdict, set_payload, summary,
+    item_path, list_sets, load_set, load_verdicts, make_set, record_verdict, set_payload,
+    summary,
 )
 
 
@@ -61,6 +62,48 @@ def test_verdicts_persist_and_summarise_per_arm(tmp_path: Path):
         record_verdict(tmp_path, "exp", "A_0", "meh")
     with pytest.raises(KeyError):
         record_verdict(tmp_path, "exp", "Z_9", "keep")
+
+
+def test_rebuilding_a_set_forgets_verdicts_whose_image_changed(tmp_path: Path):
+    """A verdict must not survive its image being replaced under the same id.
+
+    Verdicts are keyed by item id and sets get regenerated in place, so without
+    this a re-render silently inherits the last run's judgements.
+    """
+    items = make_items(tmp_path)
+    make_set(tmp_path, "exp", "t", items)
+    record_verdict(tmp_path, "exp", "A_0", "keep")
+    record_verdict(tmp_path, "exp", "A_1", "reject")
+    record_verdict(tmp_path, "exp", "B_0", "keep")
+
+    Image.new("RGB", (8, 8), "red").save(items[0]["path"])        # A_0 re-rendered
+    make_set(tmp_path, "exp", "t", items)
+
+    assert load_verdicts(tmp_path, "exp") == {"A_1": "reject", "B_0": "keep"}
+
+    # unchanged images keep theirs across any number of rebuilds
+    make_set(tmp_path, "exp", "t", items)
+    assert load_verdicts(tmp_path, "exp") == {"A_1": "reject", "B_0": "keep"}
+
+
+def test_legacy_manifest_without_hashes_keeps_its_verdicts(tmp_path: Path):
+    """Pre-hash manifests carry no digest, so there is nothing to compare.
+
+    Dropping those verdicts would discard real judging work on the strength of a
+    guess, so absence of a prior hash means leave it alone.
+    """
+    items = make_items(tmp_path)
+    make_set(tmp_path, "exp", "t", items)
+    record_verdict(tmp_path, "exp", "A_0", "keep")
+    m = tmp_path / "sets" / "exp.json"
+    d = json.loads(m.read_text())
+    for it in d["items"]:
+        it.pop("hash")
+    m.write_text(json.dumps(d))
+
+    Image.new("RGB", (8, 8), "red").save(items[0]["path"])
+    make_set(tmp_path, "exp", "t", items)
+    assert load_verdicts(tmp_path, "exp") == {"A_0": "keep"}
 
 
 def test_unfinished_sets_sort_above_complete_ones(tmp_path: Path):
