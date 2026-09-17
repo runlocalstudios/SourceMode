@@ -292,9 +292,12 @@ def build_preview(root: Path, dataset_dir: Path, *, dataset_id: str | None = Non
                 im["face_px"], im["yaw_deg"] = int(px[im["name"]][0]), round(float(px[im["name"]][1]), 1)
 
     captions = caption_report([im["caption"] for im in images])
+    prior = load_preview(root, ds_id) or {}
+    still_out = [im for im in prior.get("excluded", []) if Path(im["path"]).is_file()]
     doc = {
         "id": ds_id,
         "captions": captions,
+        "excluded": still_out,
         "dataset_dir": str(dataset_dir),
         "trigger": trigger,
         "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -347,6 +350,49 @@ def record_approval(root: Path, ds_id: str, approved: bool) -> dict:
     return approval_state(root, ds_id)
 
 
+def exclude_image(root: Path, ds_id: str, name: str, excluded: bool) -> dict:
+    """Take one image out of the training set, or put it back. Nothing is deleted.
+
+    The image and its caption move to `<dataset>/_excluded/`, a sibling of the
+    folder the trainer reads, so the trainer cannot see it and Jeremy can undo it.
+    The preview keeps the entry with its measurements so undo needs no re-measure.
+    The fingerprint is recomputed over the remaining images, which is what makes
+    a prior approval lapse: a set that has lost a photo is a different set.
+    """
+    doc = load_preview(root, ds_id)
+    if doc is None:
+        raise KeyError(ds_id)
+    pool = doc["images"] + doc.get("excluded", [])
+    entry = next((im for im in pool if im["name"] == name), None)
+    if entry is None:
+        raise KeyError(name)
+    ds_dir = Path(doc["dataset_dir"])
+    src = Path(entry["path"])
+    img_dir = src.parent if src.parent.name != "_excluded" else Path(entry["home"])
+    exc_dir = ds_dir / "_excluded"
+    if excluded:
+        exc_dir.mkdir(parents=True, exist_ok=True)
+        dest_dir, entry["home"] = exc_dir, str(img_dir)
+    else:
+        dest_dir = Path(entry.get("home", img_dir))
+    for ext in (src.suffix, ".txt"):
+        f = src.with_suffix(ext)
+        if f.is_file():
+            f.replace(dest_dir / f.name)
+    entry["path"] = str(dest_dir / src.name)
+    doc["images"] = [im for im in pool if im is not entry and im.get("_state") != "excluded"]
+    doc["excluded"] = [im for im in pool if im is not entry and im.get("_state") == "excluded"]
+    entry["_state"] = "excluded" if excluded else "kept"
+    (doc["excluded"] if excluded else doc["images"]).append(entry)
+    doc["images"].sort(key=lambda im: im["name"]); doc["excluded"].sort(key=lambda im: im["name"])
+    doc["n"] = len(doc["images"])
+    doc["fingerprint"] = fingerprint(doc["images"])
+    doc["captions"] = caption_report([im["caption"] for im in doc["images"]])
+    (root / "previews" / f"{ds_id}.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
+    return {"name": name, "excluded": excluded, "n": doc["n"], "n_excluded": len(doc["excluded"]),
+            "fingerprint": doc["fingerprint"], "approval": approval_state(root, ds_id)}
+
+
 def list_previews(root: Path) -> list[dict]:
     """Unapproved first: those are the ones blocking a training run."""
     out = []
@@ -366,15 +412,16 @@ def preview_payload(root: Path, ds_id: str) -> dict | None:
     doc = load_preview(root, ds_id)
     if doc is None:
         return None
+    strip = lambda ims: [{k: v for k, v in im.items() if k not in ("path", "home")} for im in ims]
     return {**doc, "approval": approval_state(root, ds_id),
-            "images": [{k: v for k, v in im.items() if k != "path"} for im in doc["images"]]}
+            "images": strip(doc["images"]), "excluded": strip(doc.get("excluded", []))}
 
 
 def image_path(root: Path, ds_id: str, name: str) -> Path | None:
     doc = load_preview(root, ds_id)
     if doc is None:
         return None
-    for im in doc["images"]:
+    for im in doc["images"] + doc.get("excluded", []):
         if im["name"] == name:
             p = Path(im["path"])
             return p if p.is_file() else None
@@ -402,6 +449,10 @@ PAGE = """<!-- dataset preview -->
  .finding{margin:2px 0;font-size:13px}
  .finding.f{color:#ff9d9d}
  .finding.p{color:#7fbf7f}
+ .x{float:right;width:44px;height:44px;border-radius:50%;font-size:22px;line-height:44px;text-align:center;
+   background:#5a1b1b;border:1px solid #7d2e2e;color:#ffb4b4;cursor:pointer;margin-left:10px}
+ .row.out{opacity:.35}
+ .row.out .x{background:#1b3a1b;border-color:#2e7d32;color:#b4ffb4}
  #sum{margin:10px 0 0;padding:10px;background:#181818;border:1px solid #333;border-radius:6px}
  @media (max-width:820px){ .row{flex-direction:column} .row img{max-width:100%;max-height:60vh} }
 </style>
@@ -432,7 +483,7 @@ async function open(id){
   $('state').textContent=a.approved?('approved '+(a.at||'')):(a.stale?'approval STALE - content changed since it was approved':'not approved');
   $('state').style.color=a.approved?'#7fbf7f':'#ff9d9d';
   const g=cur.gate||{};
-  let h=`<b>${cur.id}</b> - ${cur.n} images, trigger <code>${cur.trigger||'(none)'}</code>`;
+  let h=`<b>${cur.id}</b> - ${cur.n} images in the set${(cur.excluded||[]).length?', '+cur.excluded.length+' removed':''}, trigger <code>${cur.trigger||'(none)'}</code>`;
   if(g.findings){h+=`<div style="margin-top:6px">gate: <b style="color:${g.passed?'#7fbf7f':'#ff9d9d'}">${g.passed?'pass':'FAIL'}</b></div>`;
     for(const f of g.findings) if(!f.passed) h+=`<div class="finding f">x ${f.check}: ${f.detail}</div>`;}
   const cr=cur.captions||{};
@@ -440,13 +491,15 @@ async function open(id){
     for(const f of cr.findings) h+=`<div class="finding ${f.passed?'p':'f'}">${f.passed?'✓':'x'} ${f.check}: ${f.detail}</div>`;}
   $('sum').innerHTML=h;
   let out='';
-  for(const im of cur.images){
+  const all=[...cur.images.map(i=>({...i,_out:false})),...(cur.excluded||[]).map(i=>({...i,_out:true}))].sort((a,b)=>a.name<b.name?-1:1);
+  for(const im of all){
     const chips=(im.uncaptioned?'<span class="chip bad">NO CAPTION</span>':'')
       +(im.missing||[]).map(m=>`<span class="chip">no ${m}</span>`).join('');
     const meta=[im.face_px?`face ${im.face_px}px`:null,(im.yaw_deg!==undefined)?`yaw ${im.yaw_deg}\\u00b0`:null]
       .filter(Boolean).join(' \\u00b7 ');
-    out+=`<div class=row><img loading=lazy src="/dataset/file?ds=${encodeURIComponent(cur.id)}&name=${encodeURIComponent(im.name)}">
-      <div class=cap><code>${(im.caption||'(empty)').replace(/</g,'&lt;')}</code>
+    out+=`<div class="row${im._out?' out':''}" data-name="${im.name}"><img loading=lazy src="/dataset/file?ds=${encodeURIComponent(cur.id)}&name=${encodeURIComponent(im.name)}">
+      <div class=cap><button class=x title="${im._out?'put back in the training set':'remove from the training set'}" onclick="toggle('${im.name}',${im._out?'false':'true'})">${im._out?'↩':'✗'}</button>
+      <code>${(im.caption||'(empty)').replace(/</g,'&lt;')}</code>
       <div>${chips}</div><div class=meta>${im.name}${meta?' \\u00b7 '+meta:''}</div></div></div>`;
   }
   $('list').innerHTML=out;
@@ -455,6 +508,12 @@ async function setApproval(v){
   await fetch('/dataset/'+encodeURIComponent(cur.id)+'/approve',{method:'POST',
     headers:{'Content-Type':'application/json'},body:JSON.stringify({approved:v})});
   await open(cur.id); await refreshNames();
+}
+async function toggle(name,excluded){
+  const y=window.scrollY;
+  await fetch('/dataset/'+encodeURIComponent(cur.id)+'/exclude',{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({name,excluded})});
+  await open(cur.id); await refreshNames(); window.scrollTo(0,y);
 }
 async function refreshNames(){const keep=$('pick').value;await loadList();$('pick').value=keep;}
 $('pick').onchange=e=>open(e.target.value);
@@ -493,6 +552,13 @@ def preview_router(cfg: dict):
         if p is None:
             raise HTTPException(404)
         return p
+
+    @r.post("/dataset/{ds_id}/exclude")
+    def _exclude(ds_id: str, body: dict = Body(...)) -> dict:
+        try:
+            return exclude_image(root, ds_id, str(body.get("name", "")), bool(body.get("excluded", True)))
+        except KeyError as e:
+            raise HTTPException(404) from e
 
     @r.post("/dataset/{ds_id}/approve")
     def _approve(ds_id: str, body: dict = Body(...)) -> dict:

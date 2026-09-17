@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from sourcemode.train.preview import (
-    VARIABLE, approval_state, build_preview, collect_images, fingerprint, image_path,
+    VARIABLE, approval_state, build_preview, collect_images, exclude_image, fingerprint, image_path,
     list_previews, load_preview, missing_attributes, preview_payload, record_approval,
 )
 
@@ -221,3 +221,62 @@ def test_caption_report_flags_boilerplate_and_short_captions():
     short = caption_report(["jojo, a red top"] * 4)
     assert "captions long enough" in short["failed"]
     assert caption_report([])["n"] == 0
+
+
+def test_excluding_a_photo_moves_it_out_and_lapses_approval(tmp_path: Path):
+    """The red X. Nothing is deleted; the trainer just cannot see it any more.
+
+    A set that has lost a photo is a different set, so approval must lapse and the
+    fingerprint must change - otherwise a run could start on a set Jeremy approved
+    before he removed something from it.
+    """
+    root = tmp_path / "root"
+    d = make_dataset(tmp_path, n=3)
+    build_preview(root, d, measure=False)
+    record_approval(root, "ds", True)
+    fp0 = load_preview(root, "ds")["fingerprint"]
+
+    r = exclude_image(root, "ds", "face_001.png", True)
+    assert r["n"] == 2 and r["n_excluded"] == 1 and r["fingerprint"] != fp0
+    assert not r["approval"]["approved"] and r["approval"]["stale"]
+    assert not (d / "image_face" / "face_001.png").exists()
+    assert (d / "_excluded" / "face_001.png").is_file() and (d / "_excluded" / "face_001.txt").is_file()
+    doc = load_preview(root, "ds")
+    assert [im["name"] for im in doc["images"]] == ["face_000.png", "face_002.png"]
+    assert [im["name"] for im in doc["excluded"]] == ["face_001.png"]
+    assert image_path(root, "ds", "face_001.png").is_file(), "still viewable for undo"
+    # the page never sees where it went
+    assert "path" not in preview_payload(root, "ds")["excluded"][0]
+
+    # undo puts it back, and the fingerprint returns to what it was
+    r2 = exclude_image(root, "ds", "face_001.png", False)
+    assert r2["n"] == 3 and r2["n_excluded"] == 0 and r2["fingerprint"] == fp0
+    assert (d / "image_face" / "face_001.png").is_file() and (d / "image_face" / "face_001.txt").is_file()
+
+    # a rebuild keeps listing what is still excluded
+    exclude_image(root, "ds", "face_002.png", True)
+    build_preview(root, d, measure=False)
+    doc = load_preview(root, "ds")
+    assert doc["n"] == 2 and [im["name"] for im in doc["excluded"]] == ["face_002.png"]
+
+    with pytest.raises(KeyError):
+        exclude_image(root, "ds", "../secret.png", True)
+    with pytest.raises(KeyError):
+        exclude_image(root, "nope", "face_000.png", True)
+
+
+def test_exclude_endpoint(tmp_path: Path):
+    pytest.importorskip("httpx")
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from sourcemode.train.preview import preview_router
+
+    root = tmp_path / "root"
+    build_preview(root, make_dataset(tmp_path, n=2), measure=False)
+    app = FastAPI(); app.include_router(preview_router({"train": {"previews": str(root)}}))
+    c = TestClient(app)
+    assert c.post("/dataset/ds/exclude", json={"name": "face_000.png", "excluded": True}).json()["n"] == 1
+    assert c.get("/dataset/ds").json()["excluded"][0]["name"] == "face_000.png"
+    assert c.get("/dataset/file", params={"ds": "ds", "name": "face_000.png"}).status_code == 200
+    assert c.post("/dataset/ds/exclude", json={"name": "ghost.png", "excluded": True}).status_code == 404
