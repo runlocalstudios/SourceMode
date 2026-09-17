@@ -301,3 +301,23 @@ def test_client_submit_poll_fetch(tmp_path):
     assert files == [{"filename": "out.webp", "subfolder": "", "type": "output"}]
     dest = client.fetch(files[0], tmp_path / "out.webp")
     assert Path(dest).read_bytes() == b"artifact-bytes"
+
+
+def test_flux_t2i_template_resolves_and_prunes():
+    """The Flux comparison graph: every placeholder fills, no dangling node refs,
+    and with no LoRA the loader is pruned and the sampler re-links to the UNET.
+    Flux.1-dev is non-commercial; this template is for benchmarking only."""
+    from sourcemode.config import load_config, workflows_dir
+    from sourcemode.render.workflow import load_template, prune_placeholder_loras, substitute
+
+    cfg = load_config()
+    base = {"MODEL": "m", "CLIP_L": "c", "T5": "t", "VAE": "v", "POSITIVE": "p", "NEGATIVE": "",
+            "GUIDANCE": 3.5, "SEED": 1, "STEPS": 4, "WIDTH": 8, "HEIGHT": 8, "FILENAME_PREFIX": "x"}
+    g = prune_placeholder_loras(substitute(load_template(workflows_dir(cfg), "flux_t2i"),
+                                           {**base, "LORA_PATH": "l.safetensors", "LORA_STRENGTH": 1.0}))
+    ids = set(g)
+    assert all(str(i[0]) in ids for v in g.values() for i in v["inputs"].values() if isinstance(i, list))
+    assert g["9"]["inputs"]["cfg"] == 1.0 and g["9"]["inputs"]["model"] == ["2", 0]
+    g2 = prune_placeholder_loras(substitute(load_template(workflows_dir(cfg), "flux_t2i"),
+                                            {**base, "LORA_PATH": "", "LORA_STRENGTH": 0.0}))
+    assert "2" not in g2 and g2["9"]["inputs"]["model"] == ["1", 0]
