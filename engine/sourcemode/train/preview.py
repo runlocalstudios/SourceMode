@@ -453,7 +453,11 @@ PAGE = """<!-- dataset preview -->
    background:#5a1b1b;border:1px solid #7d2e2e;color:#ffb4b4;cursor:pointer;margin-left:10px}
  .row.out{opacity:.35}
  .row.out .x{background:#1b3a1b;border-color:#2e7d32;color:#b4ffb4}
- #sum{margin:10px 0 0;padding:10px;background:#181818;border:1px solid #333;border-radius:6px}
+ #sum{margin:8px 0 0;color:#bbb;font-size:13px}
+ details#rep{margin:10px 0;padding:8px 10px;background:#181818;border:1px solid #333;border-radius:6px}
+ details#rep summary{cursor:pointer;color:#bbb;font-size:13px;list-style:none}
+ details#rep summary::before{content:'▸ ';color:#888}
+ details#rep[open] summary::before{content:'▾ '}
  @media (max-width:820px){ .row{flex-direction:column} .row img{max-width:100%;max-height:60vh} }
 </style>
 <header>
@@ -463,6 +467,7 @@ PAGE = """<!-- dataset preview -->
  <span id=state></span>
  <div id=sum></div>
 </header>
+<details id=rep><summary>details</summary><div id=repbody></div></details>
 <div id=list></div>
 <script>
 const $=id=>document.getElementById(id);
@@ -482,14 +487,17 @@ async function open(id){
   const a=cur.approval;
   $('state').textContent=a.approved?('approved '+(a.at||'')):(a.stale?'approval STALE - content changed since it was approved':'not approved');
   $('state').style.color=a.approved?'#7fbf7f':'#ff9d9d';
-  const g=cur.gate||{};
-  let h=`<b>${cur.id}</b> - ${cur.n} images in the set${(cur.excluded||[]).length?', '+cur.excluded.length+' removed':''}, trigger <code>${cur.trigger||'(none)'}</code>`;
-  if(g.findings){h+=`<div style="margin-top:6px">gate: <b style="color:${g.passed?'#7fbf7f':'#ff9d9d'}">${g.passed?'pass':'FAIL'}</b></div>`;
-    for(const f of g.findings) if(!f.passed) h+=`<div class="finding f">x ${f.check}: ${f.detail}</div>`;}
-  const cr=cur.captions||{};
-  if(cr.findings){h+=`<div style="margin-top:8px">captions: <b style="color:${cr.passed?'#7fbf7f':'#ff9d9d'}">${cr.passed?'pass':'FAIL'}</b> · median ${cr.median_words} words</div>`;
-    for(const f of cr.findings) h+=`<div class="finding ${f.passed?'p':'f'}">${f.passed?'✓':'x'} ${f.check}: ${f.detail}</div>`;}
-  $('sum').innerHTML=h;
+  const g=cur.gate||{}; const cr=cur.captions||{};
+  const gf=(g.findings||[]).filter(f=>!f.passed).length, cf=(cr.findings||[]).filter(f=>!f.passed).length;
+  const col=v=>v?'#7fbf7f':'#ff9d9d';
+  $('sum').innerHTML=`<b>${cur.n}</b> in set${(cur.excluded||[]).length?', '+cur.excluded.length+' removed':''}
+    &middot; gate <b style="color:${col(g.passed)}">${g.passed?'pass':'FAIL'}</b>${gf?' ('+gf+')':''}
+    &middot; captions <b style="color:${col(cr.passed)}">${cr.passed?'pass':'FAIL'}</b>${cf?' ('+cf+')':''}`;
+  let h=`<div>trigger <code>${cur.trigger||'(none)'}</code> &middot; median ${cr.median_words||'?'} words</div>`;
+  for(const f of (g.findings||[])) if(!f.passed) h+=`<div class="finding f">x ${f.check}: ${f.detail}</div>`;
+  for(const f of (cr.findings||[])) h+=`<div class="finding ${f.passed?'p':'f'}">${f.passed?'✓':'x'} ${f.check}: ${f.detail}</div>`;
+  $('repbody').innerHTML=h;
+  $('rep').querySelector('summary').textContent=(gf+cf)?`${gf+cf} finding${gf+cf>1?'s':''} - tap for the report`:'report';
   let out='';
   const all=[...cur.images.map(i=>({...i,_out:false})),...(cur.excluded||[]).map(i=>({...i,_out:true}))].sort((a,b)=>a.name<b.name?-1:1);
   for(const im of all){
