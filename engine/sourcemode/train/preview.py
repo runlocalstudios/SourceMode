@@ -274,7 +274,7 @@ def collect_images(dataset_dir: Path) -> list[dict]:
 
 def build_preview(root: Path, dataset_dir: Path, *, dataset_id: str | None = None,
                   trigger: str = "", render_size: tuple[int, int] | None = None,
-                  measure: bool = True) -> dict:
+                  measure: bool = True, bucket_px: int = 1024) -> dict:
     """Measure the set and write the preview. `measure=False` skips InsightFace."""
     dataset_dir = Path(dataset_dir)
     ds_id = dataset_id or dataset_dir.name
@@ -284,7 +284,7 @@ def build_preview(root: Path, dataset_dir: Path, *, dataset_id: str | None = Non
     if measure:
         from ..gates.dataset import evaluate, measure_dataset  # noqa: PLC0415
 
-        m = measure_dataset(dataset_dir, render_size=render_size)
+        m = measure_dataset(dataset_dir, render_size=render_size, bucket_px=bucket_px)
         gate = evaluate(m, trigger=trigger)
         px = {f.name: (f.face_px, f.yaw_deg) for f in m.faces}
         for im in images:

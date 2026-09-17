@@ -764,6 +764,7 @@ def train_preview(
     dataset_dir: Path,
     trigger: str = typer.Option("", "--trigger", help="Trigger token every caption should start with."),
     render: str = typer.Option("1024x1536", "--render", help="Size you will generate at, WxH."),
+    bucket: int = typer.Option(1024, "--bucket", help="Training bucket (longest side) from the dataset TOML."),
     name: str = typer.Option(None, "--name", help="Preview id; defaults to the directory name."),
     quick: bool = typer.Option(False, "--quick", help="Skip face measurement (no InsightFace)."),
 ):
@@ -778,7 +779,7 @@ def train_preview(
     cfg = load_config()
     w, _, h = render.partition("x")
     doc = build_preview(preview_root(cfg), dataset_dir, dataset_id=name, trigger=trigger,
-                        render_size=(int(w), int(h)), measure=not quick)
+                        render_size=(int(w), int(h)), measure=not quick, bucket_px=bucket)
     flagged = [im for im in doc["images"] if im["missing"] or im["uncaptioned"]]
     rprint(f"[bold]{doc['id']}[/bold]: {doc['n']} images, fingerprint {doc['fingerprint']}")
     if doc.get("gate"):
