@@ -483,16 +483,10 @@ async function loadList(){
 }
 async function open(id){
   cur=await (await fetch('/dataset/'+encodeURIComponent(id),{cache:'no-store'})).json();
-  location.hash=id;
-  const a=cur.approval;
-  $('state').textContent=a.approved?('approved '+(a.at||'')):(a.stale?'approval STALE - content changed since it was approved':'not approved');
-  $('state').style.color=a.approved?'#7fbf7f':'#ff9d9d';
+  if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
+  renderHeader(cur.n,(cur.excluded||[]).length,cur.approval);
   const g=cur.gate||{}; const cr=cur.captions||{};
   const gf=(g.findings||[]).filter(f=>!f.passed).length, cf=(cr.findings||[]).filter(f=>!f.passed).length;
-  const col=v=>v?'#7fbf7f':'#ff9d9d';
-  $('sum').innerHTML=`<b>${cur.n}</b> in set${(cur.excluded||[]).length?', '+cur.excluded.length+' removed':''}
-    &middot; gate <b style="color:${col(g.passed)}">${g.passed?'pass':'FAIL'}</b>${gf?' ('+gf+')':''}
-    &middot; captions <b style="color:${col(cr.passed)}">${cr.passed?'pass':'FAIL'}</b>${cf?' ('+cf+')':''}`;
   let h=`<div>trigger <code>${cur.trigger||'(none)'}</code> &middot; median ${cr.median_words||'?'} words</div>`;
   for(const f of (g.findings||[])) if(!f.passed) h+=`<div class="finding f">x ${f.check}: ${f.detail}</div>`;
   for(const f of (cr.findings||[])) h+=`<div class="finding ${f.passed?'p':'f'}">${f.passed?'✓':'x'} ${f.check}: ${f.detail}</div>`;
@@ -506,24 +500,41 @@ async function open(id){
     const meta=[im.face_px?`face ${im.face_px}px`:null,(im.yaw_deg!==undefined)?`yaw ${im.yaw_deg}\\u00b0`:null]
       .filter(Boolean).join(' \\u00b7 ');
     out+=`<div class="row${im._out?' out':''}" data-name="${im.name}"><img loading=lazy src="/dataset/file?ds=${encodeURIComponent(cur.id)}&name=${encodeURIComponent(im.name)}">
-      <div class=cap><button class=x title="${im._out?'put back in the training set':'remove from the training set'}" onclick="toggle('${im.name}',${im._out?'false':'true'})">${im._out?'↩':'✗'}</button>
+      <div class=cap><button class=x title="${im._out?'put back in the training set':'remove from the training set'}" onclick="toggle('${im.name}',${im._out?'false':'true'})" >${im._out?'↩':'✗'}</button>
       <code>${(im.caption||'(empty)').replace(/</g,'&lt;')}</code>
       <div>${chips}</div><div class=meta>${im.name}${meta?' \\u00b7 '+meta:''}</div></div></div>`;
   }
   $('list').innerHTML=out;
 }
 async function setApproval(v){
-  await fetch('/dataset/'+encodeURIComponent(cur.id)+'/approve',{method:'POST',
-    headers:{'Content-Type':'application/json'},body:JSON.stringify({approved:v})});
-  await open(cur.id); await refreshNames();
+  const a=await (await fetch('/dataset/'+encodeURIComponent(cur.id)+'/approve',{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({approved:v})})).json();
+  cur.approval=a; renderHeader(cur.n,(cur.excluded||[]).length,a);
+}
+function renderHeader(n,nx,a){
+  const g=cur.gate||{}, cr=cur.captions||{};
+  const col=v=>v?'#7fbf7f':'#ff9d9d';
+  $('sum').innerHTML=`<b>${n}</b> in set${nx?', '+nx+' removed':''}
+    &middot; gate <b style="color:${col(g.passed)}">${g.passed?'pass':'FAIL'}</b>
+    &middot; captions <b style="color:${col(cr.passed)}">${cr.passed?'pass':'FAIL'}</b>`;
+  $('state').textContent=a.approved?('approved '+(a.at||'')):(a.stale?'approval STALE - set changed since':'not approved');
+  $('state').style.color=a.approved?'#7fbf7f':'#ff9d9d';
+  const o=[...$('pick').options].find(o=>o.value===cur.id); if(o) o.textContent=`${a.approved?'✓ ':''}${cur.id}  (${n} images)`;
 }
 async function toggle(name,excluded){
-  const y=window.scrollY;
-  await fetch('/dataset/'+encodeURIComponent(cur.id)+'/exclude',{method:'POST',
-    headers:{'Content-Type':'application/json'},body:JSON.stringify({name,excluded})});
-  await open(cur.id); await refreshNames(); window.scrollTo(0,y);
+  // Change ONLY this row. Rebuilding the list re-creates every <img>, they reload
+  // lazily, the page height changes under the thumb and the scroll jumps.
+  const btn=document.querySelector(`.row[data-name="${name}"] .x`); if(btn) btn.disabled=true;
+  const r=await (await fetch('/dataset/'+encodeURIComponent(cur.id)+'/exclude',{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({name,excluded})})).json();
+  const row=document.querySelector(`.row[data-name="${name}"]`);
+  if(row){ row.classList.toggle('out',excluded);
+    const b=row.querySelector('.x'); b.disabled=false; b.textContent=excluded?'↩':'✗';
+    b.title=excluded?'put back in the training set':'remove from the training set';
+    b.onclick=()=>toggle(name,!excluded); }
+  cur.n=r.n; cur.excluded=new Array(r.n_excluded); cur.approval=r.approval;
+  renderHeader(r.n,r.n_excluded,r.approval);
 }
-async function refreshNames(){const keep=$('pick').value;await loadList();$('pick').value=keep;}
 $('pick').onchange=e=>open(e.target.value);
 $('yes').onclick=()=>setApproval(true);
 $('no').onclick=()=>setApproval(false);
