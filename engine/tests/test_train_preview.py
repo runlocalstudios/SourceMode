@@ -8,6 +8,7 @@ from PIL import Image
 
 from sourcemode.train.preview import (
     VARIABLE, approval_state, build_preview, collect_images, exclude_image, fingerprint, image_path,
+    set_caption,
     list_previews, load_preview, missing_attributes, preview_payload, record_approval,
 )
 
@@ -280,3 +281,43 @@ def test_exclude_endpoint(tmp_path: Path):
     assert c.get("/dataset/ds").json()["excluded"][0]["name"] == "face_000.png"
     assert c.get("/dataset/file", params={"ds": "ds", "name": "face_000.png"}).status_code == 200
     assert c.post("/dataset/ds/exclude", json={"name": "ghost.png", "excluded": True}).status_code == 404
+
+
+def test_correcting_a_caption_writes_the_file_and_lapses_approval(tmp_path: Path):
+    """Jeremy's quick feedback: fix one clause from the phone. The .txt the trainer
+    reads is what changes, the chips re-score, and approval lapses because a set
+    whose captions changed is a different set."""
+    root = tmp_path / "root"
+    d = make_dataset(tmp_path, n=2)
+    build_preview(root, d, measure=False)
+    record_approval(root, "ds", True)
+    fp0 = load_preview(root, "ds")["fingerprint"]
+
+    fixed = CAPTION.replace("her hair worn loose", "her hair in low pigtails")
+    r = set_caption(root, "ds", "face_000.png", "  " + fixed + "  ")
+    assert r["caption"] == fixed and r["fingerprint"] != fp0
+    assert not r["approval"]["approved"] and r["approval"]["stale"]
+    assert (d / "image_face" / "face_000.txt").read_text(encoding="utf-8") == fixed
+    assert load_preview(root, "ds")["images"][0]["caption"] == fixed
+
+    # dropping the hair clause entirely shows up as a chip
+    r2 = set_caption(root, "ds", "face_000.png", fixed.replace("her hair in low pigtails, ", ""))
+    assert "hair" in r2["missing"]
+    with pytest.raises(KeyError):
+        set_caption(root, "ds", "../secret.png", "x")
+
+
+def test_caption_endpoint(tmp_path: Path):
+    pytest.importorskip("httpx")
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from sourcemode.train.preview import preview_router
+
+    root = tmp_path / "root"
+    build_preview(root, make_dataset(tmp_path, n=1), measure=False)
+    app = FastAPI(); app.include_router(preview_router({"train": {"previews": str(root)}}))
+    c = TestClient(app)
+    assert c.post("/dataset/ds/caption", json={"name": "face_000.png", "caption": "jojo, a test"}).json()["caption"] == "jojo, a test"
+    assert c.get("/dataset/ds").json()["images"][0]["caption"] == "jojo, a test"
+    assert c.post("/dataset/ds/caption", json={"name": "ghost.png", "caption": "x"}).status_code == 404

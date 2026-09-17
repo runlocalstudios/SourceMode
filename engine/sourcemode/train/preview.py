@@ -393,6 +393,34 @@ def exclude_image(root: Path, ds_id: str, name: str, excluded: bool) -> dict:
             "fingerprint": doc["fingerprint"], "approval": approval_state(root, ds_id)}
 
 
+def set_caption(root: Path, ds_id: str, name: str, caption: str) -> dict:
+    """Correct one image's caption from the preview. Writes the training file.
+
+    This is Jeremy's quick-feedback path: "maya src_025 - her hair is in low
+    pigtails, not loose". The .txt beside the image is the thing the trainer reads,
+    so that is what changes; the preview entry, its attribute chips, the caption
+    report and the fingerprint follow, and approval lapses until he re-approves,
+    because a set whose captions changed is a different set.
+    """
+    doc = load_preview(root, ds_id)
+    if doc is None:
+        raise KeyError(ds_id)
+    pool = doc["images"] + doc.get("excluded", [])
+    entry = next((im for im in pool if im["name"] == name), None)
+    if entry is None:
+        raise KeyError(name)
+    caption = " ".join(str(caption).split())
+    Path(entry["path"]).with_suffix(".txt").write_text(caption, encoding="utf-8")
+    entry["caption"] = caption
+    entry["missing"] = missing_attributes(caption)
+    entry["uncaptioned"] = not caption
+    doc["fingerprint"] = fingerprint(doc["images"])
+    doc["captions"] = caption_report([im["caption"] for im in doc["images"]])
+    (root / "previews" / f"{ds_id}.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
+    return {"name": name, "caption": caption, "missing": entry["missing"], "uncaptioned": entry["uncaptioned"],
+            "fingerprint": doc["fingerprint"], "captions": doc["captions"], "approval": approval_state(root, ds_id)}
+
+
 def list_previews(root: Path) -> list[dict]:
     """Unapproved first: those are the ones blocking a training run."""
     out = []
@@ -452,6 +480,11 @@ PAGE = """<!-- dataset preview -->
  .x{float:right;width:44px;height:44px;border-radius:50%;font-size:22px;line-height:44px;text-align:center;
    background:#5a1b1b;border:1px solid #7d2e2e;color:#ffb4b4;cursor:pointer;margin-left:10px}
  .row.out{opacity:.35}
+ .cap code{cursor:text}
+ .cap textarea{width:100%;box-sizing:border-box;min-height:120px;font:16px system-ui,sans-serif;background:#191919;
+   color:#e8e8e8;border:1px solid #6b8;border-radius:6px;padding:10px;line-height:1.45}
+ .cap .edit button{margin:6px 8px 0 0;padding:8px 14px}
+ .cap .edit .save{background:#1b5e20;border-color:#2e7d32}
  .row.out .x{background:#1b3a1b;border-color:#2e7d32;color:#b4ffb4}
  #sum{margin:8px 0 0;color:#bbb;font-size:13px}
  details#rep{margin:10px 0;padding:8px 10px;background:#181818;border:1px solid #333;border-radius:6px}
@@ -501,7 +534,7 @@ async function open(id){
       .filter(Boolean).join(' \\u00b7 ');
     out+=`<div class="row${im._out?' out':''}" data-name="${im.name}"><img loading=lazy src="/dataset/file?ds=${encodeURIComponent(cur.id)}&name=${encodeURIComponent(im.name)}">
       <div class=cap><button class=x title="${im._out?'put back in the training set':'remove from the training set'}" onclick="toggle('${im.name}',${im._out?'false':'true'})" >${im._out?'↩':'✗'}</button>
-      <code>${(im.caption||'(empty)').replace(/</g,'&lt;')}</code>
+      <code onclick="editCap('${im.name}')" title="tap to correct this caption">${(im.caption||'(empty)').replace(/</g,'&lt;')}</code>
       <div>${chips}</div><div class=meta>${im.name}${meta?' \\u00b7 '+meta:''}</div></div></div>`;
   }
   $('list').innerHTML=out;
@@ -521,6 +554,24 @@ function renderHeader(n,nx,a){
   $('state').style.color=a.approved?'#7fbf7f':'#ff9d9d';
   const o=[...$('pick').options].find(o=>o.value===cur.id); if(o) o.textContent=`${a.approved?'✓ ':''}${cur.id}  (${n} images)`;
 }
+function chipsFor(im){return (im.uncaptioned?'<span class="chip bad">NO CAPTION</span>':'')+(im.missing||[]).map(m=>`<span class="chip">no ${m}</span>`).join('');}
+function editCap(name){
+  const row=document.querySelector(`.row[data-name="${name}"]`); const code=row.querySelector('code');
+  if(row.querySelector('.edit')) return;
+  const cur=code.textContent==='(empty)'?'':code.textContent;
+  const box=document.createElement('div'); box.className='edit';
+  box.innerHTML=`<textarea>${cur.replace(/</g,'&lt;')}</textarea><div><button class=save>Save caption</button><button class=cancel>Cancel</button></div>`;
+  code.hidden=true; code.after(box); const ta=box.querySelector('textarea'); ta.focus();
+  box.querySelector('.cancel').onclick=()=>{box.remove();code.hidden=false;};
+  box.querySelector('.save').onclick=async()=>{
+    const r=await (await fetch('/dataset/'+encodeURIComponent(cur_id())+'/caption',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({name,caption:ta.value})})).json();
+    code.textContent=r.caption||'(empty)'; box.remove(); code.hidden=false;
+    row.querySelector('.chips').innerHTML=chipsFor(r);
+    cur.captions=r.captions; cur.approval=r.approval; renderHeader(cur.n,(cur.excluded||[]).length,r.approval);
+  };
+}
+function cur_id(){return cur.id;}
 async function toggle(name,excluded){
   // Change ONLY this row. Rebuilding the list re-creates every <img>, they reload
   // lazily, the page height changes under the thumb and the scroll jumps.
@@ -576,6 +627,13 @@ def preview_router(cfg: dict):
     def _exclude(ds_id: str, body: dict = Body(...)) -> dict:
         try:
             return exclude_image(root, ds_id, str(body.get("name", "")), bool(body.get("excluded", True)))
+        except KeyError as e:
+            raise HTTPException(404) from e
+
+    @r.post("/dataset/{ds_id}/caption")
+    def _caption(ds_id: str, body: dict = Body(...)) -> dict:
+        try:
+            return set_caption(root, ds_id, str(body.get("name", "")), str(body.get("caption", "")))
         except KeyError as e:
             raise HTTPException(404) from e
 
