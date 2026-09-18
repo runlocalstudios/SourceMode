@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from sourcemode.monitor.comfy import job_label, parse_queue, sample_comfy
 from sourcemode.monitor.gpu import parse_nvidia_smi, sample_gpu
 from sourcemode.monitor.sampler import summarise
@@ -219,3 +221,42 @@ def test_monitor_host_prefers_the_argument_then_the_env_var(monkeypatch):
     monkeypatch.setenv("SOURCEMODE_MONITOR_HOST", "0.0.0.0")
     assert monitor_host(cfg) == "0.0.0.0"
     assert monitor_host(cfg, "100.76.82.42") == "100.76.82.42"   # argument still wins
+
+
+def test_hub_serves_both_tabs_and_their_counts(tmp_path: Path):
+    """One bookmarkable page. The two review pages have colliding scripts and both
+    use location.hash, so the hub frames them rather than merging them."""
+    pytest.importorskip("httpx")
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from PIL import Image
+
+    from sourcemode.assets.judge import make_set, record_verdict
+    from sourcemode.monitor.hub import hub_router
+    from sourcemode.train.preview import build_preview, record_approval
+
+    jroot, proot = tmp_path / "judge", tmp_path / "prev"
+    img = tmp_path / "i"; img.mkdir()
+    items = []
+    for i in range(2):
+        p = img / f"{i}.png"; Image.new("RGB", (8, 8)).save(p)
+        items.append({"id": str(i), "path": p, "arm": "A", "group": str(i)})
+    make_set(jroot, "done_set", "t", items)
+    for i in ("0", "1"):
+        record_verdict(jroot, "done_set", i, "keep")
+    make_set(jroot, "open_set", "t", items)          # unjudged
+
+    ds = tmp_path / "ds" / "image_face"; ds.mkdir(parents=True)
+    q = ds / "a.png"; Image.new("RGB", (8, 8)).save(q); q.with_suffix(".txt").write_text("x", encoding="utf-8")
+    build_preview(proot, tmp_path / "ds", measure=False)
+
+    cfg = {"assets": {"judge": str(jroot)}, "train": {"previews": str(proot)}}
+    app = FastAPI(); app.include_router(hub_router(cfg))
+    c = TestClient(app)
+
+    page = c.get("/").text
+    assert 'src="/judge"' in page and "'/dataset'" in page
+    assert c.get("/hub/counts").json() == {"judge": 1, "datasets": 1}
+
+    record_approval(proot, "ds", True)
+    assert c.get("/hub/counts").json() == {"judge": 1, "datasets": 0}
