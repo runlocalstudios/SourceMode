@@ -207,7 +207,9 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport"
  #bar select{background:#222;color:#ddd;border:1px solid #444;padding:4px 8px;font-size:14px;max-width:46vw}
  #stage{position:relative;height:calc(100% - 44px);display:flex;align-items:center;justify-content:center}
  #img{max-height:100%;max-width:100%;object-fit:contain;display:block;cursor:pointer}
- #ref{position:absolute;right:12px;bottom:12px;max-height:34vh;max-width:22vw;border:2px solid #555;border-radius:4px;background:#000}
+ #ref{position:absolute;max-height:34vh;max-width:22vw;border:2px solid #555;border-radius:4px;cursor:pointer;opacity:.92;z-index:4}
+ #ref.c0{right:12px;bottom:12px} #ref.c1{left:12px;bottom:12px}
+ #ref.c2{left:12px;top:12px}     #ref.c3{right:12px;top:12px}
  #badge{position:absolute;left:14px;top:12px;padding:6px 12px;border-radius:4px;font-weight:600;font-size:16px;display:none}
  .keep{background:#1f7a3a}.reject{background:#8a2a2a}
  #keys{margin-left:auto;color:#888}
@@ -224,7 +226,9 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport"
    #bar{height:38px;gap:8px;padding:0 8px;font-size:13px}
    #bar select{font-size:13px;max-width:52vw}
    #stage{height:calc(100% - 38px)}
-   #ref{max-height:20vh;max-width:30vw;right:6px;bottom:112px}
+   #ref{max-height:20vh;max-width:30vw}
+ #ref.c0{right:6px;bottom:112px} #ref.c1{left:6px;bottom:112px}
+ #ref.c2{left:6px;top:6px}       #ref.c3{right:6px;top:6px}
    #img{max-height:100%;object-fit:contain}
  }
  @media (min-width:821px){ .tap,#undo{display:none} }
@@ -241,7 +245,7 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport"
 <div id="stage">
  <div id="badge"></div>
  <img id="img" alt="">
- <img id="ref" alt="" style="display:none">
+ <img id="ref" alt="" title="tap to move, long-press to hide" style="display:none">
  <div id="done"></div>
 </div>
 <button class="tap" id="no" aria-label="not her">&#10007;</button>
@@ -250,6 +254,10 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport"
 <script>
 const $=id=>document.getElementById(id);
 let sets=[], cur=null, idx=0, showRef=true;
+// which corner the reference sits in, remembered per device: on the intimate
+// sets the default bottom-right sat right over the body being judged
+let refCorner=+(localStorage.getItem('refCorner')||0);
+try{ if(localStorage.getItem('showRef')==='0') showRef=false; }catch(e){}
 const fileUrl=(s,i)=>`/judge/file?set=${encodeURIComponent(s)}&id=${encodeURIComponent(i)}`;
 async function fetchSets(){sets=await (await fetch('/judge/sets',{cache:'no-store'})).json();
   const p=$('pick'); const keep=p.value; p.innerHTML='';
@@ -284,6 +292,7 @@ function show(){
   if(idx>=cur.items.length){return tally();}
   const it=cur.items[idx];
   $('img').style.display=''; $('img').src=fileUrl(cur.id,it.id);
+  $('ref').className='c'+refCorner;
   $('ref').style.display=(showRef&&cur.has_reference)?'':'none';
   const v=cur.verdicts[it.id]; const b=$('badge');
   b.style.display=v?'':'none'; b.textContent=v||''; b.className=v||'';
@@ -316,7 +325,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='x'||k==='j') verdict('reject');
   else if(k==='arrowright'){if(idx<cur.items.length){idx++;show();}}
   else if(k==='arrowleft'||k==='z'||k==='backspace'){if(idx>0){idx--;show();}}
-  else if(k==='r'){showRef=!showRef;show();}
+  else if(k==='r'){showRef=!showRef;try{localStorage.setItem('showRef',showRef?'1':'0')}catch(e){};show();}
   else if(k==='s'){idx=cur.items.length;show();}
   else return; e.preventDefault();
 });
@@ -329,6 +338,15 @@ for(const [id,v] of [['yes','keep'],['no','reject']]){
   b.addEventListener('click',ev=>{ev.preventDefault();verdict(v);});
 }
 $('undo').addEventListener('click',ev=>{ev.preventDefault(); if(idx>0){idx--;show();}});
+(function(){
+  const r=$('ref'); let t=null, moved=false;
+  const hide=()=>{showRef=false;try{localStorage.setItem('showRef','0')}catch(e){};show();};
+  r.addEventListener('click',e=>{e.stopPropagation(); if(moved){moved=false;return;}
+    refCorner=(refCorner+1)%4; try{localStorage.setItem('refCorner',refCorner)}catch(e){}; show();});
+  r.addEventListener('touchstart',()=>{moved=false;t=setTimeout(()=>{moved=true;hide();},550)},{passive:true});
+  r.addEventListener('touchend',()=>clearTimeout(t),{passive:true});
+  r.addEventListener('touchmove',()=>clearTimeout(t),{passive:true});
+})();
 loadSets();
 </script></body></html>"""
 
