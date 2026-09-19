@@ -321,3 +321,22 @@ def test_caption_endpoint(tmp_path: Path):
     assert c.post("/dataset/ds/caption", json={"name": "face_000.png", "caption": "jojo, a test"}).json()["caption"] == "jojo, a test"
     assert c.get("/dataset/ds").json()["images"][0]["caption"] == "jojo, a test"
     assert c.post("/dataset/ds/caption", json={"name": "ghost.png", "caption": "x"}).status_code == 404
+
+
+def test_preview_list_groups_unapproved_before_approved(tmp_path: Path):
+    """Same shape as the judge list: the rows that need action come first, and
+    `done` marks where the page draws its divider. A stale approval is not done."""
+    root = tmp_path / "root"
+    for sid in ("b_open", "a_approved", "c_stale"):
+        d = tmp_path / sid / "image_face"; d.mkdir(parents=True)
+        q = d / "x.png"; Image.new("RGB", (8, 8)).save(q)
+        q.with_suffix(".txt").write_text(CAPTION, encoding="utf-8")
+        build_preview(root, tmp_path / sid, measure=False)
+    record_approval(root, "a_approved", True)
+    record_approval(root, "c_stale", True)
+    (tmp_path / "c_stale" / "image_face" / "x.txt").write_text(CAPTION + " x", encoding="utf-8")
+    build_preview(root, tmp_path / "c_stale", measure=False)
+
+    rows = list_previews(root)
+    assert [r["id"] for r in rows] == ["b_open", "c_stale", "a_approved"]
+    assert [r["done"] for r in rows] == [False, False, True]

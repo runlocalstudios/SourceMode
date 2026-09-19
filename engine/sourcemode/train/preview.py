@@ -432,7 +432,7 @@ def list_previews(root: Path) -> list[dict]:
         out.append({"id": doc["id"], "n": doc["n"], "built_at": doc["built_at"],
                     "gate_passed": bool(doc.get("gate", {}).get("passed")),
                     "caption_failed": doc.get("captions", {}).get("failed", []),
-                    "flagged": flagged, **st})
+                    "flagged": flagged, "done": bool(st["approved"]), **st})
     return sorted(out, key=lambda s: (s["approved"], s["id"]))
 
 
@@ -508,7 +508,15 @@ let cur=null;
 async function loadList(){
   const ls=await (await fetch('/dataset/list',{cache:'no-store'})).json();
   const p=$('pick'); p.innerHTML='';
-  for(const s of ls){const o=document.createElement('option');o.value=s.id;
+  // unapproved first, then one divider, then approved - same shape as the
+  // judging list, so the two tabs read alike
+  let split=false;
+  for(const s of ls){
+    if(s.approved&&!split){split=true;
+      const dv=document.createElement('option');
+      dv.disabled=true;dv.textContent='─'.repeat(22)+' approved '+'─'.repeat(22);
+      p.appendChild(dv);}
+    const o=document.createElement('option');o.value=s.id;
     o.textContent=`${s.approved?'\\u2713 ':''}${s.id}  (${s.n} images${s.flagged?', '+s.flagged+' flagged':''})`;
     p.appendChild(o);}
   const want=location.hash.slice(1)||(ls[0]||{}).id;
