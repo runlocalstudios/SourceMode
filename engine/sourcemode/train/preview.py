@@ -275,6 +275,16 @@ def read_signals(dataset_dir: Path) -> dict[str, dict]:
     for name, label in coarse.items():
         sig.setdefault(name, {})["hair"] = confirmed.get(name, label)
         sig[name]["hair_confirmed"] = name in confirmed
+
+    # the shot plan and the VL read the hair differently on these; the plan's wording
+    # was written, but the pair is worth an eye
+    pc = dataset_dir / "plan_conflict.json"
+    if pc.is_file():
+        try:
+            for name in json.loads(pc.read_text(encoding="utf-8")):
+                sig.setdefault(name, {})["plan_conflict"] = True
+        except (OSError, ValueError):
+            pass
     return sig
 
 
@@ -291,6 +301,8 @@ def close_calls(im: dict, sig: dict) -> list[str]:
         # the closed list collapses ponytails and buns into halfup; a confirmed
         # halfup is a real answer, an unconfirmed one is the collapse
         out.append("hair?" if sig.get("hair_confirmed") else "hair unconfirmed")
+    if sig.get("plan_conflict"):
+        out.append("hair: plan vs photo")
     px = im.get("face_px")
     if px is not None and px < FACE_FLOOR_PX:
         out.append(f"face {px}px")
