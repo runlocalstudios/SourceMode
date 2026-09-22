@@ -455,6 +455,8 @@ def exclude_image(root: Path, ds_id: str, name: str, excluded: bool) -> dict:
     entry = next((im for im in pool if im["name"] == name), None)
     if entry is None:
         raise KeyError(name)
+    log_edit(root, ds_id, name, entry.get("caption", ""), "",
+             kind="excluded" if excluded else "restored")
     ds_dir = Path(doc["dataset_dir"])
     src = Path(entry["path"])
     img_dir = src.parent if src.parent.name != "_excluded" else Path(entry["home"])
@@ -482,6 +484,98 @@ def exclude_image(root: Path, ds_id: str, name: str, excluded: bool) -> dict:
             "fingerprint": doc["fingerprint"], "approval": approval_state(root, ds_id)}
 
 
+# --- what Jeremy actually has to correct -------------------------------------
+# His rule, 2026-09-22: "any time that I have to change anything more than twice on
+# a training set, you follow up to figure out how to fix it in an automated fashion.
+# If it's just something that I have to fix once or twice, that may not rise to
+# needing to be fixed." So every edit is logged with WHICH CLAUSE changed, and the
+# report counts by clause so a systematic error separates itself from a one-off.
+CLAUSE_PATTERNS = (
+    ("hair", ("her hair",)),
+    ("outfit", ("wearing", "nothing visible")),
+    ("gaze", ("looking off camera", "looking at the camera", "looking away")),
+    ("expression", ("smile", "expression", "mid-speech", "lips", "laughing", "smirk",
+                    "teeth", "mouth")),
+    ("framing", ("portrait", "waist-up", "head-and", "close-up", "tight head")),
+    ("angle", ("facing the camera", "turned", "three-quarter", "profile", "shot from")),
+    ("lighting", ("light", "daylight", "sunlight", "lamp", "overcast", "golden")),
+    ("setting", ("in a ", "in the ", "against", "backdrop")),
+)
+EDITS = "caption_edits.jsonl"
+
+
+def classify_clause(text: str) -> str:
+    """Which part of the caption a phrase is. First match wins, so the order above
+    matters: 'her hair' before anything that merely mentions light or a setting."""
+    low = text.lower()
+    for kind, words in CLAUSE_PATTERNS:
+        if any(w in low for w in words):
+            return kind
+    return "other"
+
+
+def diff_clauses(before: str, after: str) -> list[dict]:
+    """The comma-separated phrases that changed, tagged by clause type.
+
+    Captions are assembled as comma-separated clauses, so a set difference over the
+    phrases isolates the edit without needing a real diff algorithm.
+    """
+    b = [x.strip() for x in before.split(",") if x.strip()]
+    a = [x.strip() for x in after.split(",") if x.strip()]
+    removed, added = [x for x in b if x not in a], [x for x in a if x not in b]
+    out = []
+    for kind in dict.fromkeys([classify_clause(x) for x in removed + added]):
+        out.append({"clause": kind,
+                    "from": next((x for x in removed if classify_clause(x) == kind), None),
+                    "to": next((x for x in added if classify_clause(x) == kind), None)})
+    return out
+
+
+def log_edit(root: Path, ds_id: str, name: str, before: str, after: str, kind: str = "caption") -> None:
+    """Append one edit. Never raises: a logging failure must not lose his correction."""
+    try:
+        rec = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+               "dataset": ds_id, "image": name, "kind": kind,
+               "before": before, "after": after,
+               "clauses": diff_clauses(before, after) if kind == "caption" else []}
+        with (root / EDITS).open("a", encoding="utf-8") as f:
+            f.write(json.dumps(rec) + chr(10))
+    except OSError:
+        pass
+
+
+def edit_report(root: Path, ds_id: str | None = None) -> dict:
+    """Counts per dataset and clause, and what crossed the follow-up threshold.
+
+    Three or more corrections of the same clause in one set is a systematic error in
+    the captioner, not a one-off - that is the line Jeremy drew.
+    """
+    rows = []
+    f = root / EDITS
+    if f.is_file():
+        for line in f.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                try:
+                    rows.append(json.loads(line))
+                except ValueError:
+                    continue
+    if ds_id:
+        rows = [r for r in rows if r["dataset"] == ds_id]
+    by: dict[tuple[str, str], list[dict]] = {}
+    for r in rows:
+        for c in r.get("clauses") or [{"clause": r.get("kind", "other")}]:
+            by.setdefault((r["dataset"], c["clause"]), []).append(r)
+    counts = [{"dataset": d, "clause": c, "n": len(v),
+               "images": sorted({x["image"] for x in v}),
+               "examples": [{"from": e.get("from"), "to": e.get("to")}
+                            for x in v[:3] for e in (x.get("clauses") or [])
+                            if e.get("clause") == c][:3]}
+              for (d, c), v in by.items()]
+    counts.sort(key=lambda x: -x["n"])
+    return {"total_edits": len(rows), "by_clause": counts,
+            "needs_automation": [c for c in counts if c["n"] >= 3]}
+
+
 def set_caption(root: Path, ds_id: str, name: str, caption: str) -> dict:
     """Correct one image's caption from the preview. Writes the training file.
 
@@ -499,6 +593,9 @@ def set_caption(root: Path, ds_id: str, name: str, caption: str) -> dict:
     if entry is None:
         raise KeyError(name)
     caption = " ".join(str(caption).split())
+    before = entry.get("caption", "")
+    if caption != before:
+        log_edit(root, ds_id, name, before, caption)
     Path(entry["path"]).with_suffix(".txt").write_text(caption, encoding="utf-8")
     entry["caption"] = caption
     entry["missing"] = missing_attributes(caption)
@@ -506,7 +603,8 @@ def set_caption(root: Path, ds_id: str, name: str, caption: str) -> dict:
     doc["fingerprint"] = fingerprint(doc["images"])
     doc["captions"] = caption_report([im["caption"] for im in doc["images"]])
     (root / "previews" / f"{ds_id}.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
-    return {"name": name, "caption": caption, "missing": entry["missing"], "uncaptioned": entry["uncaptioned"],
+    return {"name": name, "caption": caption, "missing": entry["missing"],
+            "uncertain": entry.get("uncertain", []), "uncaptioned": entry["uncaptioned"],
             "fingerprint": doc["fingerprint"], "captions": doc["captions"], "approval": approval_state(root, ds_id)}
 
 
@@ -638,9 +736,10 @@ async function open(id){
     const meta=[im.face_px?`face ${im.face_px}px`:null,(im.yaw_deg!==undefined)?`yaw ${im.yaw_deg}\\u00b0`:null]
       .filter(Boolean).join(' \\u00b7 ');
     out+=`<div class="row${im._out?' out':''}" data-look="${look?1:0}" data-name="${im.name}"><img loading=lazy src="/dataset/file?ds=${encodeURIComponent(cur.id)}&name=${encodeURIComponent(im.name)}">
-      <div class=cap><button class=x title="${im._out?'put back in the training set':'remove from the training set'}" onclick="toggle('${im.name}',${im._out?'false':'true'})" >${im._out?'↩':'✗'}</button>
+      <div class=cap><div class=captop>
       <code onclick="editCap('${im.name}')" title="tap to correct this caption">${(im.caption||'(empty)').replace(/</g,'&lt;')}</code>
-      <div>${chips}</div><div class=meta>${im.name}${meta?' \\u00b7 '+meta:''}</div></div></div>`;
+      <button class=x title="${im._out?'put back in the training set':'remove from the training set'}" onclick="toggle('${im.name}',${im._out?'false':'true'})" >${im._out?'↩':'✗'}</button></div>
+      <div class=chips>${chips}</div><div class=meta>${im.name}${meta?' \\u00b7 '+meta:''}</div></div></div>`;
   }
   $('list').innerHTML=out;
   $('nlook').textContent=`(${all.filter(i=>i.uncaptioned||(i.uncertain||[]).length).length} of ${all.length})`;
@@ -733,6 +832,11 @@ def preview_router(cfg: dict):
         if p is None:
             raise HTTPException(404)
         return FileResponse(p)
+
+    @r.get("/dataset/edits")
+    def _edits(ds: str | None = None) -> dict:
+        """What Jeremy has had to correct, and what crossed the follow-up threshold."""
+        return edit_report(root, ds)
 
     @r.get("/dataset/{ds_id}")
     def _one(ds_id: str) -> dict:
