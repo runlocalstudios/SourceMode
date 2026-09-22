@@ -264,8 +264,8 @@ async function fetchSets(){sets=await (await fetch('/judge/sets',{cache:'no-stor
   // /judge/sets returns unfinished first. Draw one disabled divider at the
   // boundary so a long list can be scanned for what still needs work.
   let split=false;
-  for(const s of sets){
-    if(s.done&&!split){split=true;
+  for(const [i,s] of sets.entries()){
+    if(s.done&&!split&&i>0){split=true;
       const d=document.createElement('option');
       d.disabled=true;d.textContent='─'.repeat(24)+' complete '+'─'.repeat(24);
       p.appendChild(d);}

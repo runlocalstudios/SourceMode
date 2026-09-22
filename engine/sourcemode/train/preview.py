@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -218,6 +219,90 @@ def missing_attributes(caption: str) -> list[str]:
     return [k for k, words in VARIABLE.items() if not any(w in low for w in words)]
 
 
+# --- close calls -------------------------------------------------------------
+# Jeremy's ask: "only really review the captions carefully if something is weird
+# about a picture or a pose". Every clause in a caption comes from a detector that
+# made a call; most calls are not close. These margins mark the ones that are, so
+# a 73-image set reads as a handful of rows instead of 73.
+#
+# The margins are the detector's own threshold plus a band either side. A flag is
+# a prompt to look, never a verdict - the same contract as missing_attributes.
+GAZE_THRESHOLD, GAZE_MARGIN = 0.85, 0.25   # gaze_mp.py residual
+JAW_THRESHOLD, JAW_MARGIN = 0.10, 0.04     # MediaPipe jawOpen
+FACE_FLOOR_PX = 300                        # genmedia hard rule 2
+
+AMBIGUOUS_HAIR = {"halfup"}
+
+
+def read_signals(dataset_dir: Path) -> dict[str, dict]:
+    """Per-image detector output the captioner left beside the dataset.
+
+    Absent files are not an error: older sets predate a detector, and a set with
+    no signals simply has no close calls to report.
+    """
+    dataset_dir = Path(dataset_dir)
+    sig: dict[str, dict] = {}
+
+    gz = dataset_dir / "gaze_mp.json"
+    if gz.is_file():
+        try:
+            raw = json.loads(gz.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            raw = {}
+        for name, v in raw.items():
+            # early runs wrote a bare residual; later runs write the full record
+            rec = v if isinstance(v, dict) else {"resid": v}
+            sig.setdefault(name, {}).update(
+                {"resid": rec.get("resid"), "jaw": rec.get("jaw")})
+
+    coarse: dict[str, str] = {}
+    vh = dataset_dir / "vl_hair.jsonl"
+    if vh.is_file():
+        for line in vh.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                try:
+                    r = json.loads(line)
+                except ValueError:
+                    continue
+                coarse[Path(r["image_path"]).name] = re.sub(r"[^a-z]", "", r["caption"].lower())
+    confirmed: dict[str, str] = {}
+    vc = dataset_dir / "vl_hair_confirm.jsonl"
+    if vc.is_file():
+        try:
+            confirmed = json.loads(vc.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            confirmed = {}
+    for name, label in coarse.items():
+        sig.setdefault(name, {})["hair"] = confirmed.get(name, label)
+        sig[name]["hair_confirmed"] = name in confirmed
+    return sig
+
+
+def close_calls(im: dict, sig: dict) -> list[str]:
+    """Short reasons this image's caption is worth reading. Empty is the good case."""
+    out = []
+    resid = sig.get("resid")
+    if resid is not None and abs(abs(resid) - GAZE_THRESHOLD) <= GAZE_MARGIN:
+        out.append("gaze?")
+    jaw = sig.get("jaw")
+    if jaw is not None and abs(jaw - JAW_THRESHOLD) <= JAW_MARGIN:
+        out.append("mouth?")
+    if sig.get("hair") in AMBIGUOUS_HAIR:
+        # the closed list collapses ponytails and buns into halfup; a confirmed
+        # halfup is a real answer, an unconfirmed one is the collapse
+        out.append("hair?" if sig.get("hair_confirmed") else "hair unconfirmed")
+    px = im.get("face_px")
+    if px is not None and px < FACE_FLOOR_PX:
+        out.append(f"face {px}px")
+    return out
+
+
+def needs_look(im: dict) -> bool:
+    """The short list. Missing attributes are chips, not a summons - they fire on
+    most of a set and would make the filter useless."""
+    return bool(im.get("uncaptioned") or im.get("uncertain"))
+
+
 def fingerprint(images: list[dict]) -> str:
     """Identity of exactly this set of pictures and strings.
 
@@ -290,6 +375,10 @@ def build_preview(root: Path, dataset_dir: Path, *, dataset_id: str | None = Non
         for im in images:
             if im["name"] in px:
                 im["face_px"], im["yaw_deg"] = int(px[im["name"]][0]), round(float(px[im["name"]][1]), 1)
+
+    sig = read_signals(dataset_dir)
+    for im in images:
+        im["uncertain"] = close_calls(im, sig.get(im["name"], {}))
 
     captions = caption_report([im["caption"] for im in images])
     prior = load_preview(root, ds_id) or {}
@@ -428,7 +517,7 @@ def list_previews(root: Path) -> list[dict]:
     for p in sorted(d.glob("*.json")) if d.exists() else []:
         doc = json.loads(p.read_text(encoding="utf-8"))
         st = approval_state(root, doc["id"])
-        flagged = sum(1 for im in doc["images"] if im["missing"] or im["uncaptioned"])
+        flagged = sum(1 for im in doc["images"] if needs_look(im))
         out.append({"id": doc["id"], "n": doc["n"], "built_at": doc["built_at"],
                     "gate_passed": bool(doc.get("gate", {}).get("passed")),
                     "caption_failed": doc.get("captions", {}).get("failed", []),
@@ -473,6 +562,10 @@ PAGE = """<!-- dataset preview -->
  .chip{display:inline-block;background:#3a2a00;border:1px solid #6b4e00;color:#ffd479;
    border-radius:999px;padding:2px 9px;margin:6px 6px 0 0;font-size:12px}
  .chip.bad{background:#4a0f0f;border-color:#7d2e2e;color:#ffb4b4}
+ .chip.look{background:#0d2f4a;border-color:#1d5c8f;color:#9ed2ff}
+ #only{margin-left:10px;color:#bbb;font-size:13px;user-select:none;cursor:pointer}
+ #only input{vertical-align:-1px;margin-right:5px}
+ .row.hide{display:none}
  .meta{color:#888;font-size:12px;margin-top:6px}
  .finding{margin:2px 0;font-size:13px}
  .finding.f{color:#ff9d9d}
@@ -499,6 +592,7 @@ PAGE = """<!-- dataset preview -->
  <button id=no class=no>Reject</button>
  <span id=state></span>
  <div id=sum></div>
+ <label id=only><input type=checkbox id=onlyck>only rows needing a look <span id=nlook></span></label>
 </header>
 <details id=rep><summary>details</summary><div id=repbody></div></details>
 <div id=list></div>
@@ -509,10 +603,11 @@ async function loadList(){
   const ls=await (await fetch('/dataset/list',{cache:'no-store'})).json();
   const p=$('pick'); p.innerHTML='';
   // unapproved first, then one divider, then approved - same shape as the
-  // judging list, so the two tabs read alike
+  // judging list, so the two tabs read alike. `i` guards the case where
+  // everything is approved: a divider with nothing above it is just noise.
   let split=false;
-  for(const s of ls){
-    if(s.approved&&!split){split=true;
+  for(const [i,s] of ls.entries()){
+    if(s.approved&&!split&&i>0){split=true;
       const dv=document.createElement('option');
       dv.disabled=true;dv.textContent='─'.repeat(22)+' approved '+'─'.repeat(22);
       p.appendChild(dv);}
@@ -536,16 +631,27 @@ async function open(id){
   let out='';
   const all=[...cur.images.map(i=>({...i,_out:false})),...(cur.excluded||[]).map(i=>({...i,_out:true}))].sort((a,b)=>a.name<b.name?-1:1);
   for(const im of all){
+    const look=im.uncaptioned||(im.uncertain||[]).length>0;
     const chips=(im.uncaptioned?'<span class="chip bad">NO CAPTION</span>':'')
+      +(im.uncertain||[]).map(u=>`<span class="chip look">${u}</span>`).join('')
       +(im.missing||[]).map(m=>`<span class="chip">no ${m}</span>`).join('');
     const meta=[im.face_px?`face ${im.face_px}px`:null,(im.yaw_deg!==undefined)?`yaw ${im.yaw_deg}\\u00b0`:null]
       .filter(Boolean).join(' \\u00b7 ');
-    out+=`<div class="row${im._out?' out':''}" data-name="${im.name}"><img loading=lazy src="/dataset/file?ds=${encodeURIComponent(cur.id)}&name=${encodeURIComponent(im.name)}">
+    out+=`<div class="row${im._out?' out':''}" data-look="${look?1:0}" data-name="${im.name}"><img loading=lazy src="/dataset/file?ds=${encodeURIComponent(cur.id)}&name=${encodeURIComponent(im.name)}">
       <div class=cap><button class=x title="${im._out?'put back in the training set':'remove from the training set'}" onclick="toggle('${im.name}',${im._out?'false':'true'})" >${im._out?'↩':'✗'}</button>
       <code onclick="editCap('${im.name}')" title="tap to correct this caption">${(im.caption||'(empty)').replace(/</g,'&lt;')}</code>
       <div>${chips}</div><div class=meta>${im.name}${meta?' \\u00b7 '+meta:''}</div></div></div>`;
   }
   $('list').innerHTML=out;
+  $('nlook').textContent=`(${all.filter(i=>i.uncaptioned||(i.uncertain||[]).length).length} of ${all.length})`;
+  applyOnly();
+}
+// A close call is a prompt to look, so the filter only ever hides rows - it never
+// removes one from the set. Toggling it back shows everything again.
+function applyOnly(){
+  const on=$('onlyck').checked;
+  for(const r of document.querySelectorAll('#list .row'))
+    r.classList.toggle('hide', on && r.dataset.look!=='1');
 }
 async function setApproval(v){
   const a=await (await fetch('/dataset/'+encodeURIComponent(cur.id)+'/approve',{method:'POST',
@@ -597,6 +703,10 @@ async function toggle(name,excluded){
 $('pick').onchange=e=>open(e.target.value);
 $('yes').onclick=()=>setApproval(true);
 $('no').onclick=()=>setApproval(false);
+// remember the filter across sets and reloads - it is a way of working, not a
+// per-set choice, and re-ticking it on every set defeats the point
+try{ $('onlyck').checked=localStorage.getItem('onlyLook')==='1'; }catch(e){}
+$('onlyck').onchange=()=>{ try{localStorage.setItem('onlyLook',$('onlyck').checked?'1':'0');}catch(e){} applyOnly(); };
 loadList();
 </script>
 """
