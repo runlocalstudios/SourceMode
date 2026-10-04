@@ -51,12 +51,10 @@
   "build": "skinny, average height",
   "bust": "medium",
   "figure": "slim, slender frame",
-  "features": "long black hair with prominent pink highlights (a specific pattern - learned from the images, NOT prompted), dark eyes",
-  "do_not_prompt": [
-   "pink highlights - naming them spreads pink everywhere; the LoRA must learn the exact placement from the photos"
-  ],
+  "features": "long black hair with vivid pink underlights beneath the top layer, dark eyes",
   "role_note": "exotic dancer - the internal shot plan should cover dance poses and revealing outfits the Codex plan cannot; local generation only. Train locally if the local approach does well on Amanda.",
-  "prompt": "a slim Vietnamese young woman of average height with a slender frame and a medium bust, long black hair, dark eyes"
+  "prompt": "a slim Vietnamese young woman of average height with a slender frame and a medium bust, long black hair with vivid pink underlights beneath the top layer, dark eyes",
+  "_note": "The pink MUST be prompted. Measured 2026-10-04 by matched-seed A/B at epoch 21, three scenes, identical seeds - the only variable was this phrase: 'long black hair' gave black with a faint warm strand; DELETING the colour entirely also gave black, so the LoRA did not learn the pink on its own; 'long black hair with vivid pink underlights beneath the top layer' gave her real pattern. Identity cosine went UP, not down: 0.611 / 0.572 / 0.672. The earlier do_not_prompt note claimed naming it 'spreads pink everywhere' and that the LoRA would learn the placement from the photos - both are false, and acting on them cost a 90-render sweep that scored 0/90. Same shape as priya's glasses: a trait correctly absent from the CAPTIONS still has to be stated at RENDER time."
  },
  "zara": {
   "_note": "Frame set by hand (Jeremy, 2026-10-04): keep 'tiny frame' for Zara. No build/figure/bust text - her figure comes from the LoRA, and asserting measurements nobody measured is what the frame change exists to stop.",

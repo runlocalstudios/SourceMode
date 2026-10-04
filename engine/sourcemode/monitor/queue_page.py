@@ -176,7 +176,8 @@ function drawNow(){
   }
   const bits=[];
   if(n.epoch!=null&&n.epochs) bits.push('<span class=num>epoch '+n.epoch+' of '+n.epochs+'</span>');
-  if(n.eta_s!=null) bits.push('<span class=num>'+SM.dur(n.eta_s)+'</span> left');
+  if(n.eta_s!=null) bits.push('<span class=num>'+SM.dur(n.eta_s)+'</span> left'
+     +(n.eta_estimated?' (estimated)':''));
   if(n.progress_line) bits.push(SM.esc(n.progress_line));
   SM.set($('now'),null,'<div class="card e-'+(n.stalled?'stop':'live')+'">'
     +'<div class=card-head>'+SM.pill(n.stalled?'stop':'live')
@@ -188,8 +189,10 @@ function drawNow(){
     +stats()
     +'<div class=card-foot><button class="btn btn-ghost" data-act="log" data-id="'
     +SM.esc(n.job_id)+'">Log tail</button>'
-    +'<span class="age'+(n.ageing?' stale':'')+'">log last moved '
-    +SM.dur(n.log_age_s)+' ago</span></div>'
+    +(n.log_age_s!=null
+       ? '<span class="age'+(n.ageing?' stale':'')+'">log last moved '
+         +SM.dur(n.log_age_s)+' ago</span>'
+       : '')+'</div>'
     +'<div id=logout></div></div>');
 }
 
@@ -826,6 +829,27 @@ def now_card(jobs: list[dict], status: dict | None,
                 rate = _rate(cfg_for_now)
                 per = rate["s_per_shot"] if run.get("kind") == "assets" else rate["s_per_render"]
                 r_eta = max(0.0, (r_total - r_done) * per)
+
+    # A prep job has neither tqdm nor countable images - its steps write into
+    # half a dozen different places - but it does have a measured estimate, and
+    # elapsed-against-that is a better answer than a blank. Reported as an
+    # estimate, never as a measurement: it cannot know which step it is on.
+    elapsed_s = None
+    if run and run.get("started_at"):
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        try:
+            started = datetime.fromisoformat(run["started_at"])
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            elapsed_s = max(0.0, datetime.now(timezone.utc).timestamp() - started.timestamp())
+        except ValueError:
+            elapsed_s = None
+    if run and not training_job and r_eta is None and elapsed_s is not None and cfg_for_now:
+        est = job_estimate(cfg_for_now, run) or {}
+        if est.get("total_s"):
+            r_eta = max(0.0, est["total_s"] - elapsed_s)
+            r_total = r_total or None
     step, total = (pr.get("step"), pr.get("total")) if training_job else (None, None)
     line = ""
     if step is not None and total:
@@ -835,6 +859,8 @@ def now_card(jobs: list[dict], status: dict | None,
     elif r_total:
         unit = "shot" if (run or {}).get("kind") == "assets" else "render"
         line = f"{r_done if r_done is not None else 0} of {r_total} {unit}s"
+    elif elapsed_s is not None and run:
+        line = f"running {_dur(elapsed_s)}"
     return {
         "job_id": run["id"] if run else None,
         "who": (run or {}).get("who"), "what": (run or {}).get("what"),
@@ -846,8 +872,9 @@ def now_card(jobs: list[dict], status: dict | None,
         "progress": ((step / total) if (step is not None and total)
                      else ((r_done / r_total) if (r_done is not None and r_total) else None)),
         "eta_s": pr.get("eta_s") if training_job else r_eta,
-        "elapsed_s": pr.get("elapsed_s") if training_job else None,
         "s_per_it": pr.get("s_per_it") if training_job else None,
+        "elapsed_s": elapsed_s if not training_job else pr.get("elapsed_s"),
+        "eta_estimated": bool(run and not training_job and r_done is None and r_eta is not None),
         "progress_line": line,
         "log": tr.get("log") if training_job else (run or {}).get("log"),
         "log_age_s": age if training_job else None,
@@ -1033,7 +1060,7 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
         # images to work out its progress, and the command is the only thing
         # that says where those images are written.
         row = {k: j[k] for k in ("id", "kind", "label", "status", "hold", "exit_code",
-                                 "note", "log", "cmd")}
+                                 "note", "log", "cmd", "started_at")}
         # Written for a person: the character, then what is being done to her.
         row["who"] = character_of(j["label"]).replace("_", " ").title()
         row["what"] = KIND_LABEL.get(j["kind"], j["kind"])
