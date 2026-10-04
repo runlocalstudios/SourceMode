@@ -69,10 +69,10 @@
  "text_tokens_assumed": 250,
  "observed": {
   "gpt-image-2.5-sunburst|1024x1536|low": {
-   "n": 72,
+   "n": 74,
    "output_tokens_mean": 158.0,
-   "image_in_tokens_mean": 3896.1,
-   "text_tokens_mean": 363.5
+   "image_in_tokens_mean": 3897.3,
+   "text_tokens_mean": 363.7
   },
   "gpt-image-2.5-sunburst|1024x1536|medium": {
    "n": 9,
