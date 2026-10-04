@@ -112,10 +112,17 @@ def slot_dirname(slot: dict) -> str:
 # --------------------------------------------------------------- placement
 
 def rank_candidates(cands: list[dict]) -> list[dict]:
-    """Best first: unflagged before flagged, then identity score, then fewest partial pixels."""
+    """Best first: unflagged before flagged, then FEWEST BROKEN ASKS (crop, body turn,
+    head turn, neutral-vs-smile from `adherence.check`, measured against what the
+    prompt asked), then soft expression misses, then identity score, then fewest
+    partial pixels. Relative to the ask on purpose - Jeremy, 2026-10-02: a face-size
+    threshold "is not the right generalized rule"; a full-body look must still win
+    when full body was asked for."""
     def key(c):
         rep = c.get("report") or {}
-        return (bool(rep.get("flags")), -(c.get("score") or 0.0), rep.get("partial", 1.0))
+        adh = c.get("adherence") or {}
+        return (bool(rep.get("flags")), len(adh.get("failed") or []), len(adh.get("soft") or []),
+                -(c.get("score") or 0.0), rep.get("partial", 1.0))
     return sorted(cands, key=key)
 
 

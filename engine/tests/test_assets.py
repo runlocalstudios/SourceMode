@@ -194,7 +194,9 @@ def test_shot_prompt_names_the_look_and_a_keyable_background():
     slot = {"outfit": "a red dress", "hair": "a high ponytail", "pose": "standing"}
     p = shot_prompt("priyanka", slot)
     assert p.startswith("priyanka. ") and "a red dress" in p and "a high ponytail" in p
-    assert "medium grey background" in p and "glasses" not in p
+    # magenta since 2026-10-02: the grey plate left residue in the cutouts, so the
+    # backdrop is now the Codex chroma colour and keyed with --chroma magenta
+    assert "magenta #FF00FF background" in p and "glasses" not in p
     # the trigger is the bare name by default, but a plan can name an older token
     assert shot_prompt("priyanka", slot, "priyanka_ch").startswith("priyanka_ch. ")
 

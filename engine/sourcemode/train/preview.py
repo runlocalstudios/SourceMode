@@ -42,7 +42,11 @@ VARIABLE = {
                    "grin", "lips", "mouth"),
     "angle": ("facing", "turned", "three-quarter", "profile", "over her shoulder",
               "from above", "from below", "looking"),
-    "lighting": ("light", "lit", "daylight", "sunlight", "shade", "lamp", "overcast"),
+    "lighting": ("light", "lit", "daylight", "sunlight", "shade", "lamp", "overcast", "glow",
+                 "dusk", "dawn", "neon", "candle", "firelight", "moonlight", "backlit",
+                 "golden", "sunset", "sunrise", "shadow", "illuminat", "glare", "flash",
+                 "evening", "morning", "afternoon", "night", "twilight", "ambient",
+                 "noon", "midday", "sunny", "cloudy", "bright", "dim", "dark"),
 }
 
 
@@ -230,6 +234,9 @@ def missing_attributes(caption: str) -> list[str]:
 GAZE_THRESHOLD, GAZE_MARGIN = 0.85, 0.25   # gaze_mp.py residual
 JAW_THRESHOLD, JAW_MARGIN = 0.10, 0.04     # MediaPipe jawOpen
 FACE_FLOOR_PX = 300                        # genmedia hard rule 2
+# Below this a face is too small to train on at all - such images are excluded
+# at gather time rather than flagged for review.
+FACE_DROP_PX = 250
 
 AMBIGUOUS_HAIR = {"halfup"}
 
@@ -254,6 +261,22 @@ def read_signals(dataset_dir: Path) -> dict[str, dict]:
             rec = v if isinstance(v, dict) else {"resid": v}
             sig.setdefault(name, {}).update(
                 {"resid": rec.get("resid"), "jaw": rec.get("jaw")})
+
+    # Provenance: a Lora-Gen image traces back to a <char>_shot_NNN file recorded
+    # at gather time. Anything else is hand-collected and gets flagged for review.
+    mf = dataset_dir / "manifest.json"
+    if mf.is_file():
+        try:
+            rows = json.loads(mf.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            rows = []
+        for r in rows:
+            name = r.get("file")
+            if not name:
+                continue
+            origin = Path(str(r.get("original", ""))).name
+            if not re.search(r"_shot_\d+", origin, re.I):
+                sig.setdefault(name, {})["no_plan"] = True
 
     coarse: dict[str, str] = {}
     vh = dataset_dir / "vl_hair.jsonl"
@@ -289,23 +312,30 @@ def read_signals(dataset_dir: Path) -> dict[str, dict]:
 
 
 def close_calls(im: dict, sig: dict) -> list[str]:
-    """Short reasons this image's caption is worth reading. Empty is the good case."""
+    """Short reasons this image's caption is worth reading. Empty is the good case.
+
+    Jeremy, 2026-09-23, naming the whole list: gaze he is unsure of, small faces,
+    and anything that did not come from a Lora-Gen run. The hair flags and the
+    mouth flag are gone with his say-so - the plan's wording agrees with the photo
+    closely enough that he stopped correcting it, and a flag he always dismisses
+    costs more attention than it saves.
+    """
     out = []
     resid = sig.get("resid")
     if resid is not None and abs(abs(resid) - GAZE_THRESHOLD) <= GAZE_MARGIN:
         out.append("gaze?")
-    jaw = sig.get("jaw")
-    if jaw is not None and abs(jaw - JAW_THRESHOLD) <= JAW_MARGIN:
-        out.append("mouth?")
-    if sig.get("hair") in AMBIGUOUS_HAIR:
-        # the closed list collapses ponytails and buns into halfup; a confirmed
-        # halfup is a real answer, an unconfirmed one is the collapse
-        out.append("hair?" if sig.get("hair_confirmed") else "hair unconfirmed")
-    if sig.get("plan_conflict"):
-        out.append("hair: plan vs photo")
+    # Jeremy, 2026-09-29: a small face is no longer a summons. Anything between
+    # FACE_DROP_PX and FACE_FLOOR_PX is simply trained on; anything BELOW
+    # FACE_DROP_PX never reaches the set at all, so it needs no flag either.
+    # Across the six live sets a 250px cut drops 0-6 images each (cindy 0, maddie 2,
+    # bianca 2, geena 4, ash 6, trina 6) - small enough not to dent a set.
     px = im.get("face_px")
-    if px is not None and px < FACE_FLOOR_PX:
-        out.append(f"face {px}px")
+    if px is not None and px < FACE_DROP_PX:
+        out.append(f"face {px}px - TOO SMALL, drop")
+    # Hand-collected photos predate the shot plan and are not held to its framing,
+    # lighting or resolution, so they are the ones worth a second look.
+    if sig.get("no_plan"):
+        out.append("not lora-gen")
     return out
 
 
@@ -510,8 +540,14 @@ CLAUSE_PATTERNS = (
                     "teeth", "mouth")),
     ("framing", ("portrait", "waist-up", "head-and", "close-up", "tight head")),
     ("angle", ("facing the camera", "turned", "three-quarter", "profile", "shot from")),
-    ("lighting", ("light", "daylight", "sunlight", "lamp", "overcast", "golden")),
-    ("setting", ("in a ", "in the ", "against", "backdrop")),
+    # One list, not two: "warm sunset glow" was called "no lighting" by the chip
+    # check because glow was in neither (Jeremy, 2026-10-03).
+    # Setting BEFORE lighting now that time-of-day words count as lighting: "in a
+    # night club with neon lights" is a setting, and reversing these two would call
+    # it lighting. A clause that opens with a preposition is a place, not a light.
+    ("setting", ("in a ", "in the ", "on a ", "on the ", "at a ", "at the ",
+                 "against", "backdrop")),
+    ("lighting", VARIABLE["lighting"]),
 )
 EDITS = "caption_edits.jsonl"
 
@@ -644,6 +680,41 @@ def preview_payload(root: Path, ds_id: str) -> dict | None:
             "images": strip(doc["images"]), "excluded": strip(doc.get("excluded", []))}
 
 
+# --- phone-sized delivery ----------------------------------------------------
+# Renders stay 1024x1536; only what goes down the wire shrinks. Face pixels at
+# GENERATION are what drive identity, so the images themselves are untouched.
+_WEB_MAX = 900
+
+
+def web_copy(src: "Path", w: int = _WEB_MAX) -> "Path":
+    """A JPEG no wider than `w` on its long edge, cached beside the original.
+
+    Falls back to the original on any failure - a review page that shows nothing
+    is worse than one that is slow.
+    """
+    from pathlib import Path as _P  # noqa: PLC0415
+    src = _P(src)
+    if w <= 0:
+        return src
+    try:
+        from PIL import Image  # noqa: PLC0415
+        cache = src.parent / "_web" / f"{src.stem}_{w}.jpg"
+        if cache.is_file() and cache.stat().st_mtime >= src.stat().st_mtime:
+            return cache
+        im = Image.open(src)
+        if max(im.size) <= w and src.suffix.lower() in (".jpg", ".jpeg"):
+            return src
+        im = im.convert("RGB")
+        im.thumbnail((w, w), Image.LANCZOS)
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        tmp = cache.with_suffix(".tmp")
+        im.save(tmp, "JPEG", quality=82, optimize=True)
+        tmp.replace(cache)
+        return cache
+    except Exception:
+        return src
+
+
 def image_path(root: Path, ds_id: str, name: str) -> Path | None:
     doc = load_preview(root, ds_id)
     if doc is None:
@@ -680,6 +751,8 @@ PAGE = """<!-- dataset preview -->
  .finding{margin:2px 0;font-size:13px}
  .finding.f{color:#ff9d9d}
  .finding.p{color:#7fbf7f}
+ .gz{float:right;margin:10px 6px 0 0;background:#2b3a2b;color:#bfe0bf;border:1px solid #3d553d;
+   border-radius:6px;font-size:13px;padding:6px 10px;cursor:pointer}
  .x{float:right;width:44px;height:44px;border-radius:50%;font-size:22px;line-height:44px;text-align:center;
    background:#5a1b1b;border:1px solid #7d2e2e;color:#ffb4b4;cursor:pointer;margin-left:10px}
  .row.out{opacity:.35}
@@ -750,7 +823,8 @@ async function open(id){
     out+=`<div class="row${im._out?' out':''}" data-look="${look?1:0}" data-name="${im.name}"><img loading=lazy src="/dataset/file?ds=${encodeURIComponent(cur.id)}&name=${encodeURIComponent(im.name)}">
       <div class=cap><div class=captop>
       <code onclick="editCap('${im.name}')" title="tap to correct this caption">${(im.caption||'(empty)').replace(/</g,'&lt;')}</code>
-      <button class=x title="${im._out?'put back in the training set':'remove from the training set'}" onclick="toggle('${im.name}',${im._out?'false':'true'})" >${im._out?'↩':'✗'}</button></div>
+      <button class=x title="${im._out?'put back in the training set':'remove from the training set'}" onclick="toggle('${im.name}',${im._out?'false':'true'})" >${im._out?'↩':'✗'}</button>
+      ${(im.uncertain||[]).includes('gaze?')&&!/looking off camera/.test(im.caption||'')?`<button class=gz title="add 'looking off camera' to this caption" onclick="addGaze('${im.name}')">off cam</button>`:''}</div>
       <div class=chips>${chips}</div><div class=meta>${im.name}${meta?' \\u00b7 '+meta:''}</div></div></div>`;
   }
   $('list').innerHTML=out;
@@ -797,18 +871,69 @@ function editCap(name){
   };
 }
 function cur_id(){return cur.id;}
+// The captioner puts gaze after the angle and before the hair clause, so a clause
+// added here sits where a generated one would. Falls back to appending after the
+// framing clause if a caption has no hair clause at all.
+async function addGaze(name){
+  const row=document.querySelector(`.row[data-name="${name}"]`);
+  const code=row.querySelector('code'); const btn=row.querySelector('.gz');
+  const cap=code.textContent==='(empty)'?'':code.textContent;
+  if(/looking off camera/.test(cap)) return;
+  const parts=cap.split(',').map(p=>p.trim());
+  let at=parts.findIndex(p=>/^her hair/i.test(p));
+  if(at<0) at=Math.min(2,parts.length);
+  parts.splice(at,0,'looking off camera');
+  const next=parts.join(', ');
+  if(btn) btn.disabled=true;
+  try{
+    const resp=await fetch('/dataset/'+encodeURIComponent(cur_id())+'/caption',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({name,caption:next})});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const r=await resp.json();
+    code.textContent=r.caption||'(empty)';
+    row.querySelector('.chips').innerHTML=chipsFor(r);
+    cur.captions=r.captions; cur.approval=r.approval;
+    renderHeader(cur.n,(cur.excluded||[]).length,r.approval);
+    if(btn) btn.remove();
+  }catch(e){
+    if(btn) btn.disabled=false;
+    $('state').textContent='could not add the gaze clause to '+name+' - '+e.message;
+    $('state').style.color='#ff9d9d';
+  }
+}
 async function toggle(name,excluded){
   // Change ONLY this row. Rebuilding the list re-creates every <img>, they reload
   // lazily, the page height changes under the thumb and the scroll jumps.
   const btn=document.querySelector(`.row[data-name="${name}"] .x`); if(btn) btn.disabled=true;
-  const r=await (await fetch('/dataset/'+encodeURIComponent(cur.id)+'/exclude',{method:'POST',
-    headers:{'Content-Type':'application/json'},body:JSON.stringify({name,excluded})})).json();
+  let r;
+  try{
+    const resp=await fetch('/dataset/'+encodeURIComponent(cur.id)+'/exclude',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({name,excluded})});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    r=await resp.json();
+  }catch(e){
+    // Never leave the button dead and silent: that is indistinguishable from the
+    // click not registering, and it cost a removal that had to be done by hand.
+    if(btn){ btn.disabled=false; }
+    $('state').textContent='could not '+(excluded?'remove ':'restore ')+name+' - '+e.message+' - try again';
+    $('state').style.color='#ff9d9d';
+    return;
+  }
   const row=document.querySelector(`.row[data-name="${name}"]`);
   if(row){ row.classList.toggle('out',excluded);
     const b=row.querySelector('.x'); b.disabled=false; b.textContent=excluded?'↩':'✗';
     b.title=excluded?'put back in the training set':'remove from the training set';
     b.onclick=()=>toggle(name,!excluded); }
-  cur.n=r.n; cur.excluded=new Array(r.n_excluded); cur.approval=r.approval;
+  // Keep cur in step with the server. `new Array(n)` made a sparse array whose
+  // holes spread into undefined and threw in render(); and leaving the entry in
+  // cur.images meant a re-render put a removed image back on screen.
+  const pool=[...(cur.images||[]),...(cur.excluded||[])].filter(Boolean);
+  const ent=pool.find(i=>i&&i.name===name);
+  cur.images=pool.filter(i=>i!==ent&&!i._out);
+  cur.excluded=pool.filter(i=>i!==ent&&i._out);
+  if(ent){ ent._out=excluded; (excluded?cur.excluded:cur.images).push(ent); }
+  cur.images.sort((a,b)=>a.name<b.name?-1:1); cur.excluded.sort((a,b)=>a.name<b.name?-1:1);
+  cur.n=r.n; cur.approval=r.approval;
   renderHeader(r.n,r.n_excluded,r.approval);
 }
 $('pick').onchange=e=>open(e.target.value);
@@ -839,11 +964,11 @@ def preview_router(cfg: dict):
         return list_previews(root)
 
     @r.get("/dataset/file")
-    def _file(ds: str, name: str):
+    def _file(ds: str, name: str, w: int = _WEB_MAX):
         p = image_path(root, ds, name)
         if p is None:
             raise HTTPException(404)
-        return FileResponse(p)
+        return FileResponse(web_copy(p, w))
 
     @r.get("/dataset/edits")
     def _edits(ds: str | None = None) -> dict:

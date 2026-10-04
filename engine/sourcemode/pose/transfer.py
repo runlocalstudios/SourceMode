@@ -307,12 +307,16 @@ def refine_head(cfg, client, posed: Path, source_plate: Path, source_asset: Path
     return best, "refine [%s] %.3f->%.3f" % (mode, base_id, best_id)
 
 
-def composite_on_plate(src: Path, dest: Path) -> tuple[int, int]:
-    """RGBA cutout -> flat grey plate. Returns the source size."""
+def composite_on_plate(src: Path, dest: Path, colour: tuple[int, int, int] = PLATE) -> tuple[int, int]:
+    """RGBA cutout -> flat plate (grey by default). Returns the source size.
+
+    The asset renderer passes magenta since 2026-10-02: a grey plate under a prompt
+    asking for a magenta backdrop gave a textured pink the fixed key could not
+    remove, and the edit model follows the plate more than the words."""
     from PIL import Image  # noqa: PLC0415
 
     img = Image.open(src).convert("RGBA")
-    plate = Image.new("RGB", img.size, PLATE)
+    plate = Image.new("RGB", img.size, colour)
     plate.paste(img, mask=img.getchannel("A"))
     dest.parent.mkdir(parents=True, exist_ok=True)
     plate.save(dest)

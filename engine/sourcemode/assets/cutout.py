@@ -146,12 +146,48 @@ def auto_chroma_remover(*, inner: float = 0.045, outer: float = 0.12,
             return img.convert("RGBA")
         d = key_distance(rgb, key)
         alpha = np.clip((d - inner) / max(outer - inner, 1e-6), 0.0, 1.0)
-        a = alpha[..., None]
-        recovered = despill_unpremultiply(rgb, alpha, key)
-        out = np.clip(np.where(a > 0, rgb + despill * (recovered - rgb), rgb), 0, 255)
+        # Despill EVERY retained pixel by clamping the key's channels to its anchor,
+        # the way the Codex skill does. Unpremultiply left 20.3% of edge pixels
+        # magenta on Amanda's v3 pack; this is 0% by construction.
+        out = np.clip(anchor_clamp(rgb, key, alpha > 0.0), 0, 255)
         return Image.fromarray(np.dstack([out, alpha * 255.0]).astype(np.uint8), "RGBA")
 
     return _remove
+
+
+def anchor_clamp(rgb: np.ndarray, key: tuple[int, int, int], where: np.ndarray) -> np.ndarray:
+    """Despill by clamping the key's strong channels to the channel it leaves alone.
+
+    Ported from the Codex skill's `remove_backgrounds.py`, which produces 0.0% magenta
+    edge pixels against our 20.3% on Amanda's v3 pack (measured 2026-10-03). The
+    unpremultiply despill above is correct in theory and under-corrects in practice,
+    because its cap is derived from the pixel's own excess and a hair pixel that is
+    MOSTLY backdrop still carries a legitimate-looking excess after the division.
+
+    The clamp has no such failure mode: for a magenta key (R and B strong, G the
+    anchor) every treated pixel ends with R <= G-1 and B <= G-1, so it cannot read as
+    magenta afterwards, whatever alpha says. It is applied to every retained pixel,
+    not only the partial band - a fully opaque hair strand lit by the backdrop is
+    exactly where the halo lives.
+    """
+    # Which channels the key is MADE of: the darkest channel anchors, and every
+    # channel clearly above it spills. The Codex version keyed off the gap between
+    # the top two channels instead, which classifies a clean #FF00FF correctly but
+    # misreads the dirty pink the edit model actually returns - (204,20,122) has a
+    # 82-count gap between red and blue, so red alone was treated as the spill and
+    # blue was left at 122 against green's 20. Still magenta. Anchoring on the
+    # darkest channel has no such edge case.
+    k = np.asarray(key, dtype=np.int16)
+    lo = int(np.argmin(k))
+    spill = [c for c in range(3) if c != lo and k[c] - k[lo] >= 40]
+    if not spill:                                # not a chroma key at all
+        return rgb.astype(np.float32)
+    anchor_ch = [c for c in range(3) if c not in spill]
+    out = rgb.astype(np.int16).copy()
+    anchor = np.maximum(np.max(out[:, :, anchor_ch], axis=2) - 1, 0)
+    for c in spill:
+        out[:, :, c] = np.where(where, np.minimum(out[:, :, c], anchor), out[:, :, c])
+    return out.astype(np.float32)
 
 
 def despill_unpremultiply(rgb: np.ndarray, alpha: np.ndarray,
@@ -408,7 +444,7 @@ def source_meta(src: Path) -> dict | None:
         try:
             data = json.loads(side.read_text(encoding="utf-8"))
             if isinstance(data.get("asset"), dict):
-                return {"asset": data["asset"], "score": data.get("score")}
+                return {"asset": data["asset"], "score": data.get("score"), "adherence": data.get("adherence")}
         except (OSError, ValueError):
             pass
     parsed = parse_runtime_name(src.parent.name + ".x")
@@ -434,6 +470,7 @@ def cutout_file(src: Path, out_dir: Path, *, remover: Remover, model: str,
     out_dir.mkdir(parents=True, exist_ok=True)
     img = Image.open(src)
     cut = remover(img)
+    frame_note = None
     if size:
         cut = fit_canvas(cut, size)
     report = alpha_report(np.asarray(cut.getchannel("A")))
@@ -451,12 +488,14 @@ def cutout_file(src: Path, out_dir: Path, *, remover: Remover, model: str,
         "canvas": list(cut.size),
         "outputs": outputs,
         "report": report,
+        "framing": frame_note,
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
     meta = source_meta(src)
     if meta:
         sidecar["asset"] = meta["asset"]
         sidecar["score"] = meta.get("score")
+        sidecar["adherence"] = meta.get("adherence")
     (out_dir / f"{src.stem}.json").write_text(json.dumps(sidecar, indent=1), encoding="utf-8")
     return sidecar
 

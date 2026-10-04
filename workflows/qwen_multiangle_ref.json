@@ -1,0 +1,251 @@
+{
+  "_meta": {
+    "built": "2026-09-29",
+    "purpose": "Qwen-Image-Edit-2511 + the fal multiple-angles LoRA: pose-controlled generation from 3 reference photos, no character LoRA.",
+    "prompt_syntax": "<sks> [azimuth] [elevation] [distance] - azimuth: front / front-left|right quarter / left|right side / back-left|right quarter / back; elevation: low-angle / eye-level / elevated / high-angle; distance: close-up / medium shot / wide shot. 96 combinations.",
+    "changed_from_fal": "FluxKontextImageScale -> fixed ImageScale 1024x1536. The original rescales to a ~1MP bucket, which costs face pixels, and face pixels are the measured driver of identity here.",
+    "licences": "Qwen-Image-Edit-2511 Apache-2.0, multiple-angles LoRA Apache-2.0 (verified via the HF API), Lightning LoRA Apache-2.0. Whole chain is shippable.",
+    "verified": "All 840 LoRA key-stems resolve against the model through comfy/lora.py's QwenImage branch, which registers both the bare and transformer.-prefixed forms.",
+    "placeholders": [
+      "{{REF1}}",
+      "{{REF2}}",
+      "{{REF3}}",
+      "{{POSITIVE}}",
+      "{{NEGATIVE}}",
+      "{{SEED}}",
+      "{{FILENAME_PREFIX}}"
+    ]
+  },
+  "nodes": {
+    "37": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "qwen_image_edit_2511_bf16.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "38": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+        "type": "qwen_image",
+        "device": "default"
+      }
+    },
+    "39": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "qwen_image_vae.safetensors"
+      }
+    },
+    "73": {
+      "class_type": "LoraLoaderModelOnly",
+      "inputs": {
+        "model": [
+          "37",
+          0
+        ],
+        "lora_name": "qwen-image-edit-2511-multiple-angles-lora.safetensors",
+        "strength_model": 1.0
+      }
+    },
+    "74": {
+      "class_type": "LoraLoaderModelOnly",
+      "inputs": {
+        "model": [
+          "73",
+          0
+        ],
+        "lora_name": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+        "strength_model": 1.0
+      }
+    },
+    "66": {
+      "class_type": "ModelSamplingAuraFlow",
+      "inputs": {
+        "model": [
+          "74",
+          0
+        ],
+        "shift": 3.0
+      }
+    },
+    "67": {
+      "class_type": "CFGNorm",
+      "inputs": {
+        "model": [
+          "66",
+          0
+        ],
+        "strength": 1.0,
+        "pre_cfg": false
+      }
+    },
+    "160": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "{{REF1}}"
+      }
+    },
+    "161": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "{{REF2}}"
+      }
+    },
+    "162": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "{{REF3}}"
+      }
+    },
+    "170": {
+      "class_type": "ImageScale",
+      "inputs": {
+        "image": [
+          "160",
+          0
+        ],
+        "upscale_method": "lanczos",
+        "width": 1024,
+        "height": 1536,
+        "crop": "center"
+      }
+    },
+    "6": {
+      "class_type": "TextEncodeQwenImageEditPlus",
+      "inputs": {
+        "prompt": "{{POSITIVE}}",
+        "clip": [
+          "38",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ],
+        "image1": [
+          "160",
+          0
+        ],
+        "image2": [
+          "161",
+          0
+        ],
+        "image3": [
+          "162",
+          0
+        ]
+      }
+    },
+    "7": {
+      "class_type": "TextEncodeQwenImageEditPlus",
+      "inputs": {
+        "prompt": "{{NEGATIVE}}",
+        "clip": [
+          "38",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ],
+        "image1": [
+          "160",
+          0
+        ],
+        "image2": [
+          "161",
+          0
+        ],
+        "image3": [
+          "162",
+          0
+        ]
+      }
+    },
+    "150": {
+      "class_type": "FluxKontextMultiReferenceLatentMethod",
+      "inputs": {
+        "conditioning": [
+          "6",
+          0
+        ],
+        "reference_latents_method": "index_timestep_zero"
+      }
+    },
+    "151": {
+      "class_type": "FluxKontextMultiReferenceLatentMethod",
+      "inputs": {
+        "conditioning": [
+          "7",
+          0
+        ],
+        "reference_latents_method": "index_timestep_zero"
+      }
+    },
+    "169": {
+      "class_type": "VAEEncode",
+      "inputs": {
+        "pixels": [
+          "170",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ]
+      }
+    },
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "67",
+          0
+        ],
+        "positive": [
+          "150",
+          0
+        ],
+        "negative": [
+          "151",
+          0
+        ],
+        "latent_image": [
+          "169",
+          0
+        ],
+        "seed": "{{SEED}}",
+        "steps": 4,
+        "cfg": 1.0,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 1.0
+      }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "3",
+          0
+        ],
+        "vae": [
+          "39",
+          0
+        ]
+      }
+    },
+    "60": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "images": [
+          "8",
+          0
+        ],
+        "filename_prefix": "{{FILENAME_PREFIX}}"
+      }
+    }
+  }
+}

@@ -1,0 +1,192 @@
+{
+  "_meta": {
+    "built": "2026-09-28",
+    "purpose": "Wan 2.2 S2V - audio-driven, lip-synced video from one plate + a wav.",
+    "verified": "Every node signature read from /object_info on the live instance, not from a tutorial: WanSoundImageToVideo takes positive/negative/vae/width/height/length/batch_size required, with audio_encoder_output and ref_image OPTIONAL, and returns (positive, negative, latent).",
+    "recipe": "steps 20 / cfg 6.0 / fps 16 / chunk length 77 frames (~4.8s). The lightx2v 4-step LoRAs installed here are I2V-specific and are NOT wired in until one is confirmed for S2V.",
+    "licences": "Wan 2.2 Apache-2.0, wav2vec2 Apache-2.0, umt5 Apache-2.0 - whole chain is shippable.",
+    "longer": "WanSoundImageToVideoExtend adds another 77 frames per subgraph; it is the purpose-built continuation node and must be used instead of reseeding WanImageToVideo, which gives a motion burst at every seam.",
+    "placeholders": [
+      "%POSITIVE%",
+      "%NEGATIVE%",
+      "%PLATE%",
+      "%AUDIO%",
+      "%PREFIX%"
+    ]
+  },
+  "nodes": {
+    "37": {
+      "class_type": "UNETLoader",
+      "inputs": {
+        "unet_name": "wan2.2_s2v_14B_bf16.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    "39": {
+      "class_type": "CLIPLoader",
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "type": "wan",
+        "device": "default"
+      }
+    },
+    "40": {
+      "class_type": "VAELoader",
+      "inputs": {
+        "vae_name": "wan_2.1_vae.safetensors"
+      }
+    },
+    "61": {
+      "class_type": "ModelSamplingSD3",
+      "inputs": {
+        "model": [
+          "37",
+          0
+        ],
+        "shift": 8.0
+      }
+    },
+    "6": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "%POSITIVE%",
+        "clip": [
+          "39",
+          0
+        ]
+      }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "%NEGATIVE%",
+        "clip": [
+          "39",
+          0
+        ]
+      }
+    },
+    "52": {
+      "class_type": "LoadImage",
+      "inputs": {
+        "image": "%PLATE%"
+      }
+    },
+    "70": {
+      "class_type": "LoadAudio",
+      "inputs": {
+        "audio": "%AUDIO%"
+      }
+    },
+    "71": {
+      "class_type": "AudioEncoderLoader",
+      "inputs": {
+        "audio_encoder_name": "wav2vec2_large_english_fp16.safetensors"
+      }
+    },
+    "72": {
+      "class_type": "AudioEncoderEncode",
+      "inputs": {
+        "audio_encoder": [
+          "71",
+          0
+        ],
+        "audio": [
+          "70",
+          0
+        ]
+      }
+    },
+    "50": {
+      "class_type": "WanSoundImageToVideo",
+      "inputs": {
+        "positive": [
+          "6",
+          0
+        ],
+        "negative": [
+          "7",
+          0
+        ],
+        "vae": [
+          "40",
+          0
+        ],
+        "width": 720,
+        "height": 1280,
+        "length": 77,
+        "batch_size": 1,
+        "audio_encoder_output": [
+          "72",
+          0
+        ],
+        "ref_image": [
+          "52",
+          0
+        ]
+      }
+    },
+    "57": {
+      "class_type": "KSampler",
+      "inputs": {
+        "model": [
+          "61",
+          0
+        ],
+        "seed": 42,
+        "steps": 20,
+        "cfg": 6.0,
+        "sampler_name": "uni_pc",
+        "scheduler": "simple",
+        "denoise": 1.0,
+        "positive": [
+          "50",
+          0
+        ],
+        "negative": [
+          "50",
+          1
+        ],
+        "latent_image": [
+          "50",
+          2
+        ]
+      }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": [
+          "57",
+          0
+        ],
+        "vae": [
+          "40",
+          0
+        ]
+      }
+    },
+    "63": {
+      "class_type": "CreateVideo",
+      "inputs": {
+        "images": [
+          "8",
+          0
+        ],
+        "fps": 16.0
+      }
+    },
+    "64": {
+      "class_type": "SaveVideo",
+      "inputs": {
+        "video": [
+          "63",
+          0
+        ],
+        "filename_prefix": "%PREFIX%",
+        "format": "mp4",
+        "codec": "h264"
+      }
+    }
+  }
+}

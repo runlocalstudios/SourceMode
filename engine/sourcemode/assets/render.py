@@ -16,31 +16,127 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from PIL import Image
+
 from ..gates.identity import cosine, embed_image
+from .adherence import check, measure
 from ..pose.native import build_native_workflow
 from ..pose.transfer import composite_on_plate
 from .catalog import plan_slots, slot_dirname
 
 W, H = 1024, 1536
-FRAMING = ("Full-length photograph from eye level, her whole body from head to feet in frame, "
-           "her face clearly visible and well lit. ")
-STANDING = "She stands relaxed facing the camera, weight on one hip, a soft natural smile."
+# Jeremy, 2026-10-02: "I just want the level of consistency and prompt adherence"
+# of the Codex game-asset-gen skill - its mid-thigh-up crop, separate body turn and
+# head turn, and its closed expression table. Ported from
+# ~/.codex/skills/game-asset-gen/scripts/scaffold.py (FRAMINGS, describe_yaw,
+# pose_fields, EXPRESSIONS, the prompt order) rather than re-derived. Pose family
+# rotates front / image-left / image-right by look number so every category carries
+# all three; degrees come from a per-look seeded randomizer, exactly as the scaffold
+# does. Full length is never asked for - it starved the face (122px kept 12%).
+import random
+
+FRAMING_MID_THIGH = ("standing mid-thigh-up portrait; bottom edge cuts through the middle of the thighs; "
+                     "knees, lower legs, and feet outside the frame; never full-body")
+# Jeremy, 2026-10-02, on Amanda's first pack: "almost all a little too far away...
+# shoot for framing to her upper thighs instead of what's basically at her knees".
+FRAMING_UPPER_THIGH = ("standing upper-thigh portrait, close enough that her face is large in frame; bottom edge "
+                       "cuts across the tops of her thighs just below the hips; knees, lower legs, and feet "
+                       "outside the frame; never full-body, never a wide shot")
+FRAMING = FRAMING_UPPER_THIGH   # kept for callers that read the old name
+EXPRESSIONS = (
+    "relaxed neutral: lips gently together, mouth corners level, cheeks soft, eyebrows resting, relaxed direct gaze; no smile",
+    "warm closed-lip smile: both mouth corners lifted, cheeks slightly raised, lips gently together, brows relaxed, soft direct eye contact",
+    "natural smile showing teeth: lips comfortably parted with upper teeth visible, cheeks raised, brows relaxed, eyes softly narrowed toward viewer",
+    "subtle flirty smile: one mouth corner gently lifted, lips softly together, cheeks slightly raised, brows relaxed, inviting direct eye contact",
+    "soft neutral: lips resting together without pressure, mouth corners level, cheeks relaxed, brows smooth, soft attentive eyes toward viewer; no smile",
+    "gentle closed-lip smile: mouth corners subtly lifted, lips together without tension, cheeks lightly raised, brows resting, warm direct gaze",
+    "bright natural smile showing teeth: both mouth corners lifted, lips parted in an easy smile with teeth visible, cheeks lifted, brows relaxed, eyes engaged with viewer",
+    "warm flirty smile: lips slightly parted in a subtle smile, mouth corners gently lifted, cheeks softly raised, brows resting, softly lowered eyelids with direct inviting eye contact",
+)
+CATEGORY_ORDER = ("casual", "workout", "fancy_dining_gallery", "fancy_town", "casual_date", "work")
+# expression type per EXPRESSIONS entry - the vocabulary adherence.measure() speaks
+EXPRESSION_TYPES = ("neutral", "closed-lip", "teeth", "flirty", "neutral", "closed-lip", "teeth", "flirty")
+# Jeremy, 2026-10-03: "the poses are just all over the place." The Codex skill this
+# contract was ported from varies body turn, head turn, expression, outfit and hair -
+# and NEVER the pose; the stance is simply a natural standing portrait every time.
+# The rotating pose list here was mine, not theirs, and it is what made the pack read
+# as inconsistent. One stance, stated the way they state it.
+STANCE = ("relaxed standing weight shift, hands and arms resting naturally, "
+          "shoulders level and open to the camera")
 SITTING = "She sits on a plain wooden stool facing the camera, hands resting on her thighs, a soft natural smile."
-LOOK = ("Photorealistic, natural skin texture, sharp focus, soft even studio lighting, "
-        "a plain solid medium grey background with nothing else in frame. "
-        "Natural realistic human proportions, correct anatomy.")
+# The keyable backdrop a shipping asset needs. The epoch EVAL passes a real setting
+# instead - Jeremy, 2026-10-03: "it's easier to judge against a regular backdrop
+# because it looks more real" - so the backdrop is the one part of the asset prompt
+# that is a parameter, and everything else stays identical between the two uses.
+KEY_BACKDROP = ("soft even studio lighting, a flat solid bright magenta #FF00FF background "
+                "edge to edge with nothing else in frame, no shadows on it")
 
 
-def shot_prompt(character: str, slot: dict, trigger: str | None = None) -> str:
-    """The trigger is the bare character name unless the plan overrides it.
+def appearance_clause(character: str) -> str:
+    """Age + body/feature text for the prompt. Never for a caption - see appearance.py."""
+    from .appearance import clause  # noqa: PLC0415
+    return clause(character)
 
-    It used to be hardcoded as `<character>_ch`, which silently disagreed with
-    any LoRA trained on a different token and put a dead string in the prompt.
-    The older LoRAs do use the `_ch` suffix, so a plan can still name its own.
-    """
-    pose = SITTING if slot["pose"] == "sitting" else STANDING
-    return (f"{trigger or character}. {FRAMING}{pose} "
-            f"She is wearing {slot['outfit']}, {slot['hair']}. {LOOK}")
+
+
+def describe_yaw(degrees: int) -> str:
+    if degrees == 0:
+        return "FRONT: breastbone and pelvis face the lens; both shoulders equally near the camera, torso breadth balanced on both sides"
+    side = "image-left" if degrees < 0 else "image-right"
+    near = "image-right" if degrees < 0 else "image-left"
+    return (f"THREE-QUARTER toward {side} (about {abs(degrees)} degrees): "
+            f"breastbone and pelvis point toward {side}; the shoulder on {near} is nearer the camera; "
+            f"the shoulder on {side} recedes; chest and waist visibly foreshortened, "
+            "far upper arm partly obscured by the torso. Rotate the whole torso, not just one shoulder")
+
+
+def pose_fields(character: str, slot: dict) -> dict:
+    """Screen-relative body geometry and an independent head pose, seeded per look."""
+    look = int(slot.get("look", 1))
+    family = ("front", "left", "right")[(look - 1) % 3]
+    rng = random.Random(f"{character}-{slot.get('id', look)}")
+    sign = {"front": 0, "left": -1, "right": 1}[family]
+    body = sign * rng.randint(35, 45)
+    head = sign * rng.randint(20, 30)
+    pitch = ("level", "slightly lowered", "slightly raised")[(look - 1) % 3]
+    if sign:
+        side = "image-left" if sign < 0 else "image-right"
+        head_turn = (f"Nose points toward {side} (about {abs(head)} degrees); unequal visible cheek widths, "
+                     "both eyes visible; her eyes locked on the lens, direct eye contact with the viewer")
+    else:
+        head_turn = "Nose faces the lens, both cheeks similarly visible; her eyes locked on the lens, direct eye contact with the viewer"
+    cat_i = CATEGORY_ORDER.index(slot["category"]) if slot.get("category") in CATEGORY_ORDER else 0
+    ex_i = (look - 1 + cat_i * 3) % len(EXPRESSIONS)
+    side = {"front": "front", "left": "image-left", "right": "image-right"}[family]
+    return {"body": describe_yaw(body), "head": f"{head_turn}; chin {pitch}; no lateral head tilt",
+            "expression": EXPRESSIONS[ex_i],
+            # the structured ask, for adherence.check() against the measured render
+            "asked": {"crop": "upper-thigh-up", "body_side": side, "body_deg": body, "head_side": side,
+                      "head_deg": head, "pitch": pitch, "expression": EXPRESSION_TYPES[ex_i]}}
+
+
+def shot_prompt(character: str, slot: dict, trigger: str | None = None,
+                backdrop: str | None = None) -> str:
+    """The trigger is the bare character name unless the plan overrides it; the rest
+    follows the Codex prompt order: crop, body, head, expression, hair, outfit, finish."""
+    if slot["pose"] == "sitting":
+        look = f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. Natural realistic human proportions, correct anatomy."
+        return f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, {slot['hair']}. {look}"
+    pf = pose_fields(character, slot)
+    app = appearance_clause(character)
+    return (f"{trigger or character}. New photorealistic standing portrait of {app + ', ' if app else ''}"
+            f"her body shape and proportions exactly as described. "
+            f"Crop: {FRAMING_UPPER_THIGH}. Vertical 2:3, consistent headroom and scale; hair and lateral silhouette inside canvas. "
+            f"Body: {pf['body']}. Directions mean image-left/image-right as seen by the viewer. "
+            f"Head: {pf['head']}. Body direction and head direction are separate requirements. "
+            f"Gaze: she is ALWAYS looking directly into the camera lens. "
+            f"Expression: {pf['expression']}. "
+            f"Pose: {STANCE}. "
+            f"Hair: {slot['hair']}. "
+            f"Outfit: {slot['outfit']}, fitted to her tiny frame. "
+            f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. "
+            f"Natural realistic human proportions, correct anatomy. "
+            f"No profiles, rear views, seated poses, or off-camera gaze.")
 
 
 def render_plan(cfg: dict, client, plan: dict, out: Path, *, shots: int = 4, seed: int = 7100,
@@ -58,7 +154,21 @@ def render_plan(cfg: dict, client, plan: dict, out: Path, *, shots: int = 4, see
     root.mkdir(parents=True, exist_ok=True)
     plate = root / "_plate.png"
     if not plate.exists():
-        composite_on_plate(Path(plan["source_asset"]), plate)
+        # The PLATE sets the framing, not the words. Measured 2026-10-03: the prompt
+        # said "upper-thigh, bottom edge just below the hips" and the renders came
+        # back with the hips at 0.74 of frame height, exactly where the older
+        # "mid-thigh" wording put them - while the plate was a full standing shot.
+        # The same thing happened with head turn, where the plate's direction beat
+        # the text 5 times in 6. So the plate is cropped to the target framing first
+        # and the prompt only has to agree with it. Cropping the plate costs no
+        # detail; upscaling the output afterwards would add none.
+        from .framing import crop_to_hips  # noqa: PLC0415
+        src_img = Image.open(plan["source_asset"]).convert("RGBA")
+        framed, note = crop_to_hips(src_img)
+        log(f"  plate: {note}")
+        tmp = root / "_plate_src.png"
+        framed.save(tmp)
+        composite_on_plate(tmp, plate, colour=(255, 0, 255))
     image_name = client.upload_image(plate)
     ref = embed_image(Path(plan["reference"])) if plan.get("reference") else None
 
@@ -87,9 +197,20 @@ def render_plan(cfg: dict, client, plan: dict, out: Path, *, shots: int = 4, see
             if ref is not None:
                 e = embed_image(dest)
                 score = round(cosine(ref, e), 4) if e is not None else 0.0
+            # Jeremy, 2026-10-02: a full-body render (bare feet) was placed over a
+            # correct mid-thigh one because place ranked by identity alone. The ask
+            # is recorded and the render is measured against it; place ranks by the
+            # number of asks broken, then identity. Relative to the ask, so a
+            # full-body look passes when full body was asked for.
+            asked = pose_fields(character, slot)["asked"] if slot["pose"] != "sitting" else {}
+            try:
+                adherence = check(asked, measure(dest)) if asked else {"failed": [], "soft": [], "got": {}}
+            except Exception as exc:  # noqa: BLE001 - a measurement, never a blocker
+                adherence = {"failed": [], "soft": [], "got": {}, "error": str(exc)}
             meta = {"source": str(dest), "asset": {"character": character, "category": slot["category"],
                                                    "look": slot["look"], "pose": slot["pose"], "shot": k},
-                    "score": score, "seed": s, "prompt": prompt, "lora": plan["lora"],
+                    "score": score, "asked": asked, "adherence": adherence,
+                    "seed": s, "prompt": prompt, "lora": plan["lora"],
                     "created": datetime.now(timezone.utc).isoformat(timespec="seconds")}
             side.write_text(json.dumps(meta, indent=1), encoding="utf-8")
             results.append(meta)
