@@ -42,17 +42,40 @@ function Step($label, $argList, $outLog) {
   return $p.ExitCode
 }
 function CountShots($c) {
-  # Shots written by the Lora-Gen-80 skill, which uses two layouts: loose at the
-  # top of the run folder (keiko, trina) or a per-character subfolder (ash, hannah).
-  # Build the filter by concatenation - "$c`_shot_*.png" is a quoting trap.
-  $G = "C:\Epic Games\Files\cnc info\codex\outputs\lora-gen-80"
+  # Look everywhere gather_character.py looks, because this gate decides whether
+  # the gather ever runs. It used to search ONLY
+  # codex\outputs\lora-gen-80 - the Codex Lora-Gen skill's folder - so when
+  # Tess's 80 shots were produced by the local imagegen tool into
+  # codex\outputs\tess_imagegen, this counted 0 and waited four hours for
+  # images that were already on disk. The gather would have found them
+  # immediately; only the gate was blind, and the gate is what blocks.
+  #
+  # Three layouts, all real:
+  #   outputs\<anything-with-the-name>\*.png   per-run folder (tess_imagegen)
+  #   outputs\lora-gen-80\<char>_shot_*.png    loose  (keiko, trina)
+  #   outputs\lora-gen-80\<char>\*.png        nested (ash, hannah)
+  $roots = @("C:\Epic Games\Files\cnc info\codex\outputs",
+             "C:\Epic Games\Files\cnc info\codex\output")
+  $bad = @("wrong", "bad", "reject", "discard", "dupe", "archive", "superseded")
   $n = 0
-  if (Test-Path $G) {
-    $n += @(Get-ChildItem -Path $G -Filter ($c + "_shot_*.png") -File -ErrorAction SilentlyContinue).Count
-    $sub = Join-Path $G $c
-    if (Test-Path $sub) {
-      $n += @(Get-ChildItem -Path $sub -File -Recurse -ErrorAction SilentlyContinue |
-              Where-Object { $_.Extension -in '.png', '.jpg' }).Count
+  foreach ($R in $roots) {
+    if (-not (Test-Path $R)) { continue }
+    foreach ($sub in @(Get-ChildItem -Path $R -Directory -ErrorAction SilentlyContinue)) {
+      $low = $sub.Name.ToLower()
+      if ($bad | Where-Object { $low.Contains($_) }) { continue }
+      if ($low.Contains($c)) {
+        # a whole run folder for this character
+        $n += @(Get-ChildItem -Path $sub.FullName -File -Recurse -ErrorAction SilentlyContinue |
+                Where-Object { $_.Extension -in '.png', '.jpg' }).Count
+        continue
+      }
+      # a shared run folder: loose files, or a subfolder named for her
+      $n += @(Get-ChildItem -Path $sub.FullName -Filter ($c + "_shot_*.png") -File -ErrorAction SilentlyContinue).Count
+      $nested = Join-Path $sub.FullName $c
+      if (Test-Path $nested) {
+        $n += @(Get-ChildItem -Path $nested -File -Recurse -ErrorAction SilentlyContinue |
+                Where-Object { $_.Extension -in '.png', '.jpg' }).Count
+      }
     }
   }
   return $n
