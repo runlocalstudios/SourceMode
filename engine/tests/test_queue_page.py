@@ -308,3 +308,72 @@ def test_rows_are_labelled_for_a_person(cfg_full, tmp_path):
     assert row["who"] == "Marisol"
     assert row["what"] == "LoRA training, then the epoch sweep"
     assert row["id"].startswith("j"), "the id stays, small, so a log line can be matched back"
+
+
+# --- the time estimate -----------------------------------------------------
+
+def test_a_candidate_carries_a_measured_time_estimate(cfg_full, tmp_path):
+    """Measured, not assumed: checkpoint-to-checkpoint wall time over the steps
+    between saves. 5.03-5.33 s/step across five of his runs on 2026-10-04."""
+    from sourcemode.monitor.queue_page import candidates
+
+    _approve(tmp_path, "marisol_v2", images=74)
+    e = candidates(cfg_full)[0]["estimate"]
+    assert e["steps"] == 74 * 3 * 24, "74 images need 3 repeats to put an epoch in range"
+    assert 5 * 3600 < e["train_s"] < 12 * 3600
+    assert e["total_s"] > e["train_s"], "the epoch sweep is part of what holds the card"
+    assert "74 images" in e["basis"] and "s/step" in e["basis"]
+
+
+def test_the_estimate_is_remeasured_from_completed_runs(cfg_full, tmp_path):
+    """With real runs on disk the rate comes from them, not from the fallback."""
+    from sourcemode.monitor import queue_page as qp
+
+    qp._rate_cache.clear()
+    _approve(tmp_path, "done_v2", images=50)
+    lora = tmp_path / "lora-datasets" / "done_v2" / "lora"
+    lora.mkdir(parents=True)
+    import os, time
+    t0 = time.time() - 6 * 3600
+    for i in range(1, 8):                       # 7 saves = 6 gaps
+        f = lora / f"done_v2-{i:06d}.safetensors"
+        f.write_bytes(b"x")
+        os.utime(f, (t0 + i * 1800, t0 + i * 1800))   # 30 min per epoch
+    r = qp._rate(cfg_full, max_age_s=0)
+    assert r["measured"] is True and r["n_runs"] == 1
+    # 50 images x3 repeats = 150 steps per epoch in 1800s -> 12 s/step
+    assert 11.5 < r["s_per_step"] < 12.5
+
+
+def test_the_estimate_falls_back_and_says_so_when_nothing_has_been_measured(cfg_full, tmp_path):
+    from sourcemode.monitor import queue_page as qp
+
+    qp._rate_cache.clear()
+    r = qp._rate(cfg_full, max_age_s=0)
+    assert r["measured"] is False
+    assert r["s_per_step"] == qp.FALLBACK_S_PER_STEP
+    assert "assumed" in qp.estimate(cfg_full, 50)["basis"]
+    qp._rate_cache.clear()
+
+
+def test_no_images_means_no_estimate_rather_than_a_made_up_one(cfg_full):
+    from sourcemode.monitor.queue_page import estimate
+
+    e = estimate(cfg_full, 0)
+    assert e["total_s"] is None and "no estimate" in e["basis"]
+
+
+def test_the_queue_total_counts_only_work_that_will_actually_run(cfg_full, tmp_path):
+    """Held jobs are excluded: they are not going to start until he says so."""
+    from sourcemode.monitor import queue_page as qp
+
+    qp._rate_cache.clear()
+    _approve(tmp_path, "a_v2", images=50)
+    _approve(tmp_path, "b_v2", images=50)
+    doc = _queue(tmp_path, "a_v2", "b_v2")
+    one = queue_state(cfg_full)["queued_s"]
+    q.set_hold(doc, doc["jobs"][1]["id"], True)
+    q.save(q.queue_path(tmp_path), doc)
+    two = queue_state(cfg_full)["queued_s"]
+    assert two < one and two == pytest.approx(one / 2, rel=0.01)
+    qp._rate_cache.clear()

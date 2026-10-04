@@ -42,6 +42,7 @@ from pathlib import Path
 _VERSION_TAIL = re.compile(r"_v\d+$")
 
 KIND_LABEL = {
+    "prep": "captions and preview",
     "train": "LoRA training",
     "eval": "epoch sweep",
     "assets": "asset render",
@@ -89,6 +90,8 @@ PAGE = """<!-- gpu control -->
  .state.hold{color:#e8cf6e}
  .state.bad{color:#ff9a9a}
  .note{color:var(--dim);font-size:13px;margin-top:5px}
+ .est{margin-top:5px;color:#cbd5e1}
+ .est b{color:#fff}
  .jid{font-family:ui-monospace,monospace;font-size:11px;color:#5a5a5a;margin-top:6px}
  .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
  button{background:#272727;color:var(--fg);border:1px solid #454545;padding:7px 12px;
@@ -110,6 +113,7 @@ PAGE = """<!-- gpu control -->
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 let state=null,stat=null,cands=[],busyPost=false;
+const NL=String.fromCharCode(10);
 
 const dur=s=>{ if(s==null) return ''; s=Math.round(s);
   const h=Math.floor(s/3600),m=Math.floor(s%3600/60);
@@ -183,6 +187,9 @@ function jobRow(j,i,n){
   h+='<div class=body>';
   h+='<div class=who>'+esc(j.who)+' <span class=kind>— '+esc(j.what)+'</span></div>';
   h+='<div class="state '+sc+'">'+esc(state)+'</div>';
+  if(j.estimate&&j.estimate.total_s&&j.status!=='running')
+    h+='<div class=est>'+dur(j.estimate.total_s)+' of GPU time once it starts — '
+      +dur(j.estimate.train_s)+' training + '+dur(j.estimate.sweep_s)+' sweep</div>';
   if(j.note) h+='<div class=note>'+esc(j.note)+'</div>';
   h+='<div class=jid>'+esc(j.id)+(j.log?' · '+esc(j.log.split(/[\\\\/]/).pop()):'')+'</div>';
   if(j.status!=='running'){
@@ -222,6 +229,9 @@ function draw(){
   h+='<h2>Queue</h2>';
   h+= q.length ? '<div id=list>'+q.map((j,i)=>jobRow(j,i,q.length)).join('')+'</div>'
                : '<div class="card empty">Nothing queued. Anything ready to train is listed below.</div>';
+  if(state.queued_s)
+    h+='<div class=note style="margin:-2px 0 8px">Waiting work adds about <b>'+dur(state.queued_s)
+      +'</b> of GPU time after whatever is running now.</div>';
   if(q.some(j=>j.status!=='running')&&!state.paused)
     h+='<div class=acts style="margin-top:4px"><button onclick="act(\\'/queue/pause\\')">Pause the queue</button>'
       +'<span class=empty style="align-self:center">a running job is never interrupted</span></div>';
@@ -233,8 +243,13 @@ function draw(){
       +'<div class=who>'+esc(c.who)+' <span class=kind>— approved, never trained</span></div>'
       +'<div class="state '+(c.days_waiting>=3?'stale':'wait')+'">approved '+esc(ago(c.approved_at))
       +' · '+esc(c.images)+' images</div>'
+      +(c.estimate&&c.estimate.total_s
+         ? '<div class=est><b>'+dur(c.estimate.total_s)+'</b> of GPU time — '
+           +dur(c.estimate.train_s)+' training + '+dur(c.estimate.sweep_s)+' sweep</div>'
+           +'<div class=jid>'+esc(c.estimate.basis)+'</div>'
+         : '')
       +'<div class=jid>'+esc(c.dataset)+' → character '+esc(c.character)+'</div></div>'
-      +'<button class=go onclick="queueTraining(\\''+c.dataset+'\\',\\''+esc(c.who)+'\\')">Add to queue</button>'
+      +'<button class=go onclick="queueTraining(\\''+c.dataset+'\\',\\''+esc(c.who)+'\\','+(c.estimate&&c.estimate.total_s?Math.round(c.estimate.total_s):0)+)">Add to queue</button>'
       +'</div>';
   });
 
@@ -264,10 +279,12 @@ async function act(url,body){
 const move=(id,pos)=>act('/queue/job/'+id+'/move',{position:pos});
 const hold=(id,on)=>act('/queue/job/'+id+'/hold',{hold:on});
 function cancel(id,who){ if(confirm('Remove '+who+' from the queue?')) act('/queue/job/'+id+'/cancel'); }
-function queueTraining(ds,who){
-  if(confirm('Queue '+who+' for LoRA training?\\n\\n24 epochs plus the epoch sweep, about 7 hours of GPU time. '
-    +'It starts only when the card is free, and approval is re-checked first.'))
+function queueTraining(ds,who,secs){
+  const t=secs?dur(secs):'several hours';
+  if(confirm('Queue '+who+' for LoRA training?'+NL+NL+'24 epochs plus the epoch sweep: about '+t
+    +' of GPU time.'+NL+NL+'It starts only when the card is free, and her approval is re-checked first.'))
     act('/queue/training',{dataset:ds});
+});
 }
 
 // --- pointer dragging (touch included; HTML5 DnD does not fire on touch) ----
@@ -320,6 +337,89 @@ load(); setInterval(()=>{ if(!busyPost) load(); },5000);
 """
 
 
+# How long a training run takes here, measured from completed runs rather than
+# assumed: checkpoint-to-checkpoint wall time divided by the steps between saves.
+# 2026-10-04, five runs: 5.03 / 5.08 / 5.10 / 5.17 / 5.33 s/step - tight enough to
+# quote. The epoch sweep that follows ran 120, 121 and 121 minutes on the three
+# most recent characters; the two older numbers (416m, 1866m) are a sweep WAITING
+# for the card, not a sweep running, which is exactly the contention the queue now
+# prevents. These are fallbacks: _rate() re-measures and only uses them if it cannot.
+FALLBACK_S_PER_STEP = 5.10
+FALLBACK_SWEEP_S = 121 * 60
+EPOCHS = 24
+_rate_cache: dict = {}
+
+
+def _rate(cfg: dict, max_age_s: float = 600.0) -> dict:
+    """(s_per_step, sweep_s) from past runs, so the estimate tracks the machine.
+
+    Re-measured at most every ten minutes: it is a glob and a stat, but it is on
+    the path of a page that polls every five seconds.
+    """
+    import statistics
+    import time
+
+    now = time.monotonic()
+    if _rate_cache.get("at", 0) + max_age_s > now:
+        return _rate_cache["value"]
+
+    from ..config import outputs_dir  # noqa: PLC0415
+    from ..train.dataset import choose_num_repeats  # noqa: PLC0415
+    from ..train.preview import load_preview, preview_root  # noqa: PLC0415
+
+    out = outputs_dir(cfg)
+    root = preview_root(cfg)
+    steps_rates, sweeps = [], []
+    for lora in sorted((out / "lora-datasets").glob("*/lora")):
+        cps = sorted(lora.glob("*-0000*.safetensors"), key=lambda p: p.stat().st_mtime)
+        if len(cps) < 6:
+            continue          # too few saves to time anything from
+        ds = lora.parent.name
+        doc = load_preview(root, ds)
+        n = (doc.get("n") or len(doc.get("images", []))) if doc else 0
+        if not n:
+            continue
+        per_epoch = n * choose_num_repeats(n)
+        span = cps[-1].stat().st_mtime - cps[0].stat().st_mtime
+        gaps = len(cps) - 1
+        if span > 0 and gaps > 0:
+            steps_rates.append(span / (gaps * per_epoch))
+        js = out / "judge" / "sets" / f"dense_{ds}_asset.json"
+        if js.is_file():
+            sweep = js.stat().st_mtime - cps[-1].stat().st_mtime
+            # A sweep that "took" six hours spent most of it waiting for the card.
+            # Keep the plausible ones; the median would survive either way.
+            if 0 < sweep < 4 * 3600:
+                sweeps.append(sweep)
+
+    value = {
+        "s_per_step": statistics.median(steps_rates) if steps_rates else FALLBACK_S_PER_STEP,
+        "sweep_s": statistics.median(sweeps) if sweeps else FALLBACK_SWEEP_S,
+        "n_runs": len(steps_rates),
+        "measured": bool(steps_rates),
+    }
+    _rate_cache.update(at=now, value=value)
+    return value
+
+
+def estimate(cfg: dict, images: int) -> dict:
+    """Wall-clock estimate for the standard 24-epoch run plus its epoch sweep."""
+    from ..train.dataset import choose_num_repeats  # noqa: PLC0415
+
+    r = _rate(cfg)
+    if images <= 0:
+        return {"train_s": None, "sweep_s": None, "total_s": None, "steps": None,
+                "basis": "no image count, so no estimate"}
+    repeats = choose_num_repeats(images)
+    steps = images * repeats * EPOCHS
+    train_s = steps * r["s_per_step"]
+    basis = (f"{images} images x{repeats} repeats x{EPOCHS} epochs = {steps} steps at "
+             f"{r['s_per_step']:.2f} s/step"
+             + (f", measured over {r['n_runs']} past runs" if r["measured"] else ", assumed"))
+    return {"train_s": train_s, "sweep_s": r["sweep_s"], "total_s": train_s + r["sweep_s"],
+            "steps": steps, "repeats": repeats, "basis": basis}
+
+
 def character_of(dataset: str) -> str:
     """`marisol_v2` -> `marisol`. Shown in the UI before anything is queued, so a
     dataset whose name does not follow the convention is visible rather than silent."""
@@ -361,6 +461,13 @@ def queue_state(cfg: dict) -> dict:
         if j["kind"] == "train":
             row["what"] = "LoRA training, then the epoch sweep"
         row["is_next"] = bool(head and j["id"] == head["id"])
+        row["estimate"] = None
+        if j["kind"] == "train":
+            from ..train.preview import load_preview, preview_root  # noqa: PLC0415
+
+            doc_prev = load_preview(preview_root(cfg), j["label"])
+            imgs = (doc_prev.get("n") or len(doc_prev.get("images", []))) if doc_prev else 0
+            row["estimate"] = estimate(cfg, imgs)
         row["blocked_reason"] = None
         # Only the head job can block the queue - it blocks rather than being
         # skipped - so it is the only one worth checking an approval for.
@@ -377,7 +484,12 @@ def queue_state(cfg: dict) -> dict:
     if rec:
         lease = {"pid": rec.get("pid"), "started_at": rec.get("started_at"),
                  "alive": pid_alive(int(rec.get("pid", 0)))}
+    # What the queue adds AFTER whatever is running now - the number he actually
+    # wants when deciding whether to add another character tonight.
+    queued_s = sum((j["estimate"] or {}).get("total_s") or 0
+                   for j in jobs if j["status"] == "queued" and not j["hold"])
     return {"jobs": jobs, "paused": doc["paused"], "pause_reason": doc["pause_reason"],
+            "queued_s": queued_s or None,
             "lease": lease, "runner_says": _runner_last_line(out),
             "attention": sum(1 for j in jobs if j["blocked_reason"] or j["status"] == "failed")
                          + (1 if doc["paused"] else 0)
@@ -429,7 +541,7 @@ def candidates(cfg: dict) -> list[dict]:
         rows.append({"dataset": ds, "character": character_of(ds),
                      "who": character_of(ds).replace("_", " ").title(),
                      "approved_at": st["at"], "days_waiting": waited,
-                     "images": images})
+                     "images": images, "estimate": estimate(cfg, images)})
     rows.sort(key=lambda r: r["approved_at"] or "")
     return rows
 
