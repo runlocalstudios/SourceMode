@@ -224,8 +224,10 @@ def test_monitor_host_prefers_the_argument_then_the_env_var(monkeypatch):
 
 
 def test_hub_serves_both_tabs_and_their_counts(tmp_path: Path):
-    """One bookmarkable page. The two review pages have colliding scripts and both
-    use location.hash, so the hub frames them rather than merging them."""
+    """One bookmarkable page. The review pages have colliding scripts and both use
+    location.hash, so the hub frames them rather than merging them. The GPU tab is
+    first: the question on walking up to the box is what it is doing and what is
+    next."""
     pytest.importorskip("httpx")
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
@@ -250,13 +252,20 @@ def test_hub_serves_both_tabs_and_their_counts(tmp_path: Path):
     q = ds / "a.png"; Image.new("RGB", (8, 8)).save(q); q.with_suffix(".txt").write_text("x", encoding="utf-8")
     build_preview(proot, tmp_path / "ds", measure=False)
 
-    cfg = {"assets": {"judge": str(jroot)}, "train": {"previews": str(proot)}}
+    cfg = {"assets": {"judge": str(jroot)}, "train": {"previews": str(proot)},
+           "paths": {"outputs": str(tmp_path / "out")}}
     app = FastAPI(); app.include_router(hub_router(cfg))
     c = TestClient(app)
 
     page = c.get("/").text
-    assert 'src="/judge"' in page and "'/dataset'" in page
-    assert c.get("/hub/counts").json() == {"judge": 1, "datasets": 1}
+    # The GPU tab opens first and is the only frame with an initial src; the other
+    # two load on first use so switching back keeps their place.
+    assert 'id=p_gpu class="pane on" src="/queue"' in page
+    assert "<iframe id=p_judge class=pane>" in page
+    assert "{gpu:'/queue',judge:'/judge',datasets:'/dataset'}" in page
+    assert "location.hash.slice(1) : 'gpu'" in page
+
+    assert c.get("/hub/counts").json() == {"gpu": 0, "judge": 1, "datasets": 1}
 
     record_approval(proot, "ds", True)
-    assert c.get("/hub/counts").json() == {"judge": 1, "datasets": 0}
+    assert c.get("/hub/counts").json() == {"gpu": 0, "judge": 1, "datasets": 0}

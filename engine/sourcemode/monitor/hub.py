@@ -92,7 +92,11 @@ def hub_router(cfg: dict):
         """What is waiting for him, without loading either page."""
         from .queue_page import queue_state  # noqa: PLC0415
 
-        return {"gpu": queue_state(cfg)["attention"],
+        try:
+            gpu = queue_state(cfg)["attention"]
+        except Exception:  # noqa: BLE001 - a tab badge must never 500 the whole hub
+            gpu = 0
+        return {"gpu": gpu,
                 "judge": sum(1 for s in list_sets(judge_root(cfg)) if not s["done"]),
                 "datasets": sum(1 for s in list_previews(preview_root(cfg)) if not s["approved"])}
 

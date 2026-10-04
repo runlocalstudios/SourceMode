@@ -26,11 +26,16 @@ def env(tmp_path, monkeypatch):
     man = tmp_path / "manifest.json"; man.write_text(json.dumps(src), encoding="utf-8")
     monkeypatch.setattr(manifest_mod, "MANIFESTS_DIR", tmp_path / "work")
     monkeypatch.setattr(manifest_mod, "MANIFEST_PATH", man)
+    # The live pricing file accumulates OBSERVED usage from real runs, and every
+    # estimate depends on it - so a test reading it straight breaks the next time
+    # Jeremy runs a pilot (which is exactly what happened on 2026-10-04: a `high`
+    # run made two tests fail for no reason of their own). Copy the prices, drop
+    # the observations, and let each test record whatever it needs.
     pricing = tmp_path / "pricing.json"
-    pricing.write_text((ROOT / "data" / "pricing.json").read_text(encoding="utf-8"), encoding="utf-8")
-    # The live pricing file carries observed usage from real runs, so "the mock
-    # wrote nothing" has to be measured against the baseline, not against {}.
-    observed_before = json.loads(pricing.read_text(encoding="utf-8")).get("observed", {})
+    pr = json.loads((ROOT / "data" / "pricing.json").read_text(encoding="utf-8"))
+    pr["observed"] = {}
+    pricing.write_text(json.dumps(pr), encoding="utf-8")
+    observed_before = {}   # the copy above starts with none
     return {"refs": refs, "manifest": man, "outputs": tmp_path / "out", "pricing": pricing,
             "src": src, "observed_before": observed_before}
 
