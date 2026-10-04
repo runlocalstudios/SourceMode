@@ -71,7 +71,7 @@ BODY = """
     <div id=banners></div>
     <h2>Now</h2>
     <div id=now><div class="card skel" style="height:148px"></div></div>
-    <h2>Tonight</h2>
+    <h2>Next 24 hours</h2>
     <div id=tonight></div>
     <h2>Queue</h2>
     <div id=list></div>
@@ -199,10 +199,11 @@ function drawPlan(){
   const W=plan.window_s;
   let bars='';
   for(const b of plan.blocks){
-    const share=(b.end_s-b.start_s)/W*100;
+    /* an unknown-length block gets a visible minimum, not a 0% sliver */
+    const share=b.unknown?4:(b.end_s-b.start_s)/W*100;
     bars+='<button class="b-'+b.status+'" style="flex:0 0 '+share.toFixed(1)+'%" '
       +'data-go="'+SM.esc(b.id)+'" title="'+SM.esc(b.basis)+'">'
-      +SM.esc(b.who)+' '+SM.dur(b.end_s-b.start_s)+'</button>';
+      +SM.esc(b.who)+' '+(b.unknown?'?':SM.dur(b.end_s-b.start_s))+'</button>';
   }
   if(plan.free_s>0)
     bars+='<button class=b-free style="flex:0 0 '+(plan.free_s/W*100).toFixed(1)+'%" '
@@ -226,8 +227,12 @@ function drawPlan(){
   SM.set($('tonight'),null,'<div class=card><div class=plan>'+bars+'</div>'
     +'<div class=plan-ticks><span>now '+SM.clock(plan.now_ts)+'</span>'
     +'<span>+12h</span><span>+24h</span></div>'
-    +'<div class=plan-line>Card frees at <b>'+SM.clock(plan.booked_until_ts)+'</b>'
-    +' &middot; <b>'+SM.dur(plan.free_s)+'</b> unbooked in the next 24h.</div>'
+    +'<div class=plan-line>'+(plan.unknown_n
+       ? ('Card busy until at least <b>'+SM.clock(plan.booked_until_ts)+'</b>'
+          +' &middot; '+plan.unknown_n+' job'+(plan.unknown_n===1?'':'s')
+          +' of unknown length on top')
+       : ('Card frees at <b>'+SM.clock(plan.booked_until_ts)+'</b>'
+          +' &middot; <b>'+SM.dur(plan.free_s)+'</b> unbooked'))+'.</div>'
     +notes+fits+'</div>');
 }
 
@@ -487,6 +492,12 @@ PAGE = page("SourceMode GPU", BODY, OWN_JS, OWN_CSS)
 # prevents. These are fallbacks: _rate() re-measures and only uses them if it cannot.
 FALLBACK_S_PER_STEP = 5.10
 FALLBACK_SWEEP_S = 121 * 60
+# 2026-10-04, median over 24 finished sweeps: 79.6 s per rendered image, with the
+# bulk tightly clustered 73-90 s. The asset figure is one finished pack (amanda,
+# 56 shots) at 119 s - a shot is slower than a sweep render because the pack
+# renders several candidates per look through the native pipeline.
+FALLBACK_S_PER_RENDER = 79.6
+FALLBACK_S_PER_SHOT = 119.0
 EPOCHS = 24
 _rate_cache: dict = {}
 
@@ -542,11 +553,51 @@ def _rate(cfg: dict, max_age_s: float = 600.0) -> dict:
             if 0 < sweep < 4 * 3600:
                 sweeps.append(sweep)
 
+    # How long ONE rendered image takes, measured the same way: the span across a
+    # finished run divided by its images. A training step and a render are
+    # different units and a page that quotes both must measure both - quoting
+    # only the training rate is why every eval and asset job read as zero-length.
+    def _per_file(root, pattern, lo=20.0, hi=600.0):
+        """Seconds per image, as the MEDIAN GAP between consecutive files.
+
+        Not span/count: amanda's pack is 504 shots across 28 hours and sandra's
+        367 across 25, because a pack is rendered over days with the card doing
+        other things in between. span/count measures the idle, not the work, and
+        read 250 s/shot against a true ~120. A median gap ignores any number of
+        pauses as long as most renders follow each other.
+
+        The floor is 20 s, not 2, because the gap distribution is bimodal: a
+        cluster around 4 s where several files land per render, and the real
+        render gap above 50 s. Counting the fast cluster pulled sandra's median
+        to 66 s against a true 116 - which is BELOW the sweep render rate, and
+        that is what gave it away.
+        """
+        out = []
+        for d in sorted(root.glob("*")):
+            files = sorted((f for f in d.rglob(pattern) if "_web" not in f.parts),
+                           key=lambda f: f.stat().st_mtime)
+            if len(files) < 20:
+                continue
+            gaps = [b.stat().st_mtime - a.stat().st_mtime
+                    for a, b in zip(files, files[1:])]
+            gaps = [g for g in gaps if lo < g < hi]
+            if len(gaps) >= 10:
+                out.append(statistics.median(gaps))
+        return out
+
+    renders = _per_file(out, "scene_*.png")
+    shots = [r for d in [out / "game-assets"] if d.is_dir()
+             for r in _per_file(d, "shot_*.png")]
+
     value = {
         "s_per_step": statistics.median(steps_rates) if steps_rates else FALLBACK_S_PER_STEP,
         "sweep_s": statistics.median(sweeps) if sweeps else FALLBACK_SWEEP_S,
-        "n_runs": len(steps_rates),
+        "s_per_render": statistics.median(renders) if renders else FALLBACK_S_PER_RENDER,
+        "s_per_shot": statistics.median(shots) if shots else FALLBACK_S_PER_SHOT,
+        "n_runs": len(steps_rates), "n_render_runs": len(renders),
+        "n_shot_runs": len(shots),
         "measured": bool(steps_rates),
+        "render_measured": bool(renders), "shot_measured": bool(shots),
     }
     _rate_cache.update(at=now, value=value)
     return value
@@ -563,9 +614,10 @@ def estimate(cfg: dict, images: int) -> dict:
     repeats = choose_num_repeats(images)
     steps = images * repeats * EPOCHS
     train_s = steps * r["s_per_step"]
-    basis = (f"{images} images x{repeats} repeats x{EPOCHS} epochs = {steps} steps at "
-             f"{r['s_per_step']:.2f} s/step"
-             + (f", measured over {r['n_runs']} past runs" if r["measured"] else ", assumed"))
+    # The step count is worth seeing; the rate it was multiplied by is not.
+    # Jeremy, 2026-10-04: "We don't need to show the seconds per step. The total
+    # training time is enough. And I do like to see the total steps."
+    basis = f"{images} images x{repeats} repeats x{EPOCHS} epochs = {steps} steps"
     return {"train_s": train_s, "sweep_s": r["sweep_s"], "total_s": train_s + r["sweep_s"],
             "steps": steps, "repeats": repeats, "basis": basis}
 
@@ -639,7 +691,14 @@ def now_card(jobs: list[dict], status: dict | None) -> dict | None:
     pr = tr.get("progress") or {}
     mtime, sampled = tr.get("log_mtime"), status.get("sampled_at")
     age = max(0.0, sampled - mtime) if (mtime and sampled) else None
-    step, total = pr.get("step"), pr.get("total")
+    # The sampler's training block describes the most recent TRAINING run, which
+    # is not necessarily what is on the card. Attributing it to a prep, eval or
+    # assets job reported Tess's captioning as "step 3744 of 3744 at 5.44 s/it",
+    # which was Zara's finished training run - a progress bar for the wrong job,
+    # and before this a stall flag for the wrong job too. Training numbers are
+    # reported only when a training job is what is running.
+    training_job = bool(run and run.get("kind") == "train")
+    step, total = (pr.get("step"), pr.get("total")) if training_job else (None, None)
     line = ""
     if step is not None and total:
         line = f"step {step} of {total}"
@@ -648,17 +707,99 @@ def now_card(jobs: list[dict], status: dict | None) -> dict | None:
     return {
         "job_id": run["id"] if run else None,
         "who": (run or {}).get("who"), "what": (run or {}).get("what"),
-        "epoch": tr.get("epoch"), "epochs": tr.get("epochs"),
+        "kind": (run or {}).get("kind"),
+        "epoch": tr.get("epoch") if training_job else None,
+        "epochs": tr.get("epochs") if training_job else None,
         "step": step, "total": total,
         "progress": (step / total) if (step is not None and total) else None,
-        "eta_s": pr.get("eta_s"), "elapsed_s": pr.get("elapsed_s"),
-        "s_per_it": pr.get("s_per_it"), "progress_line": line,
-        "log": tr.get("log"), "log_age_s": age,
-        "log_last_line_at": _iso_utc(mtime) if mtime else None,
-        "stalled": bool(run and age is not None and age > STALL_S),
-        "ageing": bool(age is not None and age > AGEING_S),
+        "eta_s": pr.get("eta_s") if training_job else None,
+        "elapsed_s": pr.get("elapsed_s") if training_job else None,
+        "s_per_it": pr.get("s_per_it") if training_job else None,
+        "progress_line": line,
+        "log": tr.get("log") if training_job else (run or {}).get("log"),
+        "log_age_s": age if training_job else None,
+        "log_last_line_at": _iso_utc(mtime) if (mtime and training_job) else None,
+        "stalled": bool(training_job and age is not None and age > STALL_S),
+        "ageing": bool(training_job and age is not None and age > AGEING_S),
         "sampled_at": sampled,
     }
+
+
+def render_count(cmd: list[str]) -> tuple[int, str] | None:
+    """How many images a queued RENDER job will produce, read from its command.
+
+    Only the shapes this repo queues itself are understood; anything else
+    returns None and is reported as unknown rather than guessed at. A job whose
+    length cannot be derived must not be drawn as zero-length - that is how a
+    schedule claims the card is free while three jobs are waiting on it.
+    """
+    import json as _json  # noqa: PLC0415
+    from pathlib import Path as _P  # noqa: PLC0415
+
+    joined = " ".join(cmd)
+
+    def flag(name, default=None):
+        return cmd[cmd.index(name) + 1] if name in cmd and cmd.index(name) + 1 < len(cmd) else default
+
+    if "assets" in cmd and "render" in cmd:
+        plan_p = flag("--plan")
+        if not plan_p:
+            return None
+        try:
+            doc = _json.loads(_P(plan_p).read_text(encoding="utf-8"))
+            looks = sum(c["lookCount"] for c in doc["categories"].values())
+        except (OSError, ValueError, KeyError):
+            return None
+        shots = int(flag("--shots", 4) or 4)
+        only = flag("--only")
+        if only:
+            looks = len([x for x in only.split(",") if x.strip()])
+        return looks * shots, f"{looks} looks x {shots} shots"
+
+    if "prompt_ab.py" in joined:
+        arms = len([a for a in (flag("--arms", "") or "").split("|") if "=" in a])
+        scenes = len([x for x in (flag("--scenes", "0,2,6") or "").split(",") if x.strip()])
+        if arms and scenes:
+            return arms * scenes, f"{arms} arms x {scenes} scenes"
+        return None
+
+    if "dense_epoch_eval.py" in joined:
+        # positional: script char sub total start end trigger ckpt [scenes]
+        pos = [c for c in cmd if not c.startswith("--")]
+        try:
+            i = next(k for k, c in enumerate(pos) if c.endswith("dense_epoch_eval.py"))
+            start, end = int(pos[i + 4]), int(pos[i + 5])
+            scenes = int(pos[i + 8]) if len(pos) > i + 8 else 20
+        except (StopIteration, ValueError, IndexError):
+            return None
+        epochs = flag("--epochs")
+        n_eps = len([x for x in epochs.split(",") if x.strip()]) if epochs else (end - start + 1)
+        if n_eps <= 0 or scenes <= 0:
+            return None
+        return n_eps * scenes, f"{n_eps} epochs x {scenes} scenes"
+    return None
+
+
+def job_estimate(cfg: dict, job: dict) -> dict | None:
+    """Wall-clock for any queued job, or None when its length is unknowable."""
+    if job["kind"] == "train":
+        from ..train.preview import load_preview, preview_root  # noqa: PLC0415
+
+        doc = load_preview(preview_root(cfg), job["label"])
+        imgs = (doc.get("n") or len(doc.get("images", []))) if doc else 0
+        return estimate(cfg, imgs)
+    got = render_count(job.get("cmd") or [])
+    if not got:
+        return None
+    n, how = got
+    r = _rate(cfg)
+    per = r["s_per_shot"] if job["kind"] == "assets" else r["s_per_render"]
+    measured = r["shot_measured"] if job["kind"] == "assets" else r["render_measured"]
+    unit = "shot" if job["kind"] == "assets" else "render"
+    runs = r["n_shot_runs"] if job["kind"] == "assets" else r["n_render_runs"]
+    return {"train_s": None, "sweep_s": None, "total_s": n * per, "steps": None,
+            "basis": f"{how} = {n} {unit}s at {per:.0f} s/{unit}"
+                     + (f", measured over {runs} past runs" if measured else ", assumed")}
 
 
 def character_of(dataset: str) -> str:
@@ -707,13 +848,9 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
         if j["kind"] == "train":
             row["what"] = "LoRA training, then the epoch sweep"
         row["is_next"] = bool(head and j["id"] == head["id"])
-        row["estimate"] = None
-        if j["kind"] == "train":
-            from ..train.preview import load_preview, preview_root  # noqa: PLC0415
-
-            doc_prev = load_preview(preview_root(cfg), j["label"])
-            imgs = (doc_prev.get("n") or len(doc_prev.get("images", []))) if doc_prev else 0
-            row["estimate"] = estimate(cfg, imgs)
+        # Every kind, not just training: an eval or an asset pack is hours of the
+        # card and used to be reported as nothing at all.
+        row["estimate"] = job_estimate(cfg, j)
         row["blocked_reason"] = None
         # Only the head job can block the queue - it blocks rather than being
         # skipped - so it is the only one worth checking an approval for.
@@ -738,10 +875,15 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
     now = now_card(jobs, status)
     age = (now or {}).get("log_age_s")
     for row in jobs:
+        # The age we have is the TRAINING log's. A prep, eval or assets job
+        # writes no training log, so handing it that age marked every one of
+        # them Stopped fifteen minutes in - j002 went red while it was running
+        # perfectly well. Only a training job is watched this way.
+        watched = row["status"] == "running" and row["kind"] == "train"
         row["state"] = _state_of(
             row, paused=doc["paused"],
             runner_alive=bool(lease and lease["alive"]),
-            log_age_s=age if row["status"] == "running" else None)
+            log_age_s=age if watched else None)
     # What the queue adds AFTER whatever is running now - the number he actually
     # wants when deciding whether to add another character tonight.
     queued_s = sum((j["estimate"] or {}).get("total_s") or 0
@@ -830,6 +972,7 @@ def sweepable(cfg: dict) -> list[dict]:
     jroot = judge_root(cfg)
     doc = q.load(q.queue_path(out))
     base = out / "lora-datasets"
+    set_ids = [f.stem for f in (jroot / "sets").glob("*.json")] if (jroot / "sets").is_dir() else []
     rows = []
     for d in sorted(base.glob("*")) if base.is_dir() else []:
         if not d.is_dir():
@@ -838,8 +981,29 @@ def sweepable(cfg: dict) -> list[dict]:
         ckpts = [c for sub in checkpoint_dirs(out, ds) for c in sub.glob("*.safetensors")]
         if not ckpts:
             continue                       # not trained
-        if sweep_sets_for(jroot, ds):
-            continue                       # already swept
+
+        # A run with a custom output name is swept under THAT name, not the
+        # dataset's: gabi_curated trained `gabi_full` and was swept as
+        # `gabi_every_epoch`, jojo_curated trained `jojo_a2` and was swept as
+        # `coarse_jojo_a2`, sunny_curated trained `sunny_r32` as
+        # `coarse_sunny_r32`. Resolving on the dataset id alone reported all
+        # three as never swept, which is three false alarms out of three.
+        #
+        # So the names to look under are the dataset, every checkpoint's output
+        # name, and the leading token of each - and a match on ANY of them
+        # counts. This list exists to prompt an action, so it must under-report
+        # rather than over-report: a stranded run found late costs less than a
+        # button that cannot help.
+        names = {ds, character_of(ds)}
+        for c in ckpts:
+            stem = c.stem.rsplit("-", 1)[0] if c.stem.rsplit("-", 1)[-1].isdigit() else c.stem
+            names.add(stem)
+            names.add(stem.split("_")[0])
+        names = {n for n in names if len(n) >= 3}
+        if any(sweep_sets_for(jroot, n) for n in names):
+            continue                       # already swept, under one of its names
+        if any(any(n in sid for n in names) for sid in set_ids):
+            continue                       # a judge set names it, grammar aside
         if q.duplicate_of(doc, "eval", ds) or q.duplicate_of(doc, "train", ds):
             continue                       # queued; the queue is the surface
         doc_prev = None
@@ -958,7 +1122,7 @@ def plan(cfg: dict, status: dict | None = None) -> dict:
                 basis = f"no measured duration for a {j['kind']} job"
         blocks.append({"id": j["id"], "who": j["who"], "what": j["what"],
                        "status": j["state"]["status"], "start_s": t, "end_s": t + dur,
-                       "estimated": estimated, "basis": basis})
+                       "estimated": estimated, "unknown": not dur, "basis": basis})
         t += dur
     # A held job is not a booking, and neither is one that cannot start. Both are
     # reported separately rather than quietly counted, because counting them is
@@ -971,7 +1135,13 @@ def plan(cfg: dict, status: dict | None = None) -> dict:
         return sum((j["estimate"] or {}).get("total_s") or 0 for j in rows)
 
     free = max(0.0, window - t)
+    # A job whose length cannot be derived contributes 0 to the total, so the
+    # total is a FLOOR and the page must say so rather than print a time the
+    # card will be free. Reporting "frees at 10:14" with a running job of
+    # unknown length is the same lie as counting a held job as a booking.
+    unknown = [b for b in blocks if b["unknown"]]
     return {"now_ts": now_ts, "window_s": window, "blocks": blocks,
+            "unknown_n": len(unknown),
             "booked_s": t, "booked_until_ts": now_ts + t, "free_s": free,
             "held_s": secs(held), "held_n": len(held),
             "blocked_s": secs(blocked), "blocked_n": len(blocked),
@@ -1061,7 +1231,11 @@ def queue_router(cfg: dict, status=None):
 
     @router.get("/queue/state")
     def state() -> dict:
-        return queue_state(cfg)
+        # The sampler is what makes the `now` block exist. Without it this route
+        # returned now=None while a job was plainly running, so the page's Now
+        # card read "Nothing is running" directly above a queue row saying
+        # "Running now".
+        return queue_state(cfg, status() if status else None)
 
     @router.get("/queue/candidates")
     def candidates_route() -> list[dict]:

@@ -322,7 +322,12 @@ def test_a_candidate_carries_a_measured_time_estimate(cfg_full, tmp_path):
     assert e["steps"] == 74 * 3 * 24, "74 images need 3 repeats to put an epoch in range"
     assert 5 * 3600 < e["train_s"] < 12 * 3600
     assert e["total_s"] > e["train_s"], "the epoch sweep is part of what holds the card"
-    assert "74 images" in e["basis"] and "s/step" in e["basis"]
+    # Jeremy, 2026-10-04: the step count is worth seeing, the rate it was
+    # multiplied by is not. The basis states the arithmetic that produced the
+    # steps and stops there.
+    assert "74 images" in e["basis"]
+    assert "5328 steps" in e["basis"]
+    assert "s/step" not in e["basis"], "the rate was deliberately removed"
 
 
 def test_the_estimate_is_remeasured_from_completed_runs(cfg_full, tmp_path):
@@ -352,7 +357,12 @@ def test_the_estimate_falls_back_and_says_so_when_nothing_has_been_measured(cfg_
     r = qp._rate(cfg_full, max_age_s=0)
     assert r["measured"] is False
     assert r["s_per_step"] == qp.FALLBACK_S_PER_STEP
-    assert "assumed" in qp.estimate(cfg_full, 50)["basis"]
+    # The fallback still drives the NUMBER; it is simply no longer narrated in
+    # the training basis. A render job's basis does still say measured/assumed,
+    # because there the run count is the only clue to how trustworthy it is.
+    est = qp.estimate(cfg_full, 50)
+    assert est["train_s"] == est["steps"] * qp.FALLBACK_S_PER_STEP
+    assert "3600 steps" in est["basis"]
     qp._rate_cache.clear()
 
 
