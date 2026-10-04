@@ -140,12 +140,17 @@ def test_a_box_braided_character_is_never_asked_for_loose_hair():
 
     tess = hair_options("tess")
     assert tess != DEFAULT_HAIR
-    assert all("braid" in h for h in tess)
-    assert not any("loose" in h for h in tess)
+    # The braids are NOT named - Jeremy, 2026-10-04: "I don't want you to define
+    # the box braids because that's part of the character... We want it to
+    # recognize that that is just her." They are in all 62 training frames, so
+    # an uncaptioned, unprompted constant binds to the trigger and she has them.
+    # What this list does is keep the word "loose" out of her prompts.
+    assert not any("braid" in h for h in tess)
+    assert not any("loose" in h or "down and flowing" in h for h in tess)
 
     for sid in ("boudoir", "selfies"):
         hairs = {s["hair"] for s in BY_ID[sid].plan(character="tess")}
-        assert all("braid" in h for h in hairs), sid
+        assert not any("loose" in h for h in hairs), sid
 
 
 def test_a_character_with_no_list_keeps_the_shared_rotation():
@@ -157,11 +162,72 @@ def test_a_character_with_no_list_keeps_the_shared_rotation():
     assert BY_ID["boudoir"].plan()[0]["hair"] == DEFAULT_HAIR[0]
 
 
-def test_the_braid_style_itself_is_identity_not_a_per_look_clause():
-    # It is in every frame, so a clause that re-states it on some looks and not
-    # others would make a constant accidentally variable. It lives in her
-    # appearance record; the per-look clause only varies how it is WORN.
-    from sourcemode.assets.appearance import clause
+def test_the_braid_style_is_named_nowhere_at_all():
+    """Not in the per-look clause, and not in her appearance clause either.
 
-    assert "box braids" in clause("tess")
-    assert "square grid" in clause("tess")
+    Jeremy, 2026-10-04: "I don't want you to define the box braids because
+    that's part of the character. We don't want the LoRA to exclude that. We
+    want it to recognize that that is just her." Naming a trait is exactly what
+    keeps it variable (assetgen rule b); leaving a constant unnamed is what
+    binds it to the trigger.
+    """
+    from sourcemode.assets.appearance import clause
+    from sourcemode.assets.wardrobe import hair_options
+
+    assert "braid" not in clause("tess").lower()
+    assert not any("braid" in h.lower() for h in hair_options("tess"))
+
+
+# --- long hair and a bun cannot share a prompt ------------------------------
+
+def test_an_up_style_strips_the_length_from_the_identity_clause():
+    """Jeremy, 2026-10-04: "you cannot put long hair in the same prompt as a
+    messy bun. Otherwise, you get those weird results."
+
+    Measured before fixing: every one of the 10 bun-prompted shots across
+    geena's and cindy's four sets rendered the full length hanging down WITH a
+    bun on top. He kept 3 of 10, against 25 of 30 for every other prompt in the
+    same sets - 30% against 83%.
+    """
+    from sourcemode.assets.render import shot_prompt
+
+    base = {"id": "x", "look": 1, "category": "casual", "pose": "standing",
+            "outfit": "a black bralette"}
+    down = shot_prompt("cindy", {**base, "hair": "her hair worn loose"})
+    up = shot_prompt("cindy", {**base, "hair": "her hair up in a messy bun"})
+
+    ident = lambda p: p.split("Crop:")[0]  # noqa: E731
+    assert "very long" in ident(down), "a down style keeps her length"
+    assert "very long" not in ident(up), "an up style must not also say long"
+    # colour survives: it is the identity trait the base model will not volunteer
+    assert "platinum-blonde" in ident(up)
+    assert "her hair up in a messy bun" in up
+
+
+def test_every_up_style_in_the_shared_rotation_is_detected():
+    from sourcemode.assets.appearance import is_up_style
+    from sourcemode.assets.wardrobe import DEFAULT_HAIR
+
+    flags = [is_up_style(h) for h in DEFAULT_HAIR]
+    assert flags == [False, True, True, True], DEFAULT_HAIR
+    assert not is_up_style("a bunch of flowers behind her")
+
+
+def test_short_hair_keeps_its_length_because_it_does_not_fight_a_bun():
+    # priya is the only short-haired character; dropping "chin-length" would
+    # lose the trait, and a bob was never the thing colliding with an updo.
+    from sourcemode.assets.appearance import clause, drop_length
+
+    assert "chin-length" in drop_length(clause("priya"))
+
+
+def test_no_record_still_asserts_long_hair_under_an_up_style():
+    import json
+    import re
+    from pathlib import Path
+
+    from sourcemode.assets.appearance import clause, drop_length
+
+    d = json.loads((Path("../characters/appearance.json")).read_text(encoding="utf-8"))
+    for c in (k for k in d if not k.startswith("_")):
+        assert not re.search(r"\b(very long|long)\b", drop_length(clause(c)), re.I), c

@@ -78,6 +78,16 @@ def appearance_clause(character: str) -> str:
     return clause(character)
 
 
+def is_up_style(hair_clause: str) -> bool:
+    from .appearance import is_up_style as _f  # noqa: PLC0415
+    return _f(hair_clause)
+
+
+def drop_length(text: str) -> str:
+    from .appearance import drop_length as _f  # noqa: PLC0415
+    return _f(text)
+
+
 def character_negative(character: str) -> str:
     """The character's own negative, from the same record as her appearance."""
     from .appearance import negative  # noqa: PLC0415
@@ -159,6 +169,16 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
         return f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, {slot['hair']}. {look}"
     pf = pose_fields(character, slot)
     app = appearance_clause(character)
+    # MEASURED 2026-10-04: a prompt that says her hair is long AND asks for it up
+    # renders the full length hanging down with a bun perched on top - 10 of 10
+    # bun-prompted shots across geena and cindy, 30% kept against 83% for every
+    # other prompt in the same four sets. Jeremy had already said so: "you cannot
+    # put long hair in the same prompt as a messy bun."
+    # So the length words come out when the look puts the hair up. Colour and
+    # texture stay - a platinum bun is still platinum, and the colour is the
+    # identity trait the base model will not volunteer.
+    if is_up_style(slot.get("hair", "")):
+        app = drop_length(app)
     return (f"{trigger or character}. New photorealistic {slot.get('shot_type') or 'standing portrait'}"
             f" of {app + ', ' if app else ''}"
             f"her body shape and proportions exactly as described. "

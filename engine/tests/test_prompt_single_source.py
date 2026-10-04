@@ -64,13 +64,22 @@ def test_the_eval_has_one_scene_set():
 
 
 def test_every_eval_prompt_carries_her_appearance():
-    """The thing the second path lacked: age and the appearance sentence."""
+    """The thing the second path lacked: age and the appearance sentence.
+
+    One deliberate subtraction since 2026-10-04: a look that puts the hair UP
+    drops the length words, because a prompt asserting long hair and a bun
+    renders both - measured 10/10 across geena and cindy. Everything that
+    carries identity, the pink included, still has to survive that.
+    """
     from asset_scenes import asset_prompts
+    from sourcemode.assets.appearance import drop_length
 
     want = clause("vivienne")
     assert "pink" in want                   # the record is the one that was fixed
+    short = drop_length(want)
+    assert "pink" in short, "stripping length must never cost an identity trait"
     for p in asset_prompts("vivienne"):
-        assert want in p
+        assert want in p or short in p
 
 
 def test_the_characters_negative_reaches_the_pack_and_the_eval():

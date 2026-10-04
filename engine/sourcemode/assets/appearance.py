@@ -243,6 +243,48 @@ def check(character: str) -> dict:
             "conflicts": conflicts, "has_record": bool(rec)}
 
 
+#: Words that say the hair is HANGING. Measured 2026-10-04: a prompt carrying
+#: one of these in the identity clause and an up-style per look renders the full
+#: length down AND a bun perched on top of it - 10 of 10 bun-prompted shots
+#: across geena and cindy, and he rejected 7 of them. Keep rate on those ten was
+#: 30% against 83% for every other prompt in the same four sets.
+#:
+#: Jeremy had said this before it was measured: "you cannot put long hair in the
+#: same prompt as a messy bun. Otherwise, you get those weird results."
+# Only the words that mean LONG. "chin-length" and "shoulder-length" stay:
+# short hair does not fight a bun, and dropping priya's "chin-length" would
+# lose the one trait that makes her the only short-haired character in the cast.
+_LENGTH = re.compile(
+    r"\b(?:very long|waist-length|long)\s+"
+    r"(?=(?:[\w-]+\s+){0,5}?(?:hair|bob|braids|curls|waves)\b)", re.I)
+_FLOWING = re.compile(r",?\s*\b(?:hanging (?:free|loose|down)[^,.]*"
+                      r"|worn (?:loose|down)|falling [^,.]*"
+                      r"|down (?:her|the) back)", re.I)
+
+#: An up-style in a per-look hair clause. Whole words, so "bunch" cannot trip it.
+_UP = re.compile(r"\b(?:bun|ponytail|pinned back|pinned up|gathered|tied back"
+                 r"|updo|piled|chignon|topknot|twisted up)\b", re.I)
+
+
+def is_up_style(hair_clause: str) -> bool:
+    """Does this per-look hair clause put the hair UP?"""
+    return bool(_UP.search(hair_clause or ""))
+
+
+def drop_length(text: str) -> str:
+    """Remove hanging-hair wording from an identity clause.
+
+    Only the words that assert the hair is DOWN go: length and flow. Colour and
+    texture stay, because a platinum bun is still platinum and the colour is the
+    identity trait the base model will not volunteer.
+    """
+    out = _FLOWING.sub("", _LENGTH.sub("", text or ""))
+    out = re.sub(r"\s{2,}", " ", out)
+    out = re.sub(r"\s+,", ",", out)
+    out = re.sub(r",\s*,", ",", out)
+    return out.strip(" ,")
+
+
 def clause(character: str) -> str:
     """"an 18-year-old, extremely petite..." - age first, then the body text if any.
 

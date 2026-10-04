@@ -116,18 +116,18 @@
   "avoid": "print, pastel and anything casual enough to read as off-duty - she is never off-duty"
  },
  "tess": {
-  "_note": "Jeremy, 2026-10-04: her braid is a specific protective style, not the generic braid the LoRA-Gen vocabulary means. The BRAIDS are identity and live in appearance.json; what varies per look is how they are WORN, which is the list below. Without it every pack and shoot would ask a box-braided character for loose hair.",
+  "_note": "Jeremy, 2026-10-04: the braids are part of the character and are named nowhere - the LoRA supplies them. What this list does is keep the word 'loose' out of her prompts, because the shared rotation opens with 'her hair worn loose' and that is the one thing a box-braided character must never be asked for.",
   "hair": [
-   "her box braids hanging down her back",
-   "her box braids gathered into a high ponytail",
-   "her box braids pulled over one shoulder",
-   "her box braids piled into a bun at the crown",
-   "her box braids half pinned back",
-   "her box braids tied back off her face"
+   "her hair hanging down her back",
+   "her hair gathered into a high ponytail",
+   "her hair pulled over one shoulder",
+   "her hair piled into a bun at the crown",
+   "her hair half pinned back",
+   "her hair tied back off her face"
   ],
   "style": "clean and simple, nothing that competes with the braids",
   "palette": "cream, denim, olive and black",
-  "avoid": "no hairstyle clause that implies unbraided hair - she is never 'loose'"
+  "avoid": "no hair clause that says 'loose' or 'down and flowing' - it fights what she actually has"
  },
  "cassie": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. Sells drink to bars and restaurants on evening calls; teaches yoga at Ironline Studio a few mornings a week.",

@@ -131,13 +131,13 @@
   "negative": "no bangs, bare forehead, exposed forehead, forehead fully visible, hair swept back off the forehead, centre parting, middle part, hair tucked behind the hairline, curtain bangs, side-swept bangs, receding hairline"
  },
  "tess": {
-  "_note": "Corrected by Jeremy, 2026-10-04. Her hair is LONG BOX BRAIDS - many individual plaits parted in a square grid at the scalp, hanging free past her waist. Not 'a braid', which is one plait and is what the LoRA-Gen caption vocabulary means. It is her signature, so it is named here and every render asks for it. Age comes from the game's characters.js - an `age` field here would override it, so there deliberately is none.",
+  "_note": "Jeremy, 2026-10-04: \"I don't want you to define the box braids because that's part of the character. We don't want the LoRA to exclude that. We want it to recognize that that is just her.\" So the braids are named NOWHERE - not here, not in a per-look hair clause. They are in all 62 training frames, so an uncaptioned constant binds to the trigger and she simply has them. Naming a trait is what keeps it variable. Age comes from the game's characters.js - an `age` field here would override it, so there deliberately is none.",
   "ethnicity": "Black",
   "build": "very petite",
   "figure": "slim, slender frame",
-  "features": "long black box braids - many individual plaits parted in a square grid at the scalp, hanging free past her waist - hazel eyes, deep dark-brown skin, full lips, high cheekbones",
+  "features": "hazel eyes, deep dark-brown skin, full lips, high cheekbones",
   "frame": "tiny frame",
-  "prompt": "a very petite Black young woman with a slender frame, deep dark-brown skin, long black box braids - many individual plaits parted in a square grid at the scalp, hanging free past her waist - hazel eyes, full lips and high cheekbones"
+  "prompt": "a very petite Black young woman with a slender frame, deep dark-brown skin, hazel eyes, full lips and high cheekbones"
  },
  "vivienne": {
   "ethnicity": "Vietnamese",
@@ -192,15 +192,16 @@
   "age": 24
  },
  "cindy": {
-  "_note": "Corrected by Jeremy, 2026-10-04. PLATINUM blonde, not honey - her lengths read almost white against slightly warmer roots. DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Black with a light caramel complexion; her blonde is dyed and is a strong identity trait - it must be prompted, like geena's magenta. Executive assistant, fashion is her thing.",
+  "_note": "Jeremy, 2026-10-04: platinum, NOT honey. And the reddish roots he rejected were mine - I wrote 'with slightly warmer roots' into her clause at 16:16 and her set rendered at 16:22 with it. Removed, and a negative added so the base model does not reach for it either. Corrected by Jeremy, 2026-10-04.",
   "ethnicity": "Black",
   "build": "slim with a small waist",
   "bust": "medium",
   "figure": "slim figure with a small waist and a medium bust",
-  "features": "very long loosely waved platinum-blonde dyed hair with slightly warmer roots, warm brown eyes, light caramel-brown skin, full lips",
+  "features": "very long loosely waved platinum-blonde dyed hair, warm brown eyes, light caramel-brown skin, full lips",
   "frame": "slim frame",
-  "prompt": "a 24-year-old Black woman with light caramel-brown skin, a slim figure with a small waist and a medium bust, very long loosely waved platinum-blonde dyed hair with slightly warmer roots, warm brown eyes and full lips",
-  "age": 24
+  "prompt": "a 24-year-old Black woman with light caramel-brown skin, a slim figure with a small waist and a medium bust, very long loosely waved platinum-blonde dyed hair, warm brown eyes and full lips",
+  "age": 24,
+  "negative": "red or copper roots, warm orange tones in the hair, dark regrowth"
  },
  "gabi": {
   "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Latina is stated in her systemPrompt. Her training set is ~90% loose hair, which is why prompted braids kept 20% - the hair style is a dataset problem, not an appearance one.",
