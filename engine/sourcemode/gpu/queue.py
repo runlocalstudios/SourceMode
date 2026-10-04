@@ -146,6 +146,23 @@ def cancel(doc: dict, job_id: str) -> dict:
     return job
 
 
+def restore(doc: dict, job_id: str) -> dict:
+    """Un-cancel a job. It comes back HELD, never runnable straight away.
+
+    Cancelling is soft - the job stays in the file - so a mis-click is repairable,
+    which is the whole point: Jeremy clicked Remove meaning Hold on 2026-10-04 and
+    it took a hand-edit of queue.json to put it back. Coming back held means a
+    restore can never itself start nine hours of GPU work.
+    """
+    job = find(doc, job_id)
+    if job is None:
+        raise KeyError(job_id)
+    if job["status"] != "cancelled":
+        raise ValueError(f"{job_id} is {job['status']}, not cancelled")
+    job.update(status="queued", hold=True, ended_at=None, exit_code=None, pid=None)
+    return job
+
+
 def head(doc: dict) -> dict | None:
     """The first job that is queued and not held - the next one to run, and the
     one the runner WAITS on. It never looks past it: order is the order Jeremy set."""

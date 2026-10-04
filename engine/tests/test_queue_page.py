@@ -377,3 +377,55 @@ def test_the_queue_total_counts_only_work_that_will_actually_run(cfg_full, tmp_p
     two = queue_state(cfg_full)["queued_s"]
     assert two < one and two == pytest.approx(one / 2, rel=0.01)
     qp._rate_cache.clear()
+
+
+# --- a mis-click must be repairable ----------------------------------------
+
+def test_a_removed_job_can_be_restored_and_comes_back_held(client_full, tmp_path):
+    """Jeremy clicked Remove meaning Hold, and putting it back took a hand-edit of
+    queue.json. It comes back HELD so a restore can never itself start 9 hours of
+    GPU work."""
+    _queue(tmp_path, "tess_v2")
+    jid = client_full.get("/queue/state").json()["jobs"][0]["id"]
+    client_full.post(f"/queue/job/{jid}/cancel")
+
+    st = client_full.get("/queue/state").json()
+    assert st["jobs"] == [] and [r["id"] for r in st["removed"]] == [jid]
+    assert st["removed"][0]["who"] == "Tess"
+
+    st = client_full.post(f"/queue/job/{jid}/restore").json()
+    assert [j["id"] for j in st["jobs"]] == [jid]
+    assert st["jobs"][0]["hold"] is True, "restored held, never straight back into the run order"
+    assert st["removed"] == []
+
+
+def test_the_restored_job_keeps_its_original_command(client_full, tmp_path):
+    _approve(tmp_path, "cici_v2")
+    client_full.post("/queue/training", json={"dataset": "cici_v2"})
+    jid = client_full.get("/queue/state").json()["jobs"][0]["id"]
+    before = q.find(q.load(q.queue_path(tmp_path)), jid)["cmd"]
+    client_full.post(f"/queue/job/{jid}/cancel")
+    client_full.post(f"/queue/job/{jid}/restore")
+    assert q.find(q.load(q.queue_path(tmp_path)), jid)["cmd"] == before
+
+
+def test_only_a_cancelled_job_can_be_restored(client_full, tmp_path):
+    _queue(tmp_path, "tess_v2")
+    jid = client_full.get("/queue/state").json()["jobs"][0]["id"]
+    assert client_full.post(f"/queue/job/{jid}/restore").status_code == 409
+    assert client_full.post("/queue/job/j999/restore").status_code == 404
+
+
+def test_a_restored_job_is_not_counted_as_waiting_work_until_released(cfg_full, tmp_path):
+    from sourcemode.monitor import queue_page as qp
+
+    qp._rate_cache.clear()
+    _approve(tmp_path, "tess_v2", images=50)
+    doc = _queue(tmp_path, "tess_v2")
+    jid = doc["jobs"][0]["id"]
+    assert queue_state(cfg_full)["queued_s"] > 0
+    q.cancel(doc, jid); q.save(q.queue_path(tmp_path), doc)
+    doc = q.load(q.queue_path(tmp_path))
+    q.restore(doc, jid); q.save(q.queue_path(tmp_path), doc)
+    assert queue_state(cfg_full)["queued_s"] is None, "held work is not waiting work"
+    qp._rate_cache.clear()

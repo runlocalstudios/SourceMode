@@ -198,7 +198,7 @@ function jobRow(j,i,n){
     h+='<button '+(i>=n-1?'disabled':'')+' onclick="move(\\''+j.id+'\\','+(i+1)+')">▼ Down</button>';
     h+= j.hold ? '<button class=go onclick="hold(\\''+j.id+'\\',false)">Release — let it run</button>'
                : '<button onclick="hold(\\''+j.id+'\\',true)">Hold</button>';
-    h+='<button class=warn onclick="cancel(\\''+j.id+'\\',\\''+esc(j.who)+'\\')">Remove</button>';
+    h+='<button class=warn style="margin-left:auto" onclick="cancel(\\''+j.id+'\\',\\''+esc(j.who)+'\\')">Remove from queue</button>';
     h+='</div>';
   }
   return h+'</div></div>';
@@ -235,6 +235,18 @@ function draw(){
   if(q.some(j=>j.status!=='running')&&!state.paused)
     h+='<div class=acts style="margin-top:4px"><button onclick="act(\\'/queue/pause\\')">Pause the queue</button>'
       +'<span class=empty style="align-self:center">a running job is never interrupted</span></div>';
+
+  if(state.removed&&state.removed.length){
+    h+='<h2>Recently removed</h2>';
+    state.removed.slice().reverse().forEach(r=>{
+      h+='<div class=row><div class=body>'
+        +'<div class=who>'+esc(r.who)+' <span class=kind>— '+esc(r.what)+'</span></div>'
+        +'<div class="state hold">Removed — put it back if that was a mis-click</div>'
+        +'<div class=jid>'+esc(r.id)+'</div></div>'
+        +'<button class=go onclick="restore('+JSON.stringify(r.id)+')">Restore (held)</button>'
+        +'</div>';
+    });
+  }
 
   h+='<h2>Ready to train</h2>';
   if(!cands.length) h+='<div class="card empty">Nothing approved is waiting. Everything approved is queued or trained.</div>';
@@ -278,7 +290,13 @@ async function act(url,body){
 }
 const move=(id,pos)=>act('/queue/job/'+id+'/move',{position:pos});
 const hold=(id,on)=>act('/queue/job/'+id+'/hold',{hold:on});
-function cancel(id,who){ if(confirm('Remove '+who+' from the queue?')) act('/queue/job/'+id+'/cancel'); }
+function cancel(id,who){
+  if(confirm('Remove '+who+' from the queue?'+NL+NL
+    +'If you only want to stop it starting for now, use Hold instead — it keeps its place.'
+    +NL+'A removed job can still be restored from the list below.'))
+    act('/queue/job/'+id+'/cancel');
+}
+const restore=id=>act('/queue/job/'+id+'/restore');
 function queueTraining(ds,who,secs){
   const t=secs?dur(secs):'several hours';
   if(confirm('Queue '+who+' for LoRA training?'+NL+NL+'24 epochs plus the epoch sweep: about '+t
@@ -450,9 +468,14 @@ def queue_state(cfg: dict) -> dict:
     doc = q.load(q.queue_path(out))
     head = q.head(doc)
 
-    jobs = []
+    jobs, removed = [], []
     for j in doc["jobs"]:
         if j["status"] in ("done", "cancelled"):
+            if j["status"] == "cancelled":
+                removed.append({"id": j["id"], "kind": j["kind"], "label": j["label"],
+                                "who": character_of(j["label"]).replace("_", " ").title(),
+                                "what": KIND_LABEL.get(j["kind"], j["kind"]),
+                                "ended_at": j["ended_at"]})
             continue
         row = {k: j[k] for k in ("id", "kind", "label", "status", "hold", "exit_code", "note", "log")}
         # Written for a person: the character, then what is being done to her.
@@ -488,7 +511,8 @@ def queue_state(cfg: dict) -> dict:
     # wants when deciding whether to add another character tonight.
     queued_s = sum((j["estimate"] or {}).get("total_s") or 0
                    for j in jobs if j["status"] == "queued" and not j["hold"])
-    return {"jobs": jobs, "paused": doc["paused"], "pause_reason": doc["pause_reason"],
+    return {"jobs": jobs, "removed": removed[-5:],
+            "paused": doc["paused"], "pause_reason": doc["pause_reason"],
             "queued_s": queued_s or None,
             "lease": lease, "runner_says": _runner_last_line(out),
             "attention": sum(1 for j in jobs if j["blocked_reason"] or j["status"] == "failed")
@@ -656,6 +680,20 @@ def queue_router(cfg: dict):
             q.move(doc, job_id, int(body.get("position", 0)))
         except KeyError as exc:
             raise HTTPException(404, f"no job {job_id}") from exc
+        q.save(p, doc)
+        return queue_state(cfg)
+
+    @router.post("/queue/job/{job_id}/restore")
+    def restore(job_id: str) -> dict:
+        """Put a removed job back, held. Cancelling is soft precisely so this works."""
+        p = path()
+        doc = q.load(p)
+        try:
+            q.restore(doc, job_id)
+        except KeyError as exc:
+            raise HTTPException(404, f"no job {job_id}") from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
         q.save(p, doc)
         return queue_state(cfg)
 
