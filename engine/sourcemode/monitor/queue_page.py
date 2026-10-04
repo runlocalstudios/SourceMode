@@ -261,7 +261,7 @@ function draw(){
            +'<div class=jid>'+esc(c.estimate.basis)+'</div>'
          : '')
       +'<div class=jid>'+esc(c.dataset)+' → character '+esc(c.character)+'</div></div>'
-      +'<button class=go onclick="queueTraining(\\''+c.dataset+'\\',\\''+esc(c.who)+'\\','+(c.estimate&&c.estimate.total_s?Math.round(c.estimate.total_s):0)+)">Add to queue</button>'
+      +'<button class=go onclick="queueTraining(\\''+c.dataset+'\\',\\''+esc(c.who)+'\\','+(c.estimate&&c.estimate.total_s?Math.round(c.estimate.total_s):0)+')">Add to queue</button>'
       +'</div>';
   });
 
@@ -302,7 +302,6 @@ function queueTraining(ds,who,secs){
   if(confirm('Queue '+who+' for LoRA training?'+NL+NL+'24 epochs plus the epoch sweep: about '+t
     +' of GPU time.'+NL+NL+'It starts only when the card is free, and her approval is re-checked first.'))
     act('/queue/training',{dataset:ds});
-});
 }
 
 // --- pointer dragging (touch included; HTML5 DnD does not fire on touch) ----
