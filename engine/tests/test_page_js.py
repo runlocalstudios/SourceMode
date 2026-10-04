@@ -26,7 +26,17 @@ PAGES = [
     ("queue_page", "sourcemode.monitor.queue_page", "PAGE"),
     ("hub", "sourcemode.monitor.hub", "PAGE"),
     ("judge", "sourcemode.assets.judge", "PAGE"),
+    # Never in this list until 2026-10-04, and it is the LONGEST page script in
+    # the repo. Added before the page was touched, so the baseline is known good.
+    ("dataset", "sourcemode.train.preview", "PAGE"),
 ]
+
+# A bare JS constant has no <script> tag, so it cannot be a PAGES row: _scripts()
+# would return [] and the `assert bodies` below would fail with "serves no
+# script". SHELL is already node-checked four times over - once inside each PAGE
+# above, which test_the_shell_is_embedded_in_every_page proves - so this list
+# exists for a future constant that is NOT embedded in a page.
+SCRIPTS = [("shell", "sourcemode.monitor.ui", "SHELL")]
 
 node = shutil.which("node")
 pytestmark = pytest.mark.skipif(node is None, reason="node not installed")
@@ -79,3 +89,27 @@ def test_quotes_and_braces_balance_in_the_markup(name, module, attr):
     for m in re.finditer(r'onclick="([^"]*)"', page):
         inner = m.group(1)
         assert inner.count("(") == inner.count(")"), f"{name}: unbalanced parens in {inner!r}"
+
+
+@pytest.mark.parametrize(("name", "module", "attr"), SCRIPTS, ids=[s[0] for s in SCRIPTS])
+def test_a_bare_script_constant_parses(name, module, attr, tmp_path):
+    import importlib
+
+    body = getattr(importlib.import_module(module), attr)
+    f = tmp_path / f"{name}.js"
+    f.write_text(body, encoding="utf-8")
+    r = subprocess.run([node, "--check", str(f)], capture_output=True, text=True, check=False)
+    assert r.returncode == 0, f"{name} does not parse:" + r.stderr
+
+
+def test_the_shell_is_embedded_in_every_migrated_page():
+    """Which is why SHELL needs no PAGES row of its own. Scoped to the pages
+    already moved onto ui.py, so this is green at every step of the migration."""
+    import importlib
+
+    from sourcemode.monitor.ui import SHELL
+
+    from test_ui_vocabulary import MIGRATED  # noqa: PLC0415
+
+    for module in MIGRATED:
+        assert SHELL in importlib.import_module(module).PAGE, module

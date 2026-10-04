@@ -37,6 +37,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from .ui import page
+
 # "marisol_v2" -> "marisol". A trailing version is a dataset convention, not part
 # of the character's name, and the page shows the result before anything is queued.
 _VERSION_TAIL = re.compile(r"_v\d+$")
@@ -49,309 +51,431 @@ KIND_LABEL = {
     "other": "job",
 }
 
-PAGE = """<!-- gpu control -->
-<title>SourceMode GPU</title>
-<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
-<style>
- :root{--bg:#111;--card:#191919;--line:#2d2d2d;--dim:#8a8a8a;--fg:#e8e8e8}
- *{box-sizing:border-box}
- body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;
-   padding:14px 14px 48px;-webkit-text-size-adjust:100%}
- h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);
-   margin:26px 0 10px;font-weight:700}
- .card{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:14px}
- .now .what{font-size:19px;font-weight:600}
- .now .sub{color:var(--dim);margin-top:3px}
- .bar{height:7px;background:#272727;border-radius:4px;overflow:hidden;margin-top:11px}
- .bar>i{display:block;height:100%;background:linear-gradient(90deg,#3b82f6,#60a5fa);
-   transition:width .6s}
- .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
- .stats div{background:#141414;border:1px solid #242424;border-radius:6px;padding:7px 9px}
- .stats span{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
- .stats b{font-size:17px;font-weight:600}
+OWN_CSS = r"""
+/* The GPU page adds almost nothing: the whole page is system components. */
+#stale{margin-bottom:var(--s3)}
+.logbox{margin-top:var(--s2);max-height:46vh;overflow:auto;background:var(--g2);
+  border:1px solid var(--g3);border-radius:var(--r1);padding:var(--s3);
+  font-family:var(--mono);font-size:12px;line-height:1.5;white-space:pre-wrap;
+  overflow-wrap:anywhere;color:var(--g8)}
+.logbox b{color:var(--g9)}
+/* The runner's own last line, which is its account of what it is waiting for. */
+.runner-says{font-family:var(--mono);font-size:12px;color:var(--g7);
+  word-break:break-all;margin-top:var(--s2)}
+"""
 
- .row{display:flex;gap:11px;align-items:flex-start;background:var(--card);
-   border:1px solid var(--line);border-radius:9px;padding:12px;margin-bottom:9px;
-   touch-action:pan-y}
- .row.drag{opacity:.45}
- .row.over{border-color:#3b82f6;box-shadow:0 0 0 1px #3b82f6 inset}
- .row.running{border-color:#1d4e76}
- .row.held{border-color:#6b5520;background:#1d1a12}
- .row.failed{border-color:#6b2424;background:#1d1212}
- .grip{width:26px;min-width:26px;height:34px;cursor:grab;color:#555;display:flex;
-   align-items:center;justify-content:center;font-size:19px;user-select:none;touch-action:none}
- .grip:active{cursor:grabbing}
- .body{flex:1;min-width:0}
- .who{font-size:17px;font-weight:600}
- .kind{color:var(--dim)}
- .state{margin-top:4px}
- .state.go{color:#6ee89a}
- .state.wait{color:#9cc6ff}
- .state.hold{color:#e8cf6e}
- .state.bad{color:#ff9a9a}
- .note{color:var(--dim);font-size:13px;margin-top:5px}
- .est{margin-top:5px;color:#cbd5e1}
- .est b{color:#fff}
- .jid{font-family:ui-monospace,monospace;font-size:11px;color:#5a5a5a;margin-top:6px}
- .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
- button{background:#272727;color:var(--fg);border:1px solid #454545;padding:7px 12px;
-   border-radius:6px;font:inherit;font-size:13px;cursor:pointer;min-height:36px}
- button:hover{background:#333}
- button:disabled{opacity:.3;cursor:default}
- button.go{background:#17422a;border-color:#2b6b45;color:#c7f6d8}
- button.warn{background:#44200f;border-color:#7a3c1c;color:#ffd6b8}
- .alarm{background:#3a1414;border:1px solid #7a2626;border-radius:9px;padding:13px;margin-bottom:12px}
- .ready{display:flex;gap:11px;align-items:center;background:#15190f;border:1px solid #394420;
-   border-radius:9px;padding:12px;margin-bottom:9px;flex-wrap:wrap}
- .ready .body{flex:1;min-width:140px}
- .stale{color:#e8cf6e}
- .empty{color:var(--dim)}
- code{color:#8fa7bd;font-size:12px;word-break:break-all}
-</style>
-<div id=app class=empty>loading…</div>
-<script>
+BODY = """
+<div id=stale hidden></div>
+<div class=wrap id=app>
+  <div class=col-main>
+    <div id=banners></div>
+    <h2>Now</h2>
+    <div id=now><div class="card skel" style="height:148px"></div></div>
+    <h2>Tonight</h2>
+    <div id=tonight></div>
+    <h2>Queue</h2>
+    <div id=list></div>
+    <div id=queuefoot></div>
+    <div id=removed></div>
+  </div>
+  <div class=col-rail>
+    <h2>Ready to train</h2>
+    <div id=cands></div>
+    <div id=sweepwrap></div>
+    <h2>Runner</h2>
+    <div id=runner></div>
+  </div>
+</div>
+"""
+
+OWN_JS = r"""
 const $=id=>document.getElementById(id);
-const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-let state=null,stat=null,cands=[],busyPost=false;
-const NL=String.fromCharCode(10);
+let state=null,stat=null,cands=[],sweeps=[],plan=null,posting=false;
 
-const dur=s=>{ if(s==null) return ''; s=Math.round(s);
-  const h=Math.floor(s/3600),m=Math.floor(s%3600/60);
-  return h? h+'h '+m+'m' : (m? m+'m' : s+'s'); };
-
-function ago(iso){
-  if(!iso) return '';
-  const d=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
-  if(d<3600) return Math.round(d/60)+' minutes ago';
-  if(d<86400) return Math.round(d/3600)+' hours ago';
-  const days=Math.round(d/86400);
-  return days+(days===1?' day ago':' days ago');
-}
+/* A dead poll must never look like fresh data. */
+SM.staleHandler((age,msg)=>{
+  const b=$('stale');
+  b.hidden=!msg;
+  $('app').classList.toggle('stale',!!msg);
+  if(msg) b.className='banner unknown', b.innerHTML=
+     '<span class=msg><b>These numbers are '+SM.dur(age)+' old.</b>'
+    +'<span class=why>'+SM.esc(msg)+'. Still retrying.</span></span>'
+    +'<button class="btn" data-act="reload">Retry now</button>';
+});
 
 async function load(){
-  try{
-    [state,stat,cands]=await Promise.all([
-      fetch('/queue/state',{cache:'no-store'}).then(r=>r.json()),
-      fetch('/status',{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
-      fetch('/queue/candidates',{cache:'no-store'}).then(r=>r.json()).catch(()=>[]),
-    ]);
-    draw();
-  }catch(e){ $('app').innerHTML='<div class=alarm>Could not reach the monitor: '+esc(e.message)+'</div>'; }
+  const [s,t,c,w,p]=await Promise.all([
+    SM.getJSON('/queue/state'),
+    SM.getJSON('/status').catch(()=>null),
+    SM.getJSON('/queue/candidates').catch(()=>[]),
+    SM.getJSON('/queue/sweepable').catch(()=>[]),
+    SM.getJSON('/queue/plan').catch(()=>null)]);
+  state=s; stat=t; cands=c; sweeps=w; plan=p;
+  draw();
 }
 
-// --- what the card is doing -------------------------------------------------
-function nowCard(){
-  const g=stat&&stat.gpu, j=stat&&stat.job;
-  let h='<div class="card now">';
-  h+='<div class=what>'+esc(j?j.title:'Unknown')+'</div>';
-  const tr=stat&&stat.training, bits=[];
-  if(tr&&tr.epoch!=null&&tr.epochs) bits.push('epoch '+tr.epoch+' of '+tr.epochs);
-  else if(j&&j.step!=null&&j.total) bits.push('step '+j.step+' of '+j.total);
-  if(j&&j.eta_s) bits.push(dur(j.eta_s)+' left');
-  if(j&&j.detail) bits.push(j.detail);
-  if(bits.length) h+='<div class=sub>'+esc(bits.join(' · '))+'</div>';
-  if(j&&j.progress!=null) h+='<div class=bar><i style="width:'+Math.round(j.progress*100)+'%"></i></div>';
-  if(g) h+='<div class=stats>'
-    +'<div><span>load</span><b>'+(g.util_pct==null?'—':g.util_pct+'%')+'</b></div>'
-    +'<div><span>vram</span><b>'+(g.mem_used_mb==null?'—':(g.mem_used_mb/1024).toFixed(1)+' GB')+'</b></div>'
-    +'<div><span>power</span><b>'+(g.power_w==null?'—':Math.round(g.power_w)+' W')+'</b></div>'
-    +'<div><span>temp</span><b>'+(g.temp_c==null?'—':Math.round(g.temp_c)+'°C')+'</b></div>'
+const gb=k=>(stat&&stat.gpu)?stat.gpu[k]:null;
+const stats=()=>{
+  const unk=gb('util_pct')==null&&gb('mem_used_mb')==null;
+  const cell=(lab,val)=>'<div class="stat'+(unk?' unknown':'')+'"><span>'+lab+'</span><b>'
+    +(val==null?'&mdash;':val)+'</b></div>';
+  return '<div class=stats>'
+    +cell('load',gb('util_pct')==null?null:gb('util_pct')+'%')
+    +cell('vram',gb('mem_used_mb')==null?null:(gb('mem_used_mb')/1024).toFixed(1)+' GB')
+    +cell('power',gb('power_w')==null?null:Math.round(gb('power_w'))+' W')
+    +cell('temp',gb('temp_c')==null?null:Math.round(gb('temp_c'))+'°C')
     +'</div>';
-  return h+'</div>';
+};
+
+/* --- banners: every alarm carries its own repair ------------------------- */
+function drawBanners(){
+  const n=state.now, out=[];
+  if(!state.lease||!state.lease.alive){
+    const work=state.queued_s?(' '+state.jobs.length+' job'+(state.jobs.length===1?'':'s')
+      +' waiting, '+SM.dur(state.queued_s)+' of work.'):'';
+    out.push('<div class="banner stop"><span class=msg><b>The runner is not running.</b>'
+      +'<span class=why>Nothing in the queue will start.'+work+'</span></span>'
+      +'<button class="btn btn-primary" data-act="runner-start">Start the runner</button></div>');
+  }
+  if(state.paused)
+    out.push('<div class="banner stop"><span class=msg><b>The queue is paused.</b>'
+      +'<span class=why>'+SM.esc(state.pause_reason||'')+'</span></span>'
+      +'<button class="btn btn-primary" data-act="resume">Resume the queue</button></div>');
+  if(n&&n.stalled)
+    out.push('<div class="banner stop"><span class=msg><b>'+SM.esc(n.who||'This job')
+      +'&#39;s log has not moved in '+SM.dur(n.log_age_s)+'.</b>'
+      +'<span class=why>Last line at '+SM.esc((n.log_last_line_at||'').slice(11,19))
+      +'. The process is still alive, so the card is held and nothing else will start.'
+      +'</span></span>'
+      +'<button class="btn" data-act="log" data-id="'+SM.esc(n.job_id)+'">Log tail</button>'
+      +'<button class="btn" data-act="pause">Hold the rest of the queue</button></div>');
+  for(const j of state.jobs) if(j.status==='failed')
+    out.push('<div class="banner stop"><span class=msg><b>'+SM.esc(j.who)+' failed.</b>'
+      +'<span class=why>'+SM.esc(j.state.why)+'. Requeueing brings it back held, so'
+      +' nothing starts until you say so.</span></span>'
+      +'<button class="btn" data-act="log" data-id="'+SM.esc(j.id)+'">Log tail</button>'
+      +'<button class="btn btn-primary" data-act="requeue" data-id="'+SM.esc(j.id)
+      +'">Requeue (held)</button></div>');
+  SM.set($('banners'),null,out.join(''));
 }
 
-// --- one queue row ----------------------------------------------------------
-function jobRow(j,i,n){
-  const cls=['row'];
-  if(j.status==='running') cls.push('running');
-  else if(j.hold) cls.push('held');
-  else if(j.status==='failed') cls.push('failed');
-
-  let state='',sc='wait';
-  if(j.status==='running'){
-    sc='go'; state='Running now';
-    const tr=stat&&stat.training;
-    if(tr&&tr.epoch!=null&&tr.epochs) state='Running — epoch '+tr.epoch+' of '+tr.epochs;
-    else if(tr&&tr.progress) state='Running — step '+tr.progress.step+' of '+tr.progress.total;
-    if(tr&&tr.progress&&tr.progress.eta_s) state+=' · '+dur(tr.progress.eta_s)+' left';
+/* --- the card reports the job holding it, never a state of its own ------- */
+function drawNow(){
+  const n=state.now;
+  if(!n||!n.job_id){
+    const unk=gb('util_pct')==null&&gb('mem_used_mb')==null;
+    SM.set($('now'),null,'<div class="card e-'+(unk?'unknown':'wait')+'">'
+      +'<div class=card-head>'+SM.pill(unk?'unknown':'wait')
+      +'<h3>'+(unk?'The card cannot be read':'Nothing is running')+'</h3></div>'
+      +'<div class=card-sub>'+(unk
+        ? 'nvidia-smi failed. Something may be running; the queue is not starting'
+          +' anything while this is true.'
+        : 'The card is free.'+(plan?(' '+SM.dur(plan.free_s)+' of the next 24h is unbooked.'):''))
+      +'</div>'+stats()+'</div>');
+    return;
   }
-  else if(j.status==='failed'){ state='Failed (exit '+j.exit_code+')'; sc='bad'; }
-  else if(j.hold){ state='Held — it will not start until you release it'; sc='hold'; }
-  else if(j.blocked_reason){ state=j.blocked_reason; sc='bad'; }
-  else if(j.is_next){ state=state_next(); sc='wait'; }
-  else state='Waiting its turn';
-
-  let h='<div class="'+cls.join(' ')+'" data-id="'+esc(j.id)+'" data-pos="'+i+'">';
-  h+= j.status==='running' ? '<div class=grip style="cursor:default">▌</div>'
-                           : '<div class=grip data-grip="'+esc(j.id)+'" title="drag to reorder">⠿</div>';
-  h+='<div class=body>';
-  h+='<div class=who>'+esc(j.who)+' <span class=kind>— '+esc(j.what)+'</span></div>';
-  h+='<div class="state '+sc+'">'+esc(state)+'</div>';
-  if(j.estimate&&j.estimate.total_s&&j.status!=='running')
-    h+='<div class=est>'+dur(j.estimate.total_s)+' of GPU time once it starts — '
-      +dur(j.estimate.train_s)+' training + '+dur(j.estimate.sweep_s)+' sweep</div>';
-  if(j.note) h+='<div class=note>'+esc(j.note)+'</div>';
-  h+='<div class=jid>'+esc(j.id)+(j.log?' · '+esc(j.log.split(/[\\\\/]/).pop()):'')+'</div>';
-  if(j.status!=='running'){
-    h+='<div class=acts>';
-    h+='<button '+(i===0?'disabled':'')+' onclick="move(\\''+j.id+'\\','+(i-1)+')">▲ Up</button>';
-    h+='<button '+(i>=n-1?'disabled':'')+' onclick="move(\\''+j.id+'\\','+(i+1)+')">▼ Down</button>';
-    h+= j.hold ? '<button class=go onclick="hold(\\''+j.id+'\\',false)">Release — let it run</button>'
-               : '<button onclick="hold(\\''+j.id+'\\',true)">Hold</button>';
-    h+='<button class=warn style="margin-left:auto" onclick="cancel(\\''+j.id+'\\',\\''+esc(j.who)+'\\')">Remove from queue</button>';
-    h+='</div>';
-  }
-  return h+'</div></div>';
+  const bits=[];
+  if(n.epoch!=null&&n.epochs) bits.push('<span class=num>epoch '+n.epoch+' of '+n.epochs+'</span>');
+  if(n.eta_s!=null) bits.push('<span class=num>'+SM.dur(n.eta_s)+'</span> left');
+  if(n.progress_line) bits.push(SM.esc(n.progress_line));
+  SM.set($('now'),null,'<div class="card e-'+(n.stalled?'stop':'live')+'">'
+    +'<div class=card-head>'+SM.pill(n.stalled?'stop':'live')
+    +'<h3>'+SM.esc(n.who)+' &mdash; '+SM.esc(n.what)+'</h3>'
+    +'<span class=age>as of '+SM.dur(SM.ageOf())+' ago</span></div>'
+    +'<div class="card-sub'+(n.ageing?' stale':'')+'">'+bits.join(' &middot; ')+'</div>'
+    +(n.progress!=null?'<div class="meter'+(n.stalled?' stop':'')
+       +'"><i style="width:'+Math.round(n.progress*100)+'%"></i></div>':'')
+    +stats()
+    +'<div class=card-foot><button class="btn btn-ghost" data-act="log" data-id="'
+    +SM.esc(n.job_id)+'">Log tail</button>'
+    +'<span class="age'+(n.ageing?' stale':'')+'">log last moved '
+    +SM.dur(n.log_age_s)+' ago</span></div>'
+    +'<div id=logout></div></div>');
 }
 
-function state_next(){
-  if(state.paused) return 'Next up — but the queue is paused';
-  if(!state.lease||!state.lease.alive) return 'Next up — but the runner is not running';
-  const s=state.runner_says||'';
-  const m=s.match(/card busy - (.+?);/);
-  if(m) return 'Next up — waiting for the card ('+m[1].replace(/PID \\d+ \\(/g,'').replace(/\\)/g,'')+')';
-  return 'Next up — starts as soon as the card is free';
+/* --- tonight, as booked and unbooked time ------------------------------- */
+function drawPlan(){
+  if(!plan){ SM.set($('tonight'),null,''); return; }
+  const W=plan.window_s;
+  let bars='';
+  for(const b of plan.blocks){
+    const share=(b.end_s-b.start_s)/W*100;
+    bars+='<button class="b-'+b.status+'" style="flex:0 0 '+share.toFixed(1)+'%" '
+      +'data-go="'+SM.esc(b.id)+'" title="'+SM.esc(b.basis)+'">'
+      +SM.esc(b.who)+' '+SM.dur(b.end_s-b.start_s)+'</button>';
+  }
+  if(plan.free_s>0)
+    bars+='<button class=b-free style="flex:0 0 '+(plan.free_s/W*100).toFixed(1)+'%" '
+      +'disabled>'+SM.dur(plan.free_s)+' free</button>';
+  let notes='';
+  if(plan.held_n)
+    notes+='<div class="plan-line dim">'+plan.held_n+' held job'+(plan.held_n===1?'':'s')
+      +' ('+SM.dur(plan.held_s)+') not counted as booked &mdash; a job that cannot'
+      +' start is not a booking.</div>';
+  if(plan.blocked_n)
+    notes+='<div class="plan-line dim">'+plan.blocked_n+' job'+(plan.blocked_n===1?'':'s')
+      +' blocked and waiting on you, also not booked.</div>';
+  let fits='';
+  if(plan.fits.length){
+    const f=plan.fits[0];
+    fits='<div class=card-foot><span>'+SM.esc(f.who)+' is approved, unqueued, <b>'
+      +SM.dur(f.total_s)+'</b> &mdash; she fits.</span>'
+      +'<button class="btn btn-primary push" data-act="queue" data-ds="'+SM.esc(f.dataset)
+      +'" data-who="'+SM.esc(f.who)+'" data-secs="'+Math.round(f.total_s)+'">Add to queue</button></div>';
+  }
+  SM.set($('tonight'),null,'<div class=card><div class=plan>'+bars+'</div>'
+    +'<div class=plan-ticks><span>now '+SM.clock(plan.now_ts)+'</span>'
+    +'<span>+12h</span><span>+24h</span></div>'
+    +'<div class=plan-line>Card frees at <b>'+SM.clock(plan.booked_until_ts)+'</b>'
+    +' &middot; <b>'+SM.dur(plan.free_s)+'</b> unbooked in the next 24h.</div>'
+    +notes+fits+'</div>');
+}
+
+/* --- one row shape for a queued job ------------------------------------- */
+function jobRow(el,j,i,n){
+  el.className='jrow e-'+j.state.status;
+  const running=j.status==='running';
+  SM.set(el,null,
+    (running?'<div class=grip style="cursor:default" aria-hidden=true>&#9612;</div>'
+            :'<div class=grip data-grip="'+SM.esc(j.id)+'" title="drag to reorder" '
+             +'aria-label="reorder">&#10287;</div>')
+    +'<div class=main>'
+    +'<div class=head>'+SM.pill(j.state.status)+'<span class=title>'+SM.esc(j.who)
+      +' <span class=what>&mdash; '+SM.esc(j.what)+'</span></span></div>'
+    +'<div class=why>'+SM.esc(j.state.why)+'</div>'
+    +(j.estimate&&j.estimate.total_s&&!running
+       ? '<div class=est><b>'+SM.dur(j.estimate.total_s)+'</b> of GPU time once it starts'
+         +' &mdash; '+SM.dur(j.estimate.train_s)+' training + '+SM.dur(j.estimate.sweep_s)
+         +' sweep</div><div class=basis>'+SM.esc(j.estimate.basis)+'</div>' : '')
+    +(j.note?'<div class=basis>'+SM.esc(j.note)+'</div>':'')
+    +'<div class=jid>'+SM.esc(j.id)
+      +(j.log?' &middot; '+SM.esc(String(j.log).split(/[\\/]/).pop()):'')+'</div>'
+    +'<div class="acts btn-row">'+acts(j,i,n)+'</div>'
+    +'</div>');
+}
+function acts(j,i,n){
+  if(j.status==='running')
+    return '<button class="btn btn-ghost" data-act="log" data-id="'+SM.esc(j.id)+'">Log tail</button>';
+  let h='';
+  if(j.state.status==='you'&&j.blocked_reason)
+    h+='<button class="btn btn-primary" data-go-tab="dataset" data-ref="'+SM.esc(j.label)
+      +'">Open her training set</button>';
+  h+='<button class="btn btn-icon" data-act="up" data-id="'+SM.esc(j.id)+'" data-pos="'+i
+    +'" aria-label="move up"'+(i===0?' disabled':'')+'>&#9650;</button>'
+   +'<button class="btn btn-icon" data-act="down" data-id="'+SM.esc(j.id)+'" data-pos="'+i
+    +'" aria-label="move down"'+(i>=n-1?' disabled':'')+'>&#9660;</button>'
+   +(j.hold
+      ? '<button class="btn btn-primary" data-act="hold" data-id="'+SM.esc(j.id)
+        +'" data-on="0">Release &mdash; let it run</button>'
+      : '<button class="btn" data-act="hold" data-id="'+SM.esc(j.id)+'" data-on="1">Hold</button>')
+   +'<button class="btn btn-danger push" data-act="cancel" data-id="'+SM.esc(j.id)
+    +'" data-who="'+SM.esc(j.who)+'">Remove</button>';
+  return h;
+}
+
+function drawCand(el,c){
+  el.className='jrow e-you';
+  const e=c.estimate||{};
+  SM.set(el,null,'<div class=main>'
+    +'<div class=head>'+SM.pill('you')+'<span class=title>'+SM.esc(c.who)
+      +' <span class=what>&mdash; approved, never trained</span></span></div>'
+    +'<div class=why>approved '+SM.esc(SM.ago(c.approved_at))+' &middot; '
+      +SM.esc(c.images)+' images</div>'
+    +(e.total_s?'<div class=est><b>'+SM.dur(e.total_s)+'</b> of GPU time &mdash; '
+       +SM.dur(e.train_s)+' training + '+SM.dur(e.sweep_s)+' sweep</div>'
+       +'<div class=basis>'+SM.esc(e.basis)+'</div>':'')
+    +'<div class="acts btn-row">'
+    +'<button class="btn btn-primary" data-act="queue" data-ds="'+SM.esc(c.dataset)
+      +'" data-who="'+SM.esc(c.who)+'" data-secs="'+Math.round(e.total_s||0)
+      +'">Add to queue</button>'
+    +'<button class="btn btn-ghost" data-go-tab="dataset" data-ref="'+SM.esc(c.dataset)
+      +'">Review again</button></div></div>');
+}
+
+/* Trained, but no sweep set exists - so nothing ever asked which epoch is hers.
+   Read-only on purpose: the eval step is launched inside train_character.ps1 and
+   there is no standalone script to queue, so this reports rather than pretending
+   a button could fix it. */
+function drawSweeps(){
+  if(!sweeps.length){ SM.set($('sweepwrap'),null,''); return; }
+  let h='<h2>Trained, never swept</h2>';
+  for(const s of sweeps)
+    h+='<div class="jrow e-you"><div class=main>'
+      +'<div class=head>'+SM.pill('you')+'<span class=title>'+SM.esc(s.who)
+      +' <span class=what>&mdash; trained, never swept</span></span></div>'
+      +'<div class=why>'+s.checkpoints+' checkpoint'+(s.checkpoints===1?'':'s')
+      +' on disk and no epoch sweep set, so nothing has asked which epoch is hers.'
+      +' The eval step runs inside the training script; if it failed, the log says'
+      +' <code>EVAL FAILED - no judge set</code>.</div>'
+      +'<div class=jid>'+SM.esc(s.dataset)+'</div></div></div>';
+  SM.set($('sweepwrap'),null,h);
+}
+
+function drawRunner(){
+  const alive=state.lease&&state.lease.alive;
+  SM.set($('runner'),null,'<div class="card e-'+(alive?'done':'stop')+'">'
+    +'<div class=card-head>'+SM.pill(alive?'done':'stop',alive?'Up':'Not running')
+    +'<h3>'+(alive?('Up since '+SM.esc(String(state.lease.started_at).slice(0,16).replace('T',' '))):'The runner is not running')+'</h3>'
+    +(alive?'<span class=age>pid '+SM.esc(state.lease.pid)+'</span>':'')+'</div>'
+    +(state.runner_says?'<div class=runner-says>'+SM.esc(state.runner_says)+'</div>':'')
+    +'</div>');
+}
+
+function drawRemoved(){
+  if(!state.removed||!state.removed.length){ SM.set($('removed'),null,''); return; }
+  let h='<h2>Recently removed</h2>';
+  for(const r of state.removed.slice().reverse())
+    h+='<div class="jrow e-you"><div class=main>'
+      +'<div class=head>'+SM.pill('you')+'<span class=title>'+SM.esc(r.who)
+      +' <span class=what>&mdash; '+SM.esc(r.what)+'</span></span></div>'
+      +'<div class=why>Removed &mdash; put it back if that was a mis-click.'
+      +' It returns held.</div><div class=jid>'+SM.esc(r.id)+'</div>'
+      +'<div class="acts btn-row"><button class="btn btn-primary" data-act="restore" '
+      +'data-id="'+SM.esc(r.id)+'">Restore (held)</button></div></div></div>';
+  SM.set($('removed'),null,h);
 }
 
 function draw(){
+  drawBanners(); drawNow(); drawPlan();
   const q=state.jobs||[];
-  let h='';
-
-  if(!state.lease||!state.lease.alive)
-    h+='<div class=alarm><b>The runner is not running.</b><div class=empty>'
-      +'Nothing in the queue will start. Run: Start-ScheduledTask "SourceMode GPU Runner"</div></div>';
-  if(state.paused)
-    h+='<div class=alarm><b>The queue is paused.</b><div class=empty>'+esc(state.pause_reason)+'</div>'
-      +'<div class=acts><button class=go onclick="act(\\'/queue/resume\\')">Resume the queue</button></div></div>';
-
-  h+=nowCard();
-
-  h+='<h2>Queue</h2>';
-  h+= q.length ? '<div id=list>'+q.map((j,i)=>jobRow(j,i,q.length)).join('')+'</div>'
-               : '<div class="card empty">Nothing queued. Anything ready to train is listed below.</div>';
+  if(!q.length)
+    SM.set($('list'),null,'<div class=empty><b>Nothing queued</b>'
+      +'Anything approved and waiting is in Ready to train.</div>');
+  else {
+    if($('list').querySelector('.empty')) $('list').innerHTML='';
+    SM.patch($('list'),q,j=>j.id,(el,j)=>jobRow(el,j,q.indexOf(j),q.length));
+  }
+  let foot='';
   if(state.queued_s)
-    h+='<div class=note style="margin:-2px 0 8px">Waiting work adds about <b>'+dur(state.queued_s)
+    foot+='<div class=basis>Waiting work adds about <b>'+SM.dur(state.queued_s)
       +'</b> of GPU time after whatever is running now.</div>';
   if(q.some(j=>j.status!=='running')&&!state.paused)
-    h+='<div class=acts style="margin-top:4px"><button onclick="act(\\'/queue/pause\\')">Pause the queue</button>'
-      +'<span class=empty style="align-self:center">a running job is never interrupted</span></div>';
-
-  if(state.removed&&state.removed.length){
-    h+='<h2>Recently removed</h2>';
-    state.removed.slice().reverse().forEach(r=>{
-      h+='<div class=row><div class=body>'
-        +'<div class=who>'+esc(r.who)+' <span class=kind>— '+esc(r.what)+'</span></div>'
-        +'<div class="state hold">Removed — put it back if that was a mis-click</div>'
-        +'<div class=jid>'+esc(r.id)+'</div></div>'
-        +'<button class=go onclick="restore('+JSON.stringify(r.id)+')">Restore (held)</button>'
-        +'</div>';
-    });
+    foot+='<div class="btn-row" style="margin-top:var(--s2)">'
+      +'<button class="btn" data-act="pause">Pause the queue</button>'
+      +'<span class=dim>a running job is never interrupted</span></div>';
+  SM.set($('queuefoot'),null,foot);
+  drawRemoved();
+  if(!cands.length)
+    SM.set($('cands'),null,'<div class=empty><b>Nothing waiting</b>'
+      +'Everything approved is queued or trained.</div>');
+  else {
+    if($('cands').querySelector('.empty')) $('cands').innerHTML='';
+    SM.patch($('cands'),cands,c=>'cand-'+c.dataset,drawCand);
   }
-
-  h+='<h2>Ready to train</h2>';
-  if(!cands.length) h+='<div class="card empty">Nothing approved is waiting. Everything approved is queued or trained.</div>';
-  cands.forEach(c=>{
-    h+='<div class=ready><div class=body>'
-      +'<div class=who>'+esc(c.who)+' <span class=kind>— approved, never trained</span></div>'
-      +'<div class="state '+(c.days_waiting>=3?'stale':'wait')+'">approved '+esc(ago(c.approved_at))
-      +' · '+esc(c.images)+' images</div>'
-      +(c.estimate&&c.estimate.total_s
-         ? '<div class=est><b>'+dur(c.estimate.total_s)+'</b> of GPU time — '
-           +dur(c.estimate.train_s)+' training + '+dur(c.estimate.sweep_s)+' sweep</div>'
-           +'<div class=jid>'+esc(c.estimate.basis)+'</div>'
-         : '')
-      +'<div class=jid>'+esc(c.dataset)+' → character '+esc(c.character)+'</div></div>'
-      +'<button class=go onclick="queueTraining(\\''+c.dataset+'\\',\\''+esc(c.who)+'\\','+(c.estimate&&c.estimate.total_s?Math.round(c.estimate.total_s):0)+')">Add to queue</button>'
-      +'</div>';
-  });
-
-  h+='<h2>Runner</h2><div class=card>';
-  h+= state.lease&&state.lease.alive
-    ? '<div class=state style="color:#6ee89a">Running · PID '+esc(state.lease.pid)+' since '+esc(state.lease.started_at)+'</div>'
-    : '<div class=state style="color:#ff9a9a">Not running</div>';
-  if(state.runner_says) h+='<div class=note style="margin-top:7px"><code>'+esc(state.runner_says)+'</code></div>';
-  h+='</div>';
-
-  $('app').className='';
-  $('app').innerHTML=h;
+  drawSweeps(); drawRunner();
+  /* the shell's bottom bar belongs to this frame while this tab is on top */
+  const n=state.now;
+  SM.ctx({title:(n&&n.job_id)?(n.who+' - '+n.what):'Nothing is running',
+          sub:(n&&n.job_id&&n.epoch!=null)?('epoch '+n.epoch+' of '+n.epochs
+               +(n.eta_s!=null?(' - '+SM.dur(n.eta_s)+' left'):'')):'',
+          status:(n&&n.job_id)?(n.stalled?'stop':'live'):'wait',
+          progress:(n&&n.job_id)?n.progress:null});
   wireDrag();
 }
 
-// --- actions ----------------------------------------------------------------
-async function act(url,body){
-  if(busyPost) return;
-  busyPost=true;
-  try{
-    const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},
-                            body:body===undefined?undefined:JSON.stringify(body)});
-    if(!r.ok){ const d=await r.json().catch(()=>({})); alert(d.detail||('HTTP '+r.status)); }
-  }finally{ busyPost=false; }
-  load();
+/* --- actions: ONE delegated listener for the whole page ------------------ */
+const ACTS={
+  'runner-start':()=>SM.postJSON('/queue/runner/start'),
+  'queue':b=>confirmQueue(b),
+  'hold':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/hold',{hold:b.dataset.on==='1'}),
+  'up':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/move',{position:+b.dataset.pos-1}),
+  'down':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/move',{position:+b.dataset.pos+1}),
+  'requeue':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/requeue'),
+  'restore':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/restore'),
+  'pause':()=>SM.postJSON('/queue/pause'),
+  'resume':()=>SM.postJSON('/queue/resume'),
+  'reload':()=>load(),
+  'cancel':b=>confirm('Remove '+b.dataset.who+' from the queue?'+SM.NL+SM.NL
+     +'Hold keeps its place instead. A removed job can still be restored below.')
+     ? SM.postJSON('/queue/job/'+b.dataset.id+'/cancel') : null,
+  'log':async b=>{
+    const d=await SM.getJSON('/queue/job/'+b.dataset.id+'/log?lines=60');
+    const host=$('logout')||$('banners');
+    let h='';
+    for(const p of d.parts)
+      h+='<div class=logbox><b>'+SM.esc(p.file)+'</b>'+SM.NL
+        +SM.esc(p.lines.join(SM.NL))+'</div>';
+    host.innerHTML=h||'<div class=logbox>no log on disk for '+SM.esc(d.id)+'</div>';
+  },
+};
+/* There is deliberately no action that stops a running job. Detection ships;
+   a kill button on a phone surface waits for a conversation. */
+function confirmQueue(b){
+  const t=+b.dataset.secs?SM.dur(+b.dataset.secs):'several hours';
+  return confirm('Queue '+b.dataset.who+' for LoRA training?'+SM.NL+SM.NL
+    +'24 epochs plus the epoch sweep: about '+t+' of GPU time.'+SM.NL+SM.NL
+    +'It starts only when the card is free, and her approval is re-checked first.')
+    ? SM.postJSON('/queue/training',{dataset:b.dataset.ds}) : null;
 }
-const move=(id,pos)=>act('/queue/job/'+id+'/move',{position:pos});
-const hold=(id,on)=>act('/queue/job/'+id+'/hold',{hold:on});
-function cancel(id,who){
-  if(confirm('Remove '+who+' from the queue?'+NL+NL
-    +'If you only want to stop it starting for now, use Hold instead — it keeps its place.'
-    +NL+'A removed job can still be restored from the list below.'))
-    act('/queue/job/'+id+'/cancel');
-}
-const restore=id=>act('/queue/job/'+id+'/restore');
-function queueTraining(ds,who,secs){
-  const t=secs?dur(secs):'several hours';
-  if(confirm('Queue '+who+' for LoRA training?'+NL+NL+'24 epochs plus the epoch sweep: about '+t
-    +' of GPU time.'+NL+NL+'It starts only when the card is free, and her approval is re-checked first.'))
-    act('/queue/training',{dataset:ds});
-}
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-act],[data-go-tab],[data-go]'); if(!b) return;
+  if(b.dataset.goTab) return SM.nav(b.dataset.goTab,b.dataset.ref);
+  if(b.dataset.go){
+    const row=document.querySelector('[data-k="'+b.dataset.go+'"]');
+    if(row) row.scrollIntoView({block:'center',behavior:'smooth'});
+    return;
+  }
+  const fn=ACTS[b.dataset.act]; if(!fn) return;
+  if(posting) return;
+  posting=true; b.disabled=true;
+  try{ await fn(b); if(b.dataset.act!=='log') await load(); }
+  catch(err){ SM.toast(err.message); }
+  finally{ posting=false; b.disabled=false; }
+});
 
-// --- pointer dragging (touch included; HTML5 DnD does not fire on touch) ----
+/* --- pointer dragging. HTML5 DnD does not fire on touch, which is why this
+   page has always used pointer events; the arrows stay as the fallback. ---- */
+let dragWired=false;
 function wireDrag(){
-  const list=$('list'); if(!list) return;
+  const list=$('list'); if(!list||dragWired) return;
+  dragWired=true;
   let dragEl=null,startY=0,moved=false;
-
-  const rowsNow=()=>[...list.querySelectorAll('.row')];
-
-  function down(e){
+  const rows=()=>[...list.querySelectorAll('.jrow')];
+  list.addEventListener('pointerdown',e=>{
     const grip=e.target.closest('[data-grip]'); if(!grip) return;
-    dragEl=grip.closest('.row'); startY=e.clientY; moved=false;
-    dragEl.classList.add('drag');
+    dragEl=grip.closest('.jrow'); startY=e.clientY; moved=false;
+    dragEl.classList.add('dragging');
+    dragEl.dataset.locked='1';     /* a poll mid-drag must not overwrite the row */
     grip.setPointerCapture(e.pointerId);
     e.preventDefault();
-  }
-  function moveP(e){
+  });
+  list.addEventListener('pointermove',e=>{
     if(!dragEl) return;
     if(Math.abs(e.clientY-startY)>4) moved=true;
-    for(const r of rowsNow()) r.classList.remove('over');
-    const t=rowsNow().find(r=>{
+    for(const r of rows()) r.classList.remove('dropzone');
+    const t=rows().find(r=>{
       if(r===dragEl) return false;
       const b=r.getBoundingClientRect();
       return e.clientY>=b.top&&e.clientY<=b.bottom;
     });
-    if(t) t.classList.add('over');
-  }
-  function up(e){
+    if(t) t.classList.add('dropzone');
+  });
+  const up=async e=>{
     if(!dragEl) return;
-    const rows=rowsNow();
-    const t=rows.find(r=>r.classList.contains('over'));
-    dragEl.classList.remove('drag');
-    for(const r of rows) r.classList.remove('over');
+    const all=rows();
+    const t=all.find(r=>r.classList.contains('dropzone'));
+    dragEl.classList.remove('dragging');
+    delete dragEl.dataset.locked;
+    for(const r of all) r.classList.remove('dropzone');
     const dropped=dragEl; dragEl=null;
     if(!moved||!t) return;
-    // Reorder in the DOM first so the list does not jump, then send the whole
-    // resulting order in ONE request - no intermediate states to get wrong.
-    const before=t.getBoundingClientRect().top+t.getBoundingClientRect().height/2>e.clientY;
-    t.parentNode.insertBefore(dropped,before?t:t.nextSibling);
-    act('/queue/order',{ids:rowsNow().map(r=>r.dataset.id)});
-  }
-  list.addEventListener('pointerdown',down);
-  list.addEventListener('pointermove',moveP);
+    /* Reorder the DOM first so the list does not jump, then send the WHOLE
+       resulting order in one request - no intermediate states to get wrong. */
+    const b=t.getBoundingClientRect();
+    t.parentNode.insertBefore(dropped,(b.top+b.height/2>e.clientY)?t:t.nextSibling);
+    try{ await SM.postJSON('/queue/order',{ids:rows().map(r=>r.dataset.k)}); }
+    catch(err){ SM.toast(err.message); }
+    load();
+  };
   list.addEventListener('pointerup',up);
   list.addEventListener('pointercancel',up);
 }
 
-load(); setInterval(()=>{ if(!busyPost) load(); },5000);
-</script>
+if(SM.standalone()) document.title='SourceMode GPU';
+SM.poll(5000,()=>{ if(!posting) return load(); });
 """
+
+PAGE = page("SourceMode GPU", BODY, OWN_JS, OWN_CSS)
 
 
 # How long a training run takes here, measured from completed runs rather than
@@ -401,8 +525,17 @@ def _rate(cfg: dict, max_age_s: float = 600.0) -> dict:
         gaps = len(cps) - 1
         if span > 0 and gaps > 0:
             steps_rates.append(span / (gaps * per_epoch))
-        js = out / "judge" / "sets" / f"dense_{ds}_asset.json"
-        if js.is_file():
+        # Resolve the sweep by PATTERN + ARM GRAMMAR, not by a hardcoded
+        # `_asset` suffix. Of 29 `dense_*` sets on disk only 6 carry `_asset`;
+        # dense_ash_v2.json, dense_geena_v2.json and dense_trina_v2.json are
+        # full 90-item epoch sweeps with no suffix at all, so the old filename
+        # test silently declined to measure them.
+        from ..assets.judge import judge_root, sweep_sets_for  # noqa: PLC0415
+
+        rows_for_ds = sweep_sets_for(judge_root(cfg), ds)
+        js = ((judge_root(cfg) / "sets" / f"{rows_for_ds[0]['id']}.json")
+              if rows_for_ds else None)
+        if js is not None and js.is_file():
             sweep = js.stat().st_mtime - cps[-1].stat().st_mtime
             # A sweep that "took" six hours spent most of it waiting for the card.
             # Keep the plausible ones; the median would survive either way.
@@ -437,6 +570,97 @@ def estimate(cfg: dict, images: int) -> dict:
             "steps": steps, "repeats": repeats, "basis": basis}
 
 
+STALL_S = 900.0    # 15 minutes of a silent log while the process is still alive
+AGEING_S = 300.0   # past this the ETA is drawn with its age, not as a fresh number
+
+
+def _dur(s: float | None) -> str:
+    """"4h 18m". The same two-field shape SM.dur() prints, so a sentence
+    composed on the server and one composed in the page never disagree."""
+    if s is None:
+        return ""
+    s = int(round(s))
+    h, m = s // 3600, s % 3600 // 60
+    return f"{h}h {m:02d}m" if h else (f"{m}m" if m else f"{s}s")
+
+
+def _iso_utc(ts: float) -> str:
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    return datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="seconds")
+
+
+def _state_of(job: dict, *, paused: bool, runner_alive: bool,
+              log_age_s: float | None) -> dict:
+    """The ONE place a job's status word is decided. Pages never compute one.
+
+    Seven words, one colour each, no synonyms - so two pages cannot disagree
+    about what a held job is called. `log_age_s` is passed in rather than read:
+    queue_state() is pure over the queue file and cannot see the training log.
+    None means "we were not told", which is today's behaviour exactly - no stall
+    detection, not a false negative.
+    """
+    if job["status"] == "running":
+        if log_age_s is not None and log_age_s > STALL_S:
+            return {"status": "stop",
+                    "why": f"the log has not moved in {_dur(log_age_s)} - it may be stuck"}
+        return {"status": "live", "why": "running now"}
+    if job["status"] == "failed":
+        return {"status": "stop", "why": f"failed, exit {job['exit_code']}"}
+    if job["hold"]:
+        return {"status": "you", "why": "held - it will not start until you release it"}
+    if job["blocked_reason"]:
+        return {"status": "you", "why": job["blocked_reason"]}
+    if not job["is_next"]:
+        return {"status": "wait", "why": "waiting its turn"}
+    if paused:
+        return {"status": "stop", "why": "next up, but the queue is paused"}
+    if not runner_alive:
+        return {"status": "stop", "why": "next up, but the runner is not running"}
+    return {"status": "next", "why": "starts as soon as the card is free"}
+
+
+def now_card(jobs: list[dict], status: dict | None) -> dict | None:
+    """What the card is doing - the ONE place `progress_line` exists.
+
+    queue_state() cannot compose this alone: the queue file knows which job is
+    running, and the trainer's progress lives behind the sampler. The two are
+    joined here and nowhere else.
+
+    `log_age_s` is what makes a stall visible. It depends on
+    training.sample_training() reporting the NEWER of the log and its `.err`
+    sidecar - tqdm writes to stderr, so on a live run the `.log` stops moving.
+    Before that was fixed a healthy run read as 196 minutes silent.
+    """
+    if not status:
+        return None
+    run = next((j for j in jobs if j["status"] == "running"), None)
+    tr = status.get("training") or {}
+    pr = tr.get("progress") or {}
+    mtime, sampled = tr.get("log_mtime"), status.get("sampled_at")
+    age = max(0.0, sampled - mtime) if (mtime and sampled) else None
+    step, total = pr.get("step"), pr.get("total")
+    line = ""
+    if step is not None and total:
+        line = f"step {step} of {total}"
+        if pr.get("s_per_it"):
+            line += f" at {pr['s_per_it']:.2f} s/it"
+    return {
+        "job_id": run["id"] if run else None,
+        "who": (run or {}).get("who"), "what": (run or {}).get("what"),
+        "epoch": tr.get("epoch"), "epochs": tr.get("epochs"),
+        "step": step, "total": total,
+        "progress": (step / total) if (step is not None and total) else None,
+        "eta_s": pr.get("eta_s"), "elapsed_s": pr.get("elapsed_s"),
+        "s_per_it": pr.get("s_per_it"), "progress_line": line,
+        "log": tr.get("log"), "log_age_s": age,
+        "log_last_line_at": _iso_utc(mtime) if mtime else None,
+        "stalled": bool(run and age is not None and age > STALL_S),
+        "ageing": bool(age is not None and age > AGEING_S),
+        "sampled_at": sampled,
+    }
+
+
 def character_of(dataset: str) -> str:
     """`marisol_v2` -> `marisol`. Shown in the UI before anything is queued, so a
     dataset whose name does not follow the convention is visible rather than silent."""
@@ -458,7 +682,7 @@ def _runner_last_line(outputs_root: Path) -> str | None:
     return lines[-1].strip() if lines else None
 
 
-def queue_state(cfg: dict) -> dict:
+def queue_state(cfg: dict, status: dict | None = None) -> dict:
     from ..config import outputs_dir  # noqa: PLC0415
     from ..gpu import queue as q  # noqa: PLC0415
     from ..gpu.lease import lease_path, pid_alive, read as read_lease  # noqa: PLC0415
@@ -506,6 +730,18 @@ def queue_state(cfg: dict) -> dict:
     if rec:
         lease = {"pid": rec.get("pid"), "started_at": rec.get("started_at"),
                  "alive": pid_alive(int(rec.get("pid", 0)))}
+
+    # The status WORD for every row, decided in one place. A running job also
+    # gets the log's age, which is the only way a silently stuck run is visible:
+    # without it a dead process still renders as a healthy progress bar with a
+    # confident, frozen ETA.
+    now = now_card(jobs, status)
+    age = (now or {}).get("log_age_s")
+    for row in jobs:
+        row["state"] = _state_of(
+            row, paused=doc["paused"],
+            runner_alive=bool(lease and lease["alive"]),
+            log_age_s=age if row["status"] == "running" else None)
     # What the queue adds AFTER whatever is running now - the number he actually
     # wants when deciding whether to add another character tonight.
     queued_s = sum((j["estimate"] or {}).get("total_s") or 0
@@ -513,10 +749,12 @@ def queue_state(cfg: dict) -> dict:
     return {"jobs": jobs, "removed": removed[-5:],
             "paused": doc["paused"], "pause_reason": doc["pause_reason"],
             "queued_s": queued_s or None,
+            "now": now,
             "lease": lease, "runner_says": _runner_last_line(out),
             "attention": sum(1 for j in jobs if j["blocked_reason"] or j["status"] == "failed")
                          + (1 if doc["paused"] else 0)
-                         + (0 if (lease and lease["alive"]) or not jobs else 1)}
+                         + (0 if (lease and lease["alive"]) or not jobs else 1)
+                         + (1 if (now and now["stalled"]) else 0)}
 
 
 def candidates(cfg: dict) -> list[dict]:
@@ -569,6 +807,213 @@ def candidates(cfg: dict) -> list[dict]:
     return rows
 
 
+def sweepable(cfg: dict) -> list[dict]:
+    """Trained, but the epoch sweep never produced a judge set.
+
+    A real stranding gap: `scripts/train_character.ps1` logs
+    `EVAL FAILED - no judge set` and nothing ever mentions it again, so a
+    five-hour run can finish with no way to choose an epoch and no surface
+    saying so.
+
+    The sweep is resolved by pattern AND arm grammar, never by a hardcoded
+    `dense_<ds>_asset` filename - 23 of the 29 `dense_*` sets on disk have no
+    `_asset` suffix, so the filename test would report a dozen characters as
+    never swept and offer each a button that cannot help them.
+    """
+    from ..assets.judge import judge_root, sweep_sets_for  # noqa: PLC0415
+    from ..config import outputs_dir  # noqa: PLC0415
+    from ..gpu import queue as q  # noqa: PLC0415
+    from ..train.epochs import checkpoint_dirs  # noqa: PLC0415
+    from ..train.preview import preview_root  # noqa: PLC0415
+
+    out = outputs_dir(cfg)
+    jroot = judge_root(cfg)
+    doc = q.load(q.queue_path(out))
+    base = out / "lora-datasets"
+    rows = []
+    for d in sorted(base.glob("*")) if base.is_dir() else []:
+        if not d.is_dir():
+            continue
+        ds = d.name
+        ckpts = [c for sub in checkpoint_dirs(out, ds) for c in sub.glob("*.safetensors")]
+        if not ckpts:
+            continue                       # not trained
+        if sweep_sets_for(jroot, ds):
+            continue                       # already swept
+        if q.duplicate_of(doc, "eval", ds) or q.duplicate_of(doc, "train", ds):
+            continue                       # queued; the queue is the surface
+        doc_prev = None
+        try:
+            from ..train.preview import load_preview  # noqa: PLC0415
+
+            doc_prev = load_preview(preview_root(cfg), ds)
+        except Exception:  # noqa: BLE001
+            doc_prev = None
+        rows.append({"dataset": ds, "character": character_of(ds),
+                     "who": character_of(ds).replace("_", " ").title(),
+                     "checkpoints": len(ckpts),
+                     "images": (doc_prev.get("n") if doc_prev else 0) or 0})
+    return rows
+
+
+def position(cfg: dict, dataset: str) -> dict:
+    """Where this dataset sits in the training order, and what it would cost.
+
+    Approval IS the trigger and approval order IS the training order, so the
+    page that performs an approval should be able to say what approving does.
+
+    THE BUG this gets right: the obvious implementation compares candidate
+    approval times against `approval_state(...)["at"]`, but for a dataset that is
+    not approved yet that field is None. Coerced to "" it sorts BEFORE every real
+    timestamp, so `before` is always empty and the answer is always "queued + 1" -
+    which is the one case the feature exists for. Three explicit branches instead:
+
+    - approved and current: its place is by its own approval time
+    - never approved: it would be approved NOW, so it goes after every candidate
+    - lapsed: also now. The old timestamp is not the answer either - re-approving
+      is a new approval, and it goes to the back of the order, not back to where
+      it used to be.
+    """
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from ..config import outputs_dir  # noqa: PLC0415
+    from ..gpu import queue as q  # noqa: PLC0415
+    from ..train.preview import approval_state, load_preview, preview_root  # noqa: PLC0415
+
+    root = preview_root(cfg)
+    st = approval_state(root, dataset)
+    rows = candidates(cfg)
+
+    if st["approved"] and st["at"]:
+        at, counts_itself = st["at"], True
+    else:
+        at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        counts_itself = False
+
+    before = [c for c in rows
+              if c["dataset"] != dataset and (c["approved_at"] or "") < at]
+    doc = q.load(q.queue_path(outputs_dir(cfg)))
+    queued = [j for j in doc["jobs"]
+              if j["kind"] == "train" and j["status"] in ("queued", "running")]
+
+    doc_prev = load_preview(root, dataset)
+    images = (doc_prev.get("n") or len(doc_prev.get("images", []))) if doc_prev else 0
+    est = estimate(cfg, images)
+    ahead = sum((estimate(cfg, c["images"]) or {}).get("total_s") or 0 for c in before)
+    return {"dataset": dataset, "approved": st["approved"], "stale": st["stale"],
+            "counts_itself": counts_itself,
+            "queued_n": len(queued), "before_n": len(before),
+            # 1-based: the jobs already in the queue, then the approvals ahead of
+            # this one, then this one.
+            "place": len(queued) + len(before) + 1,
+            "after": (queued[-1]["label"] if queued else
+                      (before[-1]["dataset"] if before else None)),
+            "ahead_s": ahead, "estimate": est}
+
+
+def plan(cfg: dict, status: dict | None = None) -> dict:
+    """The card's next 24 hours as blocks. Held and blocked jobs are NOT bookings.
+
+    "Waiting work adds about 9h 40m" is a number; this is a schedule. The
+    question worth answering is "what is this card doing tonight and is there a
+    gap", and that used to be mental arithmetic over three estimates.
+
+    Every field read here is declared somewhere: `st["now"]` is now_card()'s
+    block, `j["estimate"]` is estimate()'s keys, `j["state"]` is _state_of()'s.
+    Nothing reads a bare `elapsed_s` off a job row, because job rows have never
+    carried one.
+    """
+    import time  # noqa: PLC0415
+
+    st = queue_state(cfg, status)
+    nowb = st.get("now") or {}
+    now_ts, window = time.time(), 86400.0
+    blocks, t = [], 0.0
+    for j in st["jobs"]:
+        if j["hold"] or j["state"]["status"] in ("stop", "you"):
+            continue
+        est = j["estimate"] or {}
+        if j["status"] == "running":
+            sweep = (est.get("sweep_s") or 0.0) if j["kind"] == "train" else 0.0
+            if nowb.get("eta_s") is not None:
+                # the trainer's own tqdm ETA, then the sweep this SAME job owns
+                # ("LoRA training, then the epoch sweep" is one queue entry)
+                dur, estimated = nowb["eta_s"] + sweep, False
+                basis = "from the log: " + (nowb.get("progress_line") or "")
+                if sweep:
+                    basis += f", then the sweep at {round(sweep / 60)} min"
+            elif est.get("total_s") is not None:
+                dur = max(0.0, est["total_s"] - (nowb.get("elapsed_s") or 0.0))
+                basis, estimated = est.get("basis") or "", True
+            else:
+                dur, basis, estimated = 0.0, "no progress line and no image count", True
+        else:
+            dur = est.get("total_s") or 0.0
+            basis, estimated = est.get("basis") or "", True
+            if not dur:
+                # Only `train` jobs carry an estimate, so a prep or assets job
+                # has no duration. Say so rather than drawing a 0%-wide block
+                # with an empty tooltip: an unknown length is a fact, and
+                # silently treating it as zero is what makes a schedule lie.
+                basis = f"no measured duration for a {j['kind']} job"
+        blocks.append({"id": j["id"], "who": j["who"], "what": j["what"],
+                       "status": j["state"]["status"], "start_s": t, "end_s": t + dur,
+                       "estimated": estimated, "basis": basis})
+        t += dur
+    # A held job is not a booking, and neither is one that cannot start. Both are
+    # reported separately rather than quietly counted, because counting them is
+    # how "busy till Tuesday" becomes wrong.
+    held = [j for j in st["jobs"] if j["hold"]]
+    blocked = [j for j in st["jobs"]
+               if not j["hold"] and j["state"]["status"] in ("stop", "you")]
+
+    def secs(rows):
+        return sum((j["estimate"] or {}).get("total_s") or 0 for j in rows)
+
+    free = max(0.0, window - t)
+    return {"now_ts": now_ts, "window_s": window, "blocks": blocks,
+            "booked_s": t, "booked_until_ts": now_ts + t, "free_s": free,
+            "held_s": secs(held), "held_n": len(held),
+            "blocked_s": secs(blocked), "blocked_n": len(blocked),
+            "fits": [{"dataset": c["dataset"], "who": c["who"],
+                      "total_s": (c["estimate"] or {}).get("total_s")}
+                     for c in candidates(cfg)
+                     if 0 < ((c["estimate"] or {}).get("total_s") or 0) <= free][:3]}
+
+
+def job_log_tail(cfg: dict, job_id: str, lines: int = 60) -> dict:
+    """The last N lines of one job's log, decoded by BOM.
+
+    PowerShell's `*>` redirect writes UTF-16, which is why this goes through
+    monitor.training.decode_log rather than read_text(): a UTF-16 log read as
+    UTF-8 is unreadable noise, and this is the page that replaces "go and open a
+    terminal" for a failed run.
+    """
+    from pathlib import Path as _P  # noqa: PLC0415
+
+    from ..config import outputs_dir  # noqa: PLC0415
+    from ..gpu import queue as q  # noqa: PLC0415
+    from .training import read_tail  # noqa: PLC0415
+
+    out = outputs_dir(cfg)
+    job = q.find(q.load(q.queue_path(out)), job_id)
+    if job is None:
+        raise KeyError(job_id)
+    path = job.get("log")
+    found = []
+    for cand in ([_P(path)] if path else []) + ([_P(str(path) + ".err")] if path else []):
+        if cand.is_file():
+            try:
+                text = read_tail(cand)   # head+tail, decoded by BOM
+            except OSError:
+                continue
+            found.append({"file": cand.name,
+                          "lines": text.splitlines()[-max(1, min(lines, 400)):]})
+    return {"id": job_id, "who": character_of(job["label"]).replace("_", " ").title(),
+            "status": job["status"], "exit_code": job.get("exit_code"),
+            "log": path, "parts": found}
+
+
 def training_command(cfg: dict, dataset: str) -> list[str]:
     """The one place a training invocation is written. He never types a path."""
     from ..config import ENGINE_ROOT  # noqa: PLC0415
@@ -578,7 +1023,7 @@ def training_command(cfg: dict, dataset: str) -> list[str]:
             "-Ds", dataset, "-Char", character_of(dataset)]
 
 
-def queue_router(cfg: dict):
+def queue_router(cfg: dict, status=None):
     from fastapi import APIRouter, Body, HTTPException  # noqa: PLC0415
     from fastapi.responses import HTMLResponse  # noqa: PLC0415
 
@@ -601,6 +1046,84 @@ def queue_router(cfg: dict):
     @router.get("/queue/candidates")
     def candidates_route() -> list[dict]:
         return candidates(cfg)
+
+    @router.get("/queue/sweepable")
+    def sweepable_route() -> list[dict]:
+        """Trained, but no epoch sweep set exists - so nothing ever asked which
+        epoch is hers. Read-only: this build offers no button that starts a
+        sweep, because the eval step is launched by train_character.ps1 and
+        there is no standalone script to queue."""
+        return sweepable(cfg)
+
+    @router.get("/queue/plan")
+    def plan_route() -> dict:
+        return plan(cfg, status() if status else None)
+
+    @router.get("/queue/position")
+    def position_route(dataset: str) -> dict:
+        """What approving this dataset would do. Reads only; writes nothing."""
+        if not dataset or "/" in dataset or "\\" in dataset or ".." in dataset:
+            raise HTTPException(400, "a dataset id is required")
+        return position(cfg, dataset)
+
+    @router.get("/queue/job/{job_id}/log")
+    def job_log(job_id: str, lines: int = 60) -> dict:
+        try:
+            return job_log_tail(cfg, job_id, lines)
+        except KeyError as exc:
+            raise HTTPException(404, f"no job {job_id}") from exc
+
+    @router.post("/queue/runner/start")
+    def runner_start() -> dict:
+        """Start the runner's scheduled task, in the place you find it stopped.
+
+        Idempotent by construction: the runner itself refuses to start while a
+        live runner holds the lease, so a second tap cannot produce a second
+        runner. The subprocess timeout here cannot cause GPU work to start - it
+        bounds a `schtasks` call only, and on timeout it raises and this route
+        500s without having queued or started anything.
+        """
+        import subprocess  # noqa: PLC0415
+
+        from ..gpu.lease import lease_path, pid_alive, read as read_lease  # noqa: PLC0415
+        from ..config import outputs_dir  # noqa: PLC0415
+
+        rec = read_lease(lease_path(outputs_dir(cfg)))
+        if rec and pid_alive(int(rec.get("pid", 0))):
+            return {"started": False, "why": "a runner is already holding the lease",
+                    **queue_state(cfg)}
+        try:
+            r = subprocess.run(["schtasks", "/Run", "/TN", "SourceMode GPU Runner"],
+                               capture_output=True, text=True, timeout=20, check=False)
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise HTTPException(500, f"could not run schtasks: {exc}") from exc
+        if r.returncode != 0:
+            raise HTTPException(500, (r.stderr or r.stdout or "schtasks failed").strip())
+        return {"started": True, **queue_state(cfg)}
+
+    @router.post("/queue/job/{job_id}/requeue")
+    def requeue(job_id: str) -> dict:
+        """Put a failed job back, HELD - the same post-condition as restore().
+
+        A one-tap button that starts a seven-hour run is the defect class the
+        launcher scripts had. Coming back held means the queue does not move
+        until you say so.
+        """
+        p = path()
+        doc = q.load(p)
+        job = q.find(doc, job_id)
+        if job is None:
+            raise HTTPException(404, f"no job {job_id}")
+        if job["status"] != "failed":
+            raise HTTPException(409, f"{job_id} is {job['status']}, not failed")
+        job["status"] = "queued"
+        job["hold"] = True
+        job["exit_code"] = None
+        job["started_at"] = None
+        job["ended_at"] = None
+        job["note"] = "requeued from the GPU page; held"
+        q.save(p, doc)
+        return queue_state(cfg)
 
     @router.post("/queue/training")
     def add_training(body: dict = Body(default={})) -> dict:

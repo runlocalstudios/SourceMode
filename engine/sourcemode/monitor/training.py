@@ -180,7 +180,14 @@ def sample_training(log_dir: Path, *, running: bool | None = None) -> dict:
     prog = parse_progress(text)
     out["character"] = info["character"]
     out["epochs"] = info["epochs"]
-    out["log_mtime"] = log.stat().st_mtime
+    if out.get("log_mtime") is None:   # the key is pre-seeded to None, so test the VALUE
+        # `else`, not an unconditional assignment: the branch above already set
+        # this to max(log, err), and overwriting it with the .log alone reported
+        # a stale time for every live run. tqdm's progress goes to STDERR, so on
+        # a healthy 2026-10-04 training run the .log was 196.8 minutes old while
+        # the .log.err was 6 seconds old - which would make any staleness test
+        # call every running job dead.
+        out["log_mtime"] = log.stat().st_mtime
     if prog:
         out["progress"] = prog
         out["epoch"] = epoch_of(prog["step"], info["batches_per_epoch"])

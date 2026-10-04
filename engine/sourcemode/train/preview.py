@@ -30,6 +30,8 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ..monitor.ui import page
+
 # What the asset pipeline varies per render. Anything it varies must be named in
 # the caption or it is not variable - it becomes part of the identity instead.
 # `hair` is first because omitting it is the mistake that actually cost us.
@@ -119,7 +121,12 @@ def caption_report(captions: list[str]) -> dict:
     low = [c.lower() for c in captions]
     out: list[dict] = []
     if not n:
-        return {"n": 0, "findings": [_finding("captions", False, "no captions at all")]}
+        # `passed` must be present: the page reads `cr.passed` and renders a
+        # missing key as FAIL, so a set with no images used to paint red for a
+        # reason that had nothing to do with its captions.
+        return {"n": 0, "passed": False, "failed": ["captions"], "coverage": {},
+                "median_words": 0,
+                "findings": [_finding("captions", False, "no captions at all")]}
 
     # 1. coverage: anything the render pipeline varies must be named
     coverage = {}
@@ -611,7 +618,13 @@ def edit_report(root: Path, ds_id: str | None = None) -> dict:
         rows = [r for r in rows if r["dataset"] == ds_id]
     by: dict[tuple[str, str], list[dict]] = {}
     for r in rows:
-        for c in r.get("clauses") or [{"clause": r.get("kind", "other")}]:
+        # Only CAPTION edits have clauses. An exclusion or a restore has none,
+        # and bucketing it under its `kind` invented pseudo-clauses ("excluded",
+        # "restored") that outnumbered every real clause and buried the "three
+        # of the same clause is systematic" signal this report exists to find.
+        if r.get("kind", "caption") != "caption":
+            continue
+        for c in r.get("clauses") or [{"clause": "other"}]:
             by.setdefault((r["dataset"], c["clause"]), []).append(r)
     counts = [{"dataset": d, "clause": c, "n": len(v),
                "images": sorted({x["image"] for x in v}),
@@ -656,6 +669,127 @@ def set_caption(root: Path, ds_id: str, name: str, caption: str) -> dict:
             "fingerprint": doc["fingerprint"], "captions": doc["captions"], "approval": approval_state(root, ds_id)}
 
 
+def with_clause(caption: str, clause: str,
+                after: tuple[str, ...] = ("her hair",)) -> str:
+    """Insert one generated clause where the captioner would have put it.
+
+    This is the page's old `addGaze()` rule moved server-side verbatim: before
+    the first clause matching `^her hair`, else at `min(2, len(parts))` - after
+    the trigger and the framing clause. One implementation, unit-testable, and
+    the page stops holding product logic. Idempotent.
+
+    The inserted clause is classified "gaze" by CLAUSE_PATTERNS, so a quick fix
+    lands in edit_report()'s per-clause counts and will trip needs_automation at
+    three. The quick fix self-reports, which is the point.
+    """
+    parts = [x.strip() for x in caption.split(",") if x.strip()]
+    if clause in parts:
+        return caption
+    at = next((i for i, x in enumerate(parts)
+               if any(x.lower().startswith(a) for a in after)), None)
+    parts.insert(at if at is not None else min(2, len(parts)), clause)
+    return ", ".join(parts)
+
+
+def fix_rows(root: Path, ds_id: str) -> dict:
+    """The short list: only rows with something to DO, each with its suggestion.
+
+    Not a new judgement - exactly the rows `needs_look()` already returns
+    (uncaptioned, or carrying a close call), ordered worst first, with the one
+    correction that fits where there is one. A flag is still a prompt to look:
+    nothing here edits anything, and nothing here blocks approval.
+    """
+    doc = load_preview(root, ds_id) or {}
+    rows = []
+    for im in doc.get("images", []):
+        if not needs_look(im):
+            continue
+        reasons = (["NO CAPTION"] if im.get("uncaptioned") else []) \
+            + list(im.get("uncertain") or [])
+        cap = im.get("caption") or ""
+        sug = None
+        if "gaze?" in reasons and "looking off camera" not in cap:
+            sug = {"kind": "off_cam",
+                   "caption": with_clause(cap, "looking off camera")}
+        rows.append({"name": im["name"], "reasons": reasons, "caption": cap,
+                     "suggestion": sug})
+    rows.sort(key=lambda r: (0 if "NO CAPTION" in r["reasons"] else 1, r["name"]))
+    by: dict[str, int] = {}
+    for r in rows:
+        for x in r["reasons"]:
+            by[x] = by.get(x, 0) + 1
+    return {"n": doc.get("n", 0), "rows": rows,
+            "by_reason": [{"reason": k, "n": v,
+                           "bulk": "off_cam" if k == "gaze?" else None}
+                          for k, v in sorted(by.items(), key=lambda kv: -kv[1])]}
+
+
+def set_captions(root: Path, ds_id: str, edits: list[dict]) -> dict:
+    """Several captions in one request, each logged as its own edit.
+
+    One request so the fingerprint is recomputed once and the page gets one
+    answer; separate log entries so edit_report()'s "three of the same clause is
+    systematic" threshold still counts what actually happened.
+    """
+    out, failed = [], []
+    for e in edits:
+        try:
+            out.append(set_caption(root, ds_id, str(e["name"]), str(e.get("caption", ""))))
+        except KeyError:
+            failed.append(e.get("name"))
+    return {"n_written": len(out), "rows": out, "failed": failed,
+            "captions": (load_preview(root, ds_id) or {}).get("captions"),
+            "approval": approval_state(root, ds_id)}
+
+
+def approval_record(root: Path, ds_id: str) -> dict:
+    """Approval as a record, with the reason it lapsed if it did.
+
+    The fingerprint binding already works and is already invisible: the page said
+    "approval STALE - set changed since" and nothing about WHAT changed, so the
+    only way to find out was to re-read 104 captions. Everything here is derived
+    from the edit log that `log_edit()` has been writing all along - no new file,
+    no migration.
+    """
+    st = approval_state(root, ds_id)
+    since = []
+    if st.get("at"):
+        mine = []
+        f = root / EDITS
+        if f.is_file():
+            for line in f.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                if rec.get("dataset") == ds_id and rec.get("at"):
+                    mine.append(rec)
+
+        # Both the approval and every edit are stamped to the SECOND, so an edit
+        # recorded in the same second as the approval cannot be ordered against
+        # it. Which way to resolve that depends on what the fingerprint says:
+        #
+        #   stale    something definitely changed, and a same-second edit is the
+        #            likeliest cause, so include it (>=) rather than report
+        #            "lapsed, 0 changes" - which explains nothing.
+        #   current  the fingerprint matches, so a same-second edit either
+        #            predates the approval or was reverted. Excluding it (>)
+        #            keeps an approved set from listing phantom changes.
+        after = (lambda a: a >= st["at"]) if st["stale"] else (lambda a: a > st["at"])
+        for rec in mine:
+            if not after(rec["at"]):
+                continue
+            since.append({"at": rec["at"], "image": rec.get("image"),
+                          "kind": rec.get("kind", "caption"),
+                          "clauses": [c.get("clause") for c in (rec.get("clauses") or [])]})
+    kinds: dict[str, int] = {}
+    for e in since:
+        kinds[e["kind"]] = kinds.get(e["kind"], 0) + 1
+    return {**st, "since": since, "n_since": len(since), "since_by_kind": kinds}
+
+
 def list_previews(root: Path) -> list[dict]:
     """Unapproved first: those are the ones blocking a training run."""
     out = []
@@ -664,10 +798,22 @@ def list_previews(root: Path) -> list[dict]:
         doc = json.loads(p.read_text(encoding="utf-8"))
         st = approval_state(root, doc["id"])
         flagged = sum(1 for im in doc["images"] if needs_look(im))
+        # `sub`/`status`/`group` are what the one picker shows, in the same shape
+        # the judging list uses, so the two tabs read alike.
+        if st["stale"]:
+            status, group = "you", "needs"
+            sub = f"{doc['n']} images · approval lapsed"
+        elif st["approved"]:
+            status, group = "done", "done"
+            sub = f"{doc['n']} images · approved"
+        else:
+            status, group = "you", "needs"
+            sub = f"{doc['n']} images" + (f" · {flagged} need a look" if flagged else "")
         out.append({"id": doc["id"], "n": doc["n"], "built_at": doc["built_at"],
                     "gate_passed": bool(doc.get("gate", {}).get("passed")),
                     "caption_failed": doc.get("captions", {}).get("failed", []),
-                    "flagged": flagged, "done": bool(st["approved"]), **st})
+                    "flagged": flagged, "done": bool(st["approved"]),
+                    "sub": sub, "status": status, "group": group, **st})
     return sorted(out, key=lambda s: (s["approved"], s["id"]))
 
 
@@ -676,7 +822,7 @@ def preview_payload(root: Path, ds_id: str) -> dict | None:
     if doc is None:
         return None
     strip = lambda ims: [{k: v for k, v in im.items() if k not in ("path", "home")} for im in ims]
-    return {**doc, "approval": approval_state(root, ds_id),
+    return {**doc, "approval": approval_record(root, ds_id),
             "images": strip(doc["images"]), "excluded": strip(doc.get("excluded", []))}
 
 
@@ -726,226 +872,426 @@ def image_path(root: Path, ds_id: str, name: str) -> Path | None:
     return None
 
 
-PAGE = """<!-- dataset preview -->
-<title>training set</title>
-<meta name=viewport content="width=device-width,initial-scale=1">
-<style>
- body{background:#111;color:#ddd;font:14px system-ui,sans-serif;margin:0;padding:12px}
- header{position:sticky;top:0;background:#111;padding:8px 0 10px;border-bottom:1px solid #333;z-index:5}
- select,button{font:inherit;padding:8px;background:#222;color:#ddd;border:1px solid #444;border-radius:6px}
- button.ok{background:#1b5e20;border-color:#2e7d32}
- button.no{background:#5a1b1b;border-color:#7d2e2e}
- .row{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #262626;align-items:flex-start}
- .row img{max-height:46vh;max-width:42vw;border-radius:6px;background:#000}
- .cap{flex:1;min-width:0}
- .cap code{display:block;white-space:pre-wrap;word-break:break-word;background:#191919;
-   border:1px solid #333;border-radius:6px;padding:10px;color:#e8e8e8;font-size:13px;line-height:1.45}
- .chip{display:inline-block;background:#3a2a00;border:1px solid #6b4e00;color:#ffd479;
-   border-radius:999px;padding:2px 9px;margin:6px 6px 0 0;font-size:12px}
- .chip.bad{background:#4a0f0f;border-color:#7d2e2e;color:#ffb4b4}
- .chip.look{background:#0d2f4a;border-color:#1d5c8f;color:#9ed2ff}
- #only{margin-left:10px;color:#bbb;font-size:13px;user-select:none;cursor:pointer}
- #only input{vertical-align:-1px;margin-right:5px}
- .row.hide{display:none}
- .meta{color:#888;font-size:12px;margin-top:6px}
- .finding{margin:2px 0;font-size:13px}
- .finding.f{color:#ff9d9d}
- .finding.p{color:#7fbf7f}
- .gz{float:right;margin:10px 6px 0 0;background:#2b3a2b;color:#bfe0bf;border:1px solid #3d553d;
-   border-radius:6px;font-size:13px;padding:6px 10px;cursor:pointer}
- .x{float:right;width:44px;height:44px;border-radius:50%;font-size:22px;line-height:44px;text-align:center;
-   background:#5a1b1b;border:1px solid #7d2e2e;color:#ffb4b4;cursor:pointer;margin-left:10px}
- .row.out{opacity:.35}
- .cap code{cursor:text}
- .cap textarea{width:100%;box-sizing:border-box;min-height:120px;font:16px system-ui,sans-serif;background:#191919;
-   color:#e8e8e8;border:1px solid #6b8;border-radius:6px;padding:10px;line-height:1.45}
- .cap .edit button{margin:6px 8px 0 0;padding:8px 14px}
- .cap .edit .save{background:#1b5e20;border-color:#2e7d32}
- .row.out .x{background:#1b3a1b;border-color:#2e7d32;color:#b4ffb4}
- #sum{margin:8px 0 0;color:#bbb;font-size:13px}
- details#rep{margin:10px 0;padding:8px 10px;background:#181818;border:1px solid #333;border-radius:6px}
- details#rep summary{cursor:pointer;color:#bbb;font-size:13px;list-style:none}
- details#rep summary::before{content:'▸ ';color:#888}
- details#rep[open] summary::before{content:'▾ '}
- @media (max-width:820px){ .row{flex-direction:column} .row img{max-width:100%;max-height:60vh} }
-</style>
-<header>
- <select id=pick></select>
- <button id=yes class=ok>Approve for training</button>
- <button id=no class=no>Reject</button>
- <span id=state></span>
- <div id=sum></div>
- <label id=only><input type=checkbox id=onlyck>only rows needing a look <span id=nlook></span></label>
-</header>
-<details id=rep><summary>details</summary><div id=repbody></div></details>
-<div id=list></div>
-<script>
-const $=id=>document.getElementById(id);
-let cur=null;
-async function loadList(){
-  const ls=await (await fetch('/dataset/list',{cache:'no-store'})).json();
-  const p=$('pick'); p.innerHTML='';
-  // unapproved first, then one divider, then approved - same shape as the
-  // judging list, so the two tabs read alike. `i` guards the case where
-  // everything is approved: a divider with nothing above it is just noise.
-  let split=false;
-  for(const [i,s] of ls.entries()){
-    if(s.approved&&!split&&i>0){split=true;
-      const dv=document.createElement('option');
-      dv.disabled=true;dv.textContent='─'.repeat(22)+' approved '+'─'.repeat(22);
-      p.appendChild(dv);}
-    const o=document.createElement('option');o.value=s.id;
-    o.textContent=`${s.approved?'\\u2713 ':''}${s.id}  (${s.n} images${s.flagged?', '+s.flagged+' flagged':''})`;
-    p.appendChild(o);}
-  const want=location.hash.slice(1)||(ls[0]||{}).id;
-  if(want){p.value=want;await open(want);}
+OWN_CSS = r"""
+/* One image + one caption, side by side on a monitor, stacked on a phone. */
+#head{position:sticky;top:0;z-index:10;background:var(--g0);
+  padding:var(--s3) 0 var(--s2);border-bottom:1px solid var(--g3)}
+.drow{display:flex;gap:var(--s4);padding:var(--s4) 0;
+  border-bottom:1px solid var(--g3);align-items:flex-start}
+.drow>img{flex:none;width:min(42vw,320px);border-radius:var(--r1);
+  background:var(--photo);cursor:zoom-in}
+.drow .cap{flex:1;min-width:0}
+.drow.out{opacity:.4}
+.drow.hide{display:none}
+.drow .rowtop{display:flex;gap:var(--s2);align-items:flex-start}
+.drow .rowtop .cap-box{flex:1}
+.drow .meta{font:var(--t-small);color:var(--g6);margin-top:var(--s2);
+  font-family:var(--mono)}
+.drow.focusrow{box-shadow:0 0 0 2px var(--you) inset;border-radius:var(--r1)}
+#bottom{height:calc(var(--tap) + var(--s5))}
+@media (max-width:820px){
+  .drow{flex-direction:column}
+  .drow>img{width:100%;max-height:58vh;object-fit:contain}
 }
+"""
+
+BODY = """
+<div class=wrap id=app>
+  <div class=col-main>
+    <div id=head>
+      <button class=picker id=pick aria-haspopup=dialog>
+        <span class=picker-txt><div id=setname>loading&hellip;</div>
+        <div class=sub id=setsub></div></span>
+        <span class=chev aria-hidden=true>&#9662;</span></button>
+      <div id=facts></div>
+    </div>
+    <div id=approval></div>
+    <details class=report id=report><summary>report</summary><div id=repbody></div></details>
+    <div id=list></div>
+    <div id=bottom></div>
+  </div>
+  <div class=col-rail id=rail></div>
+</div>
+<div id=bars></div>
+"""
+
+OWN_JS = r"""
+const $=id=>document.getElementById(id);
+/* `set` is the loaded dataset. It is NOT called `cur`: a local `const cur` in the
+   caption editor used to shadow the module-level one, so saving a caption wrote
+   properties onto a string and the header rendered "undefined in set". */
+let set=null, sets=[], fix=null, pos=null, onlyLook=false, fixAt=-1;
+try{ onlyLook=localStorage.getItem('onlyLook')==='1'; }catch(e){}
+
+const fileUrl=(ds,name)=>'/dataset/file?ds='+encodeURIComponent(ds)
+  +'&name='+encodeURIComponent(name);
+const rowOf=name=>document.querySelector('.drow[data-name="'+CSS.escape(name)+'"]');
+
+async function loadList(){
+  try{ sets=await SM.getJSON('/dataset/list'); }
+  catch(e){ return fail('Could not load the training sets',e.message); }
+  const hashed=location.hash.slice(1);
+  const known=hashed?sets.find(s=>s.id===hashed):null;
+  /* A hash pointing at a set that no longer exists used to render a blank page
+     forever: open() took FastAPI's 404 body as the payload and threw on
+     `set.images`. The judge page fixed exactly this and recorded it; this page
+     never got the fix. */
+  if(hashed&&!known) return gone(hashed,(sets[0]||{}).id);
+  const want=known?hashed:(sets[0]||{}).id;
+  if(!want) return fail('No training sets','Build a preview first.');
+  await open(want);
+}
+function openPicker(){
+  SM.sheet({title:'Training set',current:set&&set.id,
+    items:sets.map(s=>({id:s.id,title:s.id,sub:s.sub,status:s.status,group:s.group,
+      progress:null})),
+    onPick:id=>open(id).catch(e=>SM.toast(e.message))});
+}
+$('pick').onclick=openPicker;
+
 async function open(id){
-  cur=await (await fetch('/dataset/'+encodeURIComponent(id),{cache:'no-store'})).json();
+  const r=await fetch('/dataset/'+encodeURIComponent(id),{cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  set=await r.json();
   if(location.hash.slice(1)!==id) history.replaceState(null,'','#'+id);
-  renderHeader(cur.n,(cur.excluded||[]).length,cur.approval);
-  const g=cur.gate||{}; const cr=cur.captions||{};
-  const gf=(g.findings||[]).filter(f=>!f.passed).length, cf=(cr.findings||[]).filter(f=>!f.passed).length;
-  let h=`<div>trigger <code>${cur.trigger||'(none)'}</code> &middot; median ${cr.median_words||'?'} words</div>`;
-  for(const f of (g.findings||[])) if(!f.passed) h+=`<div class="finding f">x ${f.check}: ${f.detail}</div>`;
-  for(const f of (cr.findings||[])) h+=`<div class="finding ${f.passed?'p':'f'}">${f.passed?'✓':'x'} ${f.check}: ${f.detail}</div>`;
-  $('repbody').innerHTML=h;
-  $('rep').querySelector('summary').textContent=(gf+cf)?`${gf+cf} finding${gf+cf>1?'s':''} - tap for the report`:'report';
-  let out='';
-  const all=[...cur.images.map(i=>({...i,_out:false})),...(cur.excluded||[]).map(i=>({...i,_out:true}))].sort((a,b)=>a.name<b.name?-1:1);
-  for(const im of all){
-    const look=im.uncaptioned||(im.uncertain||[]).length>0;
-    const chips=(im.uncaptioned?'<span class="chip bad">NO CAPTION</span>':'')
-      +(im.uncertain||[]).map(u=>`<span class="chip look">${u}</span>`).join('')
-      +(im.missing||[]).map(m=>`<span class="chip">no ${m}</span>`).join('');
-    const meta=[im.face_px?`face ${im.face_px}px`:null,(im.yaw_deg!==undefined)?`yaw ${im.yaw_deg}\\u00b0`:null]
-      .filter(Boolean).join(' \\u00b7 ');
-    out+=`<div class="row${im._out?' out':''}" data-look="${look?1:0}" data-name="${im.name}"><img loading=lazy src="/dataset/file?ds=${encodeURIComponent(cur.id)}&name=${encodeURIComponent(im.name)}">
-      <div class=cap><div class=captop>
-      <code onclick="editCap('${im.name}')" title="tap to correct this caption">${(im.caption||'(empty)').replace(/</g,'&lt;')}</code>
-      <button class=x title="${im._out?'put back in the training set':'remove from the training set'}" onclick="toggle('${im.name}',${im._out?'false':'true'})" >${im._out?'↩':'✗'}</button>
-      ${(im.uncertain||[]).includes('gaze?')&&!/looking off camera/.test(im.caption||'')?`<button class=gz title="add 'looking off camera' to this caption" onclick="addGaze('${im.name}')">off cam</button>`:''}</div>
-      <div class=chips>${chips}</div><div class=meta>${im.name}${meta?' \\u00b7 '+meta:''}</div></div></div>`;
+  exitFix();
+  await Promise.all([refreshFix(),refreshPos()]);
+  renderAll();
+}
+const refreshFix=()=>SM.getJSON('/dataset/'+encodeURIComponent(set.id)+'/fixlist')
+  .then(d=>{fix=d;}).catch(()=>{fix=null;});
+const refreshPos=()=>SM.getJSON('/queue/position?dataset='+encodeURIComponent(set.id))
+  .then(d=>{pos=d;}).catch(()=>{pos=null;});
+
+function renderAll(){ header(); rows(); bar(); }
+
+/* --- header: facts that are also filters -------------------------------- */
+function header(){
+  $('setname').textContent=set.id;
+  const a=set.approval||{};
+  $('setsub').textContent=set.n+' images'
+    +(a.approved?' · approved':(a.stale?' · approval lapsed':' · not approved'));
+  const g=set.gate||{}, cr=set.captions||{};
+  const nLook=fix?fix.rows.length:0;
+  const nOut=(set.excluded||[]).length;
+  let h='<div class=facts>'
+    +'<span class="fact inert"><b>'+set.n+'</b> in set</span>'
+    +(nLook?'<button class="fact flag'+(onlyLook?' on':'')+'" data-act=onlylook>'
+       +'<b>'+nLook+'</b> need you</button>':'')
+    +'<span class="fact inert">gate '+(g.passed?'pass':'<b>FAIL</b>')+'</span>'
+    +'<span class="fact inert">captions '+(cr.passed?'pass'
+       :'<b>FAIL</b> ('+((cr.failed||[]).length)+')')+'</span>'
+    +(nOut?'<span class="fact inert"><b>'+nOut+'</b> removed</span>':'')
+    +(nLook?'<button class="fact" data-act=startfix>Fix '+nLook+' rows &rarr;</button>':'')
+    +'</div>';
+  SM.set($('facts'),null,h);
+  /* the report */
+  let rep='<div class=findings>';
+  for(const f of (g.findings||[])) if(!f.passed)
+    rep+='<div class="finding fail"><span class=mark>&#10007;</span><span>'
+      +SM.esc(f.check)+': '+SM.esc(f.detail)+'</span></div>';
+  for(const f of (cr.findings||[]))
+    rep+='<div class="finding '+(f.passed?'pass':'fail')+'"><span class=mark>'
+      +(f.passed?'&#10003;':'&#10007;')+'</span><span>'+SM.esc(f.check)+': '
+      +SM.esc(f.detail)+'</span></div>';
+  rep+='</div><div class=basis>A gate annotates. Nothing here blocks approval.</div>';
+  SM.set($('repbody'),null,rep);
+  const bad=(g.findings||[]).filter(f=>!f.passed).length
+           +(cr.findings||[]).filter(f=>!f.passed).length;
+  $('report').querySelector('summary').textContent=
+    bad?(bad+' finding'+(bad>1?'s':'')+' - tap for the report'):'report';
+  approvalCard();
+}
+
+/* --- approval as a record, with the reason it lapsed -------------------- */
+function approvalCard(){
+  const a=set.approval||{};
+  const when=a.at?(' on '+String(a.at).slice(0,16).replace('T',' ')):'';
+  let h='';
+  if(a.approved)
+    h='<div class="card e-done"><div class=card-head>'+SM.pill('done','Approved')
+      +'<h3>Approved'+when+'</h3></div>'
+      +'<div class=basis>fingerprint '+SM.esc(a.fingerprint||'')+'</div></div>';
+  else if(a.stale){
+    const n=a.n_since||0;
+    h='<div class="card e-you"><div class=card-head>'+SM.pill('you','Lapsed')
+      +'<h3>Approval lapsed</h3></div>'
+      +'<div class=card-sub>You approved this'+when+' as <code>'
+      +SM.esc(a.approved_fingerprint||'')+'</code>. '
+      +(n?(n+' change'+(n===1?'':'s')+' since.'):'The set has changed since.')
+      +' It is now <code>'+SM.esc(a.fingerprint||'')+'</code>.</div>';
+    if(n){
+      h+='<details class=report><summary>What changed ('+n+')</summary>';
+      for(const e of (a.since||[]).slice(0,40))
+        h+='<div class=basis>'+SM.esc(String(e.at).slice(0,16).replace('T',' '))
+          +' &middot; '+SM.esc(e.image||'')+' &middot; '
+          +SM.esc(e.kind==='caption'?(e.clauses.filter(Boolean).join(', ')||'caption')
+                                     :e.kind)+'</div>';
+      h+='</details>';
+    }
+    h+='</div>';
   }
-  $('list').innerHTML=out;
-  $('nlook').textContent=`(${all.filter(i=>i.uncaptioned||(i.uncertain||[]).length).length} of ${all.length})`;
+  SM.set($('approval'),null,h);
+}
+
+/* --- rows ---------------------------------------------------------------- */
+function chipsFor(im){
+  /* B1: this used to render only `uncaptioned` + `missing`, so saving a caption
+     silently DELETED that row's `gaze?` chip even though set_caption() returns
+     `uncertain`. All three sources, one function, used everywhere.
+     Severity, not hue-as-category: red = a defect that will train,
+     amber = look at this, grey = a note. */
+  return (im.uncaptioned?'<span class="chip chip-stop">NO CAPTION</span>':'')
+    +(im.uncertain||[]).map(u=>'<span class="chip chip-you">'+SM.esc(u)+'</span>').join('')
+    +(im.missing||[]).map(m=>'<span class=chip>no '+SM.esc(m)+'</span>').join('');
+}
+const looks=im=>!!(im.uncaptioned||(im.uncertain||[]).length);
+
+function rows(){
+  const all=[...(set.images||[]).map(i=>({...i,_out:false})),
+             ...(set.excluded||[]).map(i=>({...i,_out:true}))]
+    .sort((a,b)=>a.name<b.name?-1:1);
+  let h='';
+  for(const im of all){
+    const meta=[im.face_px?('face '+im.face_px+'px'):null,
+                (im.yaw_deg!==undefined&&im.yaw_deg!==null)?('yaw '+im.yaw_deg+'°'):null]
+      .filter(Boolean).join(' · ');
+    h+='<div class="drow'+(im._out?' out':'')+'" data-look="'+(looks(im)?1:0)+'"'
+      +' data-name="'+SM.esc(im.name)+'">'
+      +'<img loading=lazy src="'+fileUrl(set.id,im.name)+'" alt="'+SM.esc(im.name)+'">'
+      +'<div class=cap><div class=rowtop>'
+      +'<button class="cap-box'+(im.caption?'':' empty')+'" data-act=edit'
+      +' data-name="'+SM.esc(im.name)+'" title="tap to correct this caption">'
+      +SM.esc(im.caption||'(empty)')+'</button>'
+      +'<button class="btn btn-icon'+(im._out?' btn-primary':' btn-danger')+'"'
+      +' data-act=toggle data-name="'+SM.esc(im.name)+'" data-out="'+(im._out?0:1)+'"'
+      +' title="'+(im._out?'put back in the training set':'remove from the training set')
+      +'">'+(im._out?'&#8626;':'&#10007;')+'</button>'
+      +'</div><div class=chips>'+chipsFor(im)+'</div>'
+      +'<div class=meta>'+SM.esc(im.name)+(meta?' · '+meta:'')+'</div>'
+      +'</div></div>';
+  }
+  $('list').innerHTML=h;
   applyOnly();
 }
-// A close call is a prompt to look, so the filter only ever hides rows - it never
-// removes one from the set. Toggling it back shows everything again.
+/* A close call is a prompt to look, so the filter only ever HIDES rows. */
 function applyOnly(){
-  const on=$('onlyck').checked;
-  for(const r of document.querySelectorAll('#list .row'))
-    r.classList.toggle('hide', on && r.dataset.look!=='1');
+  for(const r of document.querySelectorAll('#list .drow'))
+    r.classList.toggle('hide', onlyLook && r.dataset.look!=='1');
 }
-async function setApproval(v){
-  const a=await (await fetch('/dataset/'+encodeURIComponent(cur.id)+'/approve',{method:'POST',
-    headers:{'Content-Type':'application/json'},body:JSON.stringify({approved:v})})).json();
-  cur.approval=a; renderHeader(cur.n,(cur.excluded||[]).length,a);
+/* B2: data-look was written once at render and applyOnly() was never re-run
+   after an edit, so a row you had just fixed stayed in the filter. */
+function refreshLook(name,im){
+  const r=rowOf(name); if(!r) return;
+  r.dataset.look=looks(im)?'1':'0';
+  SM.set(r,'.chips',chipsFor(im));
+  applyOnly();
 }
-function renderHeader(n,nx,a){
-  const g=cur.gate||{}, cr=cur.captions||{};
-  const col=v=>v?'#7fbf7f':'#ff9d9d';
-  $('sum').innerHTML=`<b>${n}</b> in set${nx?', '+nx+' removed':''}
-    &middot; gate <b style="color:${col(g.passed)}">${g.passed?'pass':'FAIL'}</b>
-    &middot; captions <b style="color:${col(cr.passed)}">${cr.passed?'pass':'FAIL'}</b>`;
-  $('state').textContent=a.approved?('approved '+(a.at||'')):(a.stale?'approval STALE - set changed since':'not approved');
-  $('state').style.color=a.approved?'#7fbf7f':'#ff9d9d';
-  const o=[...$('pick').options].find(o=>o.value===cur.id); if(o) o.textContent=`${a.approved?'✓ ':''}${cur.id}  (${n} images)`;
+
+/* --- the bottom bar: the primary label states the consequence ----------- */
+function bar(){
+  if(fixAt>=0) return fixBar();
+  const a=set.approval||{};
+  const g=set.gate||{}, cr=set.captions||{};
+  const over=[(g.passed?null:'the gate'),(cr.passed?null:'captions')].filter(Boolean);
+  let label='Approve for training';
+  if(pos&&pos.estimate&&pos.estimate.total_s)
+    label+=' — '+SM.dur(pos.estimate.total_s);
+  if(pos&&pos.place) label+=', '+ordinal(pos.place)+' in the training order';
+  SM.set($('bars'),null,'<div class=actbar>'
+    +(a.approved
+       ? '<button class="btn btn-danger" data-act=approve data-v=0>Withdraw approval</button>'
+         +'<span class=dim>approved; it is in the training order</span>'
+       : '<button class="btn btn-primary" data-act=approve data-v=1>'+SM.esc(label)
+         +'</button><button class="btn" data-act=approve data-v=0>Reject</button>')
+    +(over.length&&!a.approved
+       ? '<span class=over>Approving over '+over.length+' finding'
+         +(over.length>1?'s':'')+' ('+over.join(' and ')+') — a gate annotates,'
+         +' it does not block.</span>'
+       : '')
+    +'</div>');
 }
-function chipsFor(im){return (im.uncaptioned?'<span class="chip bad">NO CAPTION</span>':'')+(im.missing||[]).map(m=>`<span class="chip">no ${m}</span>`).join('');}
-function editCap(name){
-  const row=document.querySelector(`.row[data-name="${name}"]`); const code=row.querySelector('code');
-  if(row.querySelector('.edit')) return;
-  const cur=code.textContent==='(empty)'?'':code.textContent;
-  const box=document.createElement('div'); box.className='edit';
-  box.innerHTML=`<textarea>${cur.replace(/</g,'&lt;')}</textarea><div><button class=save>Save caption</button><button class=cancel>Cancel</button></div>`;
-  code.hidden=true; code.after(box); const ta=box.querySelector('textarea'); ta.focus();
-  box.querySelector('.cancel').onclick=()=>{box.remove();code.hidden=false;};
-  box.querySelector('.save').onclick=async()=>{
-    const r=await (await fetch('/dataset/'+encodeURIComponent(cur_id())+'/caption',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({name,caption:ta.value})})).json();
-    code.textContent=r.caption||'(empty)'; box.remove(); code.hidden=false;
-    row.querySelector('.chips').innerHTML=chipsFor(r);
-    cur.captions=r.captions; cur.approval=r.approval; renderHeader(cur.n,(cur.excluded||[]).length,r.approval);
-  };
+const ordinal=n=>n+(['th','st','nd','rd'][(n%100-20)%10]||['th','st','nd','rd'][n%100]||'th');
+
+/* --- fix mode ------------------------------------------------------------ */
+function startFix(){
+  if(!fix||!fix.rows.length) return;
+  fixAt=0; gotoFix();
 }
-function cur_id(){return cur.id;}
-// The captioner puts gaze after the angle and before the hair clause, so a clause
-// added here sits where a generated one would. Falls back to appending after the
-// framing clause if a caption has no hair clause at all.
-async function addGaze(name){
-  const row=document.querySelector(`.row[data-name="${name}"]`);
-  const code=row.querySelector('code'); const btn=row.querySelector('.gz');
-  const cap=code.textContent==='(empty)'?'':code.textContent;
-  if(/looking off camera/.test(cap)) return;
-  const parts=cap.split(',').map(p=>p.trim());
-  let at=parts.findIndex(p=>/^her hair/i.test(p));
-  if(at<0) at=Math.min(2,parts.length);
-  parts.splice(at,0,'looking off camera');
-  const next=parts.join(', ');
-  if(btn) btn.disabled=true;
-  try{
-    const resp=await fetch('/dataset/'+encodeURIComponent(cur_id())+'/caption',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({name,caption:next})});
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    const r=await resp.json();
-    code.textContent=r.caption||'(empty)';
-    row.querySelector('.chips').innerHTML=chipsFor(r);
-    cur.captions=r.captions; cur.approval=r.approval;
-    renderHeader(cur.n,(cur.excluded||[]).length,r.approval);
-    if(btn) btn.remove();
-  }catch(e){
-    if(btn) btn.disabled=false;
-    $('state').textContent='could not add the gaze clause to '+name+' - '+e.message;
-    $('state').style.color='#ff9d9d';
+function exitFix(){
+  fixAt=-1;
+  for(const r of document.querySelectorAll('.drow.focusrow')) r.classList.remove('focusrow');
+}
+function gotoFix(){
+  const row=fix.rows[fixAt];
+  if(!row) { exitFix(); renderAll(); return; }
+  for(const r of document.querySelectorAll('.drow.focusrow')) r.classList.remove('focusrow');
+  const el=rowOf(row.name);
+  if(el){
+    el.classList.remove('hide');          /* never hide the row you are fixing */
+    el.classList.add('focusrow');
+    /* scroll it into view and focus NOTHING: a focused textarea pops the
+       keyboard on a phone and covers the thing you are looking at */
+    el.scrollIntoView({block:'center',behavior:'smooth'});
   }
+  fixBar();
 }
-async function toggle(name,excluded){
-  // Change ONLY this row. Rebuilding the list re-creates every <img>, they reload
-  // lazily, the page height changes under the thumb and the scroll jumps.
-  const btn=document.querySelector(`.row[data-name="${name}"] .x`); if(btn) btn.disabled=true;
-  let r;
-  try{
-    const resp=await fetch('/dataset/'+encodeURIComponent(cur.id)+'/exclude',{method:'POST',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({name,excluded})});
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
-    r=await resp.json();
-  }catch(e){
-    // Never leave the button dead and silent: that is indistinguishable from the
-    // click not registering, and it cost a removal that had to be done by hand.
-    if(btn){ btn.disabled=false; }
-    $('state').textContent='could not '+(excluded?'remove ':'restore ')+name+' - '+e.message+' - try again';
-    $('state').style.color='#ff9d9d';
+function fixBar(){
+  const row=fix&&fix.rows[fixAt];
+  if(!row){
+    SM.set($('bars'),null,'<div class="fixbar done"><span class=lbl>'
+      +'<b>Nothing is flagged any more.</b><span>Every row you were asked to look'
+      +' at has been seen.</span></span>'
+      +'<button class="btn btn-primary" data-act=endfix>Back to the set</button></div>');
     return;
   }
-  const row=document.querySelector(`.row[data-name="${name}"]`);
-  if(row){ row.classList.toggle('out',excluded);
-    const b=row.querySelector('.x'); b.disabled=false; b.textContent=excluded?'↩':'✗';
-    b.title=excluded?'put back in the training set':'remove from the training set';
-    b.onclick=()=>toggle(name,!excluded); }
-  // Keep cur in step with the server. `new Array(n)` made a sparse array whose
-  // holes spread into undefined and threw in render(); and leaving the entry in
-  // cur.images meant a re-render put a removed image back on screen.
-  const pool=[...(cur.images||[]),...(cur.excluded||[])].filter(Boolean);
-  const ent=pool.find(i=>i&&i.name===name);
-  cur.images=pool.filter(i=>i!==ent&&!i._out);
-  cur.excluded=pool.filter(i=>i!==ent&&i._out);
-  if(ent){ ent._out=excluded; (excluded?cur.excluded:cur.images).push(ent); }
-  cur.images.sort((a,b)=>a.name<b.name?-1:1); cur.excluded.sort((a,b)=>a.name<b.name?-1:1);
-  cur.n=r.n; cur.approval=r.approval;
-  renderHeader(r.n,r.n_excluded,r.approval);
+  const sug=row.suggestion;
+  SM.set($('bars'),null,'<div class=fixbar>'
+    +'<button class="btn btn-icon" data-act=fixprev aria-label="previous"'
+    +(fixAt===0?' disabled':'')+'>&#8249;</button>'
+    +'<span class=lbl><b>Fix '+(fixAt+1)+' of '+fix.rows.length+'</b>'
+    +'<span>'+SM.esc(row.reasons.join(' · '))+'</span></span>'
+    +(sug?'<button class="btn btn-primary" data-act=applysug data-name="'
+       +SM.esc(row.name)+'">Apply &ldquo;off cam&rdquo;</button>':'')
+    +'<button class="btn" data-act=fixnext>'+(fixAt+1>=fix.rows.length?'Done':'Skip')
+    +'</button>'
+    +'<button class="btn btn-icon btn-ghost" data-act=endfix aria-label="leave fix mode">'
+    +'&#10005;</button></div>');
 }
-$('pick').onchange=e=>open(e.target.value);
-$('yes').onclick=()=>setApproval(true);
-$('no').onclick=()=>setApproval(false);
-// remember the filter across sets and reloads - it is a way of working, not a
-// per-set choice, and re-ticking it on every set defeats the point
-try{ $('onlyck').checked=localStorage.getItem('onlyLook')==='1'; }catch(e){}
-$('onlyck').onchange=()=>{ try{localStorage.setItem('onlyLook',$('onlyck').checked?'1':'0');}catch(e){} applyOnly(); };
+
+/* --- actions: one delegated listener ------------------------------------ */
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-act]'); if(!b) return;
+  const a=b.dataset.act;
+  if(a==='onlylook'){
+    onlyLook=!onlyLook;
+    try{ localStorage.setItem('onlyLook',onlyLook?'1':'0'); }catch(err){}
+    applyOnly(); header(); return;
+  }
+  if(a==='startfix') return startFix();
+  if(a==='endfix'){ exitFix(); renderAll(); return; }
+  if(a==='fixprev'){ if(fixAt>0){ fixAt--; gotoFix(); } return; }
+  if(a==='fixnext'){ fixAt++; gotoFix(); return; }
+  if(a==='edit') return editCaption(b.dataset.name);
+  if(a==='pick') return openPicker();
+  if(a==='gpu') return SM.nav('gpu');
+  b.disabled=true;
+  try{
+    if(a==='approve') await approve(b.dataset.v==='1');
+    else if(a==='toggle') await toggle(b.dataset.name,b.dataset.out==='1');
+    else if(a==='applysug') await applySuggestion(b.dataset.name);
+  }catch(err){ SM.toast(err.message); }
+  finally{ b.disabled=false; }
+});
+
+async function approve(v){
+  const a=await SM.postJSON('/dataset/'+encodeURIComponent(set.id)+'/approve',{approved:v});
+  set.approval=a;
+  await Promise.all([refreshPos(),refreshFix()]);
+  renderAll();
+  SM.recount();
+  if(v&&pos){
+    /* the one place a review flow hands over to the trigger, deliberately:
+       approval IS the trigger and approval order IS the training order */
+    SM.toast(set.id+' approved — '+ordinal(pos.place)+' in the training order',
+      {label:'Open the queue',run:()=>SM.nav('gpu')});
+  }
+}
+
+async function toggle(name,out){
+  const r=await SM.postJSON('/dataset/'+encodeURIComponent(set.id)+'/exclude',
+    {name:name,excluded:out});
+  /* Change ONLY this row. Rebuilding the list re-creates every <img>, they
+     reload lazily, the page height changes under the thumb and the scroll jumps. */
+  const el=rowOf(name);
+  if(el){
+    el.classList.toggle('out',out);
+    const btn=el.querySelector('[data-act=toggle]');
+    btn.dataset.out=out?'0':'1';
+    btn.className='btn btn-icon'+(out?' btn-primary':' btn-danger');
+    btn.innerHTML=out?'&#8626;':'&#10007;';
+    btn.title=out?'put back in the training set':'remove from the training set';
+  }
+  const pool=[...(set.images||[]),...(set.excluded||[])].filter(Boolean);
+  const ent=pool.find(i=>i&&i.name===name);
+  set.images=pool.filter(i=>i!==ent&&!i._out);
+  set.excluded=pool.filter(i=>i!==ent&&i._out);
+  if(ent){ ent._out=out; (out?set.excluded:set.images).push(ent); }
+  set.n=r.n; set.approval=r.approval;
+  await Promise.all([refreshFix(),refreshPos()]);
+  header(); bar();
+}
+
+function editCaption(name){
+  const el=rowOf(name); if(!el||el.querySelector('.editor')) return;
+  const box=el.querySelector('.cap-box');
+  const text=box.classList.contains('empty')?'':box.textContent;
+  const ed=document.createElement('div');
+  ed.className='editor';
+  ed.innerHTML='<textarea spellcheck=false></textarea>'
+    +'<div class=btn-row><button class="btn btn-primary" data-save>Save caption</button>'
+    +'<button class="btn btn-ghost" data-cancel>Cancel</button></div>';
+  ed.querySelector('textarea').value=text;
+  box.hidden=true; box.after(ed);
+  ed.querySelector('textarea').focus();
+  ed.querySelector('[data-cancel]').onclick=()=>{ ed.remove(); box.hidden=false; };
+  ed.querySelector('[data-save]').onclick=async()=>{
+    const v=ed.querySelector('textarea').value;
+    try{
+      const r=await SM.postJSON('/dataset/'+encodeURIComponent(set.id)+'/caption',
+        {name:name,caption:v});
+      applyCaption(name,r);
+      ed.remove(); box.hidden=false;
+    }catch(err){ SM.toast(err.message); }
+  };
+}
+
+/* One place that absorbs a caption write, so the chips, the look flag, the
+   report, the approval and the bar can never drift apart again. */
+function applyCaption(name,r){
+  const el=rowOf(name);
+  if(el){
+    const box=el.querySelector('.cap-box');
+    box.textContent=r.caption||'(empty)';
+    box.classList.toggle('empty',!r.caption);
+  }
+  const ent=[...(set.images||[]),...(set.excluded||[])].find(i=>i&&i.name===name);
+  if(ent){ ent.caption=r.caption; ent.missing=r.missing;
+           ent.uncertain=r.uncertain; ent.uncaptioned=r.uncaptioned; }
+  set.captions=r.captions; set.approval=r.approval;
+  refreshLook(name,r);
+  refreshFix().then(()=>{ header(); bar(); });
+}
+
+async function applySuggestion(name){
+  const row=fix.rows.find(r=>r.name===name);
+  if(!row||!row.suggestion) return;
+  const r=await SM.postJSON('/dataset/'+encodeURIComponent(set.id)+'/caption',
+    {name:name,caption:row.suggestion.caption});
+  applyCaption(name,r);
+  SM.toast('caption corrected');
+  fixAt++; setTimeout(gotoFix,250);
+}
+
+function gone(id,fallback){
+  $('list').innerHTML='<div class=errbox><b>'+SM.esc(id)+' is gone</b>'
+    +'That training set is not in the list any more.'
+    +(fallback?' Opening the first one that is.':'')
+    +'<div class=btn-row><button class="btn btn-primary" data-act=pick>Choose a set'
+    +'</button></div></div>';
+  location.hash='';
+  if(fallback) setTimeout(()=>open(fallback).catch(()=>{}),1200);
+}
+function fail(what,why){
+  $('list').innerHTML='<div class=errbox><b>'+SM.esc(what)+'</b>'+SM.esc(why||'')
+    +'<div class=btn-row><button class="btn" data-act=gpu>What the card is doing'
+    +'</button></div></div>';
+}
+
 loadList();
-</script>
 """
+
+PAGE = page("training set", BODY, OWN_JS, OWN_CSS)
 
 
 def preview_router(cfg: dict):
@@ -993,6 +1339,30 @@ def preview_router(cfg: dict):
     def _caption(ds_id: str, body: dict = Body(...)) -> dict:
         try:
             return set_caption(root, ds_id, str(body.get("name", "")), str(body.get("caption", "")))
+        except KeyError as e:
+            raise HTTPException(404) from e
+
+    @r.get("/dataset/{ds_id}/fixlist")
+    def _fixlist(ds_id: str) -> dict:
+        """The rows with something to DO, each with the one fix that fits."""
+        if load_preview(root, ds_id) is None:
+            raise HTTPException(404)
+        return fix_rows(root, ds_id)
+
+    @r.get("/dataset/{ds_id}/approval")
+    def _approval(ds_id: str) -> dict:
+        if load_preview(root, ds_id) is None:
+            raise HTTPException(404)
+        return approval_record(root, ds_id)
+
+    @r.post("/dataset/{ds_id}/captions")
+    def _captions(ds_id: str, body: dict = Body(...)) -> dict:
+        """Several captions in one request, each logged as its own edit."""
+        edits = body.get("edits") or []
+        if not isinstance(edits, list):
+            raise HTTPException(400, "edits must be a list")
+        try:
+            return set_captions(root, ds_id, edits)
         except KeyError as e:
             raise HTTPException(404) from e
 

@@ -38,13 +38,17 @@ def create_app(cfg: dict, sampler: Sampler | None = None):
     from .hub import hub_router  # noqa: PLC0415
     from .queue_page import queue_router  # noqa: PLC0415
     from ..assets.review import review_router  # noqa: PLC0415
+    from ..train.epochs import epochs_router  # noqa: PLC0415
     from ..train.preview import preview_router  # noqa: PLC0415
 
-    app.include_router(hub_router(cfg))
-    app.include_router(queue_router(cfg))
+    # The sampler is how /hub/now says what the card is doing. Passed as a
+    # callable, not the object, so the router stays testable with a stub.
+    app.include_router(hub_router(cfg, sampler.status))
+    app.include_router(queue_router(cfg, sampler.status))
     app.include_router(review_router(cfg))
     app.include_router(judge_router(cfg))
     app.include_router(preview_router(cfg))
+    app.include_router(epochs_router(cfg))
     return app
 
 
