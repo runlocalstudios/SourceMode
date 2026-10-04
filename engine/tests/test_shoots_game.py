@@ -252,3 +252,20 @@ def test_makeup_reaches_every_path_from_the_one_builder():
     # and a slot may ask for less - a gym shot or a just-woken selfie
     assert "Makeup: none, bare skin" in shot_prompt(
         "nobody", {**pack, "makeup": "none, bare skin"})
+
+
+def test_a_pack_resumes_but_re_renders_when_the_prompt_changed():
+    """Resumability must not mean "a prompt fix does nothing".
+
+    `render_plan` skips any shot whose file and sidecar exist, which is what
+    lets a pack survive a crash. Measured 2026-10-04: with the makeup clause
+    added, re-running zara's pack would have re-rendered 3 of 28 looks and
+    handed back 25 built from the superseded prompt.
+    """
+    from sourcemode.assets.render import needs_rerender
+
+    assert needs_rerender({"prompt": "old words"}, "new words")
+    assert not needs_rerender({"prompt": "same words"}, "same words")
+    # a sidecar from before prompts were recorded is left alone, not re-rolled
+    assert not needs_rerender({}, "anything")
+    assert not needs_rerender({"prompt": ""}, "anything")

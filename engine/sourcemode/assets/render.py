@@ -233,6 +233,22 @@ def t2i_workflow(cfg: dict, prompt: str, seed: int, prefix: str, *, lora_path: s
         }))
 
 
+def needs_rerender(sidecar: dict, prompt: str) -> bool:
+    """Is an existing shot still what the plan asks for?
+
+    `render_plan` skips any shot whose file and sidecar exist, which is what
+    makes a pack resumable after a crash - and also what made "I fixed the
+    prompt, run it again" do nothing. Measured 2026-10-04: with the makeup
+    clause added, re-running zara's pack would have re-rendered 3 of 28 looks
+    and handed back 25 built from the superseded prompt.
+
+    A sidecar with no prompt recorded predates this and is left alone rather
+    than re-rendered on a guess.
+    """
+    prior = (sidecar or {}).get("prompt")
+    return bool(prior) and prior != prompt
+
+
 def render_plan(cfg: dict, client, plan: dict, out: Path, *, shots: int = 4, seed: int = 7100,
                 lora_strength: float = 0.85, render_pass: str = "medium", log=print,
                 only: set[str] | None = None) -> list[dict]:
@@ -277,8 +293,11 @@ def render_plan(cfg: dict, client, plan: dict, out: Path, *, shots: int = 4, see
             dest = sdir / f"shot_{k:02d}_s{s}.png"
             side = dest.with_suffix(".json")
             if dest.exists() and side.exists():
-                results.append(json.loads(side.read_text(encoding="utf-8")))
-                continue
+                prior = json.loads(side.read_text(encoding="utf-8"))
+                if not needs_rerender(prior, prompt):
+                    results.append(prior)
+                    continue
+                log(f"  {slot['id']} shot {k}: prompt changed, re-rendering")
             nodes = build_native_workflow(cfg, image_name, prompt, s, f"assets/{character}/{slot['id']}",
                                           lora=plan["lora"], lora_strength=lora_strength,
                                           render_pass=render_pass, width=W, height=H,
