@@ -46,6 +46,12 @@
   "age": 18,
   "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
  },
+ "raven": {
+  "_note": "Hair feature and its negative moved here 2026-10-04 from a FEATURE_NEG dict inside dense_epoch_eval.py, where it reached the eval and never the asset pack. Her ethnicity, build and figure are NOT documented yet - add them before her next sweep; appearance.check('raven') will say so.",
+  "features": "a full fringe falling straight across her forehead to just above her eyebrows, soft and slightly wispy rather than blunt cut",
+  "prompt": "her hair worn with full bangs falling straight across her forehead to just above her eyebrows, soft and slightly wispy rather than blunt cut",
+  "negative": "no bangs, bare forehead, exposed forehead, forehead fully visible, hair swept back off the forehead, centre parting, middle part, hair tucked behind the hairline, curtain bangs, side-swept bangs, receding hairline"
+ },
  "vivienne": {
   "ethnicity": "Vietnamese",
   "build": "skinny, average height",

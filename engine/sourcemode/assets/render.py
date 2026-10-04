@@ -78,6 +78,12 @@ def appearance_clause(character: str) -> str:
     return clause(character)
 
 
+def character_negative(character: str) -> str:
+    """The character's own negative, from the same record as her appearance."""
+    from .appearance import negative  # noqa: PLC0415
+    return negative(character)
+
+
 def fitted_clause(character: str) -> str:
     """", fitted to her tiny frame" - or NOTHING when her record does not say.
 
@@ -202,7 +208,8 @@ def render_plan(cfg: dict, client, plan: dict, out: Path, *, shots: int = 4, see
                 continue
             nodes = build_native_workflow(cfg, image_name, prompt, s, f"assets/{character}/{slot['id']}",
                                           lora=plan["lora"], lora_strength=lora_strength,
-                                          render_pass=render_pass, width=W, height=H)
+                                          render_pass=render_pass, width=W, height=H,
+                                          negative_extra=character_negative(character))
             files = client.outputs(client.wait(client.submit(nodes), timeout_s=3600))
             if not files:
                 log(f"  {slot['id']} shot {k}: no output")

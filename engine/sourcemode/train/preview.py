@@ -817,12 +817,27 @@ def list_previews(root: Path) -> list[dict]:
     return sorted(out, key=lambda s: (s["approved"], s["id"]))
 
 
+def _appearance_for(ds_id: str) -> dict:
+    """Her appearance record's pre-flight, keyed by character - `marisol_v2`
+    is marisol. Never raises: a badly shaped record must not take the page down."""
+    import re as _re  # noqa: PLC0415
+
+    try:
+        from ..assets.appearance import check  # noqa: PLC0415
+
+        return check(_re.sub(r"_v\d+$", "", ds_id))
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": True, "missing": [], "warnings": [f"could not check: {exc}"],
+                "has_record": False}
+
+
 def preview_payload(root: Path, ds_id: str) -> dict | None:
     doc = load_preview(root, ds_id)
     if doc is None:
         return None
     strip = lambda ims: [{k: v for k, v in im.items() if k not in ("path", "home")} for im in ims]
     return {**doc, "approval": approval_record(root, ds_id),
+            "appearance": _appearance_for(ds_id),
             "images": strip(doc["images"]), "excluded": strip(doc.get("excluded", []))}
 
 
@@ -1109,7 +1124,21 @@ function bar(){
          +(over.length>1?'s':'')+' ('+over.join(' and ')+') — a gate annotates,'
          +' it does not block.</span>'
        : '')
+    +appearanceNote()
     +'</div>');
+}
+/* Approval triggers training, and training ends in the sweep - the first time
+   text alone has to carry her identity. If her record is missing then, the
+   sweep hours from now renders her from the trigger alone. Say so here. */
+function appearanceNote(){
+  const ap=set.appearance; if(!ap) return '';
+  const bits=[];
+  for(const m of (ap.missing||[])) bits.push('MISSING '+m.split(' - ')[0]);
+  for(const w of (ap.warnings||[])) bits.push(w.split(' - ')[0]);
+  if(!bits.length) return '';
+  return '<span class=over>'+(ap.ok?'Appearance record: ':'Appearance record INCOMPLETE - ')
+    +SM.esc(bits.join(' · '))+(ap.ok?'':'. The sweep after training will render her from'
+    +' the trigger alone; add it to characters/appearance.json first')+'.</span>';
 }
 const ordinal=n=>n+(['th','st','nd','rd'][(n%100-20)%10]||['th','st','nd','rd'][n%100]||'th');
 

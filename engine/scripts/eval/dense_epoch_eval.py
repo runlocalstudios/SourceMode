@@ -29,11 +29,16 @@ from sourcemode.render.workflow import load_template, prune_placeholder_loras, s
 # the epoch offset, and killed a queued 60-render job the instant it started -
 # after it had waited seven hours for the card. Split flags out first.
 _FLAGS = {"--scenes", "--epochs"}
-POS, _FLAGVALS = [], {}
+# Bare flags take no value. They are skipped here for the same reason the valued
+# ones are split out: anything left in argv lands in a positional slot by index.
+_BARE = {"--allow-incomplete-appearance"}
+POS, _FLAGVALS, _BARESEEN = [], {}, set()
 _it = iter(sys.argv)
 for _a in _it:
     if _a in _FLAGS:
         _FLAGVALS[_a] = next(_it, "")
+    elif _a in _BARE:
+        _BARESEEN.add(_a)
     else:
         POS.append(_a)
 
@@ -74,101 +79,55 @@ if "--epochs" in _FLAGVALS:
 # as male wins: jojo came back 80% male at epoch 1, 53% across epochs 1-3, while
 # sunny and gabi - whose names carry a female prior - came back 0% and 5%. The bug
 # was latent in every earlier evaluation and only surfaced on jojo.
-SUBJECT = "a woman"
-# A defining hair feature the base model will not volunteer. Raven has a full
-# fringe in all five references and in her training frames, but the eval prompts
-# said nothing about it and many renders came back with a centre part and a bare
-# forehead - a visibly different person regardless of how well the LoRA learned
-# her face. Her best epoch read 50%.
+# WHAT SHE LOOKS LIKE comes from ONE place: characters/appearance.json, read
+# through sourcemode.assets.appearance. This file used to keep its own FEATURE
+# and FEATURE_NEG dicts - raven's bangs, then vivienne's pink - and its own
+# "a woman" subject with no age. That was a second description of the same
+# character, reachable only on the favorable/standard scene sets, and it is how
+# vivienne was fixed in appearance.json and still rendered black-haired here,
+# and how raven's bangs negative reached the eval and never her asset pack.
 #
-# Wording chosen for what these models actually respond to: "bangs" rather than
-# "fringe", "full" to rule out curtain and side-swept, a stated length, and a
-# texture word. Paired with a negative, because the failure is the model
-# reverting to its default rather than ignoring the request.
+# The rule, measured three times (priya's glasses, raven's bangs, vivienne's
+# pink - the last by matched-seed A/B on 2026-10-04, 0.611/0.572/0.672):
 #
-# vivienne is the second case and it cost a whole sweep: her 90-render eval
-# scored 0/90 because the prompt asked for "long black hair" over a LoRA trained
-# on black hair with pink underlights. A matched-seed A/B on 2026-10-04 settled
-# it - "long black hair" and DELETING the colour both gave plain black, so the
-# LoRA never learned the pink, while naming it gave her real pattern and RAISED
-# identity (0.611 / 0.572 / 0.672). Same rule as raven's bangs and priya's
-# glasses: a trait correctly absent from the CAPTIONS still has to be stated at
-# RENDER time.
+#   training images  identity comes from the REFERENCE PHOTOS; text must not
+#                    describe her face, hair or build (lora-gen-80 skill)
+#   training captions identity must be ABSENT, so it binds to the trigger
+#   inference        identity is LoRA + TEXT, and the text MUST state every
+#                    trait the LoRA will not carry: age, build, hair colour,
+#                    bangs, glasses. The LoRA does not learn these on its own.
 #
-# NOTE: this dict duplicates characters/appearance.json, which the asset scene
-# path already reads through appearance.clause(). Two sources for one fact is
-# how vivienne was fixed in one of them and still wrong in the other. Worth
-# collapsing into clause() rather than growing this further.
-FEATURE = {
-    "raven": ("her hair worn with full bangs falling straight across her forehead to just "
-              "above her eyebrows, soft and slightly wispy rather than blunt cut"),
-    "vivienne": ("her long black hair carrying vivid pink underlights beneath the top "
-                 "layer, the pink showing through the lengths"),
-}
-FEATURE_NEG = {
-    "raven": ("no bangs, bare forehead, exposed forehead, forehead fully visible, hair "
-              "swept back off the forehead, centre parting, middle part, hair tucked "
-              "behind the hairline, curtain bangs, side-swept bangs, receding hairline"),
-}
-FEAT = FEATURE.get(CHAR.lower(), "")
-FEAT_NEG = FEATURE_NEG.get(CHAR.lower(), "")
-LOOK = ("Photorealistic, natural skin texture, sharp focus. Natural realistic human "
-        "proportions, correct anatomy, a normal sized head.")
-SCENES = [
-    "standing in a sunlit kitchen in a white tank top, facing the camera, soft smile",
-    "on a city street at night under neon signs, wearing a black leather jacket, facing the camera",
-    "in a cafe holding a coffee cup, wearing a denim jacket, looking straight at the camera, slight smile",
-    "on a stage behind a microphone, wearing a dark top, facing the camera, singing",
-    "in a rehearsal room beside a drum kit, wearing a blue t-shirt, laughing at the camera",
-    "in a flower market surrounded by blooms, wearing a cream lace top, smiling widely at the camera",
-    "sitting on the edge of a bed under a soft lamp, wearing an oversized sweater, facing the camera",
-    "at an office desk in a blazer over a tee, facing the camera, composed expression",
-    "in a gym in athletic wear, facing the camera, resting between sets",
-    "on a park bench in autumn in a rust knit sweater, facing the camera, head tilted very slightly",
-    "in a bright bathroom mirror selfie in a grey hoodie, facing the camera, relaxed expression",
-    "at a kitchen table with a laptop, wearing a striped tee, facing the camera, small smile",
-    "on a sunny balcony in a navy button-up shirt, facing the camera, squinting slightly",
-    "in a library between shelves, wearing a cream blouse, facing the camera, calm expression",
-    "at a beach at golden hour in a white linen shirt, facing the camera, hair moving in the wind",
-    "in a car passenger seat in a black turtleneck, facing the camera, neutral expression",
-    "at a birthday party holding a slice of cake, wearing a lilac top, facing the camera, grinning",
-    "in a hotel lobby in a camel coat, facing the camera, polite smile",
-    "in a garden centre among plants, wearing a green v-neck, facing the camera, curious expression",
-    "on a rooftop at dusk in a burgundy sweater, facing the camera, contented expression",
-]
-# --scenes favorable swaps in the three-quarter portrait set and renders into a
-# separate output dir and judge set, so the two tests never mix. Never compare a
-# number from one scene set against the other - jojo scored 77-90% on asset runs
-# and 29% on the bare sweep, and comparing across tests once cost a whole wrong
-# conclusion about priya.
-# Jeremy, 2026-09-28 and again 2026-10-02: the bare sweep (microphone, drum kit,
-# rooftop...) is SHELVED. Every eval runs on the favorable three-quarter portrait
-# set unless "--scenes standard" is passed explicitly. Amanda was evaluated on the
-# wrong set after he had already said this once.
-SCENE_SET = "asset"
-if "--scenes" in _FLAGVALS:
-    SCENE_SET = _FLAGVALS["--scenes"]
-VERBATIM = False
-if SCENE_SET == "asset":
-    # Jeremy, 2026-10-02: "The real test would be to generate 10 different examples
-    # that look just like the asset generator prompts." These ARE those prompts,
-    # rendered verbatim - no subject, no feature clause, no LOOK suffix.
-    sys.path.insert(0, str(Path("scripts/eval").resolve()))
-    from asset_scenes import asset_prompts
-    SCENES = asset_prompts(TRIGGER)
-    VERBATIM = True
-    OUT = Path(f"outputs/dense_{SUB}_asset"); OUT.mkdir(parents=True, exist_ok=True)
-    SET_ID = f"dense_{SUB}_asset"
-elif SCENE_SET == "favorable":
-    # Lives in the REPO, not a session scratchpad - the old path pointed at one
-    # session's temp dir and would break for any later session.
-    sys.path.insert(0, str(Path("scripts/eval").resolve()))
-    from favorable_scenes import FAVORABLE
-    SCENES = FAVORABLE
-    OUT = Path(f"outputs/dense_{SUB}_fav"); OUT.mkdir(parents=True, exist_ok=True)
-    SET_ID = f"dense_{SUB}_fav"
-else:
-    SET_ID = f"dense_{SUB}"
+# Those three are different jobs and must not share one rule. But within the
+# inference job there is exactly one prompt builder - assets/render.shot_prompt -
+# and the eval renders its output verbatim, so a sweep and a pack cannot
+# describe her differently.
+from sourcemode.assets.appearance import check as appearance_check  # noqa: E402
+from sourcemode.assets.appearance import negative as appearance_negative  # noqa: E402
+
+# The eval scenes ARE the asset generator's prompts, rendered verbatim through
+# the LoRA - Jeremy, 2026-10-02: "The real test would be to generate 10 different
+# examples that look just like the asset generator prompts." Default here and in
+# train_character.ps1 since then; every sweep from 2026-10-02 on is `_asset`.
+#
+# The favorable and standard scene sets are SHELVED. They composed their own
+# prompt - "{trigger}, a woman, {scene}" - with no age and no appearance, which
+# violates the age rule (2026-10-03) and the render-time-trait rule above. The
+# favorable scene LIST stays in favorable_scenes.py as data; if it is ever wanted
+# again it goes through shot_prompt with a framing argument, not through a
+# second builder. Results from different scene sets were never comparable and
+# still are not: jojo read 77-90% on asset runs and 29% on the bare sweep.
+SCENE_SET = _FLAGVALS.get("--scenes", "asset")
+if SCENE_SET != "asset":
+    raise SystemExit(
+        f"--scenes {SCENE_SET} is shelved (2026-10-02): it built its own prompt with no "
+        f"age and no appearance. Use --scenes asset, which renders the asset generator's "
+        f"own prompts verbatim.")
+sys.path.insert(0, str(Path("scripts/eval").resolve()))
+from asset_scenes import asset_prompts  # noqa: E402
+SCENES = asset_prompts(TRIGGER)
+VERBATIM = True
+OUT = Path(f"outputs/dense_{SUB}_asset"); OUT.mkdir(parents=True, exist_ok=True)
+SET_ID = f"dense_{SUB}_asset"
 SCENES = SCENES[:N_SCENES]
 SEED = 8800
 
@@ -224,6 +183,28 @@ ref = embed_image(REF_PATH)
 if ref is None:
     raise SystemExit(f"reference {REF_PATH} did not embed - refusing to score against nothing")
 log(f"scoring reference: {REF_PATH.name}")
+
+# PRE-FLIGHT. The sweep is the first time text alone has to carry her identity,
+# and a missing record means the prompt is the trigger and nothing else -
+# vivienne's 90 renders scored 0/90 that way. Refuse at the guard, in a second,
+# rather than seven hours later. --allow-incomplete-appearance bypasses it, as
+# every gate here has a bypass; the refusal is the default because the cost of
+# filling the record is thirty seconds and the cost of not doing so was a sweep.
+_pre = appearance_check(CHAR)
+for _w in _pre["warnings"]:
+    log(f"appearance: WARNING {_w}")
+if not _pre["ok"]:
+    for _m in _pre["missing"]:
+        log(f"appearance: MISSING {_m}")
+    if "--allow-incomplete-appearance" not in _BARESEEN:
+        raise SystemExit(
+            f"{CHAR}'s appearance record is incomplete - " + "; ".join(_pre["missing"])
+            + ". Add it to characters/appearance.json, or pass --allow-incomplete-appearance "
+            "to render her from the trigger alone.")
+    log("appearance: incomplete, proceeding on --allow-incomplete-appearance")
+_NEG = appearance_negative(CHAR)
+if _NEG:
+    log(f"appearance: negative in effect ({len(_NEG)} chars)")
 LORA_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -242,7 +223,9 @@ def t2i(prompt, seed, lora, prefix):
     settings = {
         "MODEL": cfg["models"]["qwen_image"], "TEXT_ENCODER": cfg["models"]["qwen_text_encoder"],
         "VAE": cfg["models"]["qwen_vae"], "POSITIVE": prompt,
-        "NEGATIVE": NEGATIVE + (", " + FEAT_NEG if FEAT_NEG else ""),
+        # The character's own negative (raven's anti-bangs terms) from the same
+        # record as her appearance, so the pack and the eval share it.
+        "NEGATIVE": NEGATIVE + (", " + _NEG if _NEG else ""),
         "LORA_PATH": lora, "LORA_STRENGTH": 1.0,
         "LIGHTNING": "", "LIGHTNING_STRENGTH": 0.0,
         "SHIFT": float(cfg["render"]["qwen_shift"]), "SEED": seed,
@@ -266,8 +249,7 @@ for ep in GRID:
         try:
             if not dest.exists():
                 files = client.outputs(client.wait(client.submit(
-                    t2i(scene if VERBATIM else f"{TRIGGER}, {SUBJECT}, {scene}"
-                        + (f", {FEAT}" if FEAT else "") + f". {LOOK}", SEED + i,
+                    t2i(scene, SEED + i,
                         rf"sourcemode\{SUB}\{ck}", f"coarse/{SET_ID}/{arm}")), timeout_s=3600))
                 if not files:
                     log(f"  {arm} scene{i:02d}: no output"); continue

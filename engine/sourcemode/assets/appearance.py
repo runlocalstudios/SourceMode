@@ -111,6 +111,55 @@ def frame(character: str) -> str:
     return ""
 
 
+def negative(character: str) -> str:
+    """Per-character NEGATIVE text: what the base model reverts to without it.
+
+    Raven has a full fringe in all five references and in her training frames;
+    without a negative the renders came back with a centre part and a bare
+    forehead - a visibly different person however well the LoRA learned her
+    face. This used to live in a FEATURE_NEG dict inside dense_epoch_eval.py,
+    so it reached the eval and never the asset pack. One source now, read by
+    both.
+    """
+    return ((_load()["look"].get(character.lower()) or {}).get("negative") or "").strip()
+
+
+# What a render from the LoRA needs documented BEFORE the first text-only
+# inference - the epoch sweep - because that is the first time text alone has
+# to carry identity. Training images come from reference photos and captions
+# exclude identity by design, so neither needs this; the sweep and the pack do.
+REQUIRED = ("age", "prompt")
+
+
+def check(character: str) -> dict:
+    """What is missing from her record, for the pre-flight before GPU time.
+
+    `missing` are the fields the render prompt cannot do without: an age, and
+    the appearance sentence. Without them the prompt is the trigger alone, and
+    every trait the LoRA will not carry is lost - vivienne's sweep scored 0/90
+    that way. `warnings` are the things worth having: a frame so an outfit sits
+    on the right body, and a reference photo that embeds so the eval can score
+    and the judge page can show her.
+    """
+    c = character.lower()
+    rec = _load()["look"].get(c) or {}
+    missing, warnings = [], []
+    if not age_of(c):
+        missing.append("age - not in the game's characters.js and not in appearance.json")
+    if not (rec.get("prompt") or "").strip():
+        missing.append("prompt - the appearance sentence every render carries "
+                       "(ethnicity, build, hair colour and length, eyes, anything the "
+                       "base model will not volunteer)")
+    if not frame(c):
+        warnings.append("frame - tiny / curvy / omit; without it no fitted clause is sent")
+    refs = Path("C:/Epic Games/Files/cnc info/codex/references")
+    if refs.is_dir() and not any(refs.glob(f"{c}_*")):
+        warnings.append("no reference photo under codex/references - the eval cannot "
+                        "score identity and the judge page has nothing to show")
+    return {"character": c, "ok": not missing, "missing": missing, "warnings": warnings,
+            "has_record": bool(rec)}
+
+
 def clause(character: str) -> str:
     """"an 18-year-old, extremely petite..." - age first, then the body text if any.
 

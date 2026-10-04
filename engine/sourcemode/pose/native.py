@@ -87,12 +87,18 @@ NEGATIVE = (
 def build_native_workflow(cfg: dict, image_name: str, prompt: str, seed: int, prefix: str,
                           *, lora: str, lora_strength: float = LORA_STRENGTH,
                           render_pass: str = "medium",
-                          width: int = NATIVE_W, height: int = NATIVE_H) -> dict:
+                          width: int = NATIVE_W, height: int = NATIVE_H,
+                          negative_extra: str = "") -> dict:
     """Single-pass edit graph: one image in, one sampler, character LoRA loaded.
 
     Deliberately the plain qwen_image_edit graph — no AnyPose, no reference
     photograph, no second pass. Lightning is off: this path is about quality,
     and the distilled 4-step preset exists for iteration speed.
+
+    `negative_extra` is the character's own negative from appearance.json -
+    raven's anti-bangs terms - appended to the shared quality/identity block.
+    It used to reach only the epoch eval, so her pack would have rendered
+    without it. Same text in both places now.
     """
     from ..config import workflows_dir  # noqa: PLC0415
     from ..render.workflow import load_template, prune_placeholder_loras, substitute  # noqa: PLC0415
@@ -103,7 +109,7 @@ def build_native_workflow(cfg: dict, image_name: str, prompt: str, seed: int, pr
         "TEXT_ENCODER": cfg["models"]["qwen_text_encoder"],
         "VAE": cfg["models"]["qwen_vae"],
         "POSITIVE": prompt,
-        "NEGATIVE": NEGATIVE,
+        "NEGATIVE": NEGATIVE + (", " + negative_extra if negative_extra else ""),
         "IMAGE": image_name,
         "LORA_PATH": lora, "LORA_STRENGTH": lora_strength,
         "LIGHTNING": "", "LIGHTNING_STRENGTH": 0.0,

@@ -339,7 +339,9 @@ function drawRemoved(){
       +'<div class=why>Removed &mdash; put it back if that was a mis-click.'
       +' It returns held.</div><div class=jid>'+SM.esc(r.id)+'</div>'
       +'<div class="acts btn-row"><button class="btn btn-primary" data-act="restore" '
-      +'data-id="'+SM.esc(r.id)+'">Restore (held)</button></div></div></div>';
+      +'data-id="'+SM.esc(r.id)+'">Restore (held)</button>'
+      +'<button class="btn btn-danger push" data-act="purge" data-id="'+SM.esc(r.id)
+      +'" data-who="'+SM.esc(r.who)+'">Delete for good</button></div></div></div>';
   SM.set($('removed'),null,h);
 }
 
@@ -390,6 +392,9 @@ const ACTS={
   'down':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/move',{position:+b.dataset.pos+1}),
   'requeue':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/requeue'),
   'restore':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/restore'),
+  'purge':b=>confirm('Delete '+b.dataset.who+' ('+b.dataset.id+') for good?'+SM.NL+SM.NL
+     +'It leaves the file and cannot be restored.')
+     ? SM.postJSON('/queue/job/'+b.dataset.id+'/purge') : null,
   'pause':()=>SM.postJSON('/queue/pause'),
   'resume':()=>SM.postJSON('/queue/resume'),
   'reload':()=>load(),
@@ -1653,6 +1658,20 @@ def queue_router(cfg: dict, status=None):
         doc = q.load(p)
         try:
             q.restore(doc, job_id)
+        except KeyError as exc:
+            raise HTTPException(404, f"no job {job_id}") from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        q.save(p, doc)
+        return queue_state(cfg)
+
+    @router.post("/queue/job/{job_id}/purge")
+    def purge(job_id: str) -> dict:
+        """The one hard delete, and only for a job that is already cancelled."""
+        p = path()
+        doc = q.load(p)
+        try:
+            q.purge(doc, job_id)
         except KeyError as exc:
             raise HTTPException(404, f"no job {job_id}") from exc
         except ValueError as exc:

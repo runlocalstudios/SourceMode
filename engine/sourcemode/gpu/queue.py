@@ -163,6 +163,24 @@ def restore(doc: dict, job_id: str) -> dict:
     return job
 
 
+def purge(doc: dict, job_id: str) -> dict:
+    """Remove a cancelled job from the file for good - the one hard delete.
+
+    Cancel is soft so a mis-click is repairable. But a cancelled job whose
+    COMMAND is wrong must not stay restorable: j002's command pointed into a
+    Claude session's temp directory, and "Restore (held)" would have put a job
+    back in the queue that stalls on a path nobody should run. Only a job that
+    is already cancelled can be purged - never one that is queued or running.
+    """
+    job = find(doc, job_id)
+    if job is None:
+        raise KeyError(job_id)
+    if job["status"] != "cancelled":
+        raise ValueError(f"{job_id} is {job['status']} - only a cancelled job can be purged")
+    doc["jobs"] = [j for j in doc["jobs"] if j["id"] != job_id]
+    return job
+
+
 def head(doc: dict) -> dict | None:
     """The first job that is queued and not held - the next one to run, and the
     one the runner WAITS on. It never looks past it: order is the order Jeremy set."""
