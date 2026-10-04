@@ -153,7 +153,10 @@ for it in targets:
     attempt = int(info.get("attempt", 0)) + 1
     seed = retry_seed(info.get("seed", 0), attempt)
     try:
-        dest = redo_pack(info, seed) if info["kind"] == "pack" else redo_shoot(info, seed)
+        # An exhausted pool IS a pack slot - same plan, same look - so it goes
+        # down the same path once its four candidates are used up.
+        dest = (redo_pack(info, seed) if info["kind"] in ("pack", "pool")
+                else redo_shoot(info, seed))
     except Exception as exc:  # noqa: BLE001 - one bad slot never kills the rest
         log(f"  {info['slot_id']}: ERROR {exc}")
         dest = None

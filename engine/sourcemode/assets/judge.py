@@ -664,6 +664,13 @@ async function checkRedo(){
   if(!cur||Object.keys(cur.verdicts).length<cur.items.length) return;
   let d; try{ d=await SM.getJSON('/judge/set/'+encodeURIComponent(cur.id)+'/redo'); }
   catch(e){ return; }
+  if(d.advanced){
+    /* Candidates that already existed: nothing was queued, and the set now has
+       unjudged items again. Reload rather than telling him to wait. */
+    SM.toast(d.advanced+' reject'+(d.advanced===1?'':'s')+' swapped for the next'
+      +' candidate'+(d.queued?' - '+d.n_render+' out of candidates, queued':''));
+    return openSet(cur.id);
+  }
   if(!d.queued||!d.n) return;
   SM.toast(d.n+' reject'+(d.n===1?'':'s')+' queued to re-roll',
     {label:'Open the queue',run:()=>SM.nav('gpu')});
@@ -1056,7 +1063,17 @@ def judge_router(cfg: dict):
             dup = q.duplicate_of(doc, "redo", set_id)
         except OSError:
             dup = None
-        return {**info, "queued": dup["id"] if dup else None}
+        # The advancement itself happened on the last verdict, server-side, so
+        # it cannot be reported from there. Derive it instead: a pool item past
+        # its first candidate and not yet judged IS one that just advanced.
+        # Stateless, and correct after a reload or on a second device.
+        v = load_verdicts(root, set_id)
+        doc_set = load_set(root, set_id) or {"items": []}
+        advanced = sum(1 for it in doc_set["items"]
+                       if (it.get("redo") or {}).get("kind") == "pool"
+                       and int((it.get("redo") or {}).get("at", 0)) > 0
+                       and it["id"] not in v)
+        return {**info, "queued": dup["id"] if dup else None, "advanced": advanced}
 
     @r.get("/judge/set/{set_id}/history")
     def _history(set_id: str) -> dict:

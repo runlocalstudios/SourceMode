@@ -1570,13 +1570,25 @@ def queue_redo_if_complete(cfg: dict, set_id: str) -> dict | None:
     must not fill up with jobs he did not ask for.
     """
     from ..assets.judge import judge_root  # noqa: PLC0415
-    from ..assets.redo import redoable  # noqa: PLC0415
+    from ..assets.redo import advance_pool, redoable  # noqa: PLC0415
     from ..config import ENGINE_ROOT, outputs_dir  # noqa: PLC0415
     from ..gpu import queue as q  # noqa: PLC0415
 
-    info = redoable(judge_root(cfg), set_id)
+    root = judge_root(cfg)
+    info = redoable(root, set_id)
     if not info["n"]:
         return None
+    # Jeremy, 2026-10-04: "if I reject something instead of regenerating you can
+    # just show me the next selection of the other four that were generated".
+    # Candidates already on disk cost nothing, so they are spent before card
+    # time is. Only what the pool cannot answer reaches the queue.
+    if info["n_pool"]:
+        moved = advance_pool(root, set_id)
+        if moved["advanced"] and not moved["exhausted"]:
+            return None
+        info = redoable(root, set_id)
+        if not info["n"]:
+            return None
     qp = q.queue_path(outputs_dir(cfg))
     doc = q.load(qp)
     if q.duplicate_of(doc, "redo", set_id):

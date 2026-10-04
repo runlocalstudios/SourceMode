@@ -44,7 +44,8 @@ def test_a_half_judged_set_offers_nothing(tmp_path):
     record_verdict(root, sid, "casual_01", "reject")
     assert complete(root, sid) is False
     info = redoable(root, sid)
-    assert info == {"n": 0, "character": None, "kind": None, "complete": False}
+    assert info == {"n": 0, "n_pool": 0, "n_render": 0, "character": None,
+                    "kind": None, "complete": False}
 
 
 def test_a_finished_set_offers_exactly_its_rejects(tmp_path):
@@ -142,3 +143,71 @@ def test_the_old_tally_is_preserved_before_a_verdict_is_dropped(tmp_path):
     h = history(root, sid)
     assert h["runs"], "re-rendering must not silently erase the judged result"
     assert h["runs"][0]["reason"].startswith("1 images re-rendered")
+
+
+# --- the pool: four candidates already on disk, so a reject is free ----------
+
+def _pool_set(root, imgs, n_cand=3):
+    """One look with `n_cand` candidates already rendered."""
+    from sourcemode.assets.redo import pool_item
+
+    cands = [{"source": str(_png(imgs / f"shot_{k:02d}.png", (k * 60, 20, 20))),
+              "score": 0.9 - k / 100, "seed": 7100 + k} for k in range(n_cand)]
+    it = pool_item({"id": "casual_01", "look": 1, "category": "casual"},
+                   cands, character="zara", source="plan_28.json")
+    make_set(root, "pack_zara", "Zara - wardrobe pack", [it])
+    return "pack_zara"
+
+
+def test_a_reject_shows_the_next_candidate_and_spends_no_gpu(tmp_path):
+    from sourcemode.assets.redo import advance_pool
+
+    root, imgs = tmp_path / "judge", tmp_path / "img"
+    sid = _pool_set(root, imgs)
+    from sourcemode.assets.judge import load_set
+
+    assert load_set(root, sid)["items"][0]["path"].endswith("shot_00.png")
+    record_verdict(root, sid, "casual_01", "reject")
+    moved = advance_pool(root, sid)
+    assert moved == {"advanced": ["casual_01"], "exhausted": []}
+    row = load_set(root, sid)["items"][0]
+    assert row["path"].endswith("shot_01.png")
+    assert row["redo"]["at"] == 1
+    # and it is back to being unjudged, which is the whole point
+    assert "casual_01" not in load_verdicts(root, sid)
+
+
+def test_running_out_of_candidates_is_reported_not_silently_looped(tmp_path):
+    from sourcemode.assets.redo import advance_pool
+
+    root, imgs = tmp_path / "judge", tmp_path / "img"
+    sid = _pool_set(root, imgs, n_cand=3)
+    for expect in (["casual_01"], ["casual_01"]):
+        record_verdict(root, sid, "casual_01", "reject")
+        assert advance_pool(root, sid)["advanced"] == expect
+    # third reject: nothing left behind it
+    record_verdict(root, sid, "casual_01", "reject")
+    moved = advance_pool(root, sid)
+    assert moved == {"advanced": [], "exhausted": ["casual_01"]}
+    # it stays rejected, so the GPU path can pick it up
+    assert load_verdicts(root, sid)["casual_01"] == "reject"
+    assert redoable(root, sid)["n_render"] == 1
+
+
+def test_a_deleted_candidate_is_skipped_as_exhausted(tmp_path):
+    # "unless they've already been deleted" - a manifest can outlive the files.
+    from sourcemode.assets.redo import advance_pool
+
+    root, imgs = tmp_path / "judge", tmp_path / "img"
+    sid = _pool_set(root, imgs, n_cand=2)
+    (imgs / "shot_01.png").unlink()
+    record_verdict(root, sid, "casual_01", "reject")
+    assert advance_pool(root, sid)["exhausted"] == ["casual_01"]
+
+
+def test_pool_and_render_rejects_are_counted_separately(tmp_path):
+    root, imgs = tmp_path / "judge", tmp_path / "img"
+    sid = _pool_set(root, imgs, n_cand=2)
+    record_verdict(root, sid, "casual_01", "reject")
+    info = redoable(root, sid)
+    assert info["n_pool"] == 1 and info["n_render"] == 0
