@@ -1,0 +1,129 @@
+{
+ "_comment": [
+  "Per-character WARDROBE brief: the style a 28-look pack should be written in.",
+  "Jeremy, 2026-10-04: 'what do their current game assets look like style-wise,",
+  "just sample a few or 1 from each type of clothing set' - so every brief below",
+  "was read off the outfits already shipped in chillafterdark, not invented.",
+  "",
+  "USE: `sourcemode assets plan <char> --brief` expands this into the 28 looks",
+  "(casual 7, workout 4, fancy_dining_gallery 4, fancy_town 4, casual_date 4,",
+  "work 5). The brief is the DECISION; the look list is the expansion of it.",
+  "This is deliberately separate from appearance.json: appearance is who she is",
+  "and goes into every prompt, wardrobe is what she wears and goes into the plan.",
+  "",
+  "`work` is the one category that is not a taste - it is her JOB, which the game",
+  "fixes. Get that from characters.js, never from the vibe.",
+  "`avoid` exists because a character can have a line she does not cross, and a",
+  "generated pack with no memory of it will cross it every time."
+ ],
+
+ "ash": {
+  "_note": "DRAFT 2026-10-04 from her shipped 28. Waitress at Obsidian.",
+  "style": "edgy downtown party girl - denim, leather, cropped knits, sheer black tights, chunky boots",
+  "palette": "black and denim blue as the base, with one hot accent per look - cobalt, burnt orange, red",
+  "silhouettes": "cropped tops over high-waisted denim shorts and micro skirts; cropped moto jackets; bare midriff is normal for her",
+  "work": "Obsidian waitress: a short black shirt-dress uniform with white piping, black tights, black ankle boots",
+  "workout": "bright sports bra and leggings, the same loud-accent rule",
+  "avoid": "nothing prim or preppy - she is the opposite of wholesome"
+ },
+
+ "cindy": {
+  "_note": "DRAFT 2026-10-04 from her shipped 28. Executive assistant at Meridian Commons; her systemPrompt says fashion is a serious passion and her wardrobe 'pushes office convention'.",
+  "style": "polished and expensive - elevated tailoring, silk, one piece of gold hardware per look",
+  "palette": "camel, cream, rust and black; warm neutrals against her honey-blonde hair",
+  "silhouettes": "blazers over a bodysuit or silk shirt; high-waisted dark denim; one-shoulder and asymmetric dresses; always nipped at the waist",
+  "work": "executive assistant: a tailored blazer with a short pencil skirt or tapered trousers and a silk shirt - office convention pushed, not broken",
+  "workout": "matching seamless set, neutral tones, nothing branded or loud",
+  "avoid": "anything sloppy or unconsidered - she would not leave the house in it"
+ },
+
+ "gabi": {
+  "_note": "DRAFT 2026-10-04 from her shipped 28. 20, Latina, 'confident heat and she knows exactly what she has'.",
+  "style": "young and body-conscious - simple pieces worn tight, club-ready after dark",
+  "palette": "black, white and red; occasional electric blue sequin",
+  "silhouettes": "cropped tee or bralette with high-waisted jeans, skater skirts, platform boots; short and fitted throughout",
+  "work": "club/stage wear: sequin and satin bralettes with high-waisted black trousers or micro skirts, platform boots",
+  "workout": "sports bra and bike shorts, bare midriff",
+  "avoid": "nothing fussy or layered - her look is one or two pieces, worn well"
+ },
+
+ "jojo": {
+  "_note": "DRAFT 2026-10-04 from her shipped 28. Head bartender at Obsidian; 'certain she outranks you'.",
+  "style": "minimal and controlled - clean lines, no pattern, nothing that looks like it was tried too hard",
+  "palette": "cream, bone, black and indigo denim. Almost no colour",
+  "silhouettes": "ribbed tanks and bodycon knits; high-waisted denim shorts and short skirts; tailored waistcoats",
+  "work": "Obsidian head bartender: a fitted black waistcoat over a white tee with tailored black trousers",
+  "workout": "black or bone set, minimal, no print",
+  "avoid": "busy prints and bright colour - they read as trying, which she never does"
+ },
+
+ "keiko": {
+  "_note": "DRAFT 2026-10-04 from her shipped 12 (she has 12, not 28 - the pack is incomplete). 18, freshman, works two days at her mother's Lumen Salon.",
+  "style": "sunny Californian teenager - denim everything, soft ribbed knits, nothing expensive",
+  "palette": "cream, light denim, cobalt blue",
+  "silhouettes": "fitted ribbed tops with mom jeans or a denim mini; square necklines; skater dresses with puff sleeves",
+  "work": "Lumen Salon assistant: a chambray shirt with a canvas apron over jeans",
+  "workout": "simple two-piece set, nothing technical",
+  "avoid": "anything that reads older than 18 or expensive - she is a student, not a professional"
+ },
+
+ "kimmy": {
+  "_note": "DRAFT 2026-10-04 from her shipped 28. TWO LIVES and they must stay visibly separate: Grace Community Church on Sunday mornings, The Chill Trap in the evenings.",
+  "style": "two distinct registers - wholesome daytime (gingham, peter-pan collars, fit-and-flare) and sleek night (velvet and black bodycon)",
+  "palette": "daytime cream, navy gingham, soft blue; night pure black",
+  "silhouettes": "day: fit-and-flare skirts, collared bodices, covered shoulders. night: long-sleeve velvet and jersey minis, high necklines but tight",
+  "work": "The Chill Trap, evenings: black long-sleeve bodycon mini, covered but close-fitting",
+  "workout": "plain pastel set, modest cut",
+  "avoid": "do not blend the two registers into one - a church look with a club neckline misses the whole character"
+ },
+
+ "maya": {
+  "_note": "DRAFT 2026-10-04 from her shipped 28. Her turquoise hair underlayer shows against dark tops, which is why her palette runs dark.",
+  "style": "grown-up and earthy - suede, wool, relaxed tailoring, nothing juvenile",
+  "palette": "chocolate brown, rust, cream and black",
+  "silhouettes": "cropped jackets over a fitted cami; high-waisted wide trousers; one-shoulder ruched evening dresses",
+  "work": "relaxed professional: a cream wrap blouse with rust or brown high-waisted trousers",
+  "workout": "muted two-piece set, brown or black",
+  "avoid": "pastels and anything girlish - she reads mid-twenties and composed"
+ },
+
+ "priya": {
+  "_note": "DRAFT 2026-10-04 from her shipped 28. She wears her black-framed glasses in EVERY look - that belongs in her appearance clause, not the wardrobe.",
+  "style": "office-polished with a soft edge - knitwear, tailoring, clean necklines",
+  "palette": "black, charcoal, taupe and camel, with cobalt blue as the single evening accent",
+  "silhouettes": "blazers over a square-neck bodysuit; high-waisted trousers and dark jeans; off-the-shoulder bodycon for evening",
+  "work": "professional office: black blazer with tailored trousers over a fitted cream top",
+  "workout": "plain black or charcoal set",
+  "avoid": "nothing that fights the bob - no high collars swallowing her jawline"
+ },
+
+ "priyanka": {
+  "_note": "DRAFT 2026-10-04 from her shipped 28. Teaching assistant at Chill Coast University.",
+  "style": "campus-sweet and modest - cardigans, pleated skirts, small florals",
+  "palette": "teal, soft pink, grey and cream",
+  "silhouettes": "fitted crop tee with high-waisted jeans; cardigan over a blouse with a pleated mini; floral sundresses; one-shoulder for evening",
+  "work": "university teaching assistant: a cardigan over a tie-neck blouse with a grey pleated skirt",
+  "workout": "simple set in soft colours",
+  "avoid": "nothing overtly sexy in casual or work - evening is where she turns it up"
+ },
+
+ "sandra": {
+  "_note": "DRAFT 2026-10-04 from her shipped 28. 38, single mother, volunteers at Grace Community Church. Her shipped wardrobe is noticeably more covered than anyone else's and that is on purpose.",
+  "style": "quiet, grown-up and covered - long sleeves on almost everything, nothing cut low or short",
+  "palette": "cream, forest green, navy and black - colours that sit well against copper hair",
+  "silhouettes": "long-sleeve knit midi dresses, boat necks, relaxed jumpers with straight jeans, wrap tops",
+  "work": "church volunteer: a modest long-sleeve dress or a jumper with straight-leg jeans",
+  "workout": "full-coverage leggings and a loose long-sleeve top",
+  "avoid": "crop tops, micro skirts, plunging necklines, bare midriff - none of it is her, in any category"
+ },
+
+ "trina": {
+  "_note": "DRAFT 2026-10-04 from her shipped 28. Works at Vale Contemporary in the Hill district - a gallery, so her work look IS her fashion look.",
+  "style": "gallery glamour - sharp tailoring over something slinky, expensive and deliberate",
+  "palette": "black, camel, cream and chocolate; no print anywhere",
+  "silhouettes": "blazers over strapless or ruched minis; silk shirts with wide trousers; ribbed knit dresses that follow the figure",
+  "work": "contemporary art gallery: a tailored blazer with a silk shirt and trousers, or over a black mini",
+  "workout": "matching set in black or camel, nothing branded",
+  "avoid": "print, pastel and anything casual enough to read as off-duty - she is never off-duty"
+ }
+}

@@ -61,6 +61,8 @@ BODY = """
   <div class=col-main>
     <h2>Character</h2>
     <div class=who id=who></div>
+    <div class=btn-row style="margin:0 0 var(--s4)">
+      <button class="btn btn-sm" data-act=newchar>New character &rarr;</button></div>
     <div id=warn></div>
     <div id=list></div>
   </div>
@@ -91,8 +93,9 @@ function draw(){
   SM.set($('warn'),null, (c&&!c.appearance_ok)
     ? '<div class="banner you"><span class=msg><b>'+SM.esc(c.who)+' has no appearance record.</b>'
       +'<span class=why>She will render from the trigger alone - every trait the LoRA did not'
-      +' learn will be missing. Add '+SM.esc(c.appearance_missing.join(', '))
-      +' to characters/appearance.json first.</span></span></div>'
+      +' learn will be missing. Missing: '+SM.esc(c.appearance_missing.join(', '))
+      +'.</span></span>'
+      +'<button class="btn btn-sm" data-act=newchar>Document her</button></div>'
     : '');
 
   const blocked=(c&&c.blocked)||{};
@@ -156,6 +159,7 @@ document.addEventListener('click',async e=>{
     const id=s.dataset.shoot;
     picked.has(id)?picked.delete(id):picked.add(id); draw(); return; }
   const b=e.target.closest('[data-act]'); if(!b) return;
+  if(b.dataset.act==='newchar'){ location.href='/character'; return; }
   if(b.dataset.act==='clear'){ picked.clear(); draw(); return; }
   if(b.dataset.act==='queue'){
     b.disabled=true;
