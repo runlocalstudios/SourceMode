@@ -1,4 +1,6 @@
 import json, os, sys
+from pathlib import Path
+
 from PIL import Image, ImageDraw
 m = json.load(open('outputs/lora-datasets/amanda_seeded_v2/manifest.json'))[:67]
 s = {os.path.basename(r['file'].replace(chr(92), '/')): r for r in json.load(open('outputs/loragen_local/amanda/scores.json'))}
@@ -15,4 +17,10 @@ for i, f in enumerate(files):
     im = Image.open(f'outputs/lora-datasets/amanda_seeded_v2/image_src/{f}.png'); w, h = im.size
     im = im.crop((0, 0, w, w)).resize((tw, th))
     x, y = (i % cols) * tw, (i // cols) * (th + 18); sh.paste(im, (x, y)); d.text((x + 3, y + th + 2), f, fill='black')
-sh.save(f'C:/Users/jerem/AppData/Local/Temp/claude/C--dev-sourcemode/568fc5a3-9efa-4a3c-9e3b-beb82c705119/scratchpad/seed_{want}.jpg', quality=85)
+# outputs/qc/, not a session scratchpad: this wrote into a temp directory from a
+# different Claude session again, so the sheet landed somewhere unfindable or the
+# save threw.
+out = Path(f'outputs/qc/seed_{want}.jpg')
+out.parent.mkdir(parents=True, exist_ok=True)
+sh.save(out, quality=85)
+print('sheet:', out)

@@ -1023,6 +1023,26 @@ def training_command(cfg: dict, dataset: str) -> list[str]:
             "-Ds", dataset, "-Char", character_of(dataset)]
 
 
+def prep_command(cfg: dict, character: str, *, cap: int = 100,
+                 no_base: bool = False) -> list[str]:
+    """The one place a prep invocation is written - gather, gaze, caption, preview.
+
+    This exists for the same reason training_command() does, and for one more:
+    the prep jobs already in the queue carry an ABSOLUTE path into a Claude
+    session's temp directory, because whoever queued them pasted one. A job
+    record outlives the session that wrote it, so a queue entry is the last
+    place a temp path should appear. Built from ENGINE_ROOT, it cannot.
+    """
+    from ..config import ENGINE_ROOT  # noqa: PLC0415
+
+    script = ENGINE_ROOT / "scripts" / "character_chain.ps1"
+    cmd = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script),
+           "-Char", character, "-Cap", str(int(cap))]
+    if no_base:
+        cmd.append("-NoBase")
+    return cmd
+
+
 def queue_router(cfg: dict, status=None):
     from fastapi import APIRouter, Body, HTTPException  # noqa: PLC0415
     from fastapi.responses import HTMLResponse  # noqa: PLC0415
@@ -1151,6 +1171,29 @@ def queue_router(cfg: dict, status=None):
                     cwd=str(ENGINE_ROOT), requires_approval=ds,
                     note=f"queued from the GPU page; approved {st['at']}")
         q.save(p, doc)
+        return {"queued": job["id"], **queue_state(cfg)}
+
+    @router.post("/queue/prep")
+    def add_prep(body: dict = Body(default={})) -> dict:
+        """Queue the gather/caption/preview chain for one character.
+
+        No approval gate: this chain BUILDS the thing an approval is later given
+        to, and it ends at the preview rather than at training. It is still one
+        queued job on the one runner, so it cannot run beside anything else.
+        """
+        char = str(body.get("character", "")).strip()
+        if not char or "/" in char or "\\" in char or ".." in char:
+            raise HTTPException(400, "a character is required")
+        doc = q.load(path())
+        dup = q.duplicate_of(doc, "prep", char)
+        if dup:
+            raise HTTPException(409, f"{char} is already {dup['status']} in the queue")
+        job = q.add(doc, kind="prep", label=char,
+                    cmd=prep_command(cfg, char, cap=int(body.get("cap") or 100),
+                                     no_base=bool(body.get("no_base"))),
+                    cwd=str(ENGINE_ROOT),
+                    note="queued from the GPU page")
+        q.save(path(), doc)
         return {"queued": job["id"], **queue_state(cfg)}
 
     @router.post("/queue/order")
