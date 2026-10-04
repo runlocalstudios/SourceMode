@@ -229,19 +229,21 @@ def _now(cfg: dict, status=None) -> dict:
 
     counts, degraded = _counts(cfg)
 
+    stat_for_now = None
+    if status is not None:
+        try:
+            stat_for_now = status()
+        except Exception:  # noqa: BLE001
+            degraded.append("status")
+
     try:
-        q = queue_state(cfg)
+        q = queue_state(cfg, stat_for_now)
     except Exception:  # noqa: BLE001
         q = {"jobs": [], "paused": False, "pause_reason": "", "lease": None,
              "queued_s": None}
         degraded.append("queue")
 
-    stat = {}
-    if status is not None:
-        try:
-            stat = status() or {}
-        except Exception:  # noqa: BLE001
-            degraded.append("status")
+    stat = stat_for_now or {}
 
     jobs = q.get("jobs") or []
     running = next((j for j in jobs if j["status"] == "running"), None)
@@ -249,20 +251,25 @@ def _now(cfg: dict, status=None) -> dict:
     lease = q.get("lease")
     runner_down = bool(jobs) and not (lease and lease.get("alive"))
 
-    job, training = stat.get("job") or {}, stat.get("training") or {}
-    gpu = stat.get("gpu") or {}
+    job, gpu = stat.get("job") or {}, stat.get("gpu") or {}
+    # Take the sentence from queue_state's `now` block, which already knows that
+    # the training numbers belong to a TRAINING job and that a render job counts
+    # its images instead. Reading stat["training"] here regardless of what was
+    # running is why the phone bar said "epoch 24 of 24" under a 9-render A/B.
+    nowb = q.get("now") or {}
 
     # the sentence
     if running:
         line = running["who"] + " - " + running["what"]
         bits = []
-        if training.get("epoch") is not None and training.get("epochs"):
-            bits.append("epoch " + str(training["epoch"]) + " of " + str(training["epochs"]))
-        prog = training.get("progress") or {}
-        if prog.get("eta_s"):
-            bits.append(_dur(prog["eta_s"]) + " left")
+        if nowb.get("epoch") is not None and nowb.get("epochs"):
+            bits.append("epoch " + str(nowb["epoch"]) + " of " + str(nowb["epochs"]))
+        elif nowb.get("progress_line"):
+            bits.append(nowb["progress_line"])
+        if nowb.get("eta_s"):
+            bits.append(_dur(nowb["eta_s"]) + " left")
         sub = " · ".join(bits)
-        progress = (prog["step"] / prog["total"]) if prog.get("total") else job.get("progress")
+        progress = nowb.get("progress") if nowb.get("progress") is not None else job.get("progress")
         status_word = "live"
     else:
         line = "Nothing is running"

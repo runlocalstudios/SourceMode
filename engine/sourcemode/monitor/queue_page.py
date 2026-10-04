@@ -496,6 +496,12 @@ FALLBACK_SWEEP_S = 121 * 60
 # bulk tightly clustered 73-90 s. The asset figure is one finished pack (amanda,
 # 56 shots) at 119 s - a shot is slower than a sweep render because the pack
 # renders several candidates per look through the native pipeline.
+# The gather/caption/preview chain, summed over its OWN step timings rather
+# than first-start-to-last-done: the wall-clock span includes the card being
+# busy between steps and reads 325 min for marisol against 18 min of work.
+# 2026-10-04, seven complete chains: 17.4 / 17.9 / 18.6 / 23.0 / 25.7 / 31.1 /
+# 42.7 min, median 23.
+FALLBACK_PREP_S = 23 * 60
 FALLBACK_S_PER_RENDER = 79.6
 FALLBACK_S_PER_SHOT = 119.0
 EPOCHS = 24
@@ -585,6 +591,47 @@ def _rate(cfg: dict, max_age_s: float = 600.0) -> dict:
                 out.append(statistics.median(gaps))
         return out
 
+    # How long a prep chain actually works, from its own START/END pairs. The
+    # span between them is contaminated by waiting for the card; the sum of the
+    # steps is not.
+    import re as _re  # noqa: PLC0415
+    from datetime import datetime as _dt  # noqa: PLC0415
+
+    from .training import read_tail as _tail  # noqa: PLC0415
+
+    _TS = _re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)\s+(.*)$")
+    preps = []
+    for f in sorted((out / "logs").glob("chain_*.log")) if (out / "logs").is_dir() else []:
+        if "_launch" in f.name:
+            continue
+        try:
+            text = _tail(f)
+        except OSError:
+            continue
+        seen, steps, cur = set(), {}, None
+        for raw in text.splitlines():
+            m = _TS.match(raw.strip().lstrip("\ufeff"))
+            if not m:
+                continue
+            key = (m.group(1), m.group(2))
+            if key in seen:         # the log is written twice over
+                continue
+            seen.add(key)
+            try:
+                t = _dt.fromisoformat(m.group(1))
+            except ValueError:
+                continue
+            msg = m.group(2)
+            if msg.startswith("START "):
+                cur = (msg[6:], t)
+            elif msg.startswith("END ") and cur:
+                steps[cur[0]] = (t - cur[1]).total_seconds()
+                cur = None
+        work = sum(steps.values())
+        # a chain that never gathered did not run the whole shape
+        if work > 300 and any("gather" in k for k in steps):
+            preps.append(work)
+
     renders = _per_file(out, "scene_*.png")
     shots = [r for d in [out / "game-assets"] if d.is_dir()
              for r in _per_file(d, "shot_*.png")]
@@ -592,6 +639,8 @@ def _rate(cfg: dict, max_age_s: float = 600.0) -> dict:
     value = {
         "s_per_step": statistics.median(steps_rates) if steps_rates else FALLBACK_S_PER_STEP,
         "sweep_s": statistics.median(sweeps) if sweeps else FALLBACK_SWEEP_S,
+        "prep_s": statistics.median(preps) if preps else FALLBACK_PREP_S,
+        "n_prep_runs": len(preps), "prep_measured": bool(preps),
         "s_per_render": statistics.median(renders) if renders else FALLBACK_S_PER_RENDER,
         "s_per_shot": statistics.median(shots) if shots else FALLBACK_S_PER_SHOT,
         "n_runs": len(steps_rates), "n_render_runs": len(renders),
@@ -622,8 +671,19 @@ def estimate(cfg: dict, images: int) -> dict:
             "steps": steps, "repeats": repeats, "basis": basis}
 
 
-STALL_S = 900.0    # 15 minutes of a silent log while the process is still alive
+STALL_S = 900.0    # 15 minutes of a silent TRAINING log, which writes every step
 AGEING_S = 300.0   # past this the ETA is drawn with its age, not as a fresh number
+# A job of any other kind has no per-step log, so it gets a far more generous
+# window: PowerShell redirects stdout block-buffered, and an empty log proves
+# nothing on its own. An hour of total silence is not proof either - it is a
+# reason to LOOK, which is why this reports `you` and never `stop`, and never
+# blocks the queue.
+#
+# Measured against the real case: tess's chain ran 4h 48m with its own log at
+# ZERO BYTES, while a healthy job 24 seconds in already had 1786 bytes and was
+# being written every few seconds. The chain's own log ticked hourly, so the
+# window has to sit above that to avoid flagging its heartbeat.
+QUIET_S = 4200.0   # 70 minutes
 
 
 def _dur(s: float | None) -> str:
@@ -642,8 +702,55 @@ def _iso_utc(ts: float) -> str:
     return datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="seconds")
 
 
+def job_quiet_s(job: dict, outputs_root: Path, now: float | None = None) -> float | None:
+    """Seconds since this job last wrote ANYTHING, or None if we cannot tell.
+
+    Looks at the runner's log for the job, its `.err` sidecar, and any script
+    log named for the job's label (the chain writes `chain_<char>.log`, which
+    the runner's own redirect never sees because the chain logs with Out-File
+    rather than to stdout).
+
+    A job that has never written a byte is the strongest signal there is, and
+    it is the one this was built for: tess's log sat at 0 bytes for 4h 48m.
+    """
+    import time  # noqa: PLC0415
+
+    now = now or time.time()
+    stamps = []
+    log = job.get("log")
+    if log:
+        for cand in (Path(log), Path(str(log) + ".err")):
+            if cand.is_file():
+                stamps.append(cand.stat().st_mtime)
+    label = (job.get("label") or "").strip()
+    if label:
+        logs = outputs_root / "logs"
+        stem = character_of(label)
+        if logs.is_dir():
+            for cand in logs.glob(f"*{stem}*.log"):
+                # the runner's own line for this job is written once at START
+                # and would otherwise look like activity forever
+                if cand.name.startswith("gpu-" + str(job.get("id", ""))):
+                    continue
+                if cand.is_file():
+                    stamps.append(cand.stat().st_mtime)
+    started = job.get("started_at")
+    if not stamps:
+        # nothing written at all: measure from when it started, which is the
+        # honest reading of "this job has produced no sign of life"
+        if not started:
+            return None
+        from datetime import datetime  # noqa: PLC0415
+
+        try:
+            return max(0.0, now - datetime.fromisoformat(started).timestamp())
+        except ValueError:
+            return None
+    return max(0.0, now - max(stamps))
+
+
 def _state_of(job: dict, *, paused: bool, runner_alive: bool,
-              log_age_s: float | None) -> dict:
+              log_age_s: float | None, quiet_s: float | None = None) -> dict:
     """The ONE place a job's status word is decided. Pages never compute one.
 
     Seven words, one colour each, no synonyms - so two pages cannot disagree
@@ -656,6 +763,14 @@ def _state_of(job: dict, *, paused: bool, runner_alive: bool,
         if log_age_s is not None and log_age_s > STALL_S:
             return {"status": "stop",
                     "why": f"the log has not moved in {_dur(log_age_s)} - it may be stuck"}
+        # Any job, not only training: something running that writes nothing for
+        # over an hour is usually waiting on a thing that will never arrive, and
+        # it holds the queue head while it does. tess's chain waited 4h 48m for
+        # images that were already on disk, and nothing said so.
+        if quiet_s is not None and quiet_s > QUIET_S:
+            return {"status": "you",
+                    "why": f"running for {_dur(quiet_s)} without writing anything - "
+                           f"it may be waiting on something that will not arrive"}
         return {"status": "live", "why": "running now"}
     if job["status"] == "failed":
         return {"status": "stop", "why": f"failed, exit {job['exit_code']}"}
@@ -672,7 +787,8 @@ def _state_of(job: dict, *, paused: bool, runner_alive: bool,
     return {"status": "next", "why": "starts as soon as the card is free"}
 
 
-def now_card(jobs: list[dict], status: dict | None) -> dict | None:
+def now_card(jobs: list[dict], status: dict | None,
+             cfg_for_now: dict | None = None) -> dict | None:
     """What the card is doing - the ONE place `progress_line` exists.
 
     queue_state() cannot compose this alone: the queue file knows which job is
@@ -698,21 +814,38 @@ def now_card(jobs: list[dict], status: dict | None) -> dict | None:
     # and before this a stall flag for the wrong job too. Training numbers are
     # reported only when a training job is what is running.
     training_job = bool(run and run.get("kind") == "train")
+    # A render job's progress is countable, so it gets the same treatment as a
+    # training job's tqdm: done of total, and the time left at the measured rate.
+    r_done = r_total = r_eta = None
+    if run and not training_job:
+        got = render_count(run.get("cmd") or [])
+        if got:
+            r_total = got[0]
+            r_done = render_done(cfg_for_now, run.get("cmd") or []) if cfg_for_now else None
+            if r_done is not None:
+                rate = _rate(cfg_for_now)
+                per = rate["s_per_shot"] if run.get("kind") == "assets" else rate["s_per_render"]
+                r_eta = max(0.0, (r_total - r_done) * per)
     step, total = (pr.get("step"), pr.get("total")) if training_job else (None, None)
     line = ""
     if step is not None and total:
         line = f"step {step} of {total}"
         if pr.get("s_per_it"):
             line += f" at {pr['s_per_it']:.2f} s/it"
+    elif r_total:
+        unit = "shot" if (run or {}).get("kind") == "assets" else "render"
+        line = f"{r_done if r_done is not None else 0} of {r_total} {unit}s"
     return {
         "job_id": run["id"] if run else None,
         "who": (run or {}).get("who"), "what": (run or {}).get("what"),
         "kind": (run or {}).get("kind"),
         "epoch": tr.get("epoch") if training_job else None,
         "epochs": tr.get("epochs") if training_job else None,
-        "step": step, "total": total,
-        "progress": (step / total) if (step is not None and total) else None,
-        "eta_s": pr.get("eta_s") if training_job else None,
+        "step": step if training_job else r_done,
+        "total": total if training_job else r_total,
+        "progress": ((step / total) if (step is not None and total)
+                     else ((r_done / r_total) if (r_done is not None and r_total) else None)),
+        "eta_s": pr.get("eta_s") if training_job else r_eta,
         "elapsed_s": pr.get("elapsed_s") if training_job else None,
         "s_per_it": pr.get("s_per_it") if training_job else None,
         "progress_line": line,
@@ -780,6 +913,55 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
     return None
 
 
+def render_done(cfg: dict, cmd: list[str]) -> int | None:
+    """How many images this render job has already written.
+
+    The counterpart to render_count(): that one reads the job's command to say
+    how many images it WILL write, this one counts how many exist. The two give
+    a running render job the progress bar and the "x left" that a training job
+    gets from tqdm - which is why a 3h 36m asset pack used to show no remaining
+    time at all while it ran.
+    """
+    from ..config import outputs_dir  # noqa: PLC0415
+
+    out = outputs_dir(cfg)
+    joined = " ".join(cmd)
+
+    def flag(name, default=None):
+        return cmd[cmd.index(name) + 1] if name in cmd and cmd.index(name) + 1 < len(cmd) else default
+
+    try:
+        if "assets" in cmd and "render" in cmd:
+            import json as _json  # noqa: PLC0415
+
+            plan_p = flag("--plan")
+            if not plan_p:
+                return None
+            doc = _json.loads(Path(plan_p).read_text(encoding="utf-8"))
+            root = Path(flag("--out") or (out / "game-assets")) / doc["character"] / "renders"
+            return len(list(root.rglob("shot_*.png"))) if root.is_dir() else 0
+
+        if "prompt_ab.py" in joined:
+            pos = [c for c in cmd if not c.startswith("--")]
+            i = next(k for k, c in enumerate(pos) if c.endswith("prompt_ab.py"))
+            char = pos[i + 1]
+            root = out / f"ab_{char}_hair"
+            return len(list(root.rglob("scene_*.png"))) if root.is_dir() else 0
+
+        if "dense_epoch_eval.py" in joined:
+            pos = [c for c in cmd if not c.startswith("--")]
+            i = next(k for k, c in enumerate(pos) if c.endswith("dense_epoch_eval.py"))
+            sub = pos[i + 2]
+            scenes = flag("--scenes", "")
+            suffix = {"asset": "_asset", "favorable": "_fav"}.get(scenes, "")
+            root = out / f"dense_{sub}{suffix}"
+            return len([q for q in root.rglob("scene_*.png") if "_web" not in q.parts]) \
+                if root.is_dir() else 0
+    except (OSError, ValueError, KeyError, StopIteration, IndexError):
+        return None
+    return None
+
+
 def job_estimate(cfg: dict, job: dict) -> dict | None:
     """Wall-clock for any queued job, or None when its length is unknowable."""
     if job["kind"] == "train":
@@ -788,6 +970,12 @@ def job_estimate(cfg: dict, job: dict) -> dict | None:
         doc = load_preview(preview_root(cfg), job["label"])
         imgs = (doc.get("n") or len(doc.get("images", []))) if doc else 0
         return estimate(cfg, imgs)
+    if job["kind"] == "prep":
+        r = _rate(cfg)
+        return {"train_s": None, "sweep_s": None, "total_s": r["prep_s"], "steps": None,
+                "basis": "gather, gaze, captions, hair confirm, re-assemble, preview"
+                         + (f" - median of {r['n_prep_runs']} past chains"
+                            if r["prep_measured"] else " - assumed")}
     got = render_count(job.get("cmd") or [])
     if not got:
         return None
@@ -832,7 +1020,7 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
     doc = q.load(q.queue_path(out))
     head = q.head(doc)
 
-    jobs, removed = [], []
+    jobs, removed, by_id = [], [], {j["id"]: j for j in doc["jobs"]}
     for j in doc["jobs"]:
         if j["status"] in ("done", "cancelled"):
             if j["status"] == "cancelled":
@@ -841,7 +1029,11 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
                                 "what": KIND_LABEL.get(j["kind"], j["kind"]),
                                 "ended_at": j["ended_at"]})
             continue
-        row = {k: j[k] for k in ("id", "kind", "label", "status", "hold", "exit_code", "note", "log")}
+        # `cmd` rides along because now_card counts a render job's finished
+        # images to work out its progress, and the command is the only thing
+        # that says where those images are written.
+        row = {k: j[k] for k in ("id", "kind", "label", "status", "hold", "exit_code",
+                                 "note", "log", "cmd")}
         # Written for a person: the character, then what is being done to her.
         row["who"] = character_of(j["label"]).replace("_", " ").title()
         row["what"] = KIND_LABEL.get(j["kind"], j["kind"])
@@ -872,7 +1064,7 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
     # gets the log's age, which is the only way a silently stuck run is visible:
     # without it a dead process still renders as a healthy progress bar with a
     # confident, frozen ETA.
-    now = now_card(jobs, status)
+    now = now_card(jobs, status, cfg)
     age = (now or {}).get("log_age_s")
     for row in jobs:
         # The age we have is the TRAINING log's. A prep, eval or assets job
@@ -880,10 +1072,13 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
         # them Stopped fifteen minutes in - j002 went red while it was running
         # perfectly well. Only a training job is watched this way.
         watched = row["status"] == "running" and row["kind"] == "train"
+        row["quiet_s"] = (job_quiet_s(by_id[row["id"]], out)
+                          if row["status"] == "running" else None)
         row["state"] = _state_of(
             row, paused=doc["paused"],
             runner_alive=bool(lease and lease["alive"]),
-            log_age_s=age if watched else None)
+            log_age_s=age if watched else None,
+            quiet_s=row["quiet_s"])
     # What the queue adds AFTER whatever is running now - the number he actually
     # wants when deciding whether to add another character tonight.
     queued_s = sum((j["estimate"] or {}).get("total_s") or 0
@@ -893,7 +1088,9 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
             "queued_s": queued_s or None,
             "now": now,
             "lease": lease, "runner_says": _runner_last_line(out),
-            "attention": sum(1 for j in jobs if j["blocked_reason"] or j["status"] == "failed")
+            "attention": sum(1 for j in jobs
+                             if j["blocked_reason"] or j["status"] == "failed"
+                             or j["state"]["status"] == "you")
                          + (1 if doc["paused"] else 0)
                          + (0 if (lease and lease["alive"]) or not jobs else 1)
                          + (1 if (now and now["stalled"]) else 0)}
