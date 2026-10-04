@@ -50,6 +50,7 @@ KIND_LABEL = {
     "assets": "asset render",
     "shoot": "photo shoots",
     "redo": "re-roll rejects",
+    "packtest": "pack prompt test",
     "other": "job",
 }
 
@@ -968,6 +969,24 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
         if only:
             looks = len([x for x in only.split(",") if x.strip()])
         return looks * shots, f"{looks} looks x {shots} shots"
+
+    if "pack_t2i.py" in joined:
+        import json as _j  # noqa: PLC0415
+        from pathlib import Path as _Pp  # noqa: PLC0415
+
+        from ..assets.catalog import plan_slots  # noqa: PLC0415
+        from ..config import outputs_dir as _od  # noqa: PLC0415
+        from ..config import load_config as _lc  # noqa: PLC0415
+
+        pos = [c for c in cmd if not c.startswith("--")]
+        try:
+            i = next(k for k, c in enumerate(pos) if c.endswith("pack_t2i.py"))
+            char = pos[i + 1].lower()
+            pp = next(iter(sorted((_od(_lc()) / "game-assets" / char).glob("plan*.json"))))
+            n = len(plan_slots(_j.loads(_Pp(pp).read_text(encoding="utf-8"))))
+        except (StopIteration, IndexError, OSError, ValueError, KeyError):
+            return None
+        return n, f"{n} looks, one shot each"
 
     if "redo.py" in joined:
         from ..assets.judge import judge_root  # noqa: PLC0415
