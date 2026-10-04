@@ -211,3 +211,47 @@ def test_pool_and_render_rejects_are_counted_separately(tmp_path):
     record_verdict(root, sid, "casual_01", "reject")
     info = redoable(root, sid)
     assert info["n_pool"] == 1 and info["n_render"] == 0
+
+
+# --- an image that is not there is not judgeable ----------------------------
+
+def test_a_missing_image_is_not_offered_and_cannot_take_a_verdict(tmp_path):
+    """2026-10-04: ten of bianca's re-rolls were moved aside while the manifest
+    still pointed at them. The page served ten broken images - "It just showed
+    a little box with a question mark" - he rejected all ten, and those rejects
+    auto-queued a GPU job duplicating work already in the queue.
+
+    A re-roll always deletes the rejected file before rendering its
+    replacement, so this window exists by design. A verdict is a record of what
+    he saw; an item he cannot see must not be able to take one.
+    """
+    import pytest
+
+    from sourcemode.assets.judge import record_verdict, set_payload
+
+    root, imgs = tmp_path / "judge", tmp_path / "img"
+    sid = _set(root, imgs, n=3)
+    record_verdict(root, sid, "casual_02", "keep")
+    (imgs / "casual_01.png").unlink()
+
+    p = set_payload(root, sid)
+    # order is the stored blind shuffle, so compare as a set
+    assert {i["id"] for i in p["items"]} == {"casual_02", "casual_03"}
+    assert p["pending"] == 1
+    with pytest.raises(FileNotFoundError):
+        record_verdict(root, sid, "casual_01", "reject")
+    # the keep he really made is untouched
+    assert p["verdicts"] == {"casual_02": "keep"}
+
+
+def test_a_verdict_can_still_be_CLEARED_after_its_image_vanishes(tmp_path):
+    # Undo has to keep working, or a verdict recorded before the file went
+    # missing is stuck forever.
+    from sourcemode.assets.judge import load_verdicts, record_verdict
+
+    root, imgs = tmp_path / "judge", tmp_path / "img"
+    sid = _set(root, imgs, n=2)
+    record_verdict(root, sid, "casual_01", "reject")
+    (imgs / "casual_01.png").unlink()
+    record_verdict(root, sid, "casual_01", None)
+    assert "casual_01" not in load_verdicts(root, sid)

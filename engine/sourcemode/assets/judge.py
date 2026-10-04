@@ -176,13 +176,25 @@ def list_sets(root: Path) -> list[dict]:
 
 
 def set_payload(root: Path, set_id: str) -> dict | None:
-    """What the page gets: items in blind order, arms stripped."""
+    """What the page gets: items in blind order, arms stripped.
+
+    An item whose image is not on disk is LEFT OUT and counted instead. A
+    re-roll deletes the rejected file before it renders the replacement, so
+    there is always a window where the manifest names a file that is not
+    there; on 2026-10-04 that window was held open by hand and the page served
+    ten broken images, every one of which he dutifully rejected. A verdict is a
+    record of what he saw, so an item he cannot see must not be judgeable.
+    """
     s = load_set(root, set_id)
     if s is None:
         return None
+    here = {it["id"] for it in s["items"] if Path(it["path"]).is_file()}
+    pending = [i for i in s["order"] if i not in here]
     return {"id": s["id"], "title": s["title"], "question": s.get("question", ""),
             "has_reference": bool(s.get("reference")),
-            "items": [{"id": i} for i in s["order"]], "verdicts": load_verdicts(root, set_id)}
+            "items": [{"id": i} for i in s["order"] if i in here],
+            "pending": len(pending),
+            "verdicts": {k: v for k, v in load_verdicts(root, set_id).items() if k in here}}
 
 
 def item_path(root: Path, set_id: str, item_id: str) -> Path | None:
@@ -201,8 +213,15 @@ def record_verdict(root: Path, set_id: str, item_id: str, verdict: str | None) -
     s = load_set(root, set_id)
     if s is None:
         raise KeyError(set_id)
-    if item_id not in {it["id"] for it in s["items"]}:
+    row = next((it for it in s["items"] if it["id"] == item_id), None)
+    if row is None:
         raise KeyError(item_id)
+    # The hard guard, under every client: no verdict on an image that is not
+    # there. Clearing one (verdict=None) stays allowed, because undoing a
+    # verdict recorded before the file went missing has to keep working.
+    if verdict is not None and not Path(row["path"]).is_file():
+        raise FileNotFoundError(f"{item_id}: image is not on disk - it is "
+                                f"probably mid re-render")
     if verdict is not None and verdict not in VERDICTS:
         raise ValueError(verdict)
     v = load_verdicts(root, set_id)
@@ -597,6 +616,8 @@ async function openSet(id){
   location.hash=id;
   $('results').classList.remove('on');
   $('setname').textContent=cur.title||cur.id;
+  if(cur.pending) SM.toast(cur.pending+' shot'+(cur.pending===1?'':'s')
+    +' still rendering - not shown yet');
   const ref=$('ref');
   ref.hidden=true;
   if(cur.has_reference) ref.src='/judge/ref?set='+encodeURIComponent(id);
@@ -1088,6 +1109,8 @@ def judge_router(cfg: dict):
             raise HTTPException(404, str(e)) from e
         except ValueError as e:
             raise HTTPException(400, f"verdict must be one of {VERDICTS}") from e
+        except FileNotFoundError as e:
+            raise HTTPException(409, str(e)) from e
         # The last verdict in a set is what decides which shots get re-rolled.
         # Queueing per keystroke would mean a job for reject #1 and another for
         # reject #2; waiting for the set means one job that knows the whole
