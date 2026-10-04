@@ -36,10 +36,12 @@ def create_app(cfg: dict, sampler: Sampler | None = None):
 
     from ..assets.judge import judge_router  # noqa: PLC0415
     from .hub import hub_router  # noqa: PLC0415
+    from .queue_page import queue_router  # noqa: PLC0415
     from ..assets.review import review_router  # noqa: PLC0415
     from ..train.preview import preview_router  # noqa: PLC0415
 
     app.include_router(hub_router(cfg))
+    app.include_router(queue_router(cfg))
     app.include_router(review_router(cfg))
     app.include_router(judge_router(cfg))
     app.include_router(preview_router(cfg))
@@ -63,5 +65,10 @@ def monitor_host(cfg: dict, host: str | None = None) -> str:
 def serve(cfg: dict, host: str | None = None, port: int | None = None) -> None:
     import uvicorn  # noqa: PLC0415
 
+    # log_config=None: uvicorn's default config builds a colourising formatter that
+    # needs a console, and dies with "Unable to configure formatter 'default'" when
+    # the process is started detached with its stdout redirected to a file - which is
+    # how the autostart task and every background relaunch run it. 2026-10-03: the
+    # judge page was down for Jeremy because of exactly this.
     uvicorn.run(create_app(cfg), host=monitor_host(cfg, host),
-                port=port or int(cfg["monitor"]["port"]), log_level="warning")
+                port=port or int(cfg["monitor"]["port"]), log_level="warning", log_config=None)

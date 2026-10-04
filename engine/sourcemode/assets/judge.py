@@ -261,6 +261,10 @@ try{ if(localStorage.getItem('showRef')==='0') showRef=false; }catch(e){}
 const fileUrl=(s,i)=>`/judge/file?set=${encodeURIComponent(s)}&id=${encodeURIComponent(i)}`;
 async function fetchSets(){sets=await (await fetch('/judge/sets',{cache:'no-store'})).json();
   const p=$('pick'); const keep=p.value; p.innerHTML='';
+  // A placeholder, so "nothing open" can be shown honestly rather than the list
+  // appearing to have a set selected when none is loaded.
+  const ph=document.createElement('option');
+  ph.value='';ph.textContent='- choose a set -';p.appendChild(ph);
   // /judge/sets returns unfinished first. Draw one disabled divider at the
   // boundary so a long list can be scanned for what still needs work.
   let split=false;
@@ -274,12 +278,41 @@ async function fetchSets(){sets=await (await fetch('/judge/sets',{cache:'no-stor
     p.appendChild(o);}
   if(keep) p.value=keep;}
 async function loadSets(){
-  await fetchSets();
-  const want=location.hash.slice(1)||(sets.find(s=>s.judged<s.n)||sets[0]||{}).id;
-  if(want){$('pick').value=want;await openSet(want);}
+  try{ await fetchSets(); }
+  catch(e){ $('q').textContent='could not load the set list - '+e.message; return; }
+  // A #hash pointing at a set that no longer exists used to throw out of here and
+  // leave the page blank. Fall back to the first unjudged set and drop the hash.
+  // No fallback to sets[0]: when every set is judged that re-opened the completed
+  // curate_jojo (104/104, priority 0, so it sorts first) on EVERY visit - the same
+  // trap as the hash, from the other direction. With nothing left, open nothing.
+  const first=(sets.find(s=>s.judged<s.n)||{}).id;
+  // openSet() stamps the hash on every open, so a set opened once is re-opened on
+  // every later visit - and a COMPLETED set then has to be clicked away from by
+  // hand each time (curate_jojo, 104/104). A hash is a deep link, not a trap:
+  // honour it while the set still has work, otherwise fall through to the first
+  // set that does.
+  const hashed=location.hash.slice(1);
+  const hset=hashed?sets.find(s=>s.id===hashed):null;
+  const want=(hashed&&(!hset||hset.judged<hset.n))?hashed:first;
+  if(want!==hashed) location.hash='';
+  if(!want){
+    $('q').textContent=sets.length
+      ? 'nothing left to judge - every set is complete; pick one from the list to review it'
+      : 'no judge sets found';
+    $('prog').textContent='';
+    $('pick').value='';
+    return;
+  }
+  try{ $('pick').value=want; await openSet(want); }
+  catch(e){
+    if(want!==first&&first){ location.hash=''; $('pick').value=first; await openSet(first); }
+    else { $('q').textContent='could not open '+want+' - '+e.message; }
+  }
 }
 async function openSet(id){
-  cur=await (await fetch('/judge/set/'+encodeURIComponent(id),{cache:'no-store'})).json();
+  const r=await fetch('/judge/set/'+encodeURIComponent(id),{cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  cur=await r.json();
   location.hash=id; $('q').textContent=cur.question||'';
   $('ref').style.display='none';
   if(cur.has_reference){$('ref').src='/judge/ref?set='+encodeURIComponent(id);}
@@ -317,7 +350,13 @@ async function tally(){
   $('done').innerHTML=h; $('done').style.display='';
   for(const id of ['yes','no','undo']) $(id).style.visibility='hidden';
 }
-function nextSet(){const n=sets.find(x=>x.judged<x.n&&x.id!==cur.id)||sets[0]; if(n){$('pick').value=n.id;openSet(n.id);}}
+function nextSet(){
+  // Only a set with work left. Falling back to a finished one meant finishing a
+  // set dropped you into somebody's completed 104-image judge set.
+  const n=sets.find(x=>x.judged<x.n&&x.id!==cur.id);
+  if(n){$('pick').value=n.id;openSet(n.id);}
+  else{$('done').innerHTML='<h2>Nothing left to judge</h2>'
+    +'<p style="color:#888">Every set is complete. Pick one from the list above to review it.</p>';}}
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='SELECT'||!cur) return;
   const k=e.key.toLowerCase();
@@ -354,31 +393,36 @@ loadSets();
 def judge_router(cfg: dict):
     from fastapi import APIRouter, HTTPException  # noqa: PLC0415
     from fastapi.responses import FileResponse, HTMLResponse  # noqa: PLC0415
+    from sourcemode.train.preview import web_copy  # noqa: PLC0415
 
     root = judge_root(cfg)
     r = APIRouter()
 
     @r.get("/judge", response_class=HTMLResponse)
     def _page():
-        return PAGE
+        # no-store: a phone that cached this page across a monitor restart showed an
+        # empty set list with a perfectly healthy server behind it.
+        return HTMLResponse(PAGE, headers={"Cache-Control": "no-store, max-age=0"})
 
     @r.get("/judge/sets")
     def _sets() -> list[dict]:
         return list_sets(root)
 
     @r.get("/judge/file")
-    def _file(set: str, id: str):  # noqa: A002
+    def _file(set: str, id: str, w: int = 900):  # noqa: A002
+        # Judging is full-height on a phone, so a 900px long edge is already more
+        # than the screen resolves; the 1024x1536 PNG was ~2 MB a frame.
         p = item_path(root, set, id)
         if p is None:
             raise HTTPException(404)
-        return FileResponse(p)
+        return FileResponse(web_copy(p, w))
 
     @r.get("/judge/ref")
     def _ref(set: str):  # noqa: A002
         s = load_set(root, set)
         if s is None or not s.get("reference") or not Path(s["reference"]).is_file():
             raise HTTPException(404)
-        return FileResponse(Path(s["reference"]))
+        return FileResponse(web_copy(Path(s["reference"]), 600))
 
     @r.get("/judge/set/{set_id}")
     def _set(set_id: str) -> dict:

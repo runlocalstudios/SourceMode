@@ -1,4 +1,7 @@
-"""One bookmarkable page with tabs for the two things Jeremy actually does on a phone.
+"""One bookmarkable page with tabs for the things Jeremy actually does on a phone.
+
+The GPU tab opens first, deliberately: the question on walking up to the box is
+"what is it doing and what is next", and judging is something he chooses to do.
 
 `/judge` and `/dataset` are each self-contained pages with their own scripts and
 their own use of `location.hash`, so merging them into one document would collide
@@ -11,7 +14,7 @@ training sets left to approve - so the page answers "is there anything for me"
 before you tap anything.
 
     GET  /            the hub
-    GET  /hub/counts  {judge: n unfinished, datasets: n unapproved}
+    GET  /hub/counts  {gpu: n needing attention, judge: n unfinished, datasets: n unapproved}
 """
 
 from __future__ import annotations
@@ -34,14 +37,16 @@ PAGE = """<!-- review hub -->
  .pane.on{display:block}
 </style>
 <div id=tabs>
-  <button id=t_judge class=on onclick="show('judge')">Judging<span class=n id=n_judge></span></button>
+  <button id=t_gpu class=on onclick="show('gpu')">GPU<span class=n id=n_gpu></span></button>
+  <button id=t_judge onclick="show('judge')">Judging<span class=n id=n_judge></span></button>
   <button id=t_datasets onclick="show('datasets')">Training sets<span class=n id=n_datasets></span></button>
 </div>
-<iframe id=p_judge class="pane on" src="/judge"></iframe>
+<iframe id=p_gpu class="pane on" src="/queue"></iframe>
+<iframe id=p_judge class=pane></iframe>
 <iframe id=p_datasets class=pane></iframe>
 <script>
 const $=id=>document.getElementById(id);
-const SRC={judge:'/judge',datasets:'/dataset'};
+const SRC={gpu:'/queue',judge:'/judge',datasets:'/dataset'};
 function show(tab){
   for(const k of Object.keys(SRC)){
     const on=k===tab;
@@ -55,15 +60,16 @@ function show(tab){
 }
 async function counts(){
   try{
-    const [j,d]=await Promise.all([
-      fetch('/judge/sets',{cache:'no-store'}).then(r=>r.json()),
-      fetch('/dataset/list',{cache:'no-store'}).then(r=>r.json())]);
-    const nj=j.filter(s=>s.judged<s.n).length, nd=d.filter(s=>!s.approved).length;
-    $('n_judge').textContent=nj; $('n_datasets').textContent=nd;
+    const c=await fetch('/hub/counts',{cache:'no-store'}).then(r=>r.json());
+    // The GPU badge counts things WAITING ON HIM - paused, blocked, failed, or no
+    // runner - never the number of queued jobs, which is never zero and never
+    // actionable. A blank badge means there is nothing to do.
+    for(const [k,v] of [['gpu',c.gpu],['judge',c.judge],['datasets',c.datasets]])
+      $('n_'+k).textContent=v?v:'';
   }catch(e){}
 }
-show(location.hash.slice(1) in SRC ? location.hash.slice(1) : 'judge');
-counts(); setInterval(counts,60000);
+show(location.hash.slice(1) in SRC ? location.hash.slice(1) : 'gpu');
+counts(); setInterval(counts,30000);
 </script>
 """
 
@@ -84,7 +90,10 @@ def hub_router(cfg: dict):
     @r.get("/hub/counts")
     def _counts() -> dict:
         """What is waiting for him, without loading either page."""
-        return {"judge": sum(1 for s in list_sets(judge_root(cfg)) if not s["done"]),
+        from .queue_page import queue_state  # noqa: PLC0415
+
+        return {"gpu": queue_state(cfg)["attention"],
+                "judge": sum(1 for s in list_sets(judge_root(cfg)) if not s["done"]),
                 "datasets": sum(1 for s in list_previews(preview_root(cfg)) if not s["approved"])}
 
     return r
