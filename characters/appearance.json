@@ -73,26 +73,26 @@
  },
  "hannah": {
   "age": 29,
-  "_note": "DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03.",
+  "_note": "Corrected by Jeremy, 2026-10-04. Her highlights are BLONDE, not caramel - thick bleached money-piece ribbons through dark brown. DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03.",
   "ethnicity": "Latina",
   "build": "curvy with a defined waist",
   "bust": "full",
   "figure": "curvy figure with a defined waist and a full bust",
-  "features": "very long thick dark brown hair with heavy caramel-blonde face-framing highlights, warm brown eyes, tanned olive skin, strong dark brows, full lips",
+  "features": "very long thick dark brown hair with thick bleached blonde face-framing highlights, warm brown eyes, tanned olive skin, strong dark brows, full lips",
   "frame": "curvy frame",
-  "prompt": "a 29-year-old Latina woman with tanned olive skin, a curvy figure with a defined waist and a full bust, very long thick dark brown hair with heavy caramel-blonde face-framing highlights, warm brown eyes, strong dark brows and full lips"
+  "prompt": "a 29-year-old Latina woman with tanned olive skin, a curvy figure with a defined waist and a full bust, very long thick dark brown hair with thick bleached blonde face-framing highlights, warm brown eyes, strong dark brows and full lips"
  },
  "maddie": {
   "age": 25,
-  "_note": "DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03. Her wispy curtain fringe is in all four references - the same shape as raven's bangs, so it carries a negative.",
-  "ethnicity": "White",
+  "_note": "Corrected by Jeremy, 2026-10-04. Irish. DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03. Her wispy curtain fringe is in all four references - the same shape as raven's bangs, so it carries a negative.",
+  "ethnicity": "Irish",
   "build": "slim with a small waist",
   "bust": "medium-full",
   "figure": "slim figure with a small waist and a medium-full bust",
-  "features": "long straight auburn-copper hair with a soft wispy curtain fringe, green eyes, fair skin, light freckles across her nose",
+  "features": "long straight auburn-copper hair with a soft wispy curtain fringe, green eyes, fair Irish skin, light freckles across her nose",
   "frame": "slim frame",
   "negative": "centre-parted hair with a bare forehead, no fringe",
-  "prompt": "a 25-year-old white woman with fair skin, a slim figure with a small waist and a medium-full bust, long straight auburn-copper hair with a soft wispy curtain fringe, green eyes and light freckles across her nose"
+  "prompt": "a 25-year-old Irish woman with fair skin, a slim figure with a small waist and a medium-full bust, long straight auburn-copper hair with a soft wispy curtain fringe, green eyes and light freckles across her nose"
  },
  "marisol": {
   "_note": "Age 27 from the game (none given). Hair and skin observed from her references: the bleached blonde shows darker roots at the parting, stated so the base model does not volunteer clean platinum.",
@@ -115,14 +115,14 @@
  },
  "mira": {
   "age": 18,
-  "_note": "DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03.",
-  "ethnicity": "Latina",
+  "_note": "Corrected by Jeremy, 2026-10-04. Asian-Latina mix, not Latina. DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03.",
+  "ethnicity": "Asian and Latina mix",
   "build": "slim and petite, youthful",
   "bust": "medium",
   "figure": "slim petite youthful figure with a medium bust",
   "features": "very long straight dark brown-black hair, warm brown eyes, medium tan skin, light freckles across her cheeks",
   "frame": "slim petite frame",
-  "prompt": "an 18-year-old Latina woman with medium tan skin, a slim petite youthful figure with a medium bust, very long straight dark brown-black hair, warm brown eyes and light freckles across her cheeks"
+  "prompt": "an 18-year-old woman of mixed Asian and Latina heritage with medium tan skin, a slim petite youthful figure with a medium bust, very long straight dark brown-black hair, warm brown eyes and light freckles across her cheeks"
  },
  "raven": {
   "_note": "Hair feature and its negative moved here 2026-10-04 from a FEATURE_NEG dict inside dense_epoch_eval.py, where it reached the eval and never the asset pack. Her ethnicity, build and figure are NOT documented yet - add them before her next sweep; appearance.check('raven') will say so.",
@@ -131,13 +131,13 @@
   "negative": "no bangs, bare forehead, exposed forehead, forehead fully visible, hair swept back off the forehead, centre parting, middle part, hair tucked behind the hairline, curtain bangs, side-swept bangs, receding hairline"
  },
  "tess": {
-  "_note": "Age comes from the game's characters.js - an `age` field here would override it, so there deliberately is none. Her reference wears long box braids, a STYLE, deliberately not in the prompt: it would fight every look's hair clause. Say so if braids are her signature.",
+  "_note": "Corrected by Jeremy, 2026-10-04. Her hair is LONG BOX BRAIDS - many individual plaits parted in a square grid at the scalp, hanging free past her waist. Not 'a braid', which is one plait and is what the LoRA-Gen caption vocabulary means. It is her signature, so it is named here and every render asks for it. Age comes from the game's characters.js - an `age` field here would override it, so there deliberately is none.",
   "ethnicity": "Black",
   "build": "very petite",
   "figure": "slim, slender frame",
-  "features": "long black hair, hazel eyes, deep dark-brown skin, full lips, high cheekbones",
+  "features": "long black box braids - many individual plaits parted in a square grid at the scalp, hanging free past her waist - hazel eyes, deep dark-brown skin, full lips, high cheekbones",
   "frame": "tiny frame",
-  "prompt": "a very petite Black young woman with a slender frame, deep dark-brown skin, long black hair, hazel eyes, full lips and high cheekbones"
+  "prompt": "a very petite Black young woman with a slender frame, deep dark-brown skin, long black box braids - many individual plaits parted in a square grid at the scalp, hanging free past her waist - hazel eyes, full lips and high cheekbones"
  },
  "vivienne": {
   "ethnicity": "Vietnamese",
@@ -192,14 +192,14 @@
   "age": 24
  },
  "cindy": {
-  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Black with a light caramel complexion; her blonde is dyed and is a strong identity trait - it must be prompted, like geena's magenta. Executive assistant, fashion is her thing.",
+  "_note": "Corrected by Jeremy, 2026-10-04. PLATINUM blonde, not honey - her lengths read almost white against slightly warmer roots. DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Black with a light caramel complexion; her blonde is dyed and is a strong identity trait - it must be prompted, like geena's magenta. Executive assistant, fashion is her thing.",
   "ethnicity": "Black",
   "build": "slim with a small waist",
   "bust": "medium",
   "figure": "slim figure with a small waist and a medium bust",
-  "features": "very long loosely waved honey-blonde dyed hair, warm brown eyes, light caramel-brown skin, full lips",
+  "features": "very long loosely waved platinum-blonde dyed hair with slightly warmer roots, warm brown eyes, light caramel-brown skin, full lips",
   "frame": "slim frame",
-  "prompt": "a 24-year-old Black woman with light caramel-brown skin, a slim figure with a small waist and a medium bust, very long loosely waved honey-blonde dyed hair, warm brown eyes and full lips",
+  "prompt": "a 24-year-old Black woman with light caramel-brown skin, a slim figure with a small waist and a medium bust, very long loosely waved platinum-blonde dyed hair with slightly warmer roots, warm brown eyes and full lips",
   "age": 24
  },
  "gabi": {
@@ -214,25 +214,25 @@
   "age": 20
  },
  "jojo": {
-  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Ethnicity is not stated in the game; her renders read East Asian. Head bartender at Obsidian. Trained on the trigger `jojo_ch`, not the bare name.",
-  "ethnicity": "East Asian",
+  "_note": "Corrected by Jeremy, 2026-10-04. Half Asian, not fully. DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Ethnicity is not stated in the game; her renders read East Asian. Head bartender at Obsidian. Trained on the trigger `jojo_ch`, not the bare name.",
+  "ethnicity": "Half Asian",
   "build": "slim with a defined waist",
   "bust": "full",
   "figure": "slim figure with a defined waist and a full bust",
   "features": "very long dark brown hair with soft waves, dark brown eyes, warm light skin",
   "frame": "slim frame",
-  "prompt": "a 23-year-old East Asian woman with a slim figure, a defined waist and a full bust, warm light skin, very long dark brown hair with soft waves, and dark brown eyes",
+  "prompt": "a 23-year-old half-Asian woman with a slim figure, a defined waist and a full bust, warm light skin, very long dark brown hair with soft waves, and dark brown eyes",
   "age": 23
  },
  "keiko": {
-  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Asian is stated in her systemPrompt and her mother Hotaru owns Lumen Salon, so likely half Japanese - but her shipped renders read MIXED, with sun-lightened brown hair rather than black. Worth confirming which you want.",
-  "ethnicity": "Asian (reads mixed in her renders)",
+  "_note": "Corrected by Jeremy, 2026-10-04. Half Asian, not fully - which is why her renders read mixed with sun-lightened brown hair. DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Asian is stated in her systemPrompt and her mother Hotaru owns Lumen Salon, so likely half Japanese - but her shipped renders read MIXED, with sun-lightened brown hair rather than black. Worth confirming which you want.",
+  "ethnicity": "Half Asian",
   "build": "slim and petite, youthful",
   "bust": "small-medium",
   "figure": "slim petite youthful figure with a small-medium bust",
   "features": "very long wavy brown hair with sun-lightened caramel ends, warm brown eyes, golden-tan skin, a soft round face",
   "frame": "slim petite frame",
-  "prompt": "an 18-year-old Asian woman with a slim petite youthful figure, golden-tan skin, very long wavy brown hair with sun-lightened caramel ends, warm brown eyes and a soft round face",
+  "prompt": "an 18-year-old half-Asian woman with a slim petite youthful figure, golden-tan skin, very long wavy brown hair with sun-lightened caramel ends, warm brown eyes and a soft round face",
   "age": 18
  },
  "kimmy": {
@@ -300,5 +300,16 @@
   "frame": "curvy frame",
   "prompt": "a 33-year-old white woman with light tanned skin, a curvy hourglass figure with a small waist and a full bust, very long loosely waved platinum-blonde hair, green eyes, strong defined brows and full lips",
   "age": 33
+ },
+ "cassie": {
+  "_note": "DRAFT 2026-10-04 from her shipped game outfits. Irish, per Jeremy.",
+  "ethnicity": "Irish",
+  "build": "slim with a defined waist",
+  "bust": "medium",
+  "figure": "slim figure with a defined waist and a medium bust",
+  "features": "long wavy dark brown hair, hazel-green eyes, fair Irish skin, freckles across her nose and cheeks",
+  "frame": "slim frame",
+  "prompt": "a 29-year-old Irish woman with fair skin, a slim figure with a defined waist and a medium bust, long wavy dark brown hair, hazel-green eyes and freckles across her nose and cheeks",
+  "age": 29
  }
 }

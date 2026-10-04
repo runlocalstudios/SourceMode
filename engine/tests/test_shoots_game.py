@@ -123,3 +123,45 @@ def test_the_queue_row_only_claims_training_and_sweep_for_a_training_job():
     i = js.index("of GPU time once it starts")
     window = js[i:i + 600]
     assert "j.estimate.train_s&&j.estimate.sweep_s" in window
+
+
+# --- per-character hair -----------------------------------------------------
+
+def test_a_box_braided_character_is_never_asked_for_loose_hair():
+    """Jeremy, 2026-10-04: Tess's braid is a specific protective style, not the
+    generic braid the shared vocabulary means.
+
+    She wears long box braids in every training frame. The shared rotation
+    opens with "her hair worn loose", which would have reached a quarter of
+    every shoot and every selfie. That is the gabi collision in reverse - her
+    set is ~90% loose hair and prompting a braid kept 20%.
+    """
+    from sourcemode.assets.wardrobe import DEFAULT_HAIR, hair_options
+
+    tess = hair_options("tess")
+    assert tess != DEFAULT_HAIR
+    assert all("braid" in h for h in tess)
+    assert not any("loose" in h for h in tess)
+
+    for sid in ("boudoir", "selfies"):
+        hairs = {s["hair"] for s in BY_ID[sid].plan(character="tess")}
+        assert all("braid" in h for h in hairs), sid
+
+
+def test_a_character_with_no_list_keeps_the_shared_rotation():
+    from sourcemode.assets.wardrobe import DEFAULT_HAIR, hair_options
+
+    assert hair_options("zara") == DEFAULT_HAIR
+    assert hair_options("nobody-at-all") == DEFAULT_HAIR
+    # and passing no character at all leaves a shoot exactly as it was
+    assert BY_ID["boudoir"].plan()[0]["hair"] == DEFAULT_HAIR[0]
+
+
+def test_the_braid_style_itself_is_identity_not_a_per_look_clause():
+    # It is in every frame, so a clause that re-states it on some looks and not
+    # others would make a constant accidentally variable. It lives in her
+    # appearance record; the per-look clause only varies how it is WORN.
+    from sourcemode.assets.appearance import clause
+
+    assert "box braids" in clause("tess")
+    assert "square grid" in clause("tess")

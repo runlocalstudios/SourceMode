@@ -52,21 +52,30 @@ class Shoot:
     plan_file: str = ""
     note: str = ""
 
-    def plan(self, seed: int = 0) -> list[dict]:
+    def plan(self, seed: int = 0, character: str | None = None) -> list[dict]:
         """The shot list: outfit x pose walked in step, hair rotating under them.
 
         Deterministic, so re-running a shoot reproduces it and a judge verdict
         keyed to a shot id still means the same picture.
+
+        `character` swaps in HER hair vocabulary where she has one. Tess wears
+        box braids in every frame she was trained on, and the shared rotation
+        would have asked her for loose hair on a quarter of every shoot.
         """
+        from .wardrobe import hair_options  # noqa: PLC0415
+
         if self.explicit:
-            return [dict(x) for x in self.explicit]
+            return [dict(x) for x in self.explicit] if not character else [
+                {**x, "hair": hair_options(character)[i % len(hair_options(character))]}
+                for i, x in enumerate(self.explicit)]
+        hair = hair_options(character) if character else self.hair
         out = []
         for i in range(self.shots):
             out.append({
                 "id": f"{self.id}_{i:02d}", "look": i + 1, "category": self.bucket,
                 "pose": "standing", "shoot": self.id,
                 "outfit": self.outfits[i % len(self.outfits)],
-                "hair": self.hair[i % len(self.hair)],
+                "hair": hair[i % len(hair)],
                 "stance": self.poses[i % len(self.poses)],
                 "framing": self.framing,
                 "setting": self.setting,

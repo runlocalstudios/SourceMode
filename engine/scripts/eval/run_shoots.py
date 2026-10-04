@@ -160,7 +160,7 @@ def run_shoot(sh) -> int:
     d = OUT_ROOT / "shoots" / CHAR / sh.id
     d.mkdir(parents=True, exist_ok=True)
     items, n = [], 0
-    for k, slot in enumerate(sh.plan()):
+    for k, slot in enumerate(sh.plan(character=CHAR)):
         dest = d / f"{slot['id']}.png"
         try:
             if not dest.exists():

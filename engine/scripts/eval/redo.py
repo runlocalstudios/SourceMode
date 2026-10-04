@@ -103,7 +103,7 @@ def redo_shoot(info: dict, seed: int) -> Path | None:
     if sh is None:
         log(f"  {info['slot_id']}: unknown shoot {info['source']!r}")
         return None
-    slot = next((s for s in sh.plan() if s["id"] == info["slot_id"]), None)
+    slot = next((s for s in sh.plan(character=CHAR) if s["id"] == info["slot_id"]), None)
     if slot is None:
         log(f"  {info['slot_id']}: no longer in {sh.id} - the catalog changed")
         return None
