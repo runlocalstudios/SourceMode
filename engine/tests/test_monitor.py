@@ -261,11 +261,92 @@ def test_hub_serves_both_tabs_and_their_counts(tmp_path: Path):
     # The GPU tab opens first and is the only frame with an initial src; the other
     # two load on first use so switching back keeps their place.
     assert 'id=p_gpu class="pane on" src="/queue"' in page
-    assert "<iframe id=p_judge class=pane>" in page
-    assert "{gpu:'/queue',judge:'/judge',datasets:'/dataset'}" in page
-    assert "location.hash.slice(1) : 'gpu'" in page
+    assert "<iframe id=p_judge class=pane" in page
+    assert "{gpu:'/queue',judge:'/judge',dataset:'/dataset'}" in page
+    assert "show(start[0]||'gpu',start[1])" in page
+    # The shell renders the card's state outside the frames, so a glance at any
+    # tab answers "what is the card doing".
+    assert 'id=nowbar' in page
 
     assert c.get("/hub/counts").json() == {"gpu": 0, "judge": 1, "datasets": 1}
 
+    # /hub/now carries the same counts plus the sentence and the severity. With
+    # nothing queued and nothing running, something is still waiting on him.
+    now = c.get("/hub/now").json()
+    assert now["counts"] == {"gpu": 0, "judge": 1, "datasets": 1}
+    assert now["severity"] == "you"
+    assert now["line"] == "Nothing is running"
+    assert now["degraded"] == []
+
     record_approval(proot, "ds", True)
     assert c.get("/hub/counts").json() == {"gpu": 0, "judge": 1, "datasets": 0}
+
+
+def test_one_broken_manifest_does_not_500_the_badges(tmp_path: Path):
+    """`/hub/counts` used to wrap only `gpu` in try/except while `judge` and
+    `datasets` called list_sets()/list_previews() bare - and list_sets() reads
+    s["items"] and s["title"] with no guard. One malformed file among the 88 in
+    outputs/judge/sets/ therefore took out all three badges."""
+    pytest.importorskip("httpx")
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from sourcemode.monitor.hub import hub_router
+
+    jroot, proot = tmp_path / "judge", tmp_path / "prev"
+    (jroot / "sets").mkdir(parents=True)
+    (jroot / "sets" / "broken.json").write_text("{not json", encoding="utf-8")
+
+    cfg = {"assets": {"judge": str(jroot)}, "train": {"previews": str(proot)},
+           "paths": {"outputs": str(tmp_path / "out")}}
+    app = FastAPI()
+    app.include_router(hub_router(cfg))
+    r = TestClient(app).get("/hub/now")
+    assert r.status_code == 200
+    d = r.json()
+    assert "judge" in d["degraded"]          # it says which one it could not read
+    assert d["counts"]["datasets"] == 0      # and the others still answer
+
+
+def test_log_mtime_prefers_the_stderr_sidecar(tmp_path: Path, monkeypatch):
+    """tqdm writes progress to STDERR, so on a live run the .log stops moving
+    while the .log.err keeps going. Line 183 used to overwrite the correct
+    max(log, err) with the .log alone: on a healthy run on 2026-10-04 that
+    reported 196.8 minutes of silence against the sidecar's 6 seconds, which
+    would make any staleness test call every running job dead.
+    """
+    import os
+
+    from sourcemode.monitor import training as T
+
+    d = tmp_path / "training"
+    d.mkdir()
+    log = d / "zara_v2.log"
+    log.write_text("num train images * repeats / 100" + chr(10)
+                   + "epoch to train: 24" + chr(10), encoding="utf-8")
+    err = d / "zara_v2.log.err"
+    err.write_text("steps:  50%|#####     | 1180/2360 [1:40:12<1:40:12,  5.09s/it]" + chr(10),
+                   encoding="utf-8")
+
+    old = 1_700_000_000.0
+    os.utime(log, (old, old))                 # the header, written once at start
+    os.utime(err, (old + 11_800, old + 11_800))   # tqdm, still going
+
+    monkeypatch.setattr(T, "trainer_running", lambda: True)
+    out = T.sample_training(d)
+    assert out["log_mtime"] == old + 11_800, (
+        "log_mtime must be the NEWER of the log and its .err sidecar")
+
+
+def test_log_mtime_is_the_log_when_there_is_no_sidecar(tmp_path: Path, monkeypatch):
+    import os
+
+    from sourcemode.monitor import training as T
+
+    d = tmp_path / "training"
+    d.mkdir()
+    log = d / "solo.log"
+    log.write_text("epoch to train: 24" + chr(10), encoding="utf-8")
+    os.utime(log, (1_700_000_500.0, 1_700_000_500.0))
+    monkeypatch.setattr(T, "trainer_running", lambda: False)
+    assert T.sample_training(d)["log_mtime"] == 1_700_000_500.0

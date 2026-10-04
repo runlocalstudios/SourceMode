@@ -12,7 +12,12 @@
 # PowerShell, not nohup'd bash: every bash waiter launched from the agent tool has
 # died silently within hours. ASCII only.
 $ErrorActionPreference = "Continue"
-$SP  = "C:\Users\jerem\AppData\Local\Temp\claude\C--dev-sourcemode\913e6b47-2e1a-4e0e-af1d-c0c28a922563\scratchpad"
+# Repo paths, never a session scratchpad. These two used to point into one
+# Claude session's temp directory, which meant (a) every script here broke the
+# moment that directory was cleaned, and (b) an edit to the repo's
+# train_character.ps1 was silently not picked up by the scripts that invoke it.
+$SP  = "C:\dev\sourcemode\engine\scripts"
+$EV  = "C:\dev\sourcemode\engine\scripts\eval"
 $PY  = "C:\dev\sourcemode\engine\.venv\Scripts\python.exe"
 $L   = "C:\dev\sourcemode\engine\outputs\logs"
 $log = "$L\tonight_two.log"
@@ -23,7 +28,7 @@ Set-Location "C:\dev\sourcemode\engine"
 Free
 Log "1/2 START maddie ep22 vs ep23 at n=20 (standard scenes, as she was judged)"
 $a = Start-Process -FilePath $PY -NoNewWindow -Wait -PassThru -ArgumentList @(
-      "$SP\dense_epoch_eval.py", "maddie", "maddie_v2", "24", "22", "23", "maddie",
+      "$EV\dense_epoch_eval.py", "maddie", "maddie_v2", "24", "22", "23", "maddie",
       "outputs\lora-datasets\maddie_v2\lora", "20", "--epochs", "22,23") `
     -RedirectStandardOutput "$L\confirm_maddie.stdout.log" `
     -RedirectStandardError  "$L\confirm_maddie.stderr.log"

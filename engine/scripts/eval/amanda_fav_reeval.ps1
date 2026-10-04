@@ -3,7 +3,12 @@
 # microphone / drum-kit scenes produce junk that says nothing about the LoRA).
 # Runs after Sandra's three-look redo releases the card. Never kills anything.
 $ErrorActionPreference = "Continue"
-$SP  = "C:\Users\jerem\AppData\Local\Temp\claude\C--dev-sourcemode\913e6b47-2e1a-4e0e-af1d-c0c28a922563\scratchpad"
+# Repo paths, never a session scratchpad. These two used to point into one
+# Claude session's temp directory, which meant (a) every script here broke the
+# moment that directory was cleaned, and (b) an edit to the repo's
+# train_character.ps1 was silently not picked up by the scripts that invoke it.
+$SP  = "C:\dev\sourcemode\engine\scripts"
+$EV  = "C:\dev\sourcemode\engine\scripts\eval"
 $PY  = "C:\dev\sourcemode\engine\.venv\Scripts\python.exe"
 $L   = "C:\dev\sourcemode\engine\outputs\logs"
 $log = "$L\amanda_fav_reeval.log"
@@ -22,7 +27,7 @@ foreach ($j in @(@{ Sub = "amanda_internal_v2"; Eps = "20,21,22" }, @{ Sub = "am
   Free
   Log "START $($j.Sub) asset-prompt eval, epochs $($j.Eps) x 10"
   $p = Start-Process -FilePath $PY -NoNewWindow -Wait -PassThru -ArgumentList @(
-        "$SP\dense_epoch_eval.py", "amanda", $j.Sub, "24", "1", "24", "amanda", $dir, "10", "--scenes", "asset", "--epochs", $j.Eps) `
+        "$EV\dense_epoch_eval.py", "amanda", $j.Sub, "24", "1", "24", "amanda", $dir, "10", "--scenes", "asset", "--epochs", $j.Eps) `
       -RedirectStandardOutput "$L\asset_$($j.Sub).stdout.log" -RedirectStandardError "$L\asset_$($j.Sub).stderr.log"
   Log "END $($j.Sub) exit=$($p.ExitCode)"
 }

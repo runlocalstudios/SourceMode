@@ -56,8 +56,12 @@ def test_verdicts_persist_and_summarise_per_arm(tmp_path: Path):
     assert s["arms"] == [{"arm": "A", "n": 3, "judged": 2, "keep": 1, "rate": 0.5},
                          {"arm": "B", "n": 3, "judged": 1, "keep": 0, "rate": 0.0}]
     assert s["groups"]["0"] == {"A": "keep", "B": "reject"}
+    # `sub`/`status`/`group` are what the one picker shows instead of a bare
+    # count; they are derived, so they are asserted alongside the counts.
     assert list_sets(tmp_path) == [{"id": "exp", "title": "t", "question": "", "priority": 1,
-                                    "n": 6, "judged": 3, "done": False}]
+                                    "n": 6, "judged": 3, "done": False,
+                                    "sub": "3 of 6 judged · 3 left",
+                                    "status": "you", "group": "progress"}]
     with pytest.raises(ValueError):
         record_verdict(tmp_path, "exp", "A_0", "meh")
     with pytest.raises(KeyError):

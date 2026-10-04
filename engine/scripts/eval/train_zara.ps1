@@ -1,11 +1,16 @@
-﻿# Train the four approved sets back to back, in the order Jeremy set on 2026-10-03:
+# Train the four approved sets back to back, in the order Jeremy set on 2026-10-03:
 # vivienne then zara. Marisol and cici are HELD at his request (2026-10-03 13:50) -
 # he needs the card for ollama to test the game chat tomorrow. Each run is 24 epochs
 # plus the asset-prompt eval of epochs 16-24, so a judge set lands after each one
 # rather than all at the end. Starts when Amanda's v4 pack releases the card.
 # Never kills anything; a failed run does not stop the queue. ASCII only.
 $ErrorActionPreference = "Continue"
-$SP  = "C:\Users\jerem\AppData\Local\Temp\claude\C--dev-sourcemode\913e6b47-2e1a-4e0e-af1d-c0c28a922563\scratchpad"
+# Repo paths, never a session scratchpad. These two used to point into one
+# Claude session's temp directory, which meant (a) every script here broke the
+# moment that directory was cleaned, and (b) an edit to the repo's
+# train_character.ps1 was silently not picked up by the scripts that invoke it.
+$SP  = "C:\dev\sourcemode\engine\scripts"
+$EV  = "C:\dev\sourcemode\engine\scripts\eval"
 $L   = "C:\dev\sourcemode\engine\outputs\logs"
 $log = "$L\train_queue_4.log"
 function Log($s) { "$(Get-Date -Format s)  $s" | Out-File $log -Append -Encoding utf8 }
