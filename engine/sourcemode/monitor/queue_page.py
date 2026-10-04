@@ -1,165 +1,344 @@
-"""The GPU queue, on a phone: what is running, what is next, and the controls.
+"""The GPU page: what the card is doing, what is next, and what is ready to start.
 
-Deliberately NOT a second opinion about the card. The runner is the authority on
-why it is waiting - it is the process holding the lease and watching the
-processes - so this page reports the runner's own last log line rather than
-running its own scan. Two sources of truth about "is the card busy" is how the
-old launchers ended up disagreeing with each other.
+Written as a control surface, not a readout. Two rules it exists to enforce:
 
-    GET  /queue                   the page (a hub tab)
-    GET  /queue/state             jobs, lease, pause, the runner's last line
+- **Nothing approved can hide.** Jeremy's rule is that approval IS the trigger and
+  approval order IS the training order. The first version of this page listed only
+  jobs someone had typed into the queue, so sunny_v2 (approved 2026-09-22) and
+  three others sat approved and untrained without appearing anywhere. The
+  "Ready to train" list is therefore built from the APPROVAL RECORDS, not from a
+  hand-maintained list, and it is sorted by when he approved them.
+- **He can start work without opening Claude Code.** The training command is built
+  here, server-side, from a dataset id - he never types a path or a flag. The job
+  still carries `requires_approval`, so the runner re-checks approval at start
+  time rather than trusting what this page saw.
+
+Labels are written for a person: "Marisol - LoRA training" and "epoch 3 of 24,
+4h 12m left", never "j001 train:marisol_v2". The job id is still there, small, so
+a log line can be matched back to a row.
+
+Dragging uses POINTER events, not HTML5 drag-and-drop, because this page is read
+on a phone over Tailscale and HTML5 DnD does not fire on touch. The arrows stay as
+a fallback.
+
+    GET  /queue                     the page (the hub's first tab)
+    GET  /queue/state               jobs, lease, pause, the runner's last line
+    GET  /queue/candidates          approved datasets with no checkpoints
+    POST /queue/training            {"dataset": "marisol_v2"} -> queued
+    POST /queue/order               {"ids": [...]} -> exactly that order
     POST /queue/pause|resume
-    POST /queue/job/{id}/hold     {"hold": true|false}
-    POST /queue/job/{id}/move     {"position": n}
+    POST /queue/job/{id}/hold       {"hold": true|false}
+    POST /queue/job/{id}/move       {"position": n}
     POST /queue/job/{id}/cancel
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
-PAGE = """<!-- gpu queue -->
+# "marisol_v2" -> "marisol". A trailing version is a dataset convention, not part
+# of the character's name, and the page shows the result before anything is queued.
+_VERSION_TAIL = re.compile(r"_v\d+$")
+
+KIND_LABEL = {
+    "train": "LoRA training",
+    "eval": "epoch sweep",
+    "assets": "asset render",
+    "other": "job",
+}
+
+PAGE = """<!-- gpu control -->
 <title>SourceMode GPU</title>
 <meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>
- body{margin:0;background:#111;color:#ddd;font:14px system-ui,sans-serif;padding:12px 12px 40px}
- h2{font-size:15px;margin:18px 0 8px;color:#aaa;font-weight:600}
- .card{background:#181818;border:1px solid #2c2c2c;border-radius:6px;padding:12px;margin-bottom:10px}
- .big{font-size:17px;color:#fff;margin-bottom:2px}
- .muted{color:#888}
- .bar{height:6px;background:#262626;border-radius:3px;overflow:hidden;margin-top:8px}
- .bar>i{display:block;height:100%;background:#4a9eff}
- .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-top:10px}
- .grid div{background:#141414;border:1px solid #262626;border-radius:4px;padding:6px 8px}
- .grid b{display:block;font-size:15px;color:#fff;font-weight:600}
- .job{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid #2c2c2c;
-   border-radius:5px;margin-bottom:7px;background:#181818;flex-wrap:wrap}
- .job .id{font-family:ui-monospace,monospace;color:#777;font-size:12px}
- .job .what{flex:1;min-width:120px;color:#eee}
- .tag{font-size:11px;padding:2px 7px;border-radius:999px;background:#2a2a2a;color:#bbb}
- .tag.running{background:#13364f;color:#7fc2ff}
- .tag.next{background:#123d1e;color:#6ee89a}
- .tag.held{background:#3d3312;color:#e8cf6e}
- .tag.failed{background:#4a1a1a;color:#ff9a9a}
- .tag.blocked{background:#4a2a12;color:#ffb37a}
- button{background:#2a2a2a;color:#ddd;border:1px solid #555;padding:5px 9px;cursor:pointer;
-   border-radius:3px;font:inherit;font-size:12px}
- button:disabled{opacity:.35;cursor:default}
- .warn{background:#3a1414;border-color:#6b2020}
- .ok{color:#6ee89a}
- .bad{color:#ff9a9a}
- code{color:#9ab;word-break:break-all}
+ :root{--bg:#111;--card:#191919;--line:#2d2d2d;--dim:#8a8a8a;--fg:#e8e8e8}
+ *{box-sizing:border-box}
+ body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif;
+   padding:14px 14px 48px;-webkit-text-size-adjust:100%}
+ h2{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);
+   margin:26px 0 10px;font-weight:700}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:14px}
+ .now .what{font-size:19px;font-weight:600}
+ .now .sub{color:var(--dim);margin-top:3px}
+ .bar{height:7px;background:#272727;border-radius:4px;overflow:hidden;margin-top:11px}
+ .bar>i{display:block;height:100%;background:linear-gradient(90deg,#3b82f6,#60a5fa);
+   transition:width .6s}
+ .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+ .stats div{background:#141414;border:1px solid #242424;border-radius:6px;padding:7px 9px}
+ .stats span{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+ .stats b{font-size:17px;font-weight:600}
+
+ .row{display:flex;gap:11px;align-items:flex-start;background:var(--card);
+   border:1px solid var(--line);border-radius:9px;padding:12px;margin-bottom:9px;
+   touch-action:pan-y}
+ .row.drag{opacity:.45}
+ .row.over{border-color:#3b82f6;box-shadow:0 0 0 1px #3b82f6 inset}
+ .row.running{border-color:#1d4e76}
+ .row.held{border-color:#6b5520;background:#1d1a12}
+ .row.failed{border-color:#6b2424;background:#1d1212}
+ .grip{width:26px;min-width:26px;height:34px;cursor:grab;color:#555;display:flex;
+   align-items:center;justify-content:center;font-size:19px;user-select:none;touch-action:none}
+ .grip:active{cursor:grabbing}
+ .body{flex:1;min-width:0}
+ .who{font-size:17px;font-weight:600}
+ .kind{color:var(--dim)}
+ .state{margin-top:4px}
+ .state.go{color:#6ee89a}
+ .state.wait{color:#9cc6ff}
+ .state.hold{color:#e8cf6e}
+ .state.bad{color:#ff9a9a}
+ .note{color:var(--dim);font-size:13px;margin-top:5px}
+ .jid{font-family:ui-monospace,monospace;font-size:11px;color:#5a5a5a;margin-top:6px}
+ .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+ button{background:#272727;color:var(--fg);border:1px solid #454545;padding:7px 12px;
+   border-radius:6px;font:inherit;font-size:13px;cursor:pointer;min-height:36px}
+ button:hover{background:#333}
+ button:disabled{opacity:.3;cursor:default}
+ button.go{background:#17422a;border-color:#2b6b45;color:#c7f6d8}
+ button.warn{background:#44200f;border-color:#7a3c1c;color:#ffd6b8}
+ .alarm{background:#3a1414;border:1px solid #7a2626;border-radius:9px;padding:13px;margin-bottom:12px}
+ .ready{display:flex;gap:11px;align-items:center;background:#15190f;border:1px solid #394420;
+   border-radius:9px;padding:12px;margin-bottom:9px;flex-wrap:wrap}
+ .ready .body{flex:1;min-width:140px}
+ .stale{color:#e8cf6e}
+ .empty{color:var(--dim)}
+ code{color:#8fa7bd;font-size:12px;word-break:break-all}
 </style>
-<div id=app class=muted>loading…</div>
+<div id=app class=empty>loading…</div>
 <script>
 const $=id=>document.getElementById(id);
-const esc=s=>String(s==null?'':s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-let state=null,stat=null;
+const esc=s=>String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+let state=null,stat=null,cands=[],busyPost=false;
+
+const dur=s=>{ if(s==null) return ''; s=Math.round(s);
+  const h=Math.floor(s/3600),m=Math.floor(s%3600/60);
+  return h? h+'h '+m+'m' : (m? m+'m' : s+'s'); };
+
+function ago(iso){
+  if(!iso) return '';
+  const d=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
+  if(d<3600) return Math.round(d/60)+' minutes ago';
+  if(d<86400) return Math.round(d/3600)+' hours ago';
+  const days=Math.round(d/86400);
+  return days+(days===1?' day ago':' days ago');
+}
 
 async function load(){
   try{
-    [state,stat]=await Promise.all([
+    [state,stat,cands]=await Promise.all([
       fetch('/queue/state',{cache:'no-store'}).then(r=>r.json()),
       fetch('/status',{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+      fetch('/queue/candidates',{cache:'no-store'}).then(r=>r.json()).catch(()=>[]),
     ]);
     draw();
-  }catch(e){ $('app').innerHTML='<p class=bad>could not load: '+esc(e.message)+'</p>'; }
+  }catch(e){ $('app').innerHTML='<div class=alarm>Could not reach the monitor: '+esc(e.message)+'</div>'; }
 }
 
-function hms(s){ if(s==null) return ''; s=Math.round(s);
-  const h=Math.floor(s/3600),m=Math.floor(s%3600/60);
-  return h?`${h}h ${m}m`:(m?`${m}m`:`${s}s`); }
+// --- what the card is doing -------------------------------------------------
+function nowCard(){
+  const g=stat&&stat.gpu, j=stat&&stat.job;
+  let h='<div class="card now">';
+  h+='<div class=what>'+esc(j?j.title:'Unknown')+'</div>';
+  const tr=stat&&stat.training, bits=[];
+  if(tr&&tr.epoch!=null&&tr.epochs) bits.push('epoch '+tr.epoch+' of '+tr.epochs);
+  else if(j&&j.step!=null&&j.total) bits.push('step '+j.step+' of '+j.total);
+  if(j&&j.eta_s) bits.push(dur(j.eta_s)+' left');
+  if(j&&j.detail) bits.push(j.detail);
+  if(bits.length) h+='<div class=sub>'+esc(bits.join(' · '))+'</div>';
+  if(j&&j.progress!=null) h+='<div class=bar><i style="width:'+Math.round(j.progress*100)+'%"></i></div>';
+  if(g) h+='<div class=stats>'
+    +'<div><span>load</span><b>'+(g.util_pct==null?'—':g.util_pct+'%')+'</b></div>'
+    +'<div><span>vram</span><b>'+(g.mem_used_mb==null?'—':(g.mem_used_mb/1024).toFixed(1)+' GB')+'</b></div>'
+    +'<div><span>power</span><b>'+(g.power_w==null?'—':Math.round(g.power_w)+' W')+'</b></div>'
+    +'<div><span>temp</span><b>'+(g.temp_c==null?'—':Math.round(g.temp_c)+'°C')+'</b></div>'
+    +'</div>';
+  return h+'</div>';
+}
+
+// --- one queue row ----------------------------------------------------------
+function jobRow(j,i,n){
+  const cls=['row'];
+  if(j.status==='running') cls.push('running');
+  else if(j.hold) cls.push('held');
+  else if(j.status==='failed') cls.push('failed');
+
+  let state='',sc='wait';
+  if(j.status==='running'){
+    sc='go'; state='Running now';
+    const tr=stat&&stat.training;
+    if(tr&&tr.epoch!=null&&tr.epochs) state='Running — epoch '+tr.epoch+' of '+tr.epochs;
+    else if(tr&&tr.progress) state='Running — step '+tr.progress.step+' of '+tr.progress.total;
+    if(tr&&tr.progress&&tr.progress.eta_s) state+=' · '+dur(tr.progress.eta_s)+' left';
+  }
+  else if(j.status==='failed'){ state='Failed (exit '+j.exit_code+')'; sc='bad'; }
+  else if(j.hold){ state='Held — it will not start until you release it'; sc='hold'; }
+  else if(j.blocked_reason){ state=j.blocked_reason; sc='bad'; }
+  else if(j.is_next){ state=state_next(); sc='wait'; }
+  else state='Waiting its turn';
+
+  let h='<div class="'+cls.join(' ')+'" data-id="'+esc(j.id)+'" data-pos="'+i+'">';
+  h+= j.status==='running' ? '<div class=grip style="cursor:default">▌</div>'
+                           : '<div class=grip data-grip="'+esc(j.id)+'" title="drag to reorder">⠿</div>';
+  h+='<div class=body>';
+  h+='<div class=who>'+esc(j.who)+' <span class=kind>— '+esc(j.what)+'</span></div>';
+  h+='<div class="state '+sc+'">'+esc(state)+'</div>';
+  if(j.note) h+='<div class=note>'+esc(j.note)+'</div>';
+  h+='<div class=jid>'+esc(j.id)+(j.log?' · '+esc(j.log.split(/[\\\\/]/).pop()):'')+'</div>';
+  if(j.status!=='running'){
+    h+='<div class=acts>';
+    h+='<button '+(i===0?'disabled':'')+' onclick="move(\\''+j.id+'\\','+(i-1)+')">▲ Up</button>';
+    h+='<button '+(i>=n-1?'disabled':'')+' onclick="move(\\''+j.id+'\\','+(i+1)+')">▼ Down</button>';
+    h+= j.hold ? '<button class=go onclick="hold(\\''+j.id+'\\',false)">Release — let it run</button>'
+               : '<button onclick="hold(\\''+j.id+'\\',true)">Hold</button>';
+    h+='<button class=warn onclick="cancel(\\''+j.id+'\\',\\''+esc(j.who)+'\\')">Remove</button>';
+    h+='</div>';
+  }
+  return h+'</div></div>';
+}
+
+function state_next(){
+  if(state.paused) return 'Next up — but the queue is paused';
+  if(!state.lease||!state.lease.alive) return 'Next up — but the runner is not running';
+  const s=state.runner_says||'';
+  const m=s.match(/card busy - (.+?);/);
+  if(m) return 'Next up — waiting for the card ('+m[1].replace(/PID \\d+ \\(/g,'').replace(/\\)/g,'')+')';
+  return 'Next up — starts as soon as the card is free';
+}
 
 function draw(){
-  const g=stat&&stat.gpu, job=stat&&stat.job, q=state.jobs||[];
+  const q=state.jobs||[];
   let h='';
 
-  // --- what the card is doing right now ---
-  h+='<div class=card>';
-  h+=`<div class=big>${esc(job?job.title:'unknown')}</div>`;
-  if(job&&job.detail) h+=`<div class=muted>${esc(job.detail)}</div>`;
-  if(job&&job.progress!=null){
-    h+=`<div class=bar><i style="width:${Math.round(job.progress*100)}%"></i></div>`;
-    h+=`<div class=muted style="margin-top:4px">${Math.round(job.progress*100)}%`
-      +(job.step?` · step ${job.step}/${job.total}`:'')
-      +(job.eta_s?` · ${hms(job.eta_s)} left`:'')+'</div>';
-  }
-  if(g) h+='<div class=grid>'
-    +`<div>util<b>${g.util_pct==null?'—':g.util_pct+'%'}</b></div>`
-    +`<div>vram<b>${g.mem_used_mb==null?'—':Math.round(g.mem_used_mb/1024)+'G'}</b></div>`
-    +`<div>power<b>${g.power_w==null?'—':Math.round(g.power_w)+'W'}</b></div>`
-    +`<div>temp<b>${g.temp_c==null?'—':Math.round(g.temp_c)+'°'}</b></div>`
-    +'</div>';
-  h+='</div>';
+  if(!state.lease||!state.lease.alive)
+    h+='<div class=alarm><b>The runner is not running.</b><div class=empty>'
+      +'Nothing in the queue will start. Run: Start-ScheduledTask "SourceMode GPU Runner"</div></div>';
+  if(state.paused)
+    h+='<div class=alarm><b>The queue is paused.</b><div class=empty>'+esc(state.pause_reason)+'</div>'
+      +'<div class=acts><button class=go onclick="act(\\'/queue/resume\\')">Resume the queue</button></div></div>';
 
-  // --- the queue ---
-  if(state.paused) h+=`<div class="card warn"><b>Queue paused</b><div class=muted>`
-    +esc(state.pause_reason)+`</div><p><button onclick="act('/queue/resume')">Resume the queue</button></p></div>`;
+  h+=nowCard();
 
   h+='<h2>Queue</h2>';
-  if(!q.length) h+='<p class=muted>Nothing queued.</p>';
-  q.forEach((j,i)=>{
-    const tags=[];
-    if(j.status==='running') tags.push('<span class="tag running">running</span>');
-    if(j.is_next) tags.push('<span class="tag next">next</span>');
-    if(j.hold) tags.push('<span class="tag held">held</span>');
-    if(j.status==='failed') tags.push(`<span class="tag failed">failed ${esc(j.exit_code)}</span>`);
-    if(j.blocked_reason) tags.push('<span class="tag blocked">blocked</span>');
-    h+='<div class=job>'
-      +`<span class=id>${esc(j.id)}</span>`
-      +`<span class=what>${esc(j.kind)}: <b>${esc(j.label)}</b></span>`
-      +tags.join(' ');
-    if(j.status==='queued'){
-      h+=`<button ${i===0?'disabled':''} onclick="move('${j.id}',${i-1})">&#9650;</button>`
-        +`<button onclick="move('${j.id}',${i+1})">&#9660;</button>`
-        +`<button onclick="hold('${j.id}',${j.hold?'false':'true'})">${j.hold?'Release':'Hold'}</button>`
-        +`<button onclick="cancel('${j.id}')">Cancel</button>`;
-    }
-    if(j.blocked_reason) h+=`<div class=muted style="flex-basis:100%">${esc(j.blocked_reason)}</div>`;
-    if(j.note) h+=`<div class=muted style="flex-basis:100%;font-size:12px">${esc(j.note)}</div>`;
-    h+='</div>';
+  h+= q.length ? '<div id=list>'+q.map((j,i)=>jobRow(j,i,q.length)).join('')+'</div>'
+               : '<div class="card empty">Nothing queued. Anything ready to train is listed below.</div>';
+  if(q.some(j=>j.status!=='running')&&!state.paused)
+    h+='<div class=acts style="margin-top:4px"><button onclick="act(\\'/queue/pause\\')">Pause the queue</button>'
+      +'<span class=empty style="align-self:center">a running job is never interrupted</span></div>';
+
+  h+='<h2>Ready to train</h2>';
+  if(!cands.length) h+='<div class="card empty">Nothing approved is waiting. Everything approved is queued or trained.</div>';
+  cands.forEach(c=>{
+    h+='<div class=ready><div class=body>'
+      +'<div class=who>'+esc(c.who)+' <span class=kind>— approved, never trained</span></div>'
+      +'<div class="state '+(c.days_waiting>=3?'stale':'wait')+'">approved '+esc(ago(c.approved_at))
+      +' · '+esc(c.images)+' images</div>'
+      +'<div class=jid>'+esc(c.dataset)+' → character '+esc(c.character)+'</div></div>'
+      +'<button class=go onclick="queueTraining(\\''+c.dataset+'\\',\\''+esc(c.who)+'\\')">Add to queue</button>'
+      +'</div>';
   });
 
-  if(!state.paused&&q.some(j=>j.status==='queued'))
-    h+=`<p><button onclick="act('/queue/pause')">Pause the queue</button>
-      <span class=muted>a running job is never interrupted</span></p>`;
-
-  // --- the runner itself ---
   h+='<h2>Runner</h2><div class=card>';
-  h+=state.lease&&state.lease.alive
-    ? `<div class=ok>up · PID ${esc(state.lease.pid)} since ${esc(state.lease.started_at)}</div>`
-    : '<div class=bad>NOT RUNNING — nothing will start. Start-ScheduledTask "SourceMode GPU Runner"</div>';
-  if(state.runner_says) h+=`<div class=muted style="margin-top:6px"><code>${esc(state.runner_says)}</code></div>`;
+  h+= state.lease&&state.lease.alive
+    ? '<div class=state style="color:#6ee89a">Running · PID '+esc(state.lease.pid)+' since '+esc(state.lease.started_at)+'</div>'
+    : '<div class=state style="color:#ff9a9a">Not running</div>';
+  if(state.runner_says) h+='<div class=note style="margin-top:7px"><code>'+esc(state.runner_says)+'</code></div>';
   h+='</div>';
 
   $('app').className='';
   $('app').innerHTML=h;
+  wireDrag();
 }
 
+// --- actions ----------------------------------------------------------------
 async function act(url,body){
-  await fetch(url,{method:'POST',headers:{'content-type':'application/json'},
-                   body:body===undefined?undefined:JSON.stringify(body)});
+  if(busyPost) return;
+  busyPost=true;
+  try{
+    const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},
+                            body:body===undefined?undefined:JSON.stringify(body)});
+    if(!r.ok){ const d=await r.json().catch(()=>({})); alert(d.detail||('HTTP '+r.status)); }
+  }finally{ busyPost=false; }
   load();
 }
-const move=(id,pos)=>act(`/queue/job/${id}/move`,{position:pos});
-const hold=(id,on)=>act(`/queue/job/${id}/hold`,{hold:on==='true'||on===true});
-function cancel(id){ if(confirm('Cancel '+id+'?')) act(`/queue/job/${id}/cancel`); }
+const move=(id,pos)=>act('/queue/job/'+id+'/move',{position:pos});
+const hold=(id,on)=>act('/queue/job/'+id+'/hold',{hold:on});
+function cancel(id,who){ if(confirm('Remove '+who+' from the queue?')) act('/queue/job/'+id+'/cancel'); }
+function queueTraining(ds,who){
+  if(confirm('Queue '+who+' for LoRA training?\\n\\n24 epochs plus the epoch sweep, about 7 hours of GPU time. '
+    +'It starts only when the card is free, and approval is re-checked first.'))
+    act('/queue/training',{dataset:ds});
+}
 
-load(); setInterval(load,5000);
+// --- pointer dragging (touch included; HTML5 DnD does not fire on touch) ----
+function wireDrag(){
+  const list=$('list'); if(!list) return;
+  let dragEl=null,startY=0,moved=false;
+
+  const rowsNow=()=>[...list.querySelectorAll('.row')];
+
+  function down(e){
+    const grip=e.target.closest('[data-grip]'); if(!grip) return;
+    dragEl=grip.closest('.row'); startY=e.clientY; moved=false;
+    dragEl.classList.add('drag');
+    grip.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+  function moveP(e){
+    if(!dragEl) return;
+    if(Math.abs(e.clientY-startY)>4) moved=true;
+    for(const r of rowsNow()) r.classList.remove('over');
+    const t=rowsNow().find(r=>{
+      if(r===dragEl) return false;
+      const b=r.getBoundingClientRect();
+      return e.clientY>=b.top&&e.clientY<=b.bottom;
+    });
+    if(t) t.classList.add('over');
+  }
+  function up(e){
+    if(!dragEl) return;
+    const rows=rowsNow();
+    const t=rows.find(r=>r.classList.contains('over'));
+    dragEl.classList.remove('drag');
+    for(const r of rows) r.classList.remove('over');
+    const dropped=dragEl; dragEl=null;
+    if(!moved||!t) return;
+    // Reorder in the DOM first so the list does not jump, then send the whole
+    // resulting order in ONE request - no intermediate states to get wrong.
+    const before=t.getBoundingClientRect().top+t.getBoundingClientRect().height/2>e.clientY;
+    t.parentNode.insertBefore(dropped,before?t:t.nextSibling);
+    act('/queue/order',{ids:rowsNow().map(r=>r.dataset.id)});
+  }
+  list.addEventListener('pointerdown',down);
+  list.addEventListener('pointermove',moveP);
+  list.addEventListener('pointerup',up);
+  list.addEventListener('pointercancel',up);
+}
+
+load(); setInterval(()=>{ if(!busyPost) load(); },5000);
 </script>
 """
 
 
+def character_of(dataset: str) -> str:
+    """`marisol_v2` -> `marisol`. Shown in the UI before anything is queued, so a
+    dataset whose name does not follow the convention is visible rather than silent."""
+    return _VERSION_TAIL.sub("", dataset)
+
+
 def _runner_last_line(outputs_root: Path) -> str | None:
-    """The runner's own last log line - its account of what it is waiting for."""
+    """The runner's own last log line - its account of what it is waiting for.
+    This page never scans processes itself: the runner holds the lease and does the
+    watching, and two sources of truth about a busy card is how the old launcher
+    scripts ended up disagreeing with each other."""
     p = outputs_root / "logs" / "gpu-runner.log"
     if not p.is_file():
         return None
     try:
-        tail = p.read_text(encoding="utf-8", errors="replace").splitlines()
+        lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
         return None
-    return tail[-1].strip() if tail else None
+    return lines[-1].strip() if lines else None
 
 
 def queue_state(cfg: dict) -> dict:
@@ -170,15 +349,21 @@ def queue_state(cfg: dict) -> dict:
     out = outputs_dir(cfg)
     doc = q.load(q.queue_path(out))
     head = q.head(doc)
+
     jobs = []
     for j in doc["jobs"]:
         if j["status"] in ("done", "cancelled"):
             continue
-        row = {k: j[k] for k in ("id", "kind", "label", "status", "hold", "exit_code", "note")}
+        row = {k: j[k] for k in ("id", "kind", "label", "status", "hold", "exit_code", "note", "log")}
+        # Written for a person: the character, then what is being done to her.
+        row["who"] = character_of(j["label"]).replace("_", " ").title()
+        row["what"] = KIND_LABEL.get(j["kind"], j["kind"])
+        if j["kind"] == "train":
+            row["what"] = "LoRA training, then the epoch sweep"
         row["is_next"] = bool(head and j["id"] == head["id"])
         row["blocked_reason"] = None
-        # Only the head job can block the queue, and it blocks rather than being
-        # skipped - so that is the only one worth checking an approval for.
+        # Only the head job can block the queue - it blocks rather than being
+        # skipped - so it is the only one worth checking an approval for.
         if row["is_next"] and j["requires_approval"]:
             from ..gpu.runner import approval_ok  # noqa: PLC0415
 
@@ -199,15 +384,76 @@ def queue_state(cfg: dict) -> dict:
                          + (0 if (lease and lease["alive"]) or not jobs else 1)}
 
 
+def candidates(cfg: dict) -> list[dict]:
+    """Approved datasets with no checkpoints, oldest approval first.
+
+    Built from the approval records rather than a list anyone maintains, because the
+    hand-maintained version is how sunny_v2 sat approved and untrained from
+    2026-09-22 - and how mira_v2 was missed before her. Approval order IS the
+    training order, so that is the order they come back in.
+    """
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from ..config import outputs_dir  # noqa: PLC0415
+    from ..gpu import queue as q  # noqa: PLC0415
+    from ..train.preview import approval_state, load_preview, preview_root  # noqa: PLC0415
+
+    root = preview_root(cfg)
+    out = outputs_dir(cfg)
+    doc = q.load(q.queue_path(out))
+    now = datetime.now(timezone.utc)
+
+    rows = []
+    for p in sorted((root / "previews").glob("*.json")):
+        ds = p.stem
+        st = approval_state(root, ds)
+        if not st["approved"]:
+            continue
+        if list((out / "lora-datasets" / ds / "lora").glob("*.safetensors")):
+            continue   # any checkpoint at all means trained; a prune deletes the losers
+        if q.duplicate_of(doc, "train", ds):
+            continue   # already queued or running
+        doc_prev = load_preview(root, ds)
+        waited = None
+        if st["at"]:
+            try:
+                waited = (now - datetime.fromisoformat(st["at"])).days
+            except ValueError:
+                waited = None
+        # The preview's own count: `n` if it carries one, else the images list.
+        # NOT "items" - that key does not exist, and reading it reported 0 images
+        # for every candidate.
+        images = 0
+        if doc_prev:
+            images = doc_prev.get("n") or len(doc_prev.get("images", []))
+        rows.append({"dataset": ds, "character": character_of(ds),
+                     "who": character_of(ds).replace("_", " ").title(),
+                     "approved_at": st["at"], "days_waiting": waited,
+                     "images": images})
+    rows.sort(key=lambda r: r["approved_at"] or "")
+    return rows
+
+
+def training_command(cfg: dict, dataset: str) -> list[str]:
+    """The one place a training invocation is written. He never types a path."""
+    from ..config import ENGINE_ROOT  # noqa: PLC0415
+
+    script = ENGINE_ROOT / "scripts" / "train_character.ps1"
+    return ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script),
+            "-Ds", dataset, "-Char", character_of(dataset)]
+
+
 def queue_router(cfg: dict):
     from fastapi import APIRouter, Body, HTTPException  # noqa: PLC0415
     from fastapi.responses import HTMLResponse  # noqa: PLC0415
 
-    from ..config import outputs_dir  # noqa: PLC0415
+    from ..config import ENGINE_ROOT, outputs_dir  # noqa: PLC0415
     from ..gpu import queue as q  # noqa: PLC0415
 
     router = APIRouter()
-    path = lambda: q.queue_path(outputs_dir(cfg))  # noqa: E731
+
+    def path():
+        return q.queue_path(outputs_dir(cfg))
 
     @router.get("/queue", response_class=HTMLResponse)
     def page() -> str:
@@ -217,11 +463,57 @@ def queue_router(cfg: dict):
     def state() -> dict:
         return queue_state(cfg)
 
+    @router.get("/queue/candidates")
+    def candidates_route() -> list[dict]:
+        return candidates(cfg)
+
+    @router.post("/queue/training")
+    def add_training(body: dict = Body(default={})) -> dict:
+        """Queue the standard training run for an approved dataset.
+
+        The dataset must be approved NOW to be queued at all, and the job also
+        carries requires_approval so the runner re-checks at start time - approval
+        can lapse in between, by design, if the captions change.
+        """
+        from ..train.preview import approval_state, preview_root  # noqa: PLC0415
+
+        ds = str(body.get("dataset", "")).strip()
+        if not ds or "/" in ds or "\\" in ds or ".." in ds:
+            raise HTTPException(400, "a dataset id is required")
+        st = approval_state(preview_root(cfg), ds)
+        if not st["approved"]:
+            raise HTTPException(409, f"{ds} is not approved as it stands - review it first")
+
+        p = path()
+        doc = q.load(p)
+        dup = q.duplicate_of(doc, "train", ds)
+        if dup:
+            raise HTTPException(409, f"{ds} is already {dup['status']} in the queue")
+        job = q.add(doc, kind="train", label=ds, cmd=training_command(cfg, ds),
+                    cwd=str(ENGINE_ROOT), requires_approval=ds,
+                    note=f"queued from the GPU page; approved {st['at']}")
+        q.save(p, doc)
+        return {"queued": job["id"], **queue_state(cfg)}
+
+    @router.post("/queue/order")
+    def order(body: dict = Body(default={})) -> dict:
+        ids = body.get("ids") or []
+        if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
+            raise HTTPException(400, "ids must be a list of job ids")
+        p = path()
+        doc = q.load(p)
+        try:
+            q.reorder(doc, ids)
+        except KeyError as exc:
+            raise HTTPException(404, f"unknown job(s): {exc}") from exc
+        q.save(p, doc)
+        return queue_state(cfg)
+
     @router.post("/queue/pause")
     def pause() -> dict:
         p = path()
         doc = q.load(p)
-        q.pause(doc, "paused by hand from the queue page")
+        q.pause(doc, "paused by hand from the GPU page")
         q.save(p, doc)
         return queue_state(cfg)
 
@@ -263,7 +555,7 @@ def queue_router(cfg: dict):
             q.cancel(doc, job_id)
         except KeyError as exc:
             raise HTTPException(404, f"no job {job_id}") from exc
-        except ValueError as exc:  # running: not cancellable from a web page
+        except ValueError as exc:  # running: stopping it is a deliberate act elsewhere
             raise HTTPException(409, str(exc)) from exc
         q.save(p, doc)
         return queue_state(cfg)

@@ -110,6 +110,20 @@ def move(doc: dict, job_id: str, to_index: int) -> list[dict]:
     return jobs
 
 
+def reorder(doc: dict, ids: list[str]) -> list[dict]:
+    """Set the order to exactly `ids`. One call, so a drag never lands the queue in
+    an intermediate order - and any job the caller did not mention keeps its
+    relative place at the end rather than being dropped."""
+    by_id = {j["id"]: j for j in doc["jobs"]}
+    unknown = [i for i in ids if i not in by_id]
+    if unknown:
+        raise KeyError(", ".join(unknown))
+    ordered = [by_id[i] for i in ids]
+    ordered += [j for j in doc["jobs"] if j["id"] not in set(ids)]
+    doc["jobs"] = ordered
+    return ordered
+
+
 def set_hold(doc: dict, job_id: str, hold: bool) -> dict:
     """Held jobs keep their place in the order but are never picked. This is the
     ONLY way to let the runner move past a job: it is an explicit act, not a

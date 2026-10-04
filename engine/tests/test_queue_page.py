@@ -148,3 +148,163 @@ def test_a_running_job_cannot_be_cancelled_from_the_page(client, tmp_path):
 def test_an_unknown_job_is_a_404(client, tmp_path):
     _queue(tmp_path, "zara_v2")
     assert client.post("/queue/job/j999/hold", json={"hold": True}).status_code == 404
+
+# --- what is ready to train (the thing the first version could not show) ----
+
+def _approve(tmp_path, ds, images=2, at=None):
+    """An approved preview, the way the engine writes one."""
+    import json
+    root = tmp_path / "train-previews"
+    (root / "previews").mkdir(parents=True, exist_ok=True)
+    (root / "approvals").mkdir(parents=True, exist_ok=True)
+    fp = f"fp-{ds}"
+    (root / "previews" / f"{ds}.json").write_text(
+        # "images" + "n", the keys build_preview actually writes. The first version
+        # of this fixture invented "items", so it agreed with a bug that reported
+        # 0 images for every candidate on the live page.
+        json.dumps({"id": ds, "fingerprint": fp, "n": images,
+                    "images": [{"id": f"src_{i}"} for i in range(images)]}), encoding="utf-8")
+    (root / "approvals" / f"{ds}.json").write_text(
+        json.dumps({"approved": True, "fingerprint": fp,
+                    "at": at or "2026-09-22T17:59:07+00:00"}), encoding="utf-8")
+    return root
+
+
+@pytest.fixture
+def cfg_full(tmp_path):
+    return {"paths": {"outputs": str(tmp_path)},
+            "train": {"previews": str(tmp_path / "train-previews")}}
+
+
+def test_an_approved_untrained_dataset_is_offered_even_though_nobody_queued_it(cfg_full, tmp_path):
+    """sunny_v2 sat approved and untrained from 2026-09-22 because the page only
+    listed jobs someone had typed in. Candidates come from the approval record."""
+    from sourcemode.monitor.queue_page import candidates
+
+    _approve(tmp_path, "sunny_v2")
+    rows = candidates(cfg_full)
+    assert [r["dataset"] for r in rows] == ["sunny_v2"]
+    assert rows[0]["who"] == "Sunny" and rows[0]["character"] == "sunny"
+    assert rows[0]["images"] == 2
+
+
+def test_candidates_are_in_approval_order(cfg_full, tmp_path):
+    """Approval order IS the training order, so that is the order they are offered."""
+    from sourcemode.monitor.queue_page import candidates
+
+    _approve(tmp_path, "marisol_v2", at="2026-10-03T17:27:32+00:00")
+    _approve(tmp_path, "sunny_v2", at="2026-09-22T17:59:07+00:00")
+    _approve(tmp_path, "cici_v2", at="2026-10-02T17:39:00+00:00")
+    assert [r["dataset"] for r in candidates(cfg_full)] == ["sunny_v2", "cici_v2", "marisol_v2"]
+
+
+def test_a_trained_dataset_is_not_offered_again(cfg_full, tmp_path):
+    """ANY checkpoint means trained - a prune deletes the losing epochs, so a count
+    of one is still a finished run."""
+    from sourcemode.monitor.queue_page import candidates
+
+    _approve(tmp_path, "jojo_v2")
+    lora = tmp_path / "lora-datasets" / "jojo_v2" / "lora"
+    lora.mkdir(parents=True)
+    (lora / "jojo_v2-000018.safetensors").write_bytes(b"x")
+    assert candidates(cfg_full) == []
+
+
+def test_a_queued_dataset_is_not_offered_twice(cfg_full, tmp_path):
+    from sourcemode.monitor.queue_page import candidates
+
+    _approve(tmp_path, "cici_v2")
+    assert len(candidates(cfg_full)) == 1
+    _queue(tmp_path, "cici_v2")
+    assert candidates(cfg_full) == []
+
+
+def test_an_unapproved_dataset_is_never_offered(cfg_full, tmp_path):
+    import json
+
+    from sourcemode.monitor.queue_page import candidates
+
+    root = _approve(tmp_path, "tess_v2")
+    # captions edited after approval -> the fingerprint no longer matches
+    doc = json.loads((root / "previews" / "tess_v2.json").read_text(encoding="utf-8"))
+    doc["fingerprint"] = "changed"
+    (root / "previews" / "tess_v2.json").write_text(json.dumps(doc), encoding="utf-8")
+    assert candidates(cfg_full) == []
+
+
+# --- queueing a training run from the page ---------------------------------
+
+@pytest.fixture
+def client_full(cfg_full):
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from fastapi import FastAPI
+
+    from sourcemode.monitor.queue_page import queue_router
+
+    app = FastAPI()
+    app.include_router(queue_router(cfg_full))
+    return fastapi_testclient.TestClient(app)
+
+
+def test_queueing_training_builds_the_command_so_he_never_types_a_path(client_full, tmp_path):
+    _approve(tmp_path, "marisol_v2")
+    r = client_full.post("/queue/training", json={"dataset": "marisol_v2"})
+    assert r.status_code == 200
+
+    doc = q.load(q.queue_path(tmp_path))
+    job = doc["jobs"][0]
+    assert job["kind"] == "train" and job["label"] == "marisol_v2"
+    assert job["requires_approval"] == "marisol_v2", "the runner must re-check at start time"
+    assert "train_character.ps1" in " ".join(job["cmd"])
+    assert "-Ds" in job["cmd"] and "marisol_v2" in job["cmd"]
+    assert "-Char" in job["cmd"] and "marisol" in job["cmd"]
+
+
+def test_an_unapproved_dataset_cannot_be_queued_from_the_page(client_full, tmp_path):
+    r = client_full.post("/queue/training", json={"dataset": "nobody_v2"})
+    assert r.status_code == 409
+
+
+def test_the_same_training_cannot_be_queued_twice_from_the_page(client_full, tmp_path):
+    _approve(tmp_path, "cici_v2")
+    assert client_full.post("/queue/training", json={"dataset": "cici_v2"}).status_code == 200
+    assert client_full.post("/queue/training", json={"dataset": "cici_v2"}).status_code == 409
+
+
+def test_a_dataset_id_cannot_escape_its_directory(client_full):
+    for bad in ("../../etc/passwd", "a/b", "a\b", ""):
+        assert client_full.post("/queue/training", json={"dataset": bad}).status_code in (400, 409)
+
+
+# --- drag-and-drop reordering ----------------------------------------------
+
+def test_a_drag_sends_the_whole_resulting_order_in_one_request(client_full, tmp_path):
+    _queue(tmp_path, "vivienne_v2", "zara_v2", "marisol_v2")
+    ids = [j["id"] for j in client_full.get("/queue/state").json()["jobs"]]
+    st = client_full.post("/queue/order", json={"ids": [ids[2], ids[0], ids[1]]}).json()
+    assert [j["label"] for j in st["jobs"]] == ["marisol_v2", "vivienne_v2", "zara_v2"]
+
+
+def test_a_reorder_that_names_an_unknown_job_changes_nothing(client_full, tmp_path):
+    _queue(tmp_path, "vivienne_v2", "zara_v2")
+    ids = [j["id"] for j in client_full.get("/queue/state").json()["jobs"]]
+    assert client_full.post("/queue/order", json={"ids": [ids[1], "j999"]}).status_code == 404
+    st = client_full.get("/queue/state").json()
+    assert [j["label"] for j in st["jobs"]] == ["vivienne_v2", "zara_v2"], "order untouched"
+
+
+def test_a_job_left_out_of_a_reorder_keeps_its_place_at_the_end(tmp_path):
+    doc = _queue(tmp_path, "a_v2", "b_v2", "c_v2")
+    ids = [j["id"] for j in doc["jobs"]]
+    q.reorder(doc, [ids[2]])
+    assert [j["label"] for j in doc["jobs"]] == ["c_v2", "a_v2", "b_v2"]
+
+
+# --- the labels a person reads ---------------------------------------------
+
+def test_rows_are_labelled_for_a_person(cfg_full, tmp_path):
+    _queue(tmp_path, "marisol_v2")
+    row = queue_state(cfg_full)["jobs"][0]
+    assert row["who"] == "Marisol"
+    assert row["what"] == "LoRA training, then the epoch sweep"
+    assert row["id"].startswith("j"), "the id stays, small, so a log line can be matched back"
