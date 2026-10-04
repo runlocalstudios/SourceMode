@@ -231,3 +231,24 @@ def test_no_record_still_asserts_long_hair_under_an_up_style():
     d = json.loads((Path("../characters/appearance.json")).read_text(encoding="utf-8"))
     for c in (k for k in d if not k.startswith("_")):
         assert not re.search(r"\b(very long|long)\b", drop_length(clause(c)), re.I), c
+
+
+def test_makeup_reaches_every_path_from_the_one_builder():
+    """Jeremy, 2026-10-04, on zara's pack: "I think we should add beautiful and
+    natural makeup to the prompts... Some of those Zara pictures just look
+    frumpy." Stated once so the pack, the shoots, the selfies and the eval all
+    get it - that is what the single builder is for.
+    """
+    from sourcemode.assets.render import MAKEUP, shot_prompt
+
+    pack = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
+            "outfit": "a sundress", "hair": "her hair worn loose"}
+    assert f"Makeup: {MAKEUP}" in shot_prompt("nobody", pack)
+    sit = {**pack, "pose": "sitting"}
+    assert MAKEUP in shot_prompt("nobody", sit)
+    for sid in ("boudoir", "selfies"):
+        slot = BY_ID[sid].plan()[0]
+        assert MAKEUP in shot_prompt("nobody", slot, backdrop=slot["setting"])
+    # and a slot may ask for less - a gym shot or a just-woken selfie
+    assert "Makeup: none, bare skin" in shot_prompt(
+        "nobody", {**pack, "makeup": "none, bare skin"})

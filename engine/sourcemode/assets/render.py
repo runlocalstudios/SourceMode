@@ -64,6 +64,13 @@ EXPRESSION_TYPES = ("neutral", "closed-lip", "teeth", "flirty", "neutral", "clos
 STANCE = ("relaxed standing weight shift, hands and arms resting naturally, "
           "shoulders level and open to the camera")
 SITTING = "She sits on a plain wooden stool facing the camera, hands resting on her thighs, a soft natural smile."
+# Jeremy, 2026-10-04, on zara's pack: "I think we should add beautiful and natural
+# makeup to the prompts. It's another thing that I've found helpful in the past.
+# Some of those Zara pictures just look frumpy." Stated once, here, so it reaches
+# the wardrobe pack, every shoot, the selfie pack and the epoch eval alike - the
+# whole point of there being one builder. A slot may override it: a gym shot or a
+# just-woken selfie is allowed to ask for less.
+MAKEUP = "beautiful, natural makeup"
 # The keyable backdrop a shipping asset needs. The epoch EVAL passes a real setting
 # instead - Jeremy, 2026-10-03: "it's easier to judge against a regular backdrop
 # because it looks more real" - so the backdrop is the one part of the asset prompt
@@ -166,7 +173,8 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     """
     if slot["pose"] == "sitting":
         look = f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. Natural realistic human proportions, correct anatomy."
-        return f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, {slot['hair']}. {look}"
+        return (f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, "
+                f"{slot['hair']}, {slot.get('makeup') or MAKEUP}. {look}")
     pf = pose_fields(character, slot)
     app = appearance_clause(character)
     # MEASURED 2026-10-04: a prompt that says her hair is long AND asks for it up
@@ -187,6 +195,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
             f"Head: {pf['head']}. Body direction and head direction are separate requirements. "
             f"Gaze: she is ALWAYS looking directly into the camera lens. "
             f"Expression: {pf['expression']}. "
+            f"Makeup: {slot.get('makeup') or MAKEUP}. "
             f"Pose: {slot.get('stance') or STANCE}. "
             f"Hair: {slot['hair']}. "
             f"Outfit: {slot['outfit']}{fitted_clause(character)}. "
