@@ -85,9 +85,25 @@ SUBJECT = "a woman"
 # "fringe", "full" to rule out curtain and side-swept, a stated length, and a
 # texture word. Paired with a negative, because the failure is the model
 # reverting to its default rather than ignoring the request.
+#
+# vivienne is the second case and it cost a whole sweep: her 90-render eval
+# scored 0/90 because the prompt asked for "long black hair" over a LoRA trained
+# on black hair with pink underlights. A matched-seed A/B on 2026-10-04 settled
+# it - "long black hair" and DELETING the colour both gave plain black, so the
+# LoRA never learned the pink, while naming it gave her real pattern and RAISED
+# identity (0.611 / 0.572 / 0.672). Same rule as raven's bangs and priya's
+# glasses: a trait correctly absent from the CAPTIONS still has to be stated at
+# RENDER time.
+#
+# NOTE: this dict duplicates characters/appearance.json, which the asset scene
+# path already reads through appearance.clause(). Two sources for one fact is
+# how vivienne was fixed in one of them and still wrong in the other. Worth
+# collapsing into clause() rather than growing this further.
 FEATURE = {
     "raven": ("her hair worn with full bangs falling straight across her forehead to just "
               "above her eyebrows, soft and slightly wispy rather than blunt cut"),
+    "vivienne": ("her long black hair carrying vivid pink underlights beneath the top "
+                 "layer, the pink showing through the lengths"),
 }
 FEATURE_NEG = {
     "raven": ("no bangs, bare forehead, exposed forehead, forehead fully visible, hair "
