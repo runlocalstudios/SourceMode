@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>imagegen</title>
+<style>
+  :root { --bg:#141414; --panel:#1e1e1e; --line:#333; --fg:#e6e6e6; --dim:#9a9a9a; --ok:#3fb950; --warn:#d29922; --bad:#f85149; --acc:#58a6ff; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui, sans-serif; }
+  header { padding:10px 16px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header b { font-size:16px; }
+  .pill { padding:2px 8px; border-radius:10px; background:#2a2a2a; color:var(--dim); font-size:12px; }
+  .pill.ok { color:var(--ok); } .pill.bad { color:var(--bad); } .pill.warn { color:var(--warn); }
+  main { display:grid; grid-template-columns: 340px 1fr; gap:0; min-height: calc(100vh - 44px); }
+  aside { border-right:1px solid var(--line); padding:12px; overflow:auto; }
+  section { padding:12px 16px; overflow:auto; }
+  h3 { margin:14px 0 6px; font-size:13px; text-transform:uppercase; color:var(--dim); letter-spacing:.04em; }
+  select, input[type=text], input[type=number], textarea { background:#111; color:var(--fg); border:1px solid var(--line); border-radius:4px; padding:5px 7px; font:inherit; }
+  textarea { width:100%; min-height:110px; }
+  button { background:#2b2b2b; color:var(--fg); border:1px solid #444; border-radius:4px; padding:6px 10px; cursor:pointer; font:inherit; }
+  button.primary { background:#1f6feb; border-color:#1f6feb; }
+  button.danger { border-color:var(--bad); color:var(--bad); }
+  button:disabled { opacity:.45; cursor:default; }
+  .refs { display:flex; gap:6px; flex-wrap:wrap; }
+  .refs label { display:block; width:96px; text-align:center; font-size:11px; color:var(--dim); }
+  .refs img { width:96px; height:128px; object-fit:cover; border-radius:4px; border:2px solid transparent; display:block; }
+  .refs input:checked + img { border-color:var(--acc); }
+  .refs input { display:none; }
+  table { border-collapse:collapse; width:100%; }
+  td, th { padding:4px 6px; border-bottom:1px solid var(--line); vertical-align:top; text-align:left; }
+  tr.sel { background:#1b2533; }
+  .mono { font-family: ui-monospace, Consolas, monospace; font-size:12px; }
+  .state { font-weight:600; } .state.saved{color:var(--ok)} .state.failed,.state.blocked{color:var(--bad)} .state.uncertain{color:var(--warn)} .state.running{color:var(--acc)}
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; }
+  .card img { width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:4px; background:#000; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .pair img { width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:4px; background:#000; }
+  .est { background:#20262e; border:1px solid #30363d; border-radius:6px; padding:8px 10px; margin:8px 0; }
+  .est small { color:var(--dim); display:block; }
+  .log { background:#0d0d0d; border:1px solid var(--line); padding:8px; max-height:160px; overflow:auto; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:6px 0; }
+  .muted { color:var(--dim); }
+  details summary { cursor:pointer; color:var(--acc); }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { border-right:0; border-bottom:1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <b>imagegen</b>
+  <span id="st-mode" class="pill"></span>
+  <span id="st-key" class="pill"></span>
+  <span id="st-refs" class="pill"></span>
+  <span id="st-manifest" class="pill"></span>
+  <span id="st-active" class="pill"></span>
+  <span class="muted" style="margin-left:auto">localhost only · nothing is sent until you click Generate</span>
+</header>
+<main>
+<aside>
+  <h3>Character</h3>
+  <div class="row"><select id="char"></select><button id="reload">↻</button></div>
+  <div id="refs" class="refs"></div>
+  <div id="refs-missing" class="muted"></div>
+
+  <h3>Settings</h3>
+  <div class="row"><label>model <select id="model"></select></label></div>
+  <div class="row"><label>size <select id="size"></select></label> <label>quality <select id="quality"></select></label></div>
+  <div class="row"><label>input_fidelity <select id="fidelity"></select></label> <label>moderation <select id="moderation"></select></label></div>
+  <div class="row"><label>run label <input type="text" id="label" value="pilot" size="14"></label></div>
+  <div class="row"><label>spend ceiling $ <input type="number" id="ceiling" value="5" step="0.5" min="0" style="width:70px"></label></div>
+  <div id="est" class="est muted">select shots to see an estimate</div>
+  <div class="row"><button id="create" class="primary" disabled>Create run (no spend)</button></div>
+
+  <h3>Runs</h3>
+  <div id="runs"></div>
+  <h3>Costs across local runs</h3>
+  <div id="costs" class="muted"></div>
+</aside>
+
+<section>
+  <div class="row">
+    <button id="import">Import manifest</button>
+    <button id="pilot">Select pilot shots (1, 24, 45, 58)</button>
+    <button id="all">Select all shots</button>
+    <button id="rest">Select all non-pilot shots</button>
+    <button id="none">Clear selection</button>
+    <span id="sel-count" class="muted"></span>
+  </div>
+  <div id="shots"></div>
+
+  <div id="run-panel" hidden>
+    <h3>Run <span id="run-id" class="mono"></span></h3>
+    <div class="row">
+      <button id="generate" class="primary">Generate — send to OpenAI</button>
+      <button id="pause">Pause after current</button>
+      <button id="resume">Resume</button>
+      <span id="run-totals" class="muted"></span>
+    </div>
+    <div id="run-pause" class="est" hidden></div>
+    <div class="log mono" id="log"></div>
+    <h3>Results</h3>
+    <div id="results" class="grid"></div>
+  </div>
+</section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

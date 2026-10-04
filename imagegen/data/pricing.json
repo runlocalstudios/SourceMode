@@ -1,0 +1,90 @@
+{
+ "_comment": [
+  "Per-token prices from https://developers.openai.com/api/docs/pricing, read 2026-10-01.",
+  "USD per 1M tokens. The per-image dollar figure is NOT published as a table for",
+  "these models; output_tokens_assumed is seeded from third-party per-image estimates",
+  "for gpt-image-2 at 1024x1024 (low $0.006, medium $0.053, high $0.211 at $30/M ->",
+  "~200 / 1,770 / 7,030 tokens) scaled by pixel count, and xhigh/max are GUESSES.",
+  "ref_image_tokens_assumed is a guess. Both are replaced by observed usage as paid",
+  "results arrive (see observed below). Treat every estimate as an estimate."
+ ],
+ "verified": "2026-10-01",
+ "source": "https://developers.openai.com/api/docs/pricing",
+ "per_million": {
+  "gpt-image-2.5-sunburst": {
+   "text_in": 5.0,
+   "image_in": 8.0,
+   "image_out": 30.0
+  },
+  "gpt-image-2.5-flare": {
+   "text_in": 5.0,
+   "image_in": 8.0,
+   "image_out": 30.0
+  },
+  "gpt-image-2": {
+   "text_in": 5.0,
+   "image_in": 8.0,
+   "image_out": 30.0
+  },
+  "gpt-image-1.5": {
+   "text_in": 5.0,
+   "image_in": 8.0,
+   "image_out": 32.0
+  },
+  "gpt-image-1": {
+   "text_in": 5.0,
+   "image_in": 10.0,
+   "image_out": 40.0
+  },
+  "gpt-image-1-mini": {
+   "text_in": 2.0,
+   "image_in": 2.5,
+   "image_out": 8.0
+  }
+ },
+ "output_tokens_assumed": {
+  "1024x1024": {
+   "low": 200,
+   "medium": 1770,
+   "high": 7030,
+   "xhigh": 10000,
+   "max": 14000
+  },
+  "1024x1536": {
+   "low": 300,
+   "medium": 2650,
+   "high": 10550,
+   "xhigh": 15000,
+   "max": 21000
+  },
+  "1536x1024": {
+   "low": 300,
+   "medium": 2650,
+   "high": 10550,
+   "xhigh": 15000,
+   "max": 21000
+  }
+ },
+ "ref_image_tokens_assumed": 1500,
+ "text_tokens_assumed": 250,
+ "observed": {
+  "gpt-image-2.5-sunburst|1024x1536|low": {
+   "n": 72,
+   "output_tokens_mean": 158.0,
+   "image_in_tokens_mean": 3896.1,
+   "text_tokens_mean": 363.5
+  },
+  "gpt-image-2.5-sunburst|1024x1536|medium": {
+   "n": 9,
+   "output_tokens_mean": 343.0,
+   "image_in_tokens_mean": 3970.8,
+   "text_tokens_mean": 358.7
+  },
+  "gpt-image-2.5-sunburst|1024x1536|high": {
+   "n": 4,
+   "output_tokens_mean": 1372.0,
+   "image_in_tokens_mean": 3186.0,
+   "text_tokens_mean": 354.8
+  }
+ }
+}
