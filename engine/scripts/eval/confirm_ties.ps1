@@ -15,7 +15,12 @@
 #
 # Waits for Bianca's extension to finish first. ASCII only.
 $ErrorActionPreference = "Continue"
-$SP  = "C:\Users\jerem\AppData\Local\Temp\claude\C--dev-sourcemode\913e6b47-2e1a-4e0e-af1d-c0c28a922563\scratchpad"
+# Repo paths, never a session scratchpad. These two used to point into one
+# Claude session's temp directory, which meant (a) every script here broke the
+# moment that directory was cleaned, and (b) an edit to the repo's
+# train_character.ps1 was silently not picked up by the scripts that invoke it.
+$SP  = "C:\dev\sourcemode\engine\scripts"
+$EV  = "C:\dev\sourcemode\engine\scripts\eval"
 $PY  = "C:\dev\sourcemode\engine\.venv\Scripts\python.exe"
 $L   = "C:\dev\sourcemode\engine\outputs\logs"
 $log = "$L\confirm_ties.log"
@@ -50,7 +55,7 @@ foreach ($j in $jobs) {
   Free
   Log "START $($j.Char) epochs $($j.Eps) at n=20 ($n checkpoints on disk)"
   $p = Start-Process -FilePath $PY -NoNewWindow -Wait -PassThru -ArgumentList @(
-        "$SP\dense_epoch_eval.py", $j.Char, $j.Sub, "24", "1", "24", $j.Char,
+        "$EV\dense_epoch_eval.py", $j.Char, $j.Sub, "24", "1", "24", $j.Char,
         $dir, "20", "--epochs", $j.Eps) `
       -RedirectStandardOutput "$L\confirm_$($j.Sub).stdout.log" `
       -RedirectStandardError  "$L\confirm_$($j.Sub).stderr.log"

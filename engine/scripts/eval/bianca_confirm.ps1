@@ -8,7 +8,12 @@
 # tool today has died silently within hours, while Start-Process jobs (train_queue,
 # character_chain) have run all day. ASCII only.
 $ErrorActionPreference = "Continue"
-$SP  = "C:\Users\jerem\AppData\Local\Temp\claude\C--dev-sourcemode\913e6b47-2e1a-4e0e-af1d-c0c28a922563\scratchpad"
+# Repo paths, never a session scratchpad. These two used to point into one
+# Claude session's temp directory, which meant (a) every script here broke the
+# moment that directory was cleaned, and (b) an edit to the repo's
+# train_character.ps1 was silently not picked up by the scripts that invoke it.
+$SP  = "C:\dev\sourcemode\engine\scripts"
+$EV  = "C:\dev\sourcemode\engine\scripts\eval"
 $PY  = "C:\dev\sourcemode\engine\.venv\Scripts\python.exe"
 $L   = "C:\dev\sourcemode\engine\outputs\logs"
 $log = "$L\bianca_confirm.log"
@@ -40,7 +45,7 @@ Start-Sleep 10
 
 Log "START bianca ep12 vs ep24 at n=20"
 $p = Start-Process -FilePath $PY -NoNewWindow -Wait -PassThru -ArgumentList @(
-      "$SP\dense_epoch_eval.py", "bianca", "bianca_lr2", "24", "12", "24", "bianca",
+      "$EV\dense_epoch_eval.py", "bianca", "bianca_lr2", "24", "12", "24", "bianca",
       "outputs\lora-datasets\bianca_v2\lora_bianca_lr2", "20",
       "--scenes", "favorable", "--epochs", "12,24") `
     -RedirectStandardOutput "$L\confirm_bianca.stdout.log" `
