@@ -692,6 +692,21 @@ AGEING_S = 300.0   # past this the ETA is drawn with its age, not as a fresh num
 # being written every few seconds. The chain's own log ticked hourly, so the
 # window has to sit above that to avoid flagging its heartbeat.
 QUIET_S = 4200.0   # 70 minutes
+# ...and the quiet test ALONE is not enough, which the case that prompted it
+# proves. tess's chain logged "STALLED: 0 shots, unchanged for an hour" every
+# hour for 4h 48m: its newest signal was never older than ~60 min, so a
+# quiet-log test can never fire on it. A heartbeat that only ever says "still
+# waiting" is not progress.
+#
+# So the second test is against the job's OWN measured estimate. A prep chain
+# takes 23 minutes; tess's ran 12.5x that. Three times the estimate is the line
+# - comfortably past the spread of real runs (the slowest measured chain is 1.9x
+# the median) and well short of 12x. Like the quiet test it reports `you`, never
+# blocks, and states the numbers so the judgement stays with Jeremy: a Lora-Gen
+# chain legitimately waiting overnight for tomorrow's image quota will trip it,
+# and he can read "running 11h against an estimate of 23m" and know why.
+OVERRUN_X = 3.0
+OVERRUN_FLOOR_S = 3600.0   # never flag a job that has not been running an hour
 
 
 def _dur(s: float | None) -> str:
@@ -708,6 +723,23 @@ def _iso_utc(ts: float) -> str:
     from datetime import datetime, timezone  # noqa: PLC0415
 
     return datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="seconds")
+
+
+def _elapsed_of(job: dict, now: float | None = None) -> float | None:
+    """Seconds since the runner started this job, or None."""
+    import time  # noqa: PLC0415
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    started = job.get("started_at")
+    if not started:
+        return None
+    try:
+        t = datetime.fromisoformat(started)
+    except ValueError:
+        return None
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    return max(0.0, (now or time.time()) - t.timestamp())
 
 
 def job_quiet_s(job: dict, outputs_root: Path, now: float | None = None) -> float | None:
@@ -758,7 +790,8 @@ def job_quiet_s(job: dict, outputs_root: Path, now: float | None = None) -> floa
 
 
 def _state_of(job: dict, *, paused: bool, runner_alive: bool,
-              log_age_s: float | None, quiet_s: float | None = None) -> dict:
+              log_age_s: float | None, quiet_s: float | None = None,
+              elapsed_s: float | None = None, expected_s: float | None = None) -> dict:
     """The ONE place a job's status word is decided. Pages never compute one.
 
     Seven words, one colour each, no synonyms - so two pages cannot disagree
@@ -779,6 +812,14 @@ def _state_of(job: dict, *, paused: bool, runner_alive: bool,
             return {"status": "you",
                     "why": f"running for {_dur(quiet_s)} without writing anything - "
                            f"it may be waiting on something that will not arrive"}
+        # The heartbeat case: it IS writing, but only to say it is still
+        # waiting. Measured against how long this kind of job actually takes.
+        if (elapsed_s and expected_s and elapsed_s > OVERRUN_FLOOR_S
+                and elapsed_s > expected_s * OVERRUN_X):
+            return {"status": "you",
+                    "why": f"running {_dur(elapsed_s)} against an estimate of "
+                           f"{_dur(expected_s)} - {elapsed_s / expected_s:.0f}x, so it is "
+                           f"probably waiting on something rather than working"}
         return {"status": "live", "why": "running now"}
     if job["status"] == "failed":
         return {"status": "stop", "why": f"failed, exit {job['exit_code']}"}
@@ -1106,11 +1147,14 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
         watched = row["status"] == "running" and row["kind"] == "train"
         row["quiet_s"] = (job_quiet_s(by_id[row["id"]], out)
                           if row["status"] == "running" else None)
+        row["elapsed_s"] = (_elapsed_of(by_id[row["id"]])
+                            if row["status"] == "running" else None)
         row["state"] = _state_of(
             row, paused=doc["paused"],
             runner_alive=bool(lease and lease["alive"]),
             log_age_s=age if watched else None,
-            quiet_s=row["quiet_s"])
+            quiet_s=row["quiet_s"], elapsed_s=row["elapsed_s"],
+            expected_s=(row["estimate"] or {}).get("total_s"))
     # What the queue adds AFTER whatever is running now - the number he actually
     # wants when deciding whether to add another character tonight.
     queued_s = sum((j["estimate"] or {}).get("total_s") or 0

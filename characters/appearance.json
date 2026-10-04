@@ -30,7 +30,7 @@
   "prompt": "a petite, slim Latina young woman with a small waist and a full bust for her frame, warm tan skin, very long straight dark brown hair with lighter caramel ends, brown eyes"
  },
  "cat": {
-  "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 38, owns Obsidian and the Aire spa, independently wealthy, not easily impressed. She is NOT a dancer, so her `work` wardrobe should read as an owner in her own venue, not stage wear. Age comes from the game.",
+  "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Her Lora-Gen run is COMPLETE at 77 of 80: three were moderated out (Jeremy, 2026-10-04), not a failed run, so 77 is the right count and needs no re-run. Game: 38, owns Obsidian and the Aire spa, independently wealthy, not easily impressed. She is NOT a dancer, so her `work` wardrobe should read as an owner in her own venue, not stage wear. Age comes from the game.",
   "ethnicity": "white, Mediterranean colouring",
   "build": "tall, statuesque",
   "bust": "full",
@@ -55,14 +55,14 @@
   "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
  },
  "geena": {
-  "_note": "Age comes from the game's characters.js. Her hair is ALL-OVER vivid magenta-pink, not an underlayer like vivienne's - same lesson, it must be prompted. Her earlier sweep (dense_geena_v2) ran with NO record and therefore no pink in the prompt; treat its numbers as suspect.",
-  "ethnicity": "Black and Latina",
+  "_note": "Jeremy, 2026-10-04: Black, with a lighter complexion - matches the game's systemPrompt, which says 'You are a Black woman'. Her hair is ALL-OVER vivid magenta-pink, not an underlayer like vivienne's; same lesson, it must be prompted. Her earlier sweep (dense_geena_v2) ran with NO record and therefore no pink in the prompt - treat its numbers as suspect.",
+  "ethnicity": "Black",
   "build": "curvy",
   "bust": "full, large",
   "figure": "curvy, hourglass, full bust and hips",
-  "features": "long straight hair dyed vivid magenta-pink all over, brown eyes, warm medium-brown skin, full lips",
+  "features": "long straight hair dyed vivid magenta-pink all over, brown eyes, light brown skin, full lips",
   "frame": "curvy frame",
-  "prompt": "a curvy Black and Latina young woman with an hourglass figure and a full bust, warm medium-brown skin, long straight hair dyed vivid magenta-pink all over, brown eyes and full lips"
+  "prompt": "a curvy Black woman with an hourglass figure and a full bust, light brown skin, long straight hair dyed vivid magenta-pink all over, brown eyes and full lips"
  },
  "hannah": {
   "age": 29,
@@ -129,5 +129,15 @@
   "figure": "slim, slender frame",
   "features": "very long straight dark brown hair with a centre part, brown eyes, fair light skin",
   "prompt": "a petite, extremely skinny East Asian young woman with a slender frame and perky breasts, fair light skin, very long straight dark brown hair, brown eyes"
+ },
+ "jaina": {
+  "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 25, serves at Bella Notte on weekdays and runs Jaina's Jewels, a handmade jewellery stall, at weekends. Note the jewellery: the no-jewellery rule is a TRAINING rule (an uncaptioned accessory binds to the trigger), and her training shots must still follow it - but her ASSET looks can wear her own pieces, and arguably should. Her Lora-Gen run was started 2026-10-04 and is expected to hit the image-generation limit and finish the following day.",
+  "ethnicity": "white",
+  "build": "slim",
+  "bust": "full",
+  "figure": "slim with a full bust",
+  "features": "very long straight blonde hair with darker roots at the parting, brown eyes, fair skin, light freckles across her chest",
+  "frame": "tiny frame",
+  "prompt": "a slim white young woman with a full bust, fair skin, very long straight blonde hair with darker roots at the parting, brown eyes and light freckles"
  }
 }
