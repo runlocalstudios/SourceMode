@@ -78,6 +78,39 @@ def age_of(character: str) -> int | None:
     return int(own) if own else _load()["ages"].get(c)
 
 
+def frame(character: str) -> str:
+    """How an outfit sits on THIS character - "tiny frame", "curvy frame".
+
+    Empty when her record does not say, and an empty frame must produce no
+    clause at all. `render.py` hardcoded "fitted to her tiny frame" for every
+    character: true for amanda, who it was written for, and asserted for
+    everyone else. cici's own record reads "curvy, hourglass, large bust, full
+    hips" and the renderer was still telling the model she was tiny.
+
+    That is the same defect as vivienne's "long black hair" - a prompt stating a
+    trait the character's data contradicts - and it costs the same way, because
+    explicit text beats a LoRA's learned association.
+
+    `frame` is read first so the wording can be set deliberately; otherwise it
+    is taken from `build`/`figure`, and anything that does not reduce to a short
+    phrase is left out rather than guessed at.
+    """
+    rec = _load()["look"].get(character.lower()) or {}
+    own = (rec.get("frame") or "").strip()
+    if own:
+        return own
+    blob = " ".join(str(rec.get(k) or "") for k in ("build", "figure")).lower()
+    if not blob.strip():
+        return ""
+    # Only the two shapes that actually change how clothing reads. A record that
+    # says neither gets no clause, which is the safe answer.
+    if any(w in blob for w in ("petite", "skinny", "slim", "slender", "tiny")):
+        return "tiny frame"
+    if any(w in blob for w in ("curvy", "hourglass", "full hips", "thick", "voluptuous")):
+        return "curvy frame"
+    return ""
+
+
 def clause(character: str) -> str:
     """"an 18-year-old, extremely petite..." - age first, then the body text if any.
 

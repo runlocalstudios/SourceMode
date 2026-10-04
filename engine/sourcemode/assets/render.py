@@ -78,6 +78,21 @@ def appearance_clause(character: str) -> str:
     return clause(character)
 
 
+def fitted_clause(character: str) -> str:
+    """", fitted to her tiny frame" - or NOTHING when her record does not say.
+
+    This used to be hardcoded, so every character was told she had a tiny frame.
+    It was written for amanda and is right for her; it is wrong for cici, whose
+    own record says curvy and hourglass, and for anyone else more curvaceous.
+    An empty frame yields an empty string, never a default: asserting a body
+    shape the character's data contradicts is how vivienne's renders came back
+    with black hair.
+    """
+    from .appearance import frame  # noqa: PLC0415
+    f = frame(character)
+    return f", fitted to her {f}" if f else ""
+
+
 
 def describe_yaw(degrees: int) -> str:
     if degrees == 0:
@@ -133,7 +148,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
             f"Expression: {pf['expression']}. "
             f"Pose: {STANCE}. "
             f"Hair: {slot['hair']}. "
-            f"Outfit: {slot['outfit']}, fitted to her tiny frame. "
+            f"Outfit: {slot['outfit']}{fitted_clause(character)}. "
             f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. "
             f"Natural realistic human proportions, correct anatomy. "
             f"No profiles, rear views, seated poses, or off-camera gaze.")

@@ -1,59 +1,65 @@
 {
-  "_comment": [
-    "Per-character physical identity: ethnicity, build, features. Jeremy, 2026-10-01.",
-    "USE: injected into every GENERATION prompt (local shot plan, asset renders, eval",
-    "scenes) and available to the game persona/chat. NEVER written into a training",
-    "caption - these are identity traits; captioning one keeps it variable and the",
-    "LoRA never learns it. Make them VISIBLE in the images instead (fitted outfits",
-    "on 3/4 and waist-up frames). Folds into CharacterSource when a source.json exists.",
-    "`prompt` is the ready-made clause; keep it concrete (skin, hair, eyes, build) -",
-    "a heritage label alone steers Qwen weakly."
+ "_comment": [
+  "Per-character physical identity: ethnicity, build, features. Jeremy, 2026-10-01.",
+  "USE: injected into every GENERATION prompt (local shot plan, asset renders, eval",
+  "scenes) and available to the game persona/chat. NEVER written into a training",
+  "caption - these are identity traits; captioning one keeps it variable and the",
+  "LoRA never learns it. Make them VISIBLE in the images instead (fitted outfits",
+  "on 3/4 and waist-up frames). Folds into CharacterSource when a source.json exists.",
+  "`prompt` is the ready-made clause; keep it concrete (skin, hair, eyes, build) -",
+  "a heritage label alone steers Qwen weakly."
+ ],
+ "amanda": {
+  "ethnicity": "Italian-American (Jeremy's best guess, unconfirmed)",
+  "build": "EXTREMELY petite and skinny - tiny waist, narrow shoulders, slim arms and legs - but healthy, not anorexic",
+  "bust": "massive - very large, full breasts on a tiny frame",
+  "figure": "tiny waist and narrow hips with a large bust",
+  "features": "fair-olive skin, dark brown eyes, long dark brown hair, light freckles across the nose and cheeks",
+  "prompt": "an 18-year-old, extremely petite, very skinny young woman with a tiny waist, narrow shoulders and slim limbs, and a massive bust - very large full breasts on a tiny frame - a youthful 18-year-old face, fair-olive skin, dark brown eyes, long dark brown hair, light freckles across her nose and cheeks",
+  "age": 18,
+  "frame": "tiny frame"
+ },
+ "cici": {
+  "ethnicity": "Latina - Colombian and Venezuelan",
+  "build": "curvy",
+  "bust": "large",
+  "figure": "hourglass - large bust, defined waist, full hips",
+  "features": "warm tan skin, dark brown eyes, long dark wavy hair (confirm against references when her pipeline starts)",
+  "prompt": "a curvy Colombian-Venezuelan Latina with an hourglass figure, a large bust, a defined waist and full hips, warm tan skin, dark brown eyes, long dark wavy hair",
+  "age": 24,
+  "_note": "age from Jeremy 2026-10-03; not in the game's characters.js",
+  "frame": "curvy frame"
+ },
+ "daisy": {
+  "age": 20,
+  "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
+ },
+ "hannah": {
+  "age": 29,
+  "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
+ },
+ "maddie": {
+  "age": 25,
+  "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
+ },
+ "mira": {
+  "age": 18,
+  "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
+ },
+ "vivienne": {
+  "ethnicity": "Vietnamese",
+  "build": "skinny, average height",
+  "bust": "medium",
+  "figure": "slim, slender frame",
+  "features": "long black hair with prominent pink highlights (a specific pattern - learned from the images, NOT prompted), dark eyes",
+  "do_not_prompt": [
+   "pink highlights - naming them spreads pink everywhere; the LoRA must learn the exact placement from the photos"
   ],
-  "amanda": {
-    "ethnicity": "Italian-American (Jeremy's best guess, unconfirmed)",
-    "build": "EXTREMELY petite and skinny - tiny waist, narrow shoulders, slim arms and legs - but healthy, not anorexic",
-    "bust": "massive - very large, full breasts on a tiny frame",
-    "figure": "tiny waist and narrow hips with a large bust",
-    "features": "fair-olive skin, dark brown eyes, long dark brown hair, light freckles across the nose and cheeks",
-    "prompt": "an 18-year-old, extremely petite, very skinny young woman with a tiny waist, narrow shoulders and slim limbs, and a massive bust - very large full breasts on a tiny frame - a youthful 18-year-old face, fair-olive skin, dark brown eyes, long dark brown hair, light freckles across her nose and cheeks",
-    "age": 18
-  },
-  "cici": {
-    "ethnicity": "Latina - Colombian and Venezuelan",
-    "build": "curvy",
-    "bust": "large",
-    "figure": "hourglass - large bust, defined waist, full hips",
-    "features": "warm tan skin, dark brown eyes, long dark wavy hair (confirm against references when her pipeline starts)",
-    "prompt": "a curvy Colombian-Venezuelan Latina with an hourglass figure, a large bust, a defined waist and full hips, warm tan skin, dark brown eyes, long dark wavy hair",
-    "age": 24,
-    "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
-  },
-  "vivienne": {
-    "ethnicity": "Vietnamese",
-    "build": "skinny, average height",
-    "bust": "medium",
-    "figure": "slim, slender frame",
-    "features": "long black hair with prominent pink highlights (a specific pattern - learned from the images, NOT prompted), dark eyes",
-    "do_not_prompt": [
-      "pink highlights - naming them spreads pink everywhere; the LoRA must learn the exact placement from the photos"
-    ],
-    "role_note": "exotic dancer - the internal shot plan should cover dance poses and revealing outfits the Codex plan cannot; local generation only. Train locally if the local approach does well on Amanda.",
-    "prompt": "a slim Vietnamese young woman of average height with a slender frame and a medium bust, long black hair, dark eyes"
-  },
-  "daisy": {
-    "age": 20,
-    "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
-  },
-  "hannah": {
-    "age": 29,
-    "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
-  },
-  "maddie": {
-    "age": 25,
-    "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
-  },
-  "mira": {
-    "age": 18,
-    "_note": "age from Jeremy 2026-10-03; not in the game's characters.js"
-  }
+  "role_note": "exotic dancer - the internal shot plan should cover dance poses and revealing outfits the Codex plan cannot; local generation only. Train locally if the local approach does well on Amanda.",
+  "prompt": "a slim Vietnamese young woman of average height with a slender frame and a medium bust, long black hair, dark eyes"
+ },
+ "zara": {
+  "_note": "Frame set by hand (Jeremy, 2026-10-04): keep 'tiny frame' for Zara. No build/figure/bust text - her figure comes from the LoRA, and asserting measurements nobody measured is what the frame change exists to stop.",
+  "frame": "tiny frame"
+ }
 }
