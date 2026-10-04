@@ -141,19 +141,26 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     """The trigger is the bare character name unless the plan overrides it; the rest
     follows the Codex prompt order: crop, body, head, expression, hair, outfit, finish.
 
-    A slot may override two fields, which is what lets a named SHOOT share this
-    builder instead of growing a second one: `stance` (a boudoir shot is not a
-    standing weight shift) and `framing` (nor is it an upper-thigh crop). Both
-    default to the wardrobe-pack values, so a pack slot is unchanged. Everything
-    that carries identity - her age, appearance clause, frame, the expression
-    table, the gaze rule - is shared and cannot drift between the two uses.
+    A slot may override four COMPOSITION fields, which is what lets a named shoot
+    or the selfie pack share this builder instead of growing a second one:
+
+      stance     a boudoir shot is not a standing weight shift
+      framing    nor is it an upper-thigh crop
+      shot_type  a selfie is not a "standing portrait"
+      avoid      and the pack's "no seated poses" rules out half a selfie set
+
+    Every one defaults to the wardrobe-pack value, so a pack slot is byte-for-byte
+    unchanged. What is NOT overridable is everything that carries identity - her
+    age, appearance clause, frame, the expression table, the gaze rule - so it is
+    shared and cannot drift between the uses.
     """
     if slot["pose"] == "sitting":
         look = f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. Natural realistic human proportions, correct anatomy."
         return f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, {slot['hair']}. {look}"
     pf = pose_fields(character, slot)
     app = appearance_clause(character)
-    return (f"{trigger or character}. New photorealistic standing portrait of {app + ', ' if app else ''}"
+    return (f"{trigger or character}. New photorealistic {slot.get('shot_type') or 'standing portrait'}"
+            f" of {app + ', ' if app else ''}"
             f"her body shape and proportions exactly as described. "
             f"Crop: {slot.get('framing') or FRAMING_UPPER_THIGH}. Vertical 2:3, consistent headroom and scale; hair and lateral silhouette inside canvas. "
             f"Body: {pf['body']}. Directions mean image-left/image-right as seen by the viewer. "
@@ -165,7 +172,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
             f"Outfit: {slot['outfit']}{fitted_clause(character)}. "
             f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. "
             f"Natural realistic human proportions, correct anatomy. "
-            f"No profiles, rear views, seated poses, or off-camera gaze.")
+            + (slot.get("avoid") or "No profiles, rear views, seated poses, or off-camera gaze."))
 
 
 def render_plan(cfg: dict, client, plan: dict, out: Path, *, shots: int = 4, seed: int = 7100,

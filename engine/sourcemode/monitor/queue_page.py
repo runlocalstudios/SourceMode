@@ -254,8 +254,13 @@ function jobRow(el,j,i,n){
     +'<div class=why>'+SM.esc(j.state.why)+'</div>'
     +(j.estimate&&j.estimate.total_s&&!running
        ? '<div class=est><b>'+SM.dur(j.estimate.total_s)+'</b> of GPU time once it starts'
-         +' &mdash; '+SM.dur(j.estimate.train_s)+' training + '+SM.dur(j.estimate.sweep_s)
-         +' sweep</div><div class=basis>'+SM.esc(j.estimate.basis)+'</div>' : '')
+         /* The split is only real for a training job. Everything else - a shoot,
+            an asset pack, a prep chain - read "training + sweep" with two blank
+            durations in front of it, which described work it was not doing. */
+         +(j.estimate.train_s&&j.estimate.sweep_s
+            ? ' &mdash; '+SM.dur(j.estimate.train_s)+' training + '
+              +SM.dur(j.estimate.sweep_s)+' sweep' : '')
+         +'</div><div class=basis>'+SM.esc(j.estimate.basis)+'</div>' : '')
     +(j.note?'<div class=basis>'+SM.esc(j.note)+'</div>':'')
     +'<div class=jid>'+SM.esc(j.id)
       +(j.log?' &middot; '+SM.esc(String(j.log).split(/[\\/]/).pop()):'')+'</div>'
@@ -964,6 +969,7 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
         return looks * shots, f"{looks} looks x {shots} shots"
 
     if "run_shoots.py" in joined:
+        from ..assets.shoots import resolve as _resolve  # noqa: PLC0415
         from ..assets.shoots import total_shots  # noqa: PLC0415
 
         pos = [c for c in cmd if not c.startswith("--")]
@@ -973,7 +979,8 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
             n = total_shots(ids)
         except (StopIteration, IndexError, KeyError):
             return None
-        return n, f"{len(ids)} shoot{'s' if len(ids) != 1 else ''}"
+        word = "selection" if any(x.kind == "pack" for x in _resolve(ids)) else "shoot"
+        return n, f"{len(ids)} {word}{'s' if len(ids) != 1 else ''}"
 
     if "prompt_ab.py" in joined:
         arms = len([a for a in (flag("--arms", "") or "").split("|") if "=" in a])
@@ -1030,8 +1037,15 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
         if "run_shoots.py" in joined:
             pos = [c for c in cmd if not c.startswith("--")]
             i = next(k for k, c in enumerate(pos) if c.endswith("run_shoots.py"))
-            root = out / "shoots" / pos[i + 1].lower()
-            return len(list(root.rglob("*.png"))) if root.is_dir() else 0
+            char = pos[i + 1].lower()
+            ids = [x.strip() for x in pos[i + 2].split(",") if x.strip()]
+            # A pack in the selection renders into game-assets, not shoots, so
+            # counting only one tree stalls the bar at whatever the shoots wrote.
+            roots = [out / "shoots" / char]
+            from ..assets.shoots import resolve as _resolve  # noqa: PLC0415
+            if any(x.kind == "pack" for x in _resolve(ids)):
+                roots.append(out / "game-assets" / char / "renders")
+            return sum(len(list(r.rglob("*.png"))) for r in roots if r.is_dir())
 
         if "prompt_ab.py" in joined:
             pos = [c for c in cmd if not c.startswith("--")]
@@ -1073,6 +1087,21 @@ def job_estimate(cfg: dict, job: dict) -> dict | None:
         return None
     n, how = got
     r = _rate(cfg)
+    if "run_shoots.py" in " ".join(job.get("cmd") or []):
+        # A shoots job can mix a 75 s/render sweep shoot with the 116 s/shot
+        # asset pack. Charging all 112 pack shots at the sweep rate was a
+        # 1h15m understatement, so each selection is priced at its own rate.
+        from ..assets.shoots import estimate_seconds  # noqa: PLC0415
+
+        pos = [c for c in (job.get("cmd") or []) if not c.startswith("--")]
+        i = next(k for k, c in enumerate(pos) if c.endswith("run_shoots.py"))
+        ids = [x.strip() for x in pos[i + 2].split(",") if x.strip()]
+        total = estimate_seconds(ids, r["s_per_render"], r["s_per_shot"])
+        measured = r["render_measured"] and r["shot_measured"]
+        return {"train_s": None, "sweep_s": None, "total_s": total, "steps": None,
+                "basis": f"{how} = {n} shots"
+                         + (f", measured over {r['n_render_runs']} past runs"
+                            if measured else ", part assumed")}
     per = r["s_per_shot"] if job["kind"] == "assets" else r["s_per_render"]
     unit_runs = r["n_shot_runs"] if job["kind"] == "assets" else r["n_render_runs"]
     del unit_runs
@@ -1694,7 +1723,10 @@ def queue_router(cfg: dict, status=None):
         r = _rate(cfg)
         return {"characters": approved_characters(cfg),
                 "buckets": buckets(),
-                "s_per_shot": r["s_per_render"]}
+                # Two rates, because a sweep render and an asset-pack shot are
+                # not the same work - the rail totals each selection at its own.
+                "s_per_shot": r["s_per_render"],
+                "s_per_pack_shot": r["s_per_shot"]}
 
     @router.post("/queue/shoot")
     def add_shoot(body: dict = Body(default={})) -> dict:
@@ -1714,6 +1746,14 @@ def queue_router(cfg: dict, status=None):
             raise HTTPException(400, str(exc)) from exc
         if not resolve_lora(cfg, char):
             raise HTTPException(409, f"no approved LoRA for {char} - choose an epoch first")
+        # The page greys these, but the page is not the guard: a stale tab or a
+        # curl must not queue an hour of card time that dies at the pre-flight.
+        from ..assets.lora import blocked_shoots  # noqa: PLC0415
+
+        blocked = blocked_shoots(cfg, char)
+        hit = [i for i in ids if i in blocked]
+        if hit:
+            raise HTTPException(409, f"{hit[0]}: {blocked[hit[0]]}")
 
         doc = q.load(path())
         label = f"{char}:{'+'.join(sorted(ids))}"

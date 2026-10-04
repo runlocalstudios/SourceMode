@@ -38,6 +38,19 @@ class Shoot:
                              "her hair up in a messy bun", "her hair half pinned back")
     framing: str = ""      # "" keeps shot_prompt's upper-thigh wardrobe crop
     shots: int = 12
+    # "shoot" renders here, through shot_prompt and the t2i graph. "pack" means a
+    # shipped game-asset pack with its own pipeline - a plate, a chroma backdrop,
+    # cutout and place - which run_shoots delegates to rather than reimplements.
+    kind: str = "shoot"
+    # An explicit slot list beats the outfit x pose rotation when the set is
+    # authored shot by shot, as the selfie pack is. `()` keeps the rotation.
+    explicit: tuple[dict, ...] = ()
+    # Which measured rate this renders at: the t2i sweep rate, or the slower
+    # asset-pack rate (plate upload + adherence measurement per shot).
+    rate: str = "render"
+    # Only meaningful for kind="pack": the plan file, relative to outputs/.
+    plan_file: str = ""
+    note: str = ""
 
     def plan(self, seed: int = 0) -> list[dict]:
         """The shot list: outfit x pose walked in step, hair rotating under them.
@@ -45,6 +58,8 @@ class Shoot:
         Deterministic, so re-running a shoot reproduces it and a judge verdict
         keyed to a shot id still means the same picture.
         """
+        if self.explicit:
+            return [dict(x) for x in self.explicit]
         out = []
         for i in range(self.shots):
             out.append({
@@ -171,8 +186,38 @@ CATALOG: tuple[Shoot, ...] = (
            "leaning back in the chair, glass in hand"), shots=8),
 )
 
+# --- game assets ------------------------------------------------------------
+# Jeremy, 2026-10-04: "the whole point of this thing is that as I complete the
+# LoRAs, I want to be able to trigger the game asset generation from this page.
+# So put that as two separate options in the top of that screen under game
+# assets." These are not bite-sized and are not meant to be - they are the two
+# things that actually ship into the game - so they sit in their own group,
+# first, with their real cost on the label.
+def _selfie_pack() -> Shoot:
+    from .selfies import TOTAL, slots  # noqa: PLC0415
+
+    return Shoot("selfies", "Selfie pack", "game",
+                 "real rooms and streets, her own phone, backgrounds kept",
+                 (), (), shots=TOTAL, explicit=tuple(slots()),
+                 note="24 phone selfies - 8 casual, 6 flirty, 5 date, 5 intimate. "
+                      "Ships as rendered: no chroma plate, no cutout.")
+
+
+GAME: tuple[Shoot, ...] = (
+    Shoot("pack28", "In-game asset pack (28 looks)", "game",
+          "the shipped wardrobe pack: magenta plate, cut out and placed",
+          (), (), shots=28 * 4, kind="pack", rate="shot",
+          plan_file="game-assets/{character}/plan_28.json",
+          note="28 looks x 4 candidates. Needs a wardrobe plan on disk first - "
+               "the outfits are a decision, not a default."),
+    _selfie_pack(),
+)
+
+CATALOG = GAME + CATALOG
 BY_ID = {s.id: s for s in CATALOG}
-BUCKETS = ("intimate", "swim", "everyday", "night")
+BUCKETS = ("game", "intimate", "swim", "everyday", "night")
+BUCKET_LABEL = {"game": "Game assets", "intimate": "Intimate", "swim": "Swim",
+                "everyday": "Everyday", "night": "Night out"}
 
 
 def buckets() -> list[dict]:
@@ -181,10 +226,29 @@ def buckets() -> list[dict]:
     for b in BUCKETS:
         rows = [s for s in CATALOG if s.bucket == b]
         if rows:
-            out.append({"bucket": b,
+            out.append({"bucket": b, "label": BUCKET_LABEL.get(b, b),
                         "shoots": [{"id": s.id, "label": s.label, "shots": s.shots,
-                                    "setting": s.setting} for s in rows]})
+                                    "setting": s.setting, "kind": s.kind,
+                                    "note": s.note} for s in rows]})
     return out
+
+
+def plan_path(shoot: Shoot, character: str, outputs_root) -> object | None:
+    """Where a pack shoot's plan lives for this character, or None if it is not
+    a pack. Existence is the caller's question - the page greys the box, the
+    runner refuses."""
+    from pathlib import Path  # noqa: PLC0415
+
+    if shoot.kind != "pack" or not shoot.plan_file:
+        return None
+    return Path(outputs_root) / shoot.plan_file.format(character=character)
+
+
+def estimate_seconds(ids: list[str], s_per_render: float, s_per_shot: float) -> float:
+    """One job can mix a 75 s/shot sweep render with a 116 s/shot asset render.
+    Charging the whole job at one rate was a 1h15m error on the 112-shot pack."""
+    return sum(s.shots * (s_per_shot if s.rate == "shot" else s_per_render)
+               for s in resolve(ids))
 
 
 def resolve(ids: list[str]) -> list[Shoot]:

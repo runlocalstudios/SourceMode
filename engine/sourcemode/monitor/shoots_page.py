@@ -44,6 +44,16 @@ OWN_CSS = r"""
 .sh .t b{display:block;font:var(--t-lead);color:var(--g9)}
 .sh .t span{display:block;font:var(--t-meta);color:var(--g7)}
 .sh .n{flex:none;font:var(--t-small);color:var(--g7);font-variant-numeric:tabular-nums}
+.sh .t em{display:block;font:var(--t-small);font-style:normal;color:var(--g6);margin-top:2px}
+.sh.ship{border-color:var(--g4);background:var(--g2)}
+.sh.ship.on{border-left-color:var(--act)}
+.sh.off{opacity:.55;cursor:default}
+.sh.off .box{border-style:dashed}
+.sh .blocked{display:block;font:var(--t-small);color:var(--you-ink);margin-top:2px}
+.picks{list-style:none;margin:var(--s3) 0 0;padding:0}
+.picks li{display:flex;justify-content:space-between;gap:var(--s3);
+  padding:var(--s2) 0;border-top:1px solid var(--g3);font:var(--t-meta);color:var(--g7)}
+.picks li b{color:var(--g9);font-variant-numeric:tabular-nums}
 """
 
 BODY = """
@@ -52,7 +62,6 @@ BODY = """
     <h2>Character</h2>
     <div class=who id=who></div>
     <div id=warn></div>
-    <h2>Shoots</h2>
     <div id=list></div>
   </div>
   <div class=col-rail><div id=rail></div></div>
@@ -86,47 +95,65 @@ function draw(){
       +' to characters/appearance.json first.</span></span></div>'
     : '');
 
+  const blocked=(c&&c.blocked)||{};
   let h='';
   for(const b of data.buckets){
-    h+='<h2>'+SM.esc(b.bucket)+'</h2>';
-    for(const s of b.shoots)
-      h+='<button class="sh'+(picked.has(s.id)?' on':'')+'" data-shoot="'+SM.esc(s.id)+'">'
+    h+='<h2>'+SM.esc(b.label||b.bucket)+'</h2>';
+    for(const s of b.shoots){
+      const why=blocked[s.id];
+      h+='<button class="sh'+(b.bucket==='game'?' ship':'')
+        +(picked.has(s.id)?' on':'')+(why?' off':'')+'" data-shoot="'+SM.esc(s.id)+'"'
+        +(why?' disabled':'')+'>'
         +'<span class=box>&#10003;</span><span class=t><b>'+SM.esc(s.label)+'</b>'
-        +'<span>'+SM.esc(s.setting)+'</span></span>'
-        +'<span class=n>'+s.shots+' shots</span></button>';
+        +'<span>'+SM.esc(s.setting)+'</span>'
+        +(s.note?'<em>'+SM.esc(s.note)+'</em>':'')
+        +(why?'<span class=blocked>'+SM.esc(why)+'</span>':'')+'</span>'
+        +'<span class=n>'+s.shots+' shots<br>'+SM.dur(cost(s))+'</span></button>';
+    }
   }
   SM.set($('list'),null,h);
   bar();
 }
 
+function find(id){
+  for(const b of data.buckets) for(const s of b.shoots) if(s.id===id) return s;
+  return null;
+}
+/* An asset-pack shot costs ~116s and a sweep render ~75s. One rate across a
+   mixed selection understated the 112-shot pack by over an hour. */
+function cost(s){ return s.shots*(s.kind==='pack'?data.s_per_pack_shot:data.s_per_shot); }
+
 function bar(){
-  const n=[...picked].reduce((a,id)=>{
-    for(const b of data.buckets) for(const s of b.shoots) if(s.id===id) return a+s.shots;
-    return a;},0);
-  const secs=n*data.s_per_shot;
+  const sel=[...picked].map(find).filter(Boolean);
+  const n=sel.reduce((a,s)=>a+s.shots,0);
+  const secs=sel.reduce((a,s)=>a+cost(s),0);
   const c=data.characters.find(x=>x.character===who);
-  if(!picked.size){
+  if(!sel.length){
     SM.set($('bars'),null,'');
-    SM.set($('rail'),null,'<div class=card><div class=card-sub>Tick a shoot to see what it costs.</div></div>');
+    SM.set($('rail'),null,'<div class=card><div class=card-sub>Tick anything to see what it costs.</div></div>');
     return;
   }
-  SM.set($('rail'),null,'<div class=card><div class=card-head><h3>'+picked.size
-    +' shoot'+(picked.size===1?'':'s')+'</h3></div>'
+  const word=s=>s+(sel.length===1?'':'s');
+  SM.set($('rail'),null,'<div class=card><div class=card-head><h3>'+sel.length
+    +' '+word('selection')+'</h3></div>'
     +'<div class=card-sub><b>'+n+'</b> shots &middot; about <b>'+SM.dur(secs)
     +'</b> of GPU time</div>'
-    +'<div class=basis>Queued as ONE job. Each shoot writes its own judge set as it'
-    +' finishes, so a run that stops part-way still leaves the rest judgeable.</div></div>');
+    +'<ul class=picks>'+sel.map(s=>'<li><span>'+SM.esc(s.label)+'</span><b>'
+      +SM.dur(cost(s))+'</b></li>').join('')+'</ul>'
+    +'<div class=basis>Queued as ONE job. Each one writes its own output as it'
+    +' finishes, so a run that stops part-way still leaves the rest usable.</div></div>');
   SM.set($('bars'),null,'<div class=actbar>'
-    +'<button class="btn btn-primary" data-act=queue>Queue '+picked.size+' shoot'
-    +(picked.size===1?'':'s')+' for '+SM.esc(c?c.who:who)+' &mdash; '+SM.dur(secs)+'</button>'
+    +'<button class="btn btn-primary" data-act=queue>Queue '+sel.length+' '
+    +word('selection')+' for '+SM.esc(c?c.who:who)+' &mdash; '+SM.dur(secs)+'</button>'
     +'<button class="btn btn-ghost" data-act=clear>Clear</button></div>');
 }
 
 document.addEventListener('click',async e=>{
   const w=e.target.closest('[data-who]');
-  if(w){ who=w.dataset.who; picked.clear(); draw(); return; }
+  if(w){ who=w.dataset.who; picked.clear(); draw(); return; }  /* blocked set differs per character */
   const s=e.target.closest('[data-shoot]');
-  if(s){ const id=s.dataset.shoot;
+  if(s){ if(s.disabled) return;
+    const id=s.dataset.shoot;
     picked.has(id)?picked.delete(id):picked.add(id); draw(); return; }
   const b=e.target.closest('[data-act]'); if(!b) return;
   if(b.dataset.act==='clear'){ picked.clear(); draw(); return; }

@@ -75,5 +75,28 @@ def approved_characters(cfg: dict) -> list[dict]:
         rows.append({"character": c, "who": c.replace("_", " ").title(),
                      "lora": lora["name"], "why": lora["why"],
                      "appearance_ok": ap["ok"],
-                     "appearance_missing": [m.split(" - ")[0] for m in ap["missing"]]})
+                     "appearance_missing": [m.split(" - ")[0] for m in ap["missing"]],
+                     "blocked": blocked_shoots(cfg, c)})
     return sorted(rows, key=lambda r: r["character"])
+
+
+def blocked_shoots(cfg: dict, character: str) -> dict[str, str]:
+    """`{shoot_id: why it cannot run for her}`, so the tab can grey the box and
+    say what is missing instead of letting her queue a job that dies at the
+    guard an hour later.
+
+    Today only the wardrobe pack can be blocked: its 28 outfits are a decision
+    somebody makes per character, and a plan that does not exist is not a
+    default to fall back on.
+    """
+    from ..config import outputs_dir  # noqa: PLC0415
+    from .shoots import CATALOG, plan_path  # noqa: PLC0415
+
+    out = outputs_dir(cfg)
+    blocked = {}
+    for sh in CATALOG:
+        pp = plan_path(sh, character, out)
+        if pp is not None and not pp.is_file():
+            blocked[sh.id] = ("no wardrobe plan yet - the 28 outfits have to be "
+                              "decided before they can be rendered")
+    return blocked

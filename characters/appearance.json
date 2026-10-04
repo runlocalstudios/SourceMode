@@ -139,5 +139,16 @@
   "features": "very long straight blonde hair with darker roots at the parting, brown eyes, fair skin, light freckles across her chest",
   "frame": "tiny frame",
   "prompt": "a slim white young woman with a full bust, fair skin, very long straight blonde hair with darker roots at the parting, brown eyes and light freckles"
+ },
+ "bianca": {
+  "_note": "DRAFT, 2026-10-04 - read off her four reference photos, her shipped outfits and her twelve shipped selfies. The game record is self-contradictory on age: the structured `age` field says 27, her systemPrompt prose says 25. Taking the structured field, which is what the game actually reads. Correct any of this and the selfie pack picks it up on the next render.",
+  "ethnicity": "White",
+  "build": "slim and athletic with a small waist",
+  "bust": "full",
+  "figure": "slim athletic figure, small waist, full bust",
+  "features": "very long straight bleach-blonde hair with slightly darker roots, warm brown eyes, lightly tanned skin, freckles across her nose and cheeks, full lips",
+  "frame": "slim athletic frame",
+  "prompt": "a 27-year-old white woman with a slim athletic figure, a small waist and a full bust, lightly tanned skin, very long straight bleach-blonde hair with slightly darker roots, warm brown eyes, freckles across her nose and cheeks, and full lips",
+  "age": 27
  }
 }
