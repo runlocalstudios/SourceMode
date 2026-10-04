@@ -37,6 +37,7 @@ def create_app(cfg: dict, sampler: Sampler | None = None):
     from ..assets.judge import judge_router  # noqa: PLC0415
     from .hub import hub_router  # noqa: PLC0415
     from .queue_page import queue_router  # noqa: PLC0415
+    from .shoots_page import shoots_router  # noqa: PLC0415
     from ..assets.review import review_router  # noqa: PLC0415
     from ..train.epochs import epochs_router  # noqa: PLC0415
     from ..train.preview import preview_router  # noqa: PLC0415
@@ -49,6 +50,7 @@ def create_app(cfg: dict, sampler: Sampler | None = None):
     app.include_router(judge_router(cfg))
     app.include_router(preview_router(cfg))
     app.include_router(epochs_router(cfg))
+    app.include_router(shoots_router(cfg))
     return app
 
 

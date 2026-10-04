@@ -262,7 +262,8 @@ def test_hub_serves_both_tabs_and_their_counts(tmp_path: Path):
     # two load on first use so switching back keeps their place.
     assert 'id=p_gpu class="pane on" src="/queue"' in page
     assert "<iframe id=p_judge class=pane" in page
-    assert "{gpu:'/queue',judge:'/judge',dataset:'/dataset'}" in page
+    assert "{gpu:'/queue',judge:'/judge',dataset:'/dataset',shoots:'/shoots'}" in page
+    assert "<iframe id=p_shoots class=pane" in page
     assert "show(start[0]||'gpu',start[1])" in page
     # The shell renders the card's state outside the frames, so a glance at any
     # tab answers "what is the card doing".

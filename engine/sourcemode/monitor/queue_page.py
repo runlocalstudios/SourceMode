@@ -48,6 +48,7 @@ KIND_LABEL = {
     "train": "LoRA training",
     "eval": "epoch sweep",
     "assets": "asset render",
+    "shoot": "photo shoots",
     "other": "job",
 }
 
@@ -962,6 +963,18 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
             looks = len([x for x in only.split(",") if x.strip()])
         return looks * shots, f"{looks} looks x {shots} shots"
 
+    if "run_shoots.py" in joined:
+        from ..assets.shoots import total_shots  # noqa: PLC0415
+
+        pos = [c for c in cmd if not c.startswith("--")]
+        try:
+            i = next(k for k, c in enumerate(pos) if c.endswith("run_shoots.py"))
+            ids = [x.strip() for x in pos[i + 2].split(",") if x.strip()]
+            n = total_shots(ids)
+        except (StopIteration, IndexError, KeyError):
+            return None
+        return n, f"{len(ids)} shoot{'s' if len(ids) != 1 else ''}"
+
     if "prompt_ab.py" in joined:
         arms = len([a for a in (flag("--arms", "") or "").split("|") if "=" in a])
         scenes = len([x for x in (flag("--scenes", "0,2,6") or "").split(",") if x.strip()])
@@ -1014,6 +1027,12 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
             root = Path(flag("--out") or (out / "game-assets")) / doc["character"] / "renders"
             return len(list(root.rglob("shot_*.png"))) if root.is_dir() else 0
 
+        if "run_shoots.py" in joined:
+            pos = [c for c in cmd if not c.startswith("--")]
+            i = next(k for k, c in enumerate(pos) if c.endswith("run_shoots.py"))
+            root = out / "shoots" / pos[i + 1].lower()
+            return len(list(root.rglob("*.png"))) if root.is_dir() else 0
+
         if "prompt_ab.py" in joined:
             pos = [c for c in cmd if not c.startswith("--")]
             i = next(k for k, c in enumerate(pos) if c.endswith("prompt_ab.py"))
@@ -1055,6 +1074,8 @@ def job_estimate(cfg: dict, job: dict) -> dict | None:
     n, how = got
     r = _rate(cfg)
     per = r["s_per_shot"] if job["kind"] == "assets" else r["s_per_render"]
+    unit_runs = r["n_shot_runs"] if job["kind"] == "assets" else r["n_render_runs"]
+    del unit_runs
     measured = r["shot_measured"] if job["kind"] == "assets" else r["render_measured"]
     unit = "shot" if job["kind"] == "assets" else "render"
     runs = r["n_shot_runs"] if job["kind"] == "assets" else r["n_render_runs"]
@@ -1065,8 +1086,13 @@ def job_estimate(cfg: dict, job: dict) -> dict | None:
 
 def character_of(dataset: str) -> str:
     """`marisol_v2` -> `marisol`. Shown in the UI before anything is queued, so a
-    dataset whose name does not follow the convention is visible rather than silent."""
-    return _VERSION_TAIL.sub("", dataset)
+    dataset whose name does not follow the convention is visible rather than silent.
+
+    A shoot job's label is `zara:boudoir+pool` - the character and what was
+    ticked - because one job can carry several shoots. Everything before the
+    colon is the character; without this the queue row read "Zara:Boudoir+Pool".
+    """
+    return _VERSION_TAIL.sub("", dataset.split(":", 1)[0])
 
 
 def _runner_last_line(outputs_root: Path) -> str | None:
@@ -1466,6 +1492,22 @@ def training_command(cfg: dict, dataset: str) -> list[str]:
             "-Ds", dataset, "-Char", character_of(dataset)]
 
 
+def shoot_command(cfg: dict, character: str, shoot_ids: list[str]) -> list[str]:
+    """ONE command for however many shoots were ticked.
+
+    Jeremy, 2026-10-04: "if I check a bunch of boxes and then initiate it, I
+    would prefer that on the GPU that is just tracked as one job, not like 10
+    different jobs." So the ids are a comma list to a single script, and the
+    queue sees one entry. The script still writes a judge set per shoot as it
+    finishes, so one job is not one all-or-nothing result.
+    """
+    from ..config import ENGINE_ROOT  # noqa: PLC0415
+
+    py = ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"
+    script = ENGINE_ROOT / "scripts" / "eval" / "run_shoots.py"
+    return [str(py), str(script), character, ",".join(shoot_ids)]
+
+
 def prep_command(cfg: dict, character: str, *, cap: int = 100,
                  no_base: bool = False) -> list[str]:
     """The one place a prep invocation is written - gather, gaze, caption, preview.
@@ -1640,6 +1682,48 @@ def queue_router(cfg: dict, status=None):
                                      no_base=bool(body.get("no_base"))),
                     cwd=str(ENGINE_ROOT),
                     note="queued from the GPU page")
+        q.save(path(), doc)
+        return {"queued": job["id"], **queue_state(cfg)}
+
+    @router.get("/queue/shoots")
+    def shoots_catalog() -> dict:
+        """Everything the shoots tab needs: who can be shot, and what of."""
+        from ..assets.lora import approved_characters  # noqa: PLC0415
+        from ..assets.shoots import buckets  # noqa: PLC0415
+
+        r = _rate(cfg)
+        return {"characters": approved_characters(cfg),
+                "buckets": buckets(),
+                "s_per_shot": r["s_per_render"]}
+
+    @router.post("/queue/shoot")
+    def add_shoot(body: dict = Body(default={})) -> dict:
+        """Queue N shoots for one character as ONE job."""
+        from ..assets.lora import resolve_lora  # noqa: PLC0415
+        from ..assets.shoots import resolve  # noqa: PLC0415
+
+        char = str(body.get("character", "")).strip().lower()
+        ids = [str(x).strip() for x in (body.get("shoots") or []) if str(x).strip()]
+        if not char or "/" in char or "\\" in char or ".." in char:
+            raise HTTPException(400, "a character is required")
+        if not ids:
+            raise HTTPException(400, "tick at least one shoot")
+        try:
+            resolve(ids)
+        except KeyError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        if not resolve_lora(cfg, char):
+            raise HTTPException(409, f"no approved LoRA for {char} - choose an epoch first")
+
+        doc = q.load(path())
+        label = f"{char}:{'+'.join(sorted(ids))}"
+        dup = q.duplicate_of(doc, "shoot", label)
+        if dup:
+            raise HTTPException(409, f"exactly these shoots are already {dup['status']}")
+        job = q.add(doc, kind="shoot", label=label,
+                    cmd=shoot_command(cfg, char, sorted(ids)),
+                    cwd=str(ENGINE_ROOT),
+                    note=f"{len(ids)} shoots queued from the shoots page")
         q.save(path(), doc)
         return {"queued": job["id"], **queue_state(cfg)}
 

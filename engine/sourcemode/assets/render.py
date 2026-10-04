@@ -139,7 +139,15 @@ def pose_fields(character: str, slot: dict) -> dict:
 def shot_prompt(character: str, slot: dict, trigger: str | None = None,
                 backdrop: str | None = None) -> str:
     """The trigger is the bare character name unless the plan overrides it; the rest
-    follows the Codex prompt order: crop, body, head, expression, hair, outfit, finish."""
+    follows the Codex prompt order: crop, body, head, expression, hair, outfit, finish.
+
+    A slot may override two fields, which is what lets a named SHOOT share this
+    builder instead of growing a second one: `stance` (a boudoir shot is not a
+    standing weight shift) and `framing` (nor is it an upper-thigh crop). Both
+    default to the wardrobe-pack values, so a pack slot is unchanged. Everything
+    that carries identity - her age, appearance clause, frame, the expression
+    table, the gaze rule - is shared and cannot drift between the two uses.
+    """
     if slot["pose"] == "sitting":
         look = f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. Natural realistic human proportions, correct anatomy."
         return f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, {slot['hair']}. {look}"
@@ -147,12 +155,12 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     app = appearance_clause(character)
     return (f"{trigger or character}. New photorealistic standing portrait of {app + ', ' if app else ''}"
             f"her body shape and proportions exactly as described. "
-            f"Crop: {FRAMING_UPPER_THIGH}. Vertical 2:3, consistent headroom and scale; hair and lateral silhouette inside canvas. "
+            f"Crop: {slot.get('framing') or FRAMING_UPPER_THIGH}. Vertical 2:3, consistent headroom and scale; hair and lateral silhouette inside canvas. "
             f"Body: {pf['body']}. Directions mean image-left/image-right as seen by the viewer. "
             f"Head: {pf['head']}. Body direction and head direction are separate requirements. "
             f"Gaze: she is ALWAYS looking directly into the camera lens. "
             f"Expression: {pf['expression']}. "
-            f"Pose: {STANCE}. "
+            f"Pose: {slot.get('stance') or STANCE}. "
             f"Hair: {slot['hair']}. "
             f"Outfit: {slot['outfit']}{fitted_clause(character)}. "
             f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. "

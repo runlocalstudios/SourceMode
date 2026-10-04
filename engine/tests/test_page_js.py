@@ -29,6 +29,7 @@ PAGES = [
     # Never in this list until 2026-10-04, and it is the LONGEST page script in
     # the repo. Added before the page was touched, so the baseline is known good.
     ("dataset", "sourcemode.train.preview", "PAGE"),
+    ("shoots", "sourcemode.monitor.shoots_page", "PAGE"),
 ]
 
 # A bare JS constant has no <script> tag, so it cannot be a PAGES row: _scripts()

@@ -89,11 +89,14 @@ BODY = """
     Judging<span class=n id=n_judge></span></button>
   <button id=t_dataset role=tab aria-selected=false data-tab=dataset>
     Training sets<span class=n id=n_dataset></span></button>
+  <button id=t_shoots role=tab aria-selected=false data-tab=shoots>
+    Shoots<span class=n id=n_shoots></span></button>
 </div>
 
 <iframe id=p_gpu class="pane on" src="/queue" title="GPU"></iframe>
 <iframe id=p_judge class=pane title="Judging"></iframe>
 <iframe id=p_dataset class=pane title="Training sets"></iframe>
+<iframe id=p_shoots class=pane title="Shoots"></iframe>
 
 <div id=nowwrap>
   <button id=nowbar aria-label="what the card is doing">
@@ -107,7 +110,7 @@ BODY = """
 
 OWN_JS = r"""
 const $=id=>document.getElementById(id);
-const SRC={gpu:'/queue',judge:'/judge',dataset:'/dataset'};
+const SRC={gpu:'/queue',judge:'/judge',dataset:'/dataset',shoots:'/shoots'};
 /* The phone's browser chrome carries the worst state in the house. The colours
    come from the stylesheet, so the hub holds no hex literal of its own. */
 const TINT={stop:'stop-bg',you:'you-bg',live:'live-bg',unknown:'unk-bg',idle:'g0'};
@@ -168,6 +171,7 @@ async function now(){
   badge($('n_gpu'),d.counts.gpu,d.severity==='stop'?'stop':'you');
   badge($('n_judge'),d.counts.judge,'you');
   badge($('n_dataset'),d.counts.datasets,'you');
+  badge($('n_shoots'),0,'you');   /* nothing waits on him here */
   tint(d.severity);
   const nTotal=d.counts.gpu+d.counts.judge+d.counts.datasets;
   document.title=(d.severity==='stop'?'(!) ':(d.severity==='you'?'('+nTotal+') ':''))

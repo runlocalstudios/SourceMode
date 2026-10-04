@@ -23,7 +23,8 @@ import pytest
 # the suite is green at every step and what is left is visible rather than
 # implied. ALL_PAGES is the finish line.
 MIGRATED = ALL_PAGES = ("sourcemode.monitor.hub", "sourcemode.monitor.queue_page",
-                        "sourcemode.assets.judge", "sourcemode.train.preview")
+                        "sourcemode.assets.judge", "sourcemode.train.preview",
+                        "sourcemode.monitor.shoots_page")
 PAGE_MODULES = MIGRATED
 
 STYLE = re.compile(r"<style>(.*?)</style>", re.S)
