@@ -26,10 +26,12 @@ def test_game_assets_group_is_first_and_holds_exactly_the_two_packs():
     assert [s["id"] for s in bs[0]["shoots"]] == ["pack28", "selfies"]
 
 
-def test_the_wardrobe_pack_is_112_shots_and_the_selfie_pack_24():
-    assert BY_ID["pack28"].shots == 28 * 4
+def test_the_wardrobe_pack_is_one_shot_per_look_not_four():
+    # It used to render 4 candidates for every look and keep one: 112 shots to
+    # ship 28, every time. Judge one and re-roll the rejects instead.
+    assert BY_ID["pack28"].shots == 28
     assert BY_ID["selfies"].shots == 24 == selfies.TOTAL
-    assert total_shots(["pack28", "selfies"]) == 136
+    assert total_shots(["pack28", "selfies"]) == 52
 
 
 def test_selfie_pack_is_the_agreed_mix():
@@ -78,7 +80,7 @@ def test_a_mixed_job_is_priced_at_two_rates_not_one():
     # 112 pack shots at the asset rate + 24 selfies at the sweep rate. Charging
     # the whole thing at the sweep rate understated it by over an hour.
     secs = estimate_seconds(["pack28", "selfies"], 75.0, 116.0)
-    assert secs == pytest.approx(112 * 116.0 + 24 * 75.0)
+    assert secs == pytest.approx(28 * 116.0 + 24 * 75.0)
     assert estimate_seconds(["boudoir"], 75.0, 116.0) == pytest.approx(12 * 75.0)
 
 

@@ -175,6 +175,35 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
             + (slot.get("avoid") or "No profiles, rear views, seated poses, or off-camera gaze."))
 
 
+def t2i_workflow(cfg: dict, prompt: str, seed: int, prefix: str, *, lora_path: str,
+                 negative: str, width: int = W, height: int = H,
+                 render_pass: str = "medium") -> dict:
+    """The plain Qwen-Image text-to-image graph a shoot renders through.
+
+    Here rather than in a script because TWO things render shoots now - the
+    first pass and the re-roll of whatever was rejected - and a second copy of
+    the graph settings is exactly how one path quietly gets a different shift,
+    a different step count or a different LoRA strength from the other.
+    """
+    from ..render.workflow import (  # noqa: PLC0415
+        load_template, prune_placeholder_loras, substitute)
+    from ..config import workflows_dir  # noqa: PLC0415
+
+    preset = cfg["render"][render_pass]
+    return prune_placeholder_loras(substitute(
+        load_template(workflows_dir(cfg), "qwen_image_t2i"), {
+            "MODEL": cfg["models"]["qwen_image"],
+            "TEXT_ENCODER": cfg["models"]["qwen_text_encoder"],
+            "VAE": cfg["models"]["qwen_vae"],
+            "POSITIVE": prompt, "NEGATIVE": negative,
+            "LORA_PATH": lora_path, "LORA_STRENGTH": 1.0,
+            "LIGHTNING": "", "LIGHTNING_STRENGTH": 0.0,
+            "SHIFT": float(cfg["render"]["qwen_shift"]), "SEED": int(seed),
+            "STEPS": int(preset["qwen_t2i_steps"]), "CFG": float(preset["qwen_t2i_cfg"]),
+            "WIDTH": width, "HEIGHT": height, "FILENAME_PREFIX": prefix,
+        }))
+
+
 def render_plan(cfg: dict, client, plan: dict, out: Path, *, shots: int = 4, seed: int = 7100,
                 lora_strength: float = 0.85, render_pass: str = "medium", log=print,
                 only: set[str] | None = None) -> list[dict]:

@@ -13,12 +13,12 @@ Two things can be ticked, and they run down different pipelines:
   kind="shoot"  rendered here - shot_prompt into the Qwen t2i graph, her
                 approved LoRA, the setting kept as the backdrop. One judge set
                 per shoot, written the moment that shoot finishes.
-  kind="pack"   the shipped wardrobe pack. It has its own pipeline - a cropped
-                magenta plate, the native single-pass graph, adherence
-                measurement, then cutout and place - so this DELEGATES to
-                assets.render.render_plan rather than reimplementing it. Its
-                review happens on the /review page, not the judge board, so no
-                judge set is written for it.
+  kind="pack"   the shipped wardrobe pack. It has its own render pipeline - a
+                cropped magenta plate, the native single-pass graph, adherence
+                measurement - so this DELEGATES to assets.render.render_plan
+                rather than reimplementing it. ONE candidate per look, judged
+                on the judge board like everything else; the /review page still
+                owns the separate question of whether the CUTOUT is clean.
 
 A shoot that dies does not take the others with it: each writes its output as
 it finishes, so one job is one queue entry, not one all-or-nothing result.
@@ -38,14 +38,13 @@ from sourcemode.assets.appearance import check as appearance_check  # noqa: E402
 from sourcemode.assets.appearance import negative as appearance_negative  # noqa: E402
 from sourcemode.assets.judge import make_set  # noqa: E402
 from sourcemode.assets.lora import resolve_lora  # noqa: E402
-from sourcemode.assets.render import shot_prompt  # noqa: E402
+from sourcemode.assets.redo import judge_item  # noqa: E402
+from sourcemode.assets.render import shot_prompt, t2i_workflow  # noqa: E402
 from sourcemode.assets.shoots import plan_path, resolve, total_shots  # noqa: E402
-from sourcemode.config import load_config, outputs_dir, workflows_dir  # noqa: E402
+from sourcemode.config import load_config, outputs_dir  # noqa: E402
 from sourcemode.gates.identity import cosine, embed_image  # noqa: E402
 from sourcemode.pose.native import NEGATIVE  # noqa: E402
 from sourcemode.render.client import ComfyUIClient  # noqa: E402
-from sourcemode.render.workflow import (  # noqa: E402
-    load_template, prune_placeholder_loras, substitute)
 
 _BARE = {"--allow-incomplete-appearance"}
 POS = [a for a in sys.argv if a not in _BARE]
@@ -108,23 +107,12 @@ for pat in (f"{CHAR}_face.*", f"{CHAR}_portrait*.*"):
         break
 
 client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
-medium = cfg["render"]["medium"]
 NEG = NEGATIVE + (", " + appearance_negative(CHAR) if appearance_negative(CHAR) else "")
 
 
 def t2i(prompt: str, seed: int, prefix: str) -> dict:
-    return prune_placeholder_loras(substitute(
-        load_template(workflows_dir(cfg), "qwen_image_t2i"), {
-            "MODEL": cfg["models"]["qwen_image"],
-            "TEXT_ENCODER": cfg["models"]["qwen_text_encoder"],
-            "VAE": cfg["models"]["qwen_vae"],
-            "POSITIVE": prompt, "NEGATIVE": NEG,
-            "LORA_PATH": LORA["path"], "LORA_STRENGTH": 1.0,
-            "LIGHTNING": "", "LIGHTNING_STRENGTH": 0.0,
-            "SHIFT": float(cfg["render"]["qwen_shift"]), "SEED": seed,
-            "STEPS": int(medium["qwen_t2i_steps"]), "CFG": float(medium["qwen_t2i_cfg"]),
-            "WIDTH": W, "HEIGHT": H, "FILENAME_PREFIX": prefix,
-        }))
+    return t2i_workflow(cfg, prompt, seed, prefix, lora_path=LORA["path"],
+                        negative=NEG, width=W, height=H)
 
 
 def run_pack(sh) -> int:
@@ -133,6 +121,7 @@ def run_pack(sh) -> int:
     adherence measurement all live in render_plan and stay there."""
     import json  # noqa: PLC0415
 
+    from sourcemode.assets.catalog import look_id, plan_slots  # noqa: PLC0415
     from sourcemode.assets.render import render_plan  # noqa: PLC0415
 
     pp = plan_path(sh, CHAR, OUT_ROOT)
@@ -143,9 +132,27 @@ def run_pack(sh) -> int:
         # a plate and a LoRA that disagree. Say so and use the plan.
         log(f"  {sh.id}: NOTE plan uses {plan['lora']}, approved is {LORA['path']} "
             f"- rendering the plan as written")
-    res = render_plan(cfg, client, plan, OUT_ROOT / "game-assets", shots=4, log=log)
-    log(f"  {sh.id}: {len(res)} shots -> outputs/game-assets/{CHAR}/renders "
-        f"(review on the /review page, then cutout and place)")
+    # ONE candidate per look, not four. Jeremy, 2026-10-04: judge them, re-roll
+    # the rejects. Rendering four and keeping one cost 112 shots to ship 28
+    # whether or not the first draw was fine.
+    res = render_plan(cfg, client, plan, OUT_ROOT / "game-assets", shots=1, log=log)
+    by_id = {s["id"]: s for s in plan_slots(plan)}
+    items = []
+    for meta in res:
+        a = meta.get("asset") or {}
+        if not a.get("category") or a.get("look") is None:
+            continue
+        slot = by_id.get(look_id(a["category"], int(a["look"])))
+        if slot:
+            items.append(judge_item(slot, Path(meta["source"]), kind="pack",
+                                    character=CHAR, source=pp.name,
+                                    seed=meta.get("seed", 0), score=meta.get("score"),
+                                    arm=slot["category"]))
+    if items:
+        make_set(OUT_ROOT / "judge", f"pack_{CHAR}", f"{CHAR.title()} - wardrobe pack",
+                 items, question="Ship this one? K = yes, X = re-roll it.", priority=5)
+    log(f"  {sh.id}: {len(res)} shots -> judge set pack_{CHAR}; keepers go to "
+        f"cutout and place")
     return len(res)
 
 
@@ -167,10 +174,11 @@ def run_shoot(sh) -> int:
                 client.fetch(files[0], dest)
                 (d / f"{slot['id']}.txt").write_text(prompt, encoding="utf-8")
             e = embed_image(dest)
-            items.append({"id": slot["id"], "path": dest,
-                          "arm": slot.get("tone") or sh.id, "group": str(k),
-                          "score": round(float(cosine(ref, e)), 4)
-                          if (ref is not None and e is not None) else None})
+            items.append(judge_item(
+                slot, dest, kind="shoot", character=CHAR, source=sh.id,
+                seed=SEED + k, arm=slot.get("tone") or sh.id,
+                score=round(float(cosine(ref, e)), 4)
+                if (ref is not None and e is not None) else None))
             n += 1
         except Exception as exc:  # noqa: BLE001 - one bad shot never kills the run
             log(f"  {sh.id} {slot['id']}: ERROR {exc}")
@@ -179,7 +187,7 @@ def run_shoot(sh) -> int:
         # shoots 1-3 judgeable rather than losing everything.
         make_set(OUT_ROOT / "judge", f"shoot_{CHAR}_{sh.id}",
                  f"{CHAR.title()} - {sh.label}", items,
-                 question="Is this her? K = yes, X = no.", priority=5)
+                 question="Keep this one? K = yes, X = re-roll it.", priority=5)
         log(f"  {sh.id}: {len(items)} shots -> judge set shoot_{CHAR}_{sh.id}")
     else:
         log(f"  {sh.id}: nothing rendered, no judge set written")

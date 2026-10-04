@@ -951,10 +951,27 @@ async function loadList(){
      forever: open() took FastAPI's 404 body as the payload and threw on
      `set.images`. The judge page fixed exactly this and recorded it; this page
      never got the fix. */
-  if(hashed&&!known) return gone(hashed,(sets[0]||{}).id);
-  const want=known?hashed:(sets[0]||{}).id;
-  if(!want) return fail('No training sets','Build a preview first.');
+  if(hashed&&!known) return gone(hashed,(sets.find(s=>s.group==='needs')||{}).id);
+  if(!sets.length) return fail('No training sets','Build a preview first.');
+  /* Jeremy, 2026-10-04: "if there's nothing to approve, I don't want it bringing
+     up a set from the past. Right now there's nothing to approve, but it brings
+     up the Amanda set every time." It opened sets[0] unconditionally, and with
+     every set approved sets[0] is just whoever sorts first. Landing on a page
+     that looks like work when there is none is worse than landing on nothing. */
+  const want=known?hashed:(sets.find(s=>s.group==='needs')||{}).id;
+  if(!want) return allClear();
   await open(want);
+}
+function allClear(){
+  const done=sets.length;
+  SM.set($('list'),null,'<div class=empty><b>Nothing waiting on you</b>'
+    +'All '+done+' training set'+(done===1?' is':'s are')+' approved. A new one'
+    +' lands here when a character chain finishes.'
+    +'<div class=btn-row><button class="btn" data-act=pick>Open a past set</button>'
+    +'<button class="btn btn-ghost" data-act=gpu>What the card is doing</button>'
+    +'</div></div>');
+  $('setname').textContent='Training sets';
+  $('setsub').textContent=done+' approved';
 }
 function openPicker(){
   SM.sheet({title:'Training set',current:set&&set.id,

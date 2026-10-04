@@ -49,6 +49,7 @@ KIND_LABEL = {
     "eval": "epoch sweep",
     "assets": "asset render",
     "shoot": "photo shoots",
+    "redo": "re-roll rejects",
     "other": "job",
 }
 
@@ -968,6 +969,17 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
             looks = len([x for x in only.split(",") if x.strip()])
         return looks * shots, f"{looks} looks x {shots} shots"
 
+    if "redo.py" in joined:
+        from ..assets.judge import judge_root  # noqa: PLC0415
+        from ..assets.redo import rejected  # noqa: PLC0415
+        from ..config import load_config  # noqa: PLC0415
+
+        try:
+            n = len(rejected(judge_root(load_config()), cmd[-1]))
+        except (OSError, ValueError, KeyError):
+            return None
+        return (n, f"{n} reject{'s' if n != 1 else ''}") if n else None
+
     if "run_shoots.py" in joined:
         from ..assets.shoots import resolve as _resolve  # noqa: PLC0415
         from ..assets.shoots import total_shots  # noqa: PLC0415
@@ -1537,6 +1549,46 @@ def shoot_command(cfg: dict, character: str, shoot_ids: list[str]) -> list[str]:
     return [str(py), str(script), character, ",".join(shoot_ids)]
 
 
+def redo_command(cfg: dict, set_id: str) -> list[str]:
+    """Re-render whatever a finished judge set rejected. One job, every reject."""
+    from ..config import ENGINE_ROOT  # noqa: PLC0415
+
+    py = ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"
+    return [str(py), str(ENGINE_ROOT / "scripts" / "eval" / "redo.py"), set_id]
+
+
+def queue_redo_if_complete(cfg: dict, set_id: str) -> dict | None:
+    """Called after every verdict. Queues ONE re-roll the moment the last item
+    in a set is judged, and only then.
+
+    Jeremy, 2026-10-04: "I want you to queue and wait until the whole set has
+    been judged until you determine which shots need to be regenerated."
+
+    Deliberately silent about everything it declines to do - a half-judged set,
+    a set with no rejects, an epoch sweep whose items carry no redo block, or a
+    re-roll already sitting in the queue. The queue is the thing he watches; it
+    must not fill up with jobs he did not ask for.
+    """
+    from ..assets.judge import judge_root  # noqa: PLC0415
+    from ..assets.redo import redoable  # noqa: PLC0415
+    from ..config import ENGINE_ROOT, outputs_dir  # noqa: PLC0415
+    from ..gpu import queue as q  # noqa: PLC0415
+
+    info = redoable(judge_root(cfg), set_id)
+    if not info["n"]:
+        return None
+    qp = q.queue_path(outputs_dir(cfg))
+    doc = q.load(qp)
+    if q.duplicate_of(doc, "redo", set_id):
+        return None
+    job = q.add(doc, kind="redo", label=set_id, cmd=redo_command(cfg, set_id),
+                cwd=str(ENGINE_ROOT),
+                note=f"{info['n']} rejected shot{'s' if info['n'] != 1 else ''} "
+                     f"re-rolled with new seeds")
+    q.save(qp, doc)
+    return job
+
+
 def prep_command(cfg: dict, character: str, *, cap: int = 100,
                  no_base: bool = False) -> list[str]:
     """The one place a prep invocation is written - gather, gaze, caption, preview.
@@ -1765,6 +1817,26 @@ def queue_router(cfg: dict, status=None):
                     cwd=str(ENGINE_ROOT),
                     note=f"{len(ids)} shoots queued from the shoots page")
         q.save(path(), doc)
+        return {"queued": job["id"], **queue_state(cfg)}
+
+    @router.post("/queue/redo")
+    def add_redo(body: dict = Body(default={})) -> dict:
+        """Queue the re-roll for a finished judge set by hand."""
+        from ..assets.judge import judge_root  # noqa: PLC0415
+        from ..assets.redo import redoable  # noqa: PLC0415
+
+        set_id = str(body.get("set", "")).strip()
+        if not set_id or "/" in set_id or "\\" in set_id or ".." in set_id:
+            raise HTTPException(400, "a judge set is required")
+        info = redoable(judge_root(cfg), set_id)
+        if not info["complete"]:
+            raise HTTPException(409, "judge the whole set first - the re-roll "
+                                     "covers every reject in one job")
+        if not info["n"]:
+            raise HTTPException(409, "nothing in this set was rejected")
+        job = queue_redo_if_complete(cfg, set_id)
+        if job is None:
+            raise HTTPException(409, "a re-roll for this set is already queued")
         return {"queued": job["id"], **queue_state(cfg)}
 
     @router.post("/queue/order")

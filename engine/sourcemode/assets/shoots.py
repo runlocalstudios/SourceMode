@@ -206,10 +206,11 @@ def _selfie_pack() -> Shoot:
 GAME: tuple[Shoot, ...] = (
     Shoot("pack28", "In-game asset pack (28 looks)", "game",
           "the shipped wardrobe pack: magenta plate, cut out and placed",
-          (), (), shots=28 * 4, kind="pack", rate="shot",
+          (), (), shots=28, kind="pack", rate="shot",
           plan_file="game-assets/{character}/plan_28.json",
-          note="28 looks x 4 candidates. Needs a wardrobe plan on disk first - "
-               "the outfits are a decision, not a default."),
+          note="One shot per look, judged like everything else - reject any and "
+               "they are re-rolled in one job. Needs a wardrobe plan on disk "
+               "first: the outfits are a decision, not a default."),
     _selfie_pack(),
 )
 

@@ -649,11 +649,25 @@ async function verdict(v){
   try{
     cur.verdicts=await SM.postJSON(
       '/judge/set/'+encodeURIComponent(cur.id)+'/verdict',{item:it.id,verdict:v});
+    checkRedo();
   }catch(e){
     /* Never let a lost write look like a recorded one. */
     delete cur.verdicts[it.id]; idx=last.at; last=null; show();
     SM.toast('That verdict did not save - '+e.message);
   }
+}
+
+/* The re-roll is queued server-side on the last verdict, not per keystroke -
+   Jeremy, 2026-10-04: "wait until the whole set has been judged until you
+   determine which shots need to be regenerated." This only SAYS so. */
+async function checkRedo(){
+  if(!cur||Object.keys(cur.verdicts).length<cur.items.length) return;
+  let d; try{ d=await SM.getJSON('/judge/set/'+encodeURIComponent(cur.id)+'/redo'); }
+  catch(e){ return; }
+  if(!d.queued||!d.n) return;
+  SM.toast(d.n+' reject'+(d.n===1?'':'s')+' queued to re-roll',
+    {label:'Open the queue',run:()=>SM.nav('gpu')});
+  SM.recount();
 }
 
 async function undo(){
@@ -1025,6 +1039,25 @@ def judge_router(cfg: dict):
             raise HTTPException(404, f"{set_id} is not an epoch sweep")
         return b
 
+    @r.get("/judge/set/{set_id}/redo")
+    def _redo(set_id: str) -> dict:
+        """What a re-roll of this set would cover, and whether it is queued.
+
+        The queueing itself happens on the last verdict, server-side, so it
+        still happens if the tab is closed before this is ever called.
+        """
+        from ..assets.redo import redoable  # noqa: PLC0415
+        from ..gpu import queue as q  # noqa: PLC0415
+        from ..config import outputs_dir  # noqa: PLC0415
+
+        info = redoable(root, set_id)
+        try:
+            doc = q.load(q.queue_path(outputs_dir(cfg)))
+            dup = q.duplicate_of(doc, "redo", set_id)
+        except OSError:
+            dup = None
+        return {**info, "queued": dup["id"] if dup else None}
+
     @r.get("/judge/set/{set_id}/history")
     def _history(set_id: str) -> dict:
         """Past tallies for this set id. Makes a re-render comparable."""
@@ -1033,10 +1066,26 @@ def judge_router(cfg: dict):
     @r.post("/judge/set/{set_id}/verdict")
     def _verdict(set_id: str, body: dict) -> dict:
         try:
-            return record_verdict(root, set_id, str(body.get("item")), body.get("verdict"))
+            out = record_verdict(root, set_id, str(body.get("item")), body.get("verdict"))
         except KeyError as e:
             raise HTTPException(404, str(e)) from e
         except ValueError as e:
             raise HTTPException(400, f"verdict must be one of {VERDICTS}") from e
+        # The last verdict in a set is what decides which shots get re-rolled.
+        # Queueing per keystroke would mean a job for reject #1 and another for
+        # reject #2; waiting for the set means one job that knows the whole
+        # answer. Never allowed to break judging - a queue that cannot be
+        # written is a queue problem, not a reason to lose a verdict.
+        # NOTE: record_verdict returns the verdicts dict keyed by ITEM ID, and
+        # the page assigns it straight to cur.verdicts. Nothing else may be put
+        # in it - an extra key here would count as a judged item and throw the
+        # completion test off by one. The page asks /redo separately.
+        try:
+            from ..monitor.queue_page import queue_redo_if_complete  # noqa: PLC0415
+
+            queue_redo_if_complete(cfg, set_id)
+        except Exception:  # noqa: BLE001
+            pass
+        return out
 
     return r
