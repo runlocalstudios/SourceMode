@@ -25,6 +25,7 @@ voice_app = typer.Typer(no_args_is_help=True, help="Voice synthesis (Chatterbox)
 pose_app = typer.Typer(no_args_is_help=True, help="Pose transfer: same character and outfit, new pose.")
 monitor_app = typer.Typer(no_args_is_help=True, help="Live readout of the GPU box for the control panel.")
 assets_app = typer.Typer(no_args_is_help=True, help="In-game asset production: background removal, review sheets.")
+gpu_app = typer.Typer(no_args_is_help=True, help="Serialised GPU work: one ordered queue, one runner, one job at a time.")
 app.add_typer(source_app, name="source")
 app.add_typer(gates_app, name="gates")
 app.add_typer(prompts_app, name="prompts")
@@ -35,6 +36,7 @@ app.add_typer(voice_app, name="voice")
 app.add_typer(pose_app, name="pose")
 app.add_typer(monitor_app, name="monitor")
 app.add_typer(assets_app, name="assets")
+app.add_typer(gpu_app, name="gpu")
 
 
 @assets_app.command("plan")
@@ -1007,3 +1009,166 @@ def pose_transfer_cmd(
 
 if __name__ == "__main__":
     app()
+
+
+# --- gpu queue -------------------------------------------------------------
+#
+# Why a queue at all: before this, run order lived in whichever one-off
+# PowerShell script a session wrote, each with its own wait loop - nineteen
+# copies of the same loop in engine/scripts/eval, all of which proceed anyway
+# after four hours. Nothing starts GPU work now except by being in this list.
+
+
+def _gpu_paths():
+    cfg = load_config()
+    from .gpu import queue as q  # noqa: PLC0415
+
+    out = outputs_dir(cfg)
+    return out, q.queue_path(out)
+
+
+@gpu_app.command("add")
+def gpu_add(
+    kind: str = typer.Argument(..., help="train | eval | assets | other - a label for the readout."),
+    label: str = typer.Argument(..., help="What it operates on, e.g. zara_v2."),
+    cmd: list[str] = typer.Argument(..., help="The command, after a literal -- separator."),
+    cwd: str = typer.Option(None, "--cwd", help="Default: the engine directory."),
+    requires_approval: str = typer.Option(None, "--requires-approval",
+                                          help="Dataset id whose approval is re-checked at start time."),
+    note: str = typer.Option("", "--note"),
+    allow_duplicate: bool = typer.Option(False, "--allow-duplicate",
+                                         help="Queue this even though the same kind+label is already queued."),
+):
+    """Append a job to the END of the queue. Appending is how work is requested."""
+    from .config import ENGINE_ROOT  # noqa: PLC0415
+    from .gpu import queue as q  # noqa: PLC0415
+
+    out, path = _gpu_paths()
+    doc = q.load(path)
+    dup = q.duplicate_of(doc, kind, label)
+    if dup and not allow_duplicate:
+        rprint(f"[red]{dup['id']} is already {dup['status']} for {kind}:{label}[/red]"
+               " - pass --allow-duplicate if you really mean to run it twice")
+        raise typer.Exit(1)
+    job = q.add(doc, kind=kind, label=label, cmd=list(cmd), cwd=cwd or str(ENGINE_ROOT),
+                requires_approval=requires_approval, note=note)
+    q.save(path, doc)
+    rprint(f"[green]queued[/green] {job['id']} {kind}:{label} at position {len(doc['jobs'])}")
+
+
+@gpu_app.command("list")
+def gpu_list(all_jobs: bool = typer.Option(False, "--all", help="Include finished and cancelled jobs.")):
+    """What is running, what is next, in order."""
+    from .gpu import queue as q  # noqa: PLC0415
+    from .gpu.busy import gpu_busy  # noqa: PLC0415
+    from .gpu.lease import holder, lease_path  # noqa: PLC0415
+
+    out, path = _gpu_paths()
+    doc = q.load(path)
+    lease = holder(lease_path(out))
+    rprint(f"runner: [green]up[/green] (PID {lease['pid']})" if lease else "runner: [red]NOT RUNNING[/red]")
+    if doc["paused"]:
+        rprint(f"[red]queue PAUSED[/red]: {doc['pause_reason']}")
+    held = gpu_busy()
+    if held:
+        rprint("card busy: " + ", ".join(f"PID {h['pid']} ({h['pattern']})" for h in held))
+    nxt = q.head(doc)
+    for i, j in enumerate(doc["jobs"]):
+        if not all_jobs and j["status"] in ("done", "cancelled"):
+            continue
+        marks = []
+        if j["hold"]:
+            marks.append("HELD")
+        if nxt and j["id"] == nxt["id"]:
+            marks.append("NEXT")
+        colour = {"running": "cyan", "failed": "red", "queued": "white"}.get(j["status"], "bright_black")
+        rprint(f" {i:>2}. [{colour}]{j['id']} {j['status']:<9}[/{colour}] {j['kind']}:{j['label']}"
+               f" {' '.join(marks)}" + (f" exit={j['exit_code']}" if j["exit_code"] not in (None, 0) else ""))
+    if not doc["jobs"]:
+        rprint(" (empty)")
+
+
+@gpu_app.command("move")
+def gpu_move(job_id: str, position: int = typer.Argument(..., help="0-based target position.")):
+    """Reorder. The file order is the run order, so this is how the order changes."""
+    from .gpu import queue as q  # noqa: PLC0415
+
+    out, path = _gpu_paths()
+    doc = q.load(path)
+    q.move(doc, job_id, position)
+    q.save(path, doc)
+    gpu_list(all_jobs=False)
+
+
+@gpu_app.command("hold")
+def gpu_hold(job_id: str, release_it: bool = typer.Option(False, "--release", help="Un-hold it.")):
+    """Hold a job in place but make it unrunnable - the only way the runner moves
+    past a job it is waiting on. Deliberate by design: never a timeout."""
+    from .gpu import queue as q  # noqa: PLC0415
+
+    out, path = _gpu_paths()
+    doc = q.load(path)
+    job = q.set_hold(doc, job_id, not release_it)
+    q.save(path, doc)
+    rprint(f"{job['id']} {job['label']}: " + ("released" if release_it else "HELD"))
+
+
+@gpu_app.command("cancel")
+def gpu_cancel(job_id: str):
+    """Cancel a queued job. A running job is not cancellable from here."""
+    from .gpu import queue as q  # noqa: PLC0415
+
+    out, path = _gpu_paths()
+    doc = q.load(path)
+    try:
+        job = q.cancel(doc, job_id)
+    except ValueError as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    q.save(path, doc)
+    rprint(f"cancelled {job['id']} {job['label']}")
+
+
+@gpu_app.command("resume")
+def gpu_resume():
+    """Clear a pause (a fast failure pauses the queue so it is not burned through)."""
+    from .gpu import queue as q  # noqa: PLC0415
+
+    out, path = _gpu_paths()
+    doc = q.load(path)
+    was = doc["pause_reason"]
+    q.resume(doc)
+    q.save(path, doc)
+    rprint(f"resumed (was paused: {was or 'not paused'})")
+
+
+@gpu_app.command("run")
+def gpu_run(
+    once: bool = typer.Option(False, "--once", help="Take at most one job, then exit."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Report what it would start; never exec."),
+    poll: float = typer.Option(60.0, "--poll", help="Seconds between checks while waiting."),
+):
+    """The single runner. One logon task runs this; a second instance refuses to start."""
+    from .gpu.runner import Runner  # noqa: PLC0415
+
+    out, _ = _gpu_paths()
+    log_path = out / "logs" / "gpu-runner.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def log(msg: str) -> None:
+        line = f"{q_now()}  {msg}"
+        rprint(line)
+        with log_path.open("a", encoding="utf-8") as fh:
+            fh.write(line + chr(10))
+
+    try:
+        Runner(out, log=log, poll=poll).serve(once=once, dry_run=dry_run)
+    except RuntimeError as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+
+
+def q_now() -> str:
+    from .gpu.queue import now  # noqa: PLC0415
+
+    return now()

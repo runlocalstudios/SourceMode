@@ -1,4 +1,4 @@
-# Register the three SourceMode services to start at logon and survive reboots
+# Register the SourceMode services to start at logon and survive reboots
 # (a Windows Update reboot silently killed a 5-hour run on 2026-09-09).
 # Run once from an elevated or normal PowerShell:  .\register-autostart.ps1
 # Undo with unregister-autostart.ps1. Tasks appear in Task Scheduler under the
@@ -9,7 +9,11 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $tasks = @(
   @{ Name = "SourceMode ComfyUI"; Script = "start-comfyui.ps1" },
   @{ Name = "SourceMode Monitor"; Script = "start-monitor.ps1" },
-  @{ Name = "SourceMode Web";     Script = "start-web.ps1" }
+  @{ Name = "SourceMode Web";     Script = "start-web.ps1" },
+  # The GPU runner: the only thing that starts training, evals or asset renders,
+  # one at a time, in the queue's order. Registered here so it comes back after a
+  # reboot - a Windows Update restart silently killed a 5-hour run once already.
+  @{ Name = "SourceMode GPU Runner"; Script = "start-gpu-runner.ps1" }
 )
 
 $settings = New-ScheduledTaskSettingsSet `
