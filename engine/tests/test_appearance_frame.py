@@ -48,12 +48,18 @@ def test_no_body_shape_is_hardcoded_in_the_prompt_builder():
 
 
 def test_a_character_with_no_record_is_told_nothing():
-    """marisol and geena have no appearance record. Before this, both were told
-    they had a tiny frame."""
-    for who in ("marisol", "geena"):
+    """Before this, EVERY character was told she had a tiny frame.
+
+    Named characters are deliberately not hard-coded here: this test used to
+    cite marisol and geena, and broke the day they were documented - which is
+    the right outcome for them and the wrong reason for a test to fail. The
+    rule is about the absence of a record, so the subject is a name that has
+    none and never will.
+    """
+    for who in ("nobody_who_does_not_exist", "", "a_name_with_no_record"):
         assert frame(who) == ""
         assert fitted_clause(who) == ""
-        assert "fitted to her" not in shot_prompt(who, SLOT, who)
+        assert "fitted to her" not in shot_prompt(who or "x", SLOT, who or "x")
 
 
 @pytest.mark.parametrize(("who", "want"), [("amanda", "tiny"), ("zara", "tiny"),
