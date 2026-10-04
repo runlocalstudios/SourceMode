@@ -19,6 +19,26 @@
   "age": 18,
   "frame": "tiny frame"
  },
+ "bri": {
+  "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 18, college freshman, Twitch streamer, loud and warm. Her wardrobe should read student, not club. Age comes from the game.",
+  "ethnicity": "Latina",
+  "build": "petite, slim",
+  "bust": "full for her frame",
+  "figure": "slim with a small waist",
+  "features": "very long straight dark brown hair with lighter caramel ends, brown eyes, warm tan skin",
+  "frame": "tiny frame",
+  "prompt": "a petite, slim Latina young woman with a small waist and a full bust for her frame, warm tan skin, very long straight dark brown hair with lighter caramel ends, brown eyes"
+ },
+ "cat": {
+  "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 38, owns Obsidian and the Aire spa, independently wealthy, not easily impressed. She is NOT a dancer, so her `work` wardrobe should read as an owner in her own venue, not stage wear. Age comes from the game.",
+  "ethnicity": "white, Mediterranean colouring",
+  "build": "tall, statuesque",
+  "bust": "full",
+  "figure": "curvy, hourglass",
+  "features": "very long straight light-brown hair with a centre part, brown eyes, olive-fair skin, strong defined brows, full lips",
+  "frame": "curvy frame",
+  "prompt": "a curvy white woman with Mediterranean colouring and an hourglass figure, a full bust, olive-fair skin, very long straight light-brown hair with a centre part, brown eyes, strong defined brows and full lips"
+ },
  "cici": {
   "ethnicity": "Latina - Colombian and Venezuelan",
   "build": "curvy",
@@ -61,6 +81,15 @@
   "features": "bleached blonde hair falling just past her shoulders with darker roots at the parting, brown eyes, light tan skin",
   "frame": "curvy frame",
   "prompt": "a curvy Latina young woman with an hourglass figure and a full bust, light tan skin, bleached blonde hair falling just past her shoulders with darker roots at the parting, brown eyes"
+ },
+ "mei": {
+  "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 27, property manager of The Flats; her `work` wardrobe should read front-desk professional. Age comes from the game.",
+  "ethnicity": "East Asian",
+  "build": "petite, slim",
+  "figure": "slim, slender frame",
+  "features": "long dark brown hair worn loose and tousled with soft waves, dark brown eyes, fair skin",
+  "frame": "tiny frame",
+  "prompt": "a petite, slim East Asian young woman with a slender frame, fair skin, long dark brown hair worn loose with soft waves, dark brown eyes"
  },
  "mira": {
   "age": 18,

@@ -111,6 +111,88 @@ def frame(character: str) -> str:
     return ""
 
 
+# Words the game's own prose uses about how a character LOOKS. Deliberately
+# narrow: the systemPrompt is mostly voice and behaviour, and matching loosely
+# turns "building, frank and direct" into a physical description. Ethnicity and
+# eye/hair/build words only.
+_ETHNICITY = ("black", "latina", "asian", "vietnamese", "korean", "japanese", "chinese",
+              "filipina", "indian", "white", "mixed", "hispanic", "middle eastern")
+_PHYSICAL = ("hair", "eyes", "skin", "freckle", "tattoo", "curvy", "petite", "slim",
+             "slender", "tall", "short", "build", "figure", "bust", "blonde",
+             "brunette", "redhead")
+
+
+def game_facts(character: str) -> dict:
+    """What chillafterdark already states about her: age, role, and any
+    appearance the writing commits to.
+
+    Jeremy, 2026-10-04: "I want you to do a quick scan anytime we have a new
+    character to check whether any of this is already described in Chill After
+    Dark... most of these characters already have information that should be
+    validated to ensure that it's the same, at least the first time."
+
+    The game is the source of truth for age and for anything its dialogue
+    asserts - a render that contradicts the writing is wrong even if it looks
+    good. Returns `{}` when the game repo is not present, so nothing here
+    depends on it being checked out.
+    """
+    import re as _re  # noqa: PLC0415
+
+    if not GAME_CHARACTERS.is_file():
+        return {}
+    try:
+        src = GAME_CHARACTERS.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {}
+    c = character.lower()
+    m = _re.search(rf"^  {_re.escape(c)}:\s*\{{", src, _re.M)
+    if not m:
+        return {}
+    nxt = _re.search(r"^  [a-z0-9_]+:\s*\{", src[m.end():], _re.M)
+    rec = src[m.start(): m.end() + (nxt.start() if nxt else len(src))]
+
+    out: dict = {"found": True}
+    age = _re.search(r"age:\s*(\d+)", rec)
+    if age:
+        out["age"] = int(age.group(1))
+    intro = _re.search(r"introImpression:\s*'([^']*)'", rec)
+    if intro:
+        out["intro"] = intro.group(1)
+    sp = _re.search(r"systemPrompt:\s*`(.*?)`", rec, _re.S)
+    text = sp.group(1) if sp else ""
+    out["system_prompt"] = text
+    # the opening line is where the writing states who she is and what she does
+    first = next((l.strip() for l in text.splitlines() if l.strip()), "")
+    out["opening"] = first
+    low = text.lower()
+    out["ethnicity"] = sorted({w for w in _ETHNICITY if _re.search(rf"\b{w}\b", low)})
+    out["physical"] = [l.strip() for l in text.splitlines()
+                       if any(_re.search(rf"\b{w}", l.lower()) for w in _PHYSICAL)][:4]
+    return out
+
+
+def validate(character: str) -> list[str]:
+    """Where our record and the game's writing disagree. Checked when a record
+    is created, not on every render - the game is authoritative, so a conflict
+    means one of the two needs editing, by a person."""
+    import re as _re  # noqa: PLC0415
+
+    g = game_facts(character)
+    if not g.get("found"):
+        return []
+    rec = _load()["look"].get(character.lower()) or {}
+    ours = " ".join(str(rec.get(k) or "") for k in
+                    ("prompt", "features", "ethnicity", "build", "figure")).lower()
+    out = []
+    if rec.get("age") and g.get("age") and int(rec["age"]) != g["age"]:
+        out.append(f"age: record says {rec['age']}, the game says {g['age']} - the game wins, "
+                   f"so remove the age field here")
+    for e in g.get("ethnicity", []):
+        if ours and e not in ours:
+            out.append(f"ethnicity: the game's dialogue calls her {e!r}, our record does not")
+    return out
+
+
 def negative(character: str) -> str:
     """Per-character NEGATIVE text: what the base model reverts to without it.
 
@@ -156,8 +238,9 @@ def check(character: str) -> dict:
     if refs.is_dir() and not any(refs.glob(f"{c}_*")):
         warnings.append("no reference photo under codex/references - the eval cannot "
                         "score identity and the judge page has nothing to show")
+    conflicts = validate(c)
     return {"character": c, "ok": not missing, "missing": missing, "warnings": warnings,
-            "has_record": bool(rec)}
+            "conflicts": conflicts, "has_record": bool(rec)}
 
 
 def clause(character: str) -> str:
