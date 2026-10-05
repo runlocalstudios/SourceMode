@@ -38,7 +38,7 @@ import re
 from pathlib import Path
 
 #: A schedule outfit that means she is at work rather than out.
-WORK_OUTFITS = frozenset({"work", "stripper", "server"})
+WORK_OUTFITS = frozenset({"work", "stripper", "server", "uniform"})
 
 # Wording from Qwen-Image-2512's own release material, which leads on reducing
 # the AI look and demos it with "a casual iPhone snapshot: unpretentious
@@ -69,6 +69,37 @@ AVOID = ("No studio lighting, no plain backdrop, no catalogue posing, no legible
 # other. Settings follow the shoot convention - light first, then the place -
 # and never hard midday sun or wet hair (both fail on this generator).
 PLACES: dict[str, dict[str, list[tuple[str, str, str]]]] = {
+    "adultStore": {
+        # Never the shelves: a public feed sees a boutique counter.
+        "job": [("soft pink boutique lighting, behind the counter of a small upscale boutique",
+                 "a fitted black wrap top and high-waisted trousers", "leaning on the counter, smiling")],
+        "hobby": [("soft pink boutique lighting, in a small upscale boutique",
+                   "a satin camisole under an oversized blazer", "browsing a display, glancing back")]},
+    "barbershop": {
+        "hobby": [("warm vintage light, in a classic barbershop with leather chairs",
+                   "a cropped denim jacket over a white tee", "sitting sideways in a barber chair")]},
+    "central_street": {
+        "hobby": [("soft morning light, on a wide civic boulevard with stone buildings",
+                   "a matching running set", "jogging past, smiling at the camera"),
+                  ("golden-hour light, on the steps of a grand civic building",
+                   "a fitted ribbed dress and a cropped denim jacket", "sitting on the steps")]},
+    "hill_street": {
+        "job": [("soft morning light, on a quiet upscale street lined with townhouses",
+                 "a tailored camel coat over a fitted knit dress", "walking, a leather tote on her arm")],
+        "hobby": [("golden-hour light, on a quiet upscale street with flower boxes",
+                   "a silk midi skirt and a fitted knit top", "strolling past a townhouse door"),
+                  ("warm evening light, outside an elegant wine bar on a quiet hill street",
+                   "a black satin slip dress and a light blazer", "standing by a bistro table")]},
+    "officePark": {
+        "job": [("bright even office light, in a modern open-plan office",
+                 "a fitted blouse tucked into a pencil skirt", "sitting on the edge of a desk, laptop open"),
+                ("soft window light, in a glass-walled meeting room",
+                 "a tailored blazer over a silk camisole", "standing by the window, coffee in hand"),
+                ("bright midday shade, on the lawn outside a glass office building",
+                 "a crisp white shirt and wide-leg trousers", "walking with a laptop under her arm")]},
+    "policeStation": {
+        "job": [("bright even light, in the lobby of a city police precinct",
+                 "a fitted navy police uniform", "standing at the front desk, hands resting on it")]},
     "aireSpa": {
         "job": [("soft warm candlelight, in a calm day-spa treatment room with folded white towels",
                  "a fitted black spa tunic", "standing beside the treatment table, hands folded")],
@@ -206,9 +237,12 @@ PLACES: dict[str, dict[str, list[tuple[str, str, str]]]] = {
         "hobby": [("warm market light, at a flower stall in a busy market hall",
                    "a linen button-down and wide-leg trousers", "holding a bouquet of peonies")]},
     "university": {
-        "job": [("bright classroom light, at the front of a lecture hall",
-                 "a fitted blazer over a silk blouse and tailored trousers",
-                 "standing by the lectern, holding a marker")],
+        # The game's university staff are teaching assistants, not professors.
+        "job": [("bright classroom light, at the whiteboard of a small seminar room",
+                 "a fitted knit sweater and tailored trousers",
+                 "standing by the whiteboard, a marker in her hand"),
+                ("soft desk-lamp light, in a cramped office-hours room stacked with papers",
+                 "a cardigan over a white blouse", "sitting at the desk, pen in hand, papers spread out")],
         "hobby": [("soft afternoon light, on a leafy university campus lawn",
                    "a cropped cardigan and a pleated mini skirt", "sitting on the grass with a laptop and books"),
                   ("soft warm light, at a cafe table on campus", "an oversized university sweatshirt",
@@ -319,13 +353,20 @@ def slots(character: str, batch: int) -> list[dict]:
     hair = hair_options(c)
     life = [(None, m) for m in LIFESTYLE]
 
+    # One shuffled lifestyle queue, shared: a job or hobby slot her places cannot
+    # fill takes the next lifestyle scene instead of repeating one of hers -
+    # priyanka has a single university scene, and drawing it three times gave
+    # three near-identical photos.
+    life_q = _draw(rng, life, 3 * len(life))
     picks: list[tuple[str, str | None, tuple[str, str, str]]] = []
     for tone, n in MIX:
         if tone in ("job", "hobby"):
-            pool = _moments(work if tone == "job" else play, tone) or life
-            picks += [(tone, loc, m) for loc, m in _draw(rng, pool, n)]
+            own = _moments(work if tone == "job" else play, tone)
+            mine = rng.sample(own, min(n, len(own)))
+            mine += [life_q.pop(0) for _ in range(n - len(mine))]
+            picks += [(tone, loc, m) for loc, m in mine]
         elif tone == "lifestyle":
-            picks += [(tone, None, m) for _, m in _draw(rng, life, n)]
+            picks += [(tone, None, life_q.pop(0)[1]) for _ in range(n)]
         elif tone == "sightseeing":
             for tmpl in (SIGHT_INTL, SIGHT_US):
                 picks.append((tone, None, (tmpl.format(light=rng.choice(SIGHT_LIGHT)),

@@ -80,15 +80,15 @@ def test_zaras_job_and_hobbies_come_from_her_schedule():
     work = {loc for loc, outfit in sched if outfit in I.WORK_OUTFITS}
     play = {loc for loc, outfit in sched if outfit not in I.WORK_OUTFITS}
     slots = I.slots("zara", 1)
-    assert {s["place"] for s in slots if s["tone"] == "job"} <= work
-    assert {s["place"] for s in slots if s["tone"] == "hobby"} <= play
+    assert {s["place"] for s in slots if s["tone"] == "job"} - {None} <= work
+    assert {s["place"] for s in slots if s["tone"] == "hobby"} - {None} <= play
 
 
 @pytest.mark.skipif(not GAME_CHARACTERS.is_file(), reason="game repo not checked out")
 def test_every_scheduled_location_in_the_game_has_a_scene():
     """A new location in the game must get a scene here, not silently drop out."""
     src = GAME_CHARACTERS.read_text(encoding="utf-8", errors="replace")
-    used = set(re.findall(r"'location':\s*'(\w+)'", src))
+    used = set(re.findall(r"['\"]?location['\"]?:\s*'(\w+)'", src))
     assert used - set(I.PLACES) == set()
 
 
@@ -107,3 +107,17 @@ def test_next_batch_counts_what_is_on_disk(tmp_path):
     (tmp_path / "influencer_b02").mkdir()
     (tmp_path / "boudoir").mkdir()
     assert I.next_batch(tmp_path) == 3
+
+
+def test_a_short_list_of_her_places_never_repeats_a_scene(monkeypatch):
+    """priyanka had one university scene and got it three times."""
+    monkeypatch.setattr(I, "_places", lambda c: (["lumenSalon"], ["laundromat"]))
+    for b in range(1, 6):
+        scenes = [(s["setting"], s["outfit"]) for s in I.slots("x", b)]
+        assert len(scenes) == len(set(scenes)), b
+
+
+@pytest.mark.skipif(not GAME_CHARACTERS.is_file(), reason="game repo not checked out")
+def test_unquoted_schedule_keys_are_read():
+    """priyanka's library shift is written `{ location: 'library', ... }`."""
+    assert ("library", "work") in game_facts("priyanka")["schedule"]

@@ -171,7 +171,9 @@ def game_facts(character: str) -> dict:
     # where her week takes her, as (location, outfit) - the influencer pack
     # reads her job and hobbies off this rather than off prose
     out["schedule"] = [(m.group(1), m.group(2)) for m in _re.finditer(
-        r"'location':\s*'(\w+)'[^}]*?'outfit':\s*'(\w+)'", rec)]
+        # keys appear both quoted and bare in the game file - priyanka's
+        # library shift is `{ location: 'library', ... }`
+        r"['\"]?location['\"]?:\s*'(\w+)'[^}]*?['\"]?outfit['\"]?:\s*'(\w+)'", rec)]
     return out
 
 
