@@ -25,8 +25,11 @@ $trigger.Delay = "PT20S"   # let the GPU driver and network settle first
 
 foreach ($t in $tasks) {
   $script = Join-Path $here $t.Script
-  $action = New-ScheduledTaskAction -Execute "powershell.exe" `
-    -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script`""
+  # conhost --headless, not -WindowStyle Hidden: with Windows Terminal as the
+  # default terminal, Hidden is ignored and every task left an empty window open
+  # that killed its service (and the runner's training child) if closed.
+  $action = New-ScheduledTaskAction -Execute "conhost.exe" `
+    -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$script`""
   Register-ScheduledTask -TaskName $t.Name -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null
   Write-Host "registered  $($t.Name)  ->  $script"
 }
