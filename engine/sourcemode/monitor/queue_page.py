@@ -996,15 +996,27 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
         from ..config import outputs_dir as _od  # noqa: PLC0415
         from ..config import load_config as _lc  # noqa: PLC0415
 
+        from ..assets.catalog import slot_dirname  # noqa: PLC0415
+
         pos = [c for c in cmd if not c.startswith("--")]
         try:
             i = next(k for k, c in enumerate(pos) if c.endswith("pack_t2i.py"))
             char = pos[i + 1].lower()
             pp = next(iter(sorted((_od(_lc()) / "game-assets" / char).glob("plan*.json"))))
-            n = len(plan_slots(_j.loads(_Pp(pp).read_text(encoding="utf-8"))))
+            slots = plan_slots(_j.loads(_Pp(pp).read_text(encoding="utf-8")))
         except (StopIteration, IndexError, OSError, ValueError, KeyError):
             return None
-        return n, f"{n} looks, one shot each"
+        # pack_t2i skips every look already on disk, so a re-roll of two rejects
+        # read "28 looks" here while it rendered two. Count what it WILL render.
+        renders = _od(_lc()) / "game-assets-t2i" / char / "renders"
+        todo = [s for s in slots if not any((renders / slot_dirname(s)).glob("shot_*.png"))]
+        n, total = len(todo), len(slots)
+        if n == total:
+            return n, f"{n} looks, one shot each"
+        if not n:
+            return None
+        return n, (f"re-renders {', '.join(s['id'] for s in todo)} - "
+                   f"{n} of {total} looks; the other {total - n} are on disk and kept")
 
     if "redo.py" in joined:
         from ..assets.judge import judge_root  # noqa: PLC0415
@@ -1109,7 +1121,12 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
             sub = pos[i + 2]
             scenes = flag("--scenes", "")
             suffix = {"asset": "_asset", "favorable": "_fav"}.get(scenes, "")
-            root = out / f"dense_{sub}{suffix}"
+            # asset is the eval's default scene set, and --tag renders into its
+            # own folder beside it - so both have to be in the path counted
+            if not scenes:
+                suffix = "_asset"
+            tag = flag("--tag")
+            root = out / f"dense_{sub}{suffix}{'_' + tag if tag else ''}"
             return len([q for q in root.rglob("scene_*.png") if "_web" not in q.parts]) \
                 if root.is_dir() else 0
     except (OSError, ValueError, KeyError, StopIteration, IndexError):
