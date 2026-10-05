@@ -42,7 +42,7 @@ from sourcemode.render.workflow import (  # noqa: E402
 # Flags are split out BEFORE any positional parsing: dense_epoch_eval read
 # argv by index, a trailing --scenes landed in the epoch-offset slot, int()
 # raised, and the job died four seconds after waiting seven hours for the card.
-_FLAGS = {"--find", "--arms", "--scenes", "--seed"}
+_FLAGS = {"--find", "--arms", "--scenes", "--seed", "--tag", "--source"}
 POS, FLAG = [], {}
 _it = iter(sys.argv)
 for _a in _it:
@@ -65,7 +65,7 @@ SCENES_IDX = [int(x) for x in FLAG.get("--scenes", "0,2,6").split(",") if x.stri
 SEED = int(FLAG.get("--seed", "90210"))
 
 W, H = 1024, 1536
-TAG = "hair"
+TAG = FLAG.get("--tag", "hair")
 OUT = Path(f"outputs/ab_{CHAR}_{TAG}")
 OUT.mkdir(parents=True, exist_ok=True)
 LOG = Path(f"outputs/logs/ab_{CHAR}_{TAG}.log")
@@ -94,12 +94,19 @@ LORA_DIR.mkdir(parents=True, exist_ok=True)
 if not (LORA_DIR / CK).exists():
     shutil.copy2(CKPT_DIR / CK, LORA_DIR / CK)
 
-# the scenes this character's sweep actually used, so the A/B is comparable to it
-ALL = asset_prompts(TRIGGER)
+# the scenes this character's sweep actually used, so the A/B is comparable to it.
+# --source influencer uses her influencer batch-1 slots instead, built exactly as
+# run_shoots builds them, so the A/B answers a question about that pack.
+if FLAG.get("--source") == "influencer":
+    from sourcemode.assets.influencer import slots as _inf_slots  # noqa: E402
+    from sourcemode.assets.render import shot_prompt as _shot  # noqa: E402
+    ALL = [_shot(CHAR, s, TRIGGER, backdrop=s["setting"]) for s in _inf_slots(CHAR, 1)]
+else:
+    ALL = asset_prompts(TRIGGER)
 missing = [p for p in SCENES_IDX if p >= len(ALL)]
 if missing:
     raise SystemExit(f"scene index out of range: {missing} (have {len(ALL)})")
-for p in ALL:
+for p in (ALL[i] for i in SCENES_IDX):
     if FIND not in p:
         raise SystemExit(f"--find {FIND!r} is not in the prompt; nothing would change")
 
