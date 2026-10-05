@@ -1115,7 +1115,8 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
             pos = [c for c in cmd if not c.startswith("--")]
             i = next(k for k, c in enumerate(pos) if c.endswith("prompt_ab.py"))
             char = pos[i + 1]
-            root = out / f"ab_{char}_hair"
+            # --tag names the folder (ab_jojo_skin); "hair" was the only test once
+            root = out / f"ab_{char}_{flag('--tag', 'hair')}"
             return len(list(root.rglob("scene_*.png"))) if root.is_dir() else 0
 
         if "dense_epoch_eval.py" in joined:
