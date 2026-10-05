@@ -401,5 +401,8 @@ def batch_of(shoot_id: str) -> int | None:
 def next_batch(char_dir: Path) -> int:
     """One past the highest batch already rendered for her - so ticking the box
     again is always a fresh batch, never a re-render of the last one."""
-    seen = [batch_of(p.name) for p in Path(char_dir).glob("influencer_b*") if p.is_dir()]
+    # A batch folder with no image in it is a run that failed before rendering;
+    # it does not use up a number (priyanka's first two attempts made b01, b02).
+    seen = [batch_of(p.name) for p in Path(char_dir).glob("influencer_b*")
+            if p.is_dir() and any(p.glob("*.png"))]
     return max([b for b in seen if b] or [0]) + 1

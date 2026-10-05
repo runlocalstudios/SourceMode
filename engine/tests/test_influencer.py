@@ -103,10 +103,26 @@ def test_the_pack_is_on_the_shoots_tab_and_a_batch_resolves_for_redo():
 
 def test_next_batch_counts_what_is_on_disk(tmp_path):
     assert I.next_batch(tmp_path) == 1
-    (tmp_path / "influencer_b01").mkdir()
-    (tmp_path / "influencer_b02").mkdir()
+    for b in ("influencer_b01", "influencer_b02"):
+        (tmp_path / b).mkdir()
+        (tmp_path / b / "x.png").write_bytes(b"")
     (tmp_path / "boudoir").mkdir()
     assert I.next_batch(tmp_path) == 3
+    # a failed run leaves an empty folder; it must not use up a batch number
+    (tmp_path / "influencer_b03").mkdir()
+    assert I.next_batch(tmp_path) == 3
+
+
+def test_a_continuation_checkpoint_resolves_to_its_own_comfyui_folder():
+    """priyanka_v2b-000006 lives under loras/sourcemode/priyanka_v2b/, not priyanka_v2/."""
+    from pathlib import PureWindowsPath
+
+    from sourcemode.assets.lora import comfy_path
+
+    assert PureWindowsPath(comfy_path("priyanka_v2b-000006.safetensors")).parts == (
+        "sourcemode", "priyanka_v2b", "priyanka_v2b-000006.safetensors")
+    assert PureWindowsPath(comfy_path("zara_v2-000018.safetensors")).parts[1] == "zara_v2"
+    assert PureWindowsPath(comfy_path("zara_v2.safetensors")).parts[1] == "zara_v2"
 
 
 def test_a_short_list_of_her_places_never_repeats_a_scene(monkeypatch):

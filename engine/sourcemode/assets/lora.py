@@ -13,7 +13,20 @@ guessing at the one decision the whole sweep exists to make.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
+
+
+def comfy_path(filename: str) -> str:
+    """Where ComfyUI has a checkpoint: `sourcemode/<output name>/<file>`.
+
+    Keyed by the FILENAME, never the dataset folder. A continuation run saves
+    `priyanka_v2b-000006.safetensors` into priyanka_v2's training folder, but it
+    is staged in ComfyUI under `priyanka_v2b/` - its output name - so a path
+    built from the dataset name failed all 14 of her influencer renders.
+    """
+    stem = re.sub(r"-\d{6}$", "", Path(filename).stem)
+    return str(Path("sourcemode") / stem / Path(filename).name)
 
 
 def resolve_lora(cfg: dict, character: str) -> dict | None:
@@ -32,7 +45,7 @@ def resolve_lora(cfg: dict, character: str) -> dict | None:
     if rec and rec.get("lora") and Path(rec["lora"]).is_file():
         p = Path(rec["lora"])
         return {"dataset": rec["dataset"], "name": p.name, "epoch": rec.get("epoch"),
-                "path": str(Path("sourcemode") / rec["dataset"] / p.name),
+                "path": comfy_path(p.name),
                 "why": f"epoch {rec.get('epoch')} chosen on the judge page"}
 
     base = out / "lora-datasets"
@@ -46,7 +59,7 @@ def resolve_lora(cfg: dict, character: str) -> dict | None:
         ckpts = [k for sub in checkpoint_dirs(out, ds.name) for k in sub.glob("*.safetensors")]
         if len(ckpts) == 1:
             return {"dataset": ds.name, "name": ckpts[0].name, "epoch": None,
-                    "path": str(Path("sourcemode") / ds.name / ckpts[0].name),
+                    "path": comfy_path(ckpts[0].name),
                     "why": "pruned to one checkpoint - the prune was the choice"}
     return None
 
