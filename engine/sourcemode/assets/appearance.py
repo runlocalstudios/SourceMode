@@ -168,6 +168,10 @@ def game_facts(character: str) -> dict:
     out["ethnicity"] = sorted({w for w in _ETHNICITY if _re.search(rf"\b{w}\b", low)})
     out["physical"] = [l.strip() for l in text.splitlines()
                        if any(_re.search(rf"\b{w}", l.lower()) for w in _PHYSICAL)][:4]
+    # where her week takes her, as (location, outfit) - the influencer pack
+    # reads her job and hobbies off this rather than off prose
+    out["schedule"] = [(m.group(1), m.group(2)) for m in _re.finditer(
+        r"'location':\s*'(\w+)'[^}]*?'outfit':\s*'(\w+)'", rec)]
     return out
 
 

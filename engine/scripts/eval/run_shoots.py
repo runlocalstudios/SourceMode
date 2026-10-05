@@ -157,6 +157,17 @@ def run_pack(sh) -> int:
 
 
 def run_shoot(sh) -> int:
+    if sh.make is not None:
+        # A batched pack: every tick is the NEXT batch, never a re-render of the
+        # last one. The folder is made now so the queue's progress bar counts
+        # this batch, not the one before it.
+        from dataclasses import replace  # noqa: PLC0415
+
+        from sourcemode.assets.influencer import next_batch  # noqa: PLC0415
+
+        b = next_batch(OUT_ROOT / "shoots" / CHAR)
+        sh = replace(sh, id=f"{sh.id}_b{b:02d}", batch=b, label=f"{sh.label}, batch {b}")
+        log(f"  {sh.id}: batch {b}")
     d = OUT_ROOT / "shoots" / CHAR / sh.id
     d.mkdir(parents=True, exist_ok=True)
     items, n = [], 0

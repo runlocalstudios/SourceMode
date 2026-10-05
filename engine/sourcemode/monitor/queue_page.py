@@ -1106,7 +1106,15 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
             from ..assets.shoots import resolve as _resolve  # noqa: PLC0415
             if any(x.kind == "pack" for x in _resolve(ids)):
                 roots.append(out / "game-assets" / char / "renders")
-            return sum(len(list(r.rglob("*.png"))) for r in roots if r.is_dir())
+            # Influencer batches pile up beside each other; only the newest is
+            # the one this job is writing, so the older ones must not count.
+            from ..assets.influencer import batch_of  # noqa: PLC0415
+            sd = out / "shoots" / char
+            batches = sorted((p for p in sd.glob("influencer_b*") if batch_of(p.name)),
+                             key=lambda p: batch_of(p.name)) if sd.is_dir() else []
+            stale = set(batches[:-1]) if "influencer" in ids else set(batches)
+            return sum(1 for r in roots if r.is_dir() for q in r.rglob("*.png")
+                       if not any(s in q.parents for s in stale))
 
         if "prompt_ab.py" in joined:
             pos = [c for c in cmd if not c.startswith("--")]

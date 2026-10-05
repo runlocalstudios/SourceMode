@@ -97,9 +97,9 @@ def drop(p: Path) -> None:
 
 
 def redo_shoot(info: dict, seed: int) -> Path | None:
-    from sourcemode.assets.shoots import BY_ID
+    from sourcemode.assets.shoots import lookup
 
-    sh = BY_ID.get(info["source"])
+    sh = lookup(info["source"])
     if sh is None:
         log(f"  {info['slot_id']}: unknown shoot {info['source']!r}")
         return None

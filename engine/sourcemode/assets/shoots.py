@@ -51,6 +51,10 @@ class Shoot:
     # Only meaningful for kind="pack": the plan file, relative to outputs/.
     plan_file: str = ""
     note: str = ""
+    # A shoot whose slots depend on WHO she is (the influencer pack reads her
+    # job and hobbies off the game) builds them with make(character, batch).
+    make: object = None
+    batch: int = 0
 
     def plan(self, seed: int = 0, character: str | None = None) -> list[dict]:
         """The shot list: outfit x pose walked in step, hair rotating under them.
@@ -64,6 +68,8 @@ class Shoot:
         """
         from .wardrobe import hair_options  # noqa: PLC0415
 
+        if self.make is not None:
+            return self.make(character or "", self.batch or 1)
         if self.explicit:
             return [dict(x) for x in self.explicit] if not character else [
                 {**x, "hair": hair_options(character)[i % len(hair_options(character))]}
@@ -223,11 +229,35 @@ GAME: tuple[Shoot, ...] = (
     _selfie_pack(),
 )
 
-CATALOG = GAME + CATALOG
+def _influencer() -> Shoot:
+    from .influencer import TOTAL, slots  # noqa: PLC0415
+
+    return Shoot("influencer", "Influencer pack", "social",
+                 "her job and hobbies from the game, plus travel, pool, beach and boudoir",
+                 (), (), shots=TOTAL, make=slots,
+                 note="14 feed photos: 3 job, 3 hobbies, 2 lifestyle, 2 sightseeing, pool, "
+                      "beach, 2 boudoir (no lingerie). Every tick is a NEW batch - different "
+                      "scenes, outfits and hair - so a feed never repeats.")
+
+
+CATALOG = GAME + (_influencer(),) + CATALOG
 BY_ID = {s.id: s for s in CATALOG}
-BUCKETS = ("game", "intimate", "swim", "everyday", "night")
-BUCKET_LABEL = {"game": "Game assets", "intimate": "Intimate", "swim": "Swim",
-                "everyday": "Everyday", "night": "Night out"}
+BUCKETS = ("game", "social", "intimate", "swim", "everyday", "night")
+BUCKET_LABEL = {"game": "Game assets", "social": "Social", "intimate": "Intimate",
+                "swim": "Swim", "everyday": "Everyday", "night": "Night out"}
+
+
+def lookup(source: str) -> Shoot | None:
+    """A shoot by the id its renders were filed under - including one batch of
+    a batched pack ("influencer_b03"), which is what a redo has to rebuild."""
+    from dataclasses import replace  # noqa: PLC0415
+
+    from .influencer import batch_of  # noqa: PLC0415
+
+    if source in BY_ID:
+        return BY_ID[source]
+    b = batch_of(source)
+    return replace(BY_ID["influencer"], id=source, batch=b) if b else None
 
 
 def buckets() -> list[dict]:
