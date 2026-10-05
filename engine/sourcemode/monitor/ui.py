@@ -275,6 +275,8 @@ PARTS = r"""
 .jrow .est b{color:var(--g9);font-variant-numeric:tabular-nums}
 .jrow .basis,.jrow .jid{font:var(--t-small);color:var(--g6);margin-top:var(--s1);
   font-family:var(--mono);word-break:break-all}
+.jrow .basis.clamp{font-family:inherit;word-break:normal;display:-webkit-box;
+  -webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .jrow .acts{margin-top:var(--s3)}
 
 /* --------------------------------------------------------------- plan bar ---*/

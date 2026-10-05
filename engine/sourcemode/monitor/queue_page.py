@@ -253,19 +253,15 @@ function jobRow(el,j,i,n){
     +'<div class=main>'
     +'<div class=head>'+SM.pill(j.state.status)+'<span class=title>'+SM.esc(j.who)
       +' <span class=what>&mdash; '+SM.esc(j.what)+'</span></span></div>'
-    +'<div class=why>'+SM.esc(j.state.why)+'</div>'
+    /* Jeremy, 2026-10-05: the pill already says running / next / waiting, so a
+       sentence repeating it is gone; `why` is only set when it adds something
+       (held, blocked, failed, stalled). Below it: how long, what it renders,
+       and his note - nothing about how the estimate was derived. */
+    +(j.state.why?'<div class=why>'+SM.esc(j.state.why)+'</div>':'')
     +(j.estimate&&j.estimate.total_s&&!running
-       ? '<div class=est><b>'+SM.dur(j.estimate.total_s)+'</b> of GPU time once it starts'
-         /* The split is only real for a training job. Everything else - a shoot,
-            an asset pack, a prep chain - read "training + sweep" with two blank
-            durations in front of it, which described work it was not doing. */
-         +(j.estimate.train_s&&j.estimate.sweep_s
-            ? ' &mdash; '+SM.dur(j.estimate.train_s)+' training + '
-              +SM.dur(j.estimate.sweep_s)+' sweep' : '')
-         +'</div><div class=basis>'+SM.esc(j.estimate.basis)+'</div>' : '')
-    +(j.note?'<div class=basis>'+SM.esc(j.note)+'</div>':'')
-    +'<div class=jid>'+SM.esc(j.id)
-      +(j.log?' &middot; '+SM.esc(String(j.log).split(/[\\/]/).pop()):'')+'</div>'
+       ? '<div class=est><b>'+SM.dur(j.estimate.total_s)+'</b>'
+         +(j.estimate.what?' &middot; '+SM.esc(j.estimate.what):'')+'</div>' : '')
+    +(j.note?'<div class="basis clamp">'+SM.esc(j.note)+'</div>':'')
     +'<div class="acts btn-row">'+acts(j,i,n)+'</div>'
     +'</div>');
 }
@@ -846,20 +842,20 @@ def _state_of(job: dict, *, paused: bool, runner_alive: bool,
                     "why": f"running {_dur(elapsed_s)} against an estimate of "
                            f"{_dur(expected_s)} - {elapsed_s / expected_s:.0f}x, so it is "
                            f"probably waiting on something rather than working"}
-        return {"status": "live", "why": "running now"}
+        return {"status": "live", "why": ""}
     if job["status"] == "failed":
         return {"status": "stop", "why": f"failed, exit {job['exit_code']}"}
     if job["hold"]:
-        return {"status": "you", "why": "held - it will not start until you release it"}
+        return {"status": "you", "why": "held"}
     if job["blocked_reason"]:
         return {"status": "you", "why": job["blocked_reason"]}
     if not job["is_next"]:
-        return {"status": "wait", "why": "waiting its turn"}
+        return {"status": "wait", "why": ""}
     if paused:
         return {"status": "stop", "why": "next up, but the queue is paused"}
     if not runner_alive:
         return {"status": "stop", "why": "next up, but the runner is not running"}
-    return {"status": "next", "why": "starts as soon as the card is free"}
+    return {"status": "next", "why": ""}
 
 
 def now_card(jobs: list[dict], status: dict | None,
@@ -1015,8 +1011,7 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
             return n, f"{n} looks, one shot each"
         if not n:
             return None
-        return n, (f"re-renders {', '.join(s['id'] for s in todo)} - "
-                   f"{n} of {total} looks; the other {total - n} are on disk and kept")
+        return n, f"re-renders {', '.join(s['id'] for s in todo)}"
 
     if "redo.py" in joined:
         from ..assets.judge import judge_root  # noqa: PLC0415
@@ -1160,6 +1155,13 @@ def job_estimate(cfg: dict, job: dict) -> dict | None:
     if not got:
         return None
     n, how = got
+    est = _render_estimate(cfg, job, n, how)
+    if est:
+        est["what"] = how       # the card's one line: what this job renders
+    return est
+
+
+def _render_estimate(cfg: dict, job: dict, n: int, how: str) -> dict | None:
     r = _rate(cfg)
     if "run_shoots.py" in " ".join(job.get("cmd") or []):
         # A shoots job can mix a 75 s/render sweep shoot with the 116 s/shot

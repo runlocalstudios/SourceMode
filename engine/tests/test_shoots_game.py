@@ -119,10 +119,12 @@ def test_resolve_still_refuses_a_typo():
 def test_the_queue_row_only_claims_training_and_sweep_for_a_training_job():
     # The shoots and asset jobs read "24m of GPU time once it starts - training
     # + sweep", with two blank durations, describing work they do not do.
+    # Since 2026-10-05 the queue row shows no split at all - one duration and
+    # what the job renders - so no row can describe work it is not doing.
     js = Path("sourcemode/monitor/queue_page.py").read_text(encoding="utf-8")
-    i = js.index("of GPU time once it starts")
-    window = js[i:i + 600]
-    assert "j.estimate.train_s&&j.estimate.sweep_s" in window
+    i = js.index("function jobRow(")
+    row = js[i:js.index("function acts(", i)]
+    assert "training + " not in row and "sweep" not in row
 
 
 # --- per-character hair -----------------------------------------------------
