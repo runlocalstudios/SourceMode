@@ -60,8 +60,14 @@ QS = [
     ("ponytail", "Ignore any loose strands around her face. Is her hair gathered at one "
                  "point and hanging loose from the tie as a tail? "
                  "Answer with exactly one word: yes or no."),
+    # Asked LAST, before the fallback. rivera 2026-10-05: all 12 of her braid /
+    # high-ponytail captions were a loose bob, every question above said no, and
+    # without this they all fell back to "half pinned back" - confidently wrong.
+    ("loose", "Is all of her hair hanging free - not tied, braided, clipped or pinned "
+              "anywhere? Answer with exactly one word: yes or no."),
 ]
-PHRASE = {"bun": "her hair in a loose bun", "braid": "her hair in a braid over one shoulder",
+PHRASE = {"loose": "her hair worn loose",
+          "bun": "her hair in a loose bun", "braid": "her hair in a braid over one shoulder",
           "pigtails": "her hair in pigtails", "ponytail": "her hair in a ponytail",
           "halfup": "her hair half pinned back"}
 
