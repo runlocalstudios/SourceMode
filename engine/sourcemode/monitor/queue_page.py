@@ -1035,8 +1035,8 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
             n = total_shots(ids)
         except (StopIteration, IndexError, KeyError):
             return None
-        word = "selection" if any(x.kind == "pack" for x in _resolve(ids)) else "shoot"
-        return n, f"{len(ids)} {word}{'s' if len(ids) != 1 else ''}"
+        # what was ticked, by name - "1 shoot" told him nothing
+        return n, ", ".join(s.label for s in _resolve(ids))
 
     if "prompt_ab.py" in joined:
         arms = len([a for a in (flag("--arms", "") or "").split("|") if "=" in a])
