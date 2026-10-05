@@ -54,7 +54,28 @@ def save(path: Path, doc: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(doc, indent=1, ensure_ascii=False), encoding="utf-8")
-    tmp.replace(path)
+    replace_retrying(tmp, path)
+
+
+def replace_retrying(tmp: Path, path: Path, tries: int = 100) -> None:
+    """os.replace, retried while a reader holds the target open.
+
+    On Windows a replace fails with "Access is denied" while any process has the
+    target open without delete sharing - and the monitor reads queue.json every
+    few seconds. 2026-10-05 23:15 the runner hit that window, the PermissionError
+    was uncaught, and the runner died with jobs still queued. Retry for ~10s;
+    past that, raise - a save that cannot land is an error, never a skip.
+    """
+    import time  # noqa: PLC0415
+
+    for i in range(tries):
+        try:
+            tmp.replace(path)
+            return
+        except PermissionError:
+            if i == tries - 1:
+                raise
+            time.sleep(0.1)
 
 
 def add(doc: dict, *, kind: str, label: str, cmd: list[str], cwd: str,

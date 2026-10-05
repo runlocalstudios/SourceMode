@@ -87,6 +87,21 @@ Log "unloading ComfyUI"
 try { Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8188/free -ContentType application/json -Body '{"unload_models":true,"free_memory":true}' | Out-Null } catch {}
 Start-Sleep 10
 
+# The dataset TOML was a manual step. Sandra aborted on its absence, and on
+# 2026-10-05 tess, jaina and bri did the same within a minute of each other -
+# write_dataset_toml.py existed and nothing called it. Write it here, from the
+# auto-tuner, and refuse to go on without it.
+if (-not (Test-Path "$DsDir\dataset_qwen_t2i.toml")) {
+  Log "writing dataset_qwen_t2i.toml"
+  Push-Location "C:\dev\sourcemode\engine"
+  & $PY "C:\dev\sourcemode\engine\scripts\eval\write_dataset_toml.py" $Ds 2>&1 | Out-File $log -Append -Encoding utf8
+  Pop-Location
+}
+if (-not (Test-Path "$DsDir\dataset_qwen_t2i.toml")) {
+  Log "ABORT: no dataset_qwen_t2i.toml for $Ds and it could not be written - see the line above"
+  exit 1
+}
+
 Log "caching latents + text encoder"
 & "$M\.venv\Scripts\python.exe" "$M\src\musubi_tuner\qwen_image_cache_latents.py" --dataset_config "$DsDir\dataset_qwen_t2i.toml" --vae "C:\ComfyUI\models\vae\qwen_image_vae.safetensors" --model_version original 2>&1 | Select-Object -Last 1 | Out-File $log -Append -Encoding utf8
 & "$M\.venv\Scripts\python.exe" "$M\src\musubi_tuner\qwen_image_cache_text_encoder_outputs.py" --dataset_config "$DsDir\dataset_qwen_t2i.toml" --text_encoder "C:\ComfyUI\models\text_encoders\qwen_2.5_vl_7b.safetensors" --batch_size 1 --model_version original 2>&1 | Select-Object -Last 1 | Out-File $log -Append -Encoding utf8
@@ -139,5 +154,11 @@ if (Test-Path "$DsDir\$LoraSub\$($OutName).safetensors") {
     -RedirectStandardOutput "$L\eval_$($OutName).stdout.log" -RedirectStandardError "$L\eval_$($OutName).stderr.log"
   Log "END $Char eval exit=$($ev.ExitCode)"
   if ($ev.ExitCode -ne 0) { Log "EVAL FAILED - no judge set; read eval_$($Ds).stdout.log" }
-} else { Log "no final checkpoint; skipping eval" }
+} else {
+  # A run that produced no checkpoint FAILED. It used to log "skipping eval",
+  # write the DONE marker and exit 0, so the queue showed three dead trainings
+  # as done in 37 seconds each.
+  Log "ABORT: training exited $($p.ExitCode) with no final checkpoint - not writing the DONE marker"
+  exit 1
+}
 Log "$($OutName.ToUpper())TRAINDONE"

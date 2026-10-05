@@ -98,7 +98,8 @@ def acquire(path: Path, pid: int | None = None) -> dict:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(rec, indent=1), encoding="utf-8")
-    tmp.replace(path)
+    from .queue import replace_retrying  # noqa: PLC0415 - the monitor reads this too
+    replace_retrying(tmp, path)
     return rec
 
 
