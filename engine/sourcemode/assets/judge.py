@@ -500,6 +500,15 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;background:var(--photo)
   cursor:pointer;-webkit-tap-highlight-color:transparent;
   transition:opacity var(--m-base) var(--ease)}
 #pick .num{color:var(--g9)}
+/* Jeremy, 2026-10-05: the kept / Undo toast lives top right on this page,
+   level with the picker, instead of floating over the photo above his thumbs.
+   Compact to match the picker; the picker narrows so the two never meet. */
+#pick{max-width:min(calc(100vw - 190px),380px)}
+body .toast{top:var(--s3);right:var(--s3);left:auto;bottom:auto;min-height:30px;
+  padding:0 4px 0 12px;gap:var(--s2);font:var(--t-small);font-weight:600;
+  transform:translate(0,-8px)}
+body .toast.on{transform:none}
+body .toast .btn{min-height:24px;padding:0 10px}
 #pick #setname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #pick.dim{opacity:.25}
 #stage{position:absolute;inset:0;display:flex;align-items:center;
