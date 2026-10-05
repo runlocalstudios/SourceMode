@@ -99,6 +99,24 @@ def test_an_explicit_frame_overrides_the_derivation(monkeypatch):
     assert A.frame("x") == "tiny frame"
 
 
+@pytest.mark.parametrize(("outfit", "want"), [
+    ("a pleated pastel-pink mini skirt and a white cropped tee knotted at the waist, white sneakers",
+     "a pleated pastel-pink mini skirt and a white cropped tee knotted at the waist"),
+    ("a black shirt-dress, black tights, black ankle boots", "a black shirt-dress, black tights"),
+    ("a satin bralette and micro skirt with platform boots", "a satin bralette and micro skirt"),
+    ("a fitted black cocktail dress", "a fitted black cocktail dress"),
+])
+def test_footwear_is_dropped_from_a_thigh_up_asset(outfit, want):
+    """Jeremy, 2026-10-05: no shoes in a game asset unless he asks."""
+    from sourcemode.assets.render import drop_footwear
+
+    assert drop_footwear(outfit) == want
+    p = shot_prompt("x", dict(SLOT, outfit=outfit), "x")
+    assert "sneakers" not in p and "boots" not in p
+    assert "sneakers" in shot_prompt("x", dict(SLOT, outfit=outfit, shoes=True), "x") \
+        or "sneakers" not in outfit
+
+
 def test_the_appearance_file_is_still_valid_json_and_keyed_by_character():
     from sourcemode.assets.appearance import APPEARANCE
 

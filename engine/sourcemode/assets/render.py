@@ -34,6 +34,7 @@ W, H = 1024, 1536
 # all three; degrees come from a per-look seeded randomizer, exactly as the scaffold
 # does. Full length is never asked for - it starved the face (122px kept 12%).
 import random
+import re
 
 FRAMING_MID_THIGH = ("standing mid-thigh-up portrait; bottom edge cuts through the middle of the thighs; "
                      "knees, lower legs, and feet outside the frame; never full-body")
@@ -114,6 +115,34 @@ def fitted_clause(character: str) -> str:
     from .appearance import frame  # noqa: PLC0415
     f = frame(character)
     return f", fitted to her {f}" if f else ""
+
+
+#: Footwear in an outfit fights the upper-thigh crop. Jeremy, 2026-10-05: "none
+#: of the game assets are ever supposed to have shoes unless I specifically ask.
+#: they are always meant to be mid or high thigh up". zara casual_01 asked for
+#: "white sneakers" under that crop and came back shot from overhead, full
+#: length, feet in frame - the model obeyed the outfit and broke the crop.
+_FOOTWEAR = re.compile(r"\b(?:sneakers?|shoes?|boots?|heels|sandals?|loafers?|pumps|flats"
+                       r"|slippers?|trainers|stilettos?|mules|platforms|socks|stockings)\b", re.I)
+
+
+def drop_footwear(outfit: str) -> str:
+    """Remove footwear from an outfit, keeping every other garment.
+
+    A comma-separated part that names footwear is dropped; if it joins the
+    footwear on with "and"/"with", only that tail goes. A slot with
+    `"shoes": true` skips this - that is how a look asks for them.
+    """
+    keep = []
+    for part in (outfit or "").split(","):
+        m = _FOOTWEAR.search(part)
+        if not m:
+            keep.append(part)
+            continue
+        joins = list(re.finditer(r"\s+(?:and|with)\s+", part[:m.start()]))
+        if joins and part[:joins[-1].start()].strip():
+            keep.append(part[:joins[-1].start()])
+    return ",".join(keep).strip(" ,")
 
 
 
@@ -198,7 +227,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
             f"Makeup: {slot.get('makeup') or MAKEUP}. "
             f"Pose: {slot.get('stance') or STANCE}. "
             f"Hair: {slot['hair']}. "
-            f"Outfit: {slot['outfit']}{fitted_clause(character)}. "
+            f"Outfit: {slot['outfit'] if slot.get('shoes') else drop_footwear(slot['outfit'])}{fitted_clause(character)}. "
             f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. "
             f"Natural realistic human proportions, correct anatomy. "
             + (slot.get("avoid") or "No profiles, rear views, seated poses, or off-camera gaze."))
