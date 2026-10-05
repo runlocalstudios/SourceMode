@@ -640,7 +640,10 @@ async function show(){
   back.style.opacity=1; fore.style.opacity=0;
   front=front==='A'?'B':'A';
   resetZoom();
-  $('prog').textContent=(idx+1)+'/'+cur.items.length;
+  /* On a re-judge, "11/28" says nothing about how much is left - say it. */
+  const open=cur.items.filter(x=>!(x.id in cur.verdicts)).length;
+  $('prog').textContent=(idx+1)+'/'+cur.items.length
+    +(open<cur.items.length?' · '+open+' to judge':'');
   $('hair').firstElementChild.style.width=(idx/cur.items.length*100)+'%';
   const ref=$('ref');
   ref.className='c'+refCorner;
@@ -660,11 +663,24 @@ function dim(){
   dimT=setTimeout(()=>$('pick').classList.add('dim'),2500);
 }
 
+/* The next item still WITHOUT a verdict, from `from` on and then wrapping.
+   Jeremy, 2026-10-05: two Zara re-rolls came back as the only open items, and
+   after the first one the page walked him through every keep after it. A
+   verdict now jumps to the next open item; past the last, it is the results. */
+function nextOpen(from){
+  const n=cur.items.length;
+  for(let k=0;k<n;k++){
+    const i=(from+k)%n;
+    if(!(cur.items[i].id in cur.verdicts)) return i;
+  }
+  return n;
+}
+
 async function verdict(v){
   if(!cur||idx>=cur.items.length||zoom>1) return;   /* zoomed = looking, not judging */
   const it=cur.items[idx];
   last={item:it.id,at:idx,prev:cur.verdicts[it.id]||null};
-  cur.verdicts[it.id]=v; idx++; show();              /* the thumb never waits */
+  cur.verdicts[it.id]=v; idx=nextOpen(idx+1); show();  /* the thumb never waits */
   if(navigator.vibrate) navigator.vibrate(8);
   SM.toast(v==='keep'?'kept':'rejected',{label:'Undo',run:undo});
   try{
