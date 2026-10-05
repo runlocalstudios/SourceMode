@@ -669,6 +669,33 @@ def set_caption(root: Path, ds_id: str, name: str, caption: str) -> dict:
             "fingerprint": doc["fingerprint"], "captions": doc["captions"], "approval": approval_state(root, ds_id)}
 
 
+def sync_captions(root: Path, ds_id: str) -> int:
+    """Re-read every caption from its .txt into the preview, for a TOOL that
+    rewrote captions on disk (hair_recheck). Not logged as an edit: the edit log
+    counts Jeremy's corrections, and a script's pass is not one of his. His own
+    edits already live in the .txt files, so re-reading them loses nothing.
+    Returns how many entries changed; approval lapses with the fingerprint."""
+    doc = load_preview(root, ds_id)
+    if doc is None:
+        return 0
+    changed = 0
+    for entry in doc["images"] + doc.get("excluded", []):
+        txt = Path(entry["path"]).with_suffix(".txt")
+        if not txt.is_file():
+            continue
+        cap = " ".join(txt.read_text(encoding="utf-8").split())
+        if cap != entry.get("caption", ""):
+            entry["caption"] = cap
+            entry["missing"] = missing_attributes(cap)
+            entry["uncaptioned"] = not cap
+            changed += 1
+    if changed:
+        doc["fingerprint"] = fingerprint(doc["images"])
+        doc["captions"] = caption_report([im["caption"] for im in doc["images"]])
+        (root / "previews" / f"{ds_id}.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
+    return changed
+
+
 def with_clause(caption: str, clause: str,
                 after: tuple[str, ...] = ("her hair",)) -> str:
     """Insert one generated clause where the captioner would have put it.

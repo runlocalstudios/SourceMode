@@ -159,6 +159,11 @@ $rc = Step "$Char captions"     @("$PREP\caption_from_vl.py", $Char)          "c
 # the Training sets tab and release the next chain.
 if ($rc -ne 0) { Log "ABORT: captions failed, not writing the DONE marker"; exit 1 }
 Step "$Char hair confirm" @("$PREP\hair_confirm2.py", $Char, "--apply") "hair_confirm_$Char" | Out-Null
+# Plan captions say what was ASKED. On a character whose hair cannot hold a braid
+# or a long ponytail the generator substituted something else, and only asking
+# the image catches it - rivera 2026-10-05, marisol 2026-10-03. Run for everyone:
+# on long hair it confirms the braids, on short hair it corrects them.
+Step "$Char hair recheck" @("C:\dev\sourcemode\engine\scripts\eval\hair_recheck.py", $Char, "--apply") "hair_recheck_$Char" | Out-Null
 $rc = Step "$Char re-assemble"  @("$PREP\caption_from_vl.py", $Char)          "captions_${Char}2" 
 # A marker on an empty result is what let a failed caption step reach
 # the Training sets tab and release the next chain.

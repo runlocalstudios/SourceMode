@@ -125,7 +125,11 @@ if not APPLY:
     print("\ndry run - pass --apply to write")
     raise SystemExit(0)
 
-OUT.write_text(json.dumps(result, indent=1), encoding="utf-8")
+# MERGE, never overwrite: hair_confirm2 writes the same file for the hand-collected
+# images, and the re-assemble step reads it as the override for both.
+prev = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
+prev.update(result)
+OUT.write_text(json.dumps(prev, indent=1), encoding="utf-8")
 changed = 0
 for n, label in sorted(result.items()):
     txt = IMG / (Path(n).stem + ".txt")
@@ -135,3 +139,12 @@ for n, label in sorted(result.items()):
         txt.write_text(new, encoding="utf-8")
         changed += 1
 print(f"\nrewrote {changed} of {len(result)} captions; verdicts in {OUT}")
+
+# A set already on the Training sets tab caches its captions in the preview;
+# without this the page keeps showing the braids that were just corrected.
+from sourcemode.config import load_config  # noqa: E402
+from sourcemode.train.preview import preview_root, sync_captions  # noqa: E402
+
+n = sync_captions(preview_root(load_config()), f"{CHAR}_v2")
+if n:
+    print(f"preview {CHAR}_v2: {n} caption(s) refreshed - approval lapses until re-approved")

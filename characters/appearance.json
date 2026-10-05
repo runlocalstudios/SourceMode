@@ -212,14 +212,14 @@
   "age": 20
  },
  "jojo": {
-  "_note": "Corrected by Jeremy, 2026-10-04. Half Asian, not fully. DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Ethnicity is not stated in the game; her renders read East Asian. Head bartender at Obsidian. Trained on the trigger `jojo_ch`, not the bare name.",
+  "_note": "Corrected by Jeremy, 2026-10-04. Half Asian, not fully. DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Ethnicity is not stated in the game; her renders read East Asian. Head bartender at Obsidian. Trained on the trigger `jojo_ch`, not the bare name. 2026-10-05: ethnicity word removed, skin tone kept - matched-seed A/B on jojo and priyanka influencer shots: with it 2/4 each, skin tone only 4/4, neither 4/4 (Jeremy: 'too ethnic'). priya given the same change untested.",
   "ethnicity": "Half Asian",
   "build": "slim with a defined waist",
   "bust": "full",
   "figure": "slim figure with a defined waist and a full bust",
   "features": "very long dark brown hair with soft waves, dark brown eyes, warm light skin",
   "frame": "slim frame",
-  "prompt": "a 23-year-old half-Asian woman with a slim figure, a defined waist and a full bust, warm light skin, very long dark brown hair with soft waves, and dark brown eyes",
+  "prompt": "a 23-year-old woman with a slim figure, a defined waist and a full bust, light olive skin, very long dark brown hair with soft waves, and dark brown eyes",
   "age": 23
  },
  "keiko": {
@@ -256,25 +256,25 @@
   "age": 26
  },
  "priya": {
-  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. The ONLY character with short hair and the ONLY one who wears glasses - both in every shipped outfit. The glasses belong in HER clause and nobody else's: a shared 'her glasses' descriptor once corrupted three of four characters. The game says age 22; her systemPrompt prose says late 20s.",
+  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. The ONLY character with short hair and the ONLY one who wears glasses - both in every shipped outfit. The glasses belong in HER clause and nobody else's: a shared 'her glasses' descriptor once corrupted three of four characters. The game says age 22; her systemPrompt prose says late 20s. 2026-10-05: ethnicity word removed, skin tone kept - matched-seed A/B on jojo and priyanka influencer shots: with it 2/4 each, skin tone only 4/4, neither 4/4 (Jeremy: 'too ethnic'). priya given the same change untested.",
   "ethnicity": "Indian",
   "build": "slim with an hourglass shape",
   "bust": "full",
   "figure": "slim hourglass figure with a small waist and a full bust",
   "features": "a chin-length dark brown bob parted to one side, black-framed rectangular glasses she always wears, dark brown eyes, medium brown skin, full lips",
   "frame": "slim frame",
-  "prompt": "a 22-year-old Indian woman with medium brown skin, a slim hourglass figure with a small waist and a full bust, a chin-length dark brown bob parted to one side, black-framed rectangular glasses, dark brown eyes and full lips",
+  "prompt": "a 22-year-old woman with light brown skin, a slim hourglass figure with a small waist and a full bust, a chin-length dark brown bob parted to one side, black-framed rectangular glasses, dark brown eyes and full lips",
   "age": 22
  },
  "priyanka": {
-  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Indian is stated in her systemPrompt. Teaching assistant at Chill Coast University. Her epoch-26 extension is the project record for a rescued undertrained run: 21% -> 64%.",
+  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Indian is stated in her systemPrompt. Teaching assistant at Chill Coast University. Her epoch-26 extension is the project record for a rescued undertrained run: 21% -> 64%. 2026-10-05: ethnicity word removed, skin tone kept - matched-seed A/B on jojo and priyanka influencer shots: with it 2/4 each, skin tone only 4/4, neither 4/4 (Jeremy: 'too ethnic'). priya given the same change untested.",
   "ethnicity": "Indian",
   "build": "slim and petite",
   "bust": "small-medium",
   "figure": "slim petite figure with a small waist and a small-medium bust",
   "features": "very long straight black hair, dark brown eyes, medium brown skin, a warm open face",
   "frame": "slim petite frame",
-  "prompt": "a 20-year-old Indian woman with medium brown skin, a slim petite figure with a small waist, very long straight black hair, dark brown eyes and a warm open face",
+  "prompt": "a 20-year-old woman with light brown skin, a slim petite figure with a small waist, very long straight black hair, dark brown eyes and a warm open face",
   "age": 20
  },
  "sandra": {
