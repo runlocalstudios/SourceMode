@@ -177,6 +177,37 @@ def game_facts(character: str) -> dict:
     return out
 
 
+GAME_PERSONA = GAME_CHARACTERS.with_name("characterPersona.js")
+GAME_LOCATIONS = GAME_CHARACTERS.with_name("locations.js")
+
+
+def persona_job(character: str) -> str:
+    """Her one-line job from characterPersona.js ("She runs the floor at
+    Threads..."), or "" when the game does not have one."""
+    import re as _re  # noqa: PLC0415
+
+    try:
+        src = GAME_PERSONA.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    m = _re.search(rf"^\s*{_re.escape(character.lower())}:\s*persona\(", src, _re.M)
+    if not m:
+        return ""
+    j = _re.search(r"job:\s*'((?:[^'\\]|\\.)*)'", src[m.end(): m.end() + 1500])
+    return j.group(1) if j else ""
+
+
+def location_names() -> dict[str, str]:
+    """Game location id -> display name ("threads" -> "Threads")."""
+    import re as _re  # noqa: PLC0415
+
+    try:
+        src = GAME_LOCATIONS.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {}
+    return dict(_re.findall(r"(?m)^\s{2}(\w+):\s*\{[^}]*?name:\s*'([^']+)'", src))
+
+
 def validate(character: str) -> list[str]:
     """Where our record and the game's writing disagree. Checked when a record
     is created, not on every render - the game is authoritative, so a conflict

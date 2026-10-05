@@ -137,3 +137,9 @@ def test_a_short_list_of_her_places_never_repeats_a_scene(monkeypatch):
 def test_unquoted_schedule_keys_are_read():
     """priyanka's library shift is written `{ location: 'library', ... }`."""
     assert ("library", "work") in game_facts("priyanka")["schedule"]
+
+@pytest.mark.skipif(not GAME_CHARACTERS.is_file(), reason="game repo not checked out")
+def test_a_job_named_in_her_persona_counts_even_in_everyday_clothes():
+    """bianca works every Threads shift in her 'default' outfit."""
+    work, play = I._places("bianca")
+    assert "threads" in work and "threads" not in play

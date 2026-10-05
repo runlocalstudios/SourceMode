@@ -316,13 +316,18 @@ TOTAL = sum(n for _, n in MIX)
 
 def _places(character: str) -> tuple[list[str], list[str]]:
     """(work locations, own-time locations) from her game schedule, deduped in order."""
-    from .appearance import game_facts  # noqa: PLC0415
+    from .appearance import game_facts, location_names, persona_job  # noqa: PLC0415
 
+    # The outfit is not the only signal: bianca works every Threads shift in
+    # her 'default' clothes. A place her persona's job line names is her job.
+    job_line = persona_job(character).lower()
+    names = location_names()
+    named = {loc for loc, nm in names.items() if nm.lower() in job_line} if job_line else set()
     work, play = [], []
     for loc, outfit in game_facts(character).get("schedule") or []:
         if loc not in PLACES:
             continue
-        bucket = work if outfit in WORK_OUTFITS else play
+        bucket = work if (outfit in WORK_OUTFITS or loc in named) else play
         if loc not in bucket:
             bucket.append(loc)
     return work, play
