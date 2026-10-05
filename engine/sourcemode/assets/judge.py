@@ -778,12 +778,11 @@ $('stage').addEventListener('pointermove',e=>{
   for(const id of ['imgA','imgB'])
     $(id).style.transform='translate('+zx+'px,'+zy+'px) scale('+zoom+')';
 });
-$('stage').addEventListener('pointerup',e=>{
-  if(panFrom){ panFrom=null; return; }
-  if(zoom>1) return;                        /* a tap while zoomed never judges */
-  if(window.matchMedia('(min-width:821px)').matches)
-    verdict(e.clientX < window.innerWidth/2 ? 'reject' : 'keep');
-});
+/* A click on the photo never judges. Jeremy, 2026-10-05: on a computer the
+   first click is how he gives the page focus, and left-half-reject /
+   right-half-keep turned that click into a verdict and moved on. K / X and
+   the two buttons judge; a click focuses, a double-click zooms. */
+$('stage').addEventListener('pointerup',()=>{ if(panFrom) panFrom=null; });
 
 /* --- reference: tap = corner, press = compare --------------------------- */
 function toggleRef(){

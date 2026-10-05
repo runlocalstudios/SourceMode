@@ -124,8 +124,12 @@ function show(tab,ref){
     if(on){
       /* first visit loads the frame; later visits only move its hash, so a
          140-image set keeps its scroll position exactly as it does today */
-      if(!f.src) f.src=SRC[k]+(ref?'#'+ref:'');
+      if(!f.src){
+        f.src=SRC[k]+(ref?'#'+ref:'');
+        f.addEventListener('load',()=>{ if(f.classList.contains('on')) focusPane(f); });
+      }
       else if(ref){ try{ f.contentWindow.location.hash=ref; }catch(e){} }
+      focusPane(f);
     }
     try{ f.contentWindow.postMessage({sm:1,t:on?'shown':'hidden'},location.origin); }
     catch(e){}
@@ -134,6 +138,25 @@ function show(tab,ref){
   const h='#'+tab+(ref?'/'+ref:'');
   if(location.hash!==h) history.replaceState(null,'',h);
 }
+/* Keys belong to the tab on show. Jeremy, 2026-10-05: on a computer K / X did
+   nothing until he clicked into the judge page, because focus stayed on the
+   shell (the tab he had just clicked). Focus the frame whenever it is shown,
+   and pass a key typed at the shell through to the frame that is on. */
+function focusPane(f){
+  /* only with a mouse: focusing on a phone can pop a keyboard */
+  if(!window.matchMedia('(hover:hover)').matches) return;
+  try{ f.contentWindow.focus(); }catch(e){}
+}
+document.addEventListener('keydown',e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey||e.key==='Tab') return;
+  /* only the judge pane is driven by single keys; the others have inputs */
+  const f=document.querySelector('iframe.pane.on'); if(!f||f.id!=='p_judge') return;
+  try{
+    f.contentWindow.focus();
+    f.contentWindow.dispatchEvent(new KeyboardEvent('keydown',{key:e.key,bubbles:true}));
+    e.preventDefault();
+  }catch(err){}
+});
 $('tabs').addEventListener('click',e=>{
   if(document.body.dataset.chrome==='immersive'){
     document.body.dataset.chrome='normal'; return;   /* the grab strip */
