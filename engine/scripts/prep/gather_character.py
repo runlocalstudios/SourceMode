@@ -70,9 +70,15 @@ def sources() -> list[tuple[Path, str]]:
         if p.suffix.lower() in EXT and p.is_file() and p not in seen:
             seen.add(p); out.append((p, prov))
 
+    # --loragen-only: Jeremy, 2026-10-04 (Cat, Jaina) - "ONLY pull their
+    # LoRA-gen photos and photos from cnc info/codex/references". Stricter than
+    # --no-base, which only drops the hand-collected base folder: cat has
+    # ELEVEN older run folders carrying her name and --no-base still gathered
+    # 336 images for her against jaina's clean 81.
+    loragen_only = "--loragen-only" in sys.argv
     # --no-base: Jeremy, 2026-09-30 (Sienna) - only the references and the Lora-Gen
     # outputs are candidates; the hand-collected base folder is left out entirely.
-    if "--no-base" not in sys.argv:
+    if not loragen_only and "--no-base" not in sys.argv:
         for p in sorted((BASE / CHAR).glob("*")) if (BASE / CHAR).is_dir() else []:
             take(p, "base")
     # Match the whole filename component before the first underscore, never a
@@ -86,6 +92,11 @@ def sources() -> list[tuple[Path, str]]:
             continue
         for sub in sorted(x for x in d.iterdir() if x.is_dir()):
             if any(b in sub.name.lower() for b in BAD_DIR):
+                skipped_dirs.append(f"{root}/{sub.name}")
+                continue
+            # The hyphen matters: `2026-07-26_cat_lora60_1` contains "lora" and
+            # is one of eleven older cat runs; `lora-gen-80` is the shot plan.
+            if loragen_only and "lora-gen" not in sub.name.lower():
                 skipped_dirs.append(f"{root}/{sub.name}")
                 continue
             if CHAR in sub.name.lower():           # a whole run folder for this character

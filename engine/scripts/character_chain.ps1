@@ -20,7 +20,11 @@ param(
   [int]$StableMin = 12,
   [int]$MinShots = 70,
   # references + Lora-Gen outputs only; the hand-collected base folder is skipped
-  [switch]$NoBase
+  [switch]$NoBase,
+  # STRICTER than -NoBase: only codex/references and the lora-gen run folder.
+  # Jeremy, 2026-10-04 - cat has eleven older run folders carrying her name and
+  # -NoBase still gathered 336 images for her against jaina's clean 81.
+  [switch]$LoragenOnly
 )
 $ErrorActionPreference = "Continue"
 # Repo paths, never a session scratchpad. $SP used to be one Claude session's
@@ -126,6 +130,7 @@ Log "$Char ready: $last Lora-Gen shots, $total images across all sources"
 Free
 $gatherArgs = @("$PREP\gather_character.py", $Char, "--cap", "$Cap", "--apply")
 if ($NoBase) { $gatherArgs += "--no-base" }
+if ($LoragenOnly) { $gatherArgs += "--loragen-only" }
 $rc = Step "$Char gather" $gatherArgs "gather_$Char"
 if ($rc -ne 0) { Log "ABORT: nothing staged for $Char"; exit 1 }
 # CPU (MediaPipe). Writes gaze_mp.json, without which caption_from_vl.py
