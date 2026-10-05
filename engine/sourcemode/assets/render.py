@@ -200,6 +200,12 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     age, appearance clause, frame, the expression table, the gaze rule - so it is
     shared and cannot drift between the uses.
     """
+    # Hair too short to gather never gets an up-style, whoever wrote the slot -
+    # wardrobe plans and the eval looks set hair per look, outside hair_options.
+    # priya's chin-length bob was asked for buns and rendered down AND up.
+    from .wardrobe import SHORT_HAIR, is_short_haired  # noqa: PLC0415
+    if is_short_haired(character) and is_up_style(slot.get("hair", "")):
+        slot = {**slot, "hair": SHORT_HAIR[int(slot.get("look", 1)) % len(SHORT_HAIR)]}
     if slot["pose"] == "sitting":
         look = f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. Natural realistic human proportions, correct anatomy."
         return (f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, "

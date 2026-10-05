@@ -29,6 +29,7 @@ some looks and not others is how a constant becomes accidentally variable.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 #: The shared rotation, used by any character whose brief does not override it.
@@ -77,7 +78,32 @@ def hair_options(character: str) -> tuple[str, ...]:
     h = brief(character).get("hair")
     if isinstance(h, list) and h:
         return tuple(str(x) for x in h if str(x).strip())
+    if is_short_haired(character):
+        return SHORT_HAIR
     return DEFAULT_HAIR
+
+
+#: What hair too short to gather can actually do. Jeremy, 2026-10-05, on priya's
+#: influencer pack: "a bunch where her hair is down, but also in a bun at the same
+#: time" - her record says "a chin-length dark brown bob" and the shared rotation
+#: asked that bob for a messy bun and a high ponytail. The model drew both, or
+#: lengthened her hair to obey (the skill's older lesson from her wardrobe pack).
+#: No up-style here, so the collision cannot be asked for.
+SHORT_HAIR: tuple[str, ...] = (
+    "her hair worn loose",
+    "her hair tucked behind her ears",
+    "her hair swept to one side",
+    "her hair held back on one side with a clip",
+)
+_SHORT = re.compile(r"\b(?:bob|pixie|chin-length|jaw-length|ear-length|cropped|buzzed|short hair)\b", re.I)
+
+
+def is_short_haired(character: str) -> bool:
+    """Does her appearance record describe hair too short to put up?"""
+    from .appearance import _load as _look  # noqa: PLC0415
+
+    rec = _look()["look"].get((character or "").lower()) or {}
+    return bool(_SHORT.search(" ".join(str(rec.get(k) or "") for k in ("prompt", "features"))))
 
 
 def avoid(character: str) -> str:
