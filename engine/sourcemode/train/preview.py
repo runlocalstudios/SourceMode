@@ -904,10 +904,19 @@ OWN_CSS = r"""
   font-family:var(--mono)}
 .drow.focusrow{box-shadow:0 0 0 2px var(--you) inset;border-radius:var(--r1)}
 #bottom{height:calc(var(--tap) + var(--s5))}
+/* Jeremy, 2026-10-05, on a phone: "extremely cramped" - the sticky header (picker
+   + six chips) held the top third, the approved-state bar and the running-job
+   bar held the bottom third, and the caption got a sliver between them. On a
+   phone the header scrolls away, an approved set's bar sits at the end of the
+   page instead of floating, and the photo cedes height to the caption. */
 @media (max-width:820px){
+  #head{position:static}
   .drow{flex-direction:column}
-  .drow>img{width:100%;max-height:58vh;object-fit:contain}
+  .drow>img{width:100%;max-height:45vh;object-fit:contain}
+  .editor textarea{min-height:min(38vh,300px);font-size:16px;line-height:1.45}
+  .cap-box{font-size:16px;line-height:1.45}
 }
+.actbar.quiet{position:static;box-shadow:none;margin:var(--s3) 0}
 """
 
 BODY = """
@@ -1130,7 +1139,9 @@ function bar(){
   if(pos&&pos.estimate&&pos.estimate.total_s)
     label+=' — '+SM.dur(pos.estimate.total_s);
   if(pos&&pos.place) label+=', '+ordinal(pos.place)+' in the training order';
-  SM.set($('bars'),null,'<div class=actbar>'
+  /* Approved, the only action is the rare Withdraw - it does not get to float
+     over the captions he is still correcting. */
+  SM.set($('bars'),null,'<div class="actbar'+(a.approved?' quiet':'')+'">'
     +(a.approved
        ? '<button class="btn btn-danger" data-act=approve data-v=0>Withdraw approval</button>'
          +'<span class=dim>approved; it is in the training order</span>'
@@ -1280,6 +1291,8 @@ function editCaption(name){
   ed.querySelector('textarea').value=text;
   box.hidden=true; box.after(ed);
   ed.querySelector('textarea').focus();
+  /* bring the whole editor, Save button included, above the phone keyboard */
+  setTimeout(()=>ed.scrollIntoView({block:'center',behavior:'smooth'}),250);
   ed.querySelector('[data-cancel]').onclick=()=>{ ed.remove(); box.hidden=false; };
   ed.querySelector('[data-save]').onclick=async()=>{
     const v=ed.querySelector('textarea').value;
