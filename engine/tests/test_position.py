@@ -151,3 +151,60 @@ def test_position_writes_nothing(tmp_path):
     before = path.stat().st_mtime_ns
     position(cfg, "mine_v2")
     assert path.stat().st_mtime_ns == before
+
+
+def test_quiet_detector_sees_the_training_log_where_training_writes_it(tmp_path):
+    """2026-10-04: the NOW card said marisol was on epoch 7 of 24 while the
+    queue row said "running for 2h 03m without writing anything".
+
+    musubi/accelerate writes progress to STDERR, which lands in
+    outputs/TRAINING/<dataset>.log.err. job_quiet_s only globbed
+    outputs/LOGS, so the freshest thing it could see was the zero-byte file
+    the runner touches once at start:
+
+        outputs/logs/gpu-j023-marisol_v2.log        0 bytes, 125 min old
+        outputs/training/marisol_v2.log.err   274,041 bytes,   0.1 min old
+    """
+    import time
+
+    from sourcemode.monitor.queue_page import job_quiet_s
+
+    (tmp_path / "logs").mkdir()
+    (tmp_path / "training").mkdir()
+    old = time.time() - 2 * 3600
+    runner = tmp_path / "logs" / "gpu-j023-marisol_v2.log"
+    runner.write_bytes(b"")                       # the runner's zero-byte file
+    import os
+
+    os.utime(runner, (old, old))
+    job = {"id": "j023", "status": "running", "label": "marisol_v2",
+           "log": str(runner),
+           "started_at": "2026-10-04T17:30:00+00:00"}
+
+    # with only the stale runner log, it reads as two hours of silence
+    assert job_quiet_s(job, tmp_path) > 3600
+
+    # the live training stderr makes it obviously alive
+    err = tmp_path / "training" / "marisol_v2.log.err"
+    err.write_text("steps:  29%|##  | 1554/5328", encoding="utf-8")
+    assert job_quiet_s(job, tmp_path) < 60
+
+
+def test_the_runners_own_start_line_never_counts_as_activity(tmp_path):
+    """It is written once at START and would otherwise look like life forever."""
+    import os
+    import time
+
+    from sourcemode.monitor.queue_page import job_quiet_s
+
+    (tmp_path / "logs").mkdir()
+    fresh = tmp_path / "logs" / "gpu-j099-zara_v2.log"
+    fresh.write_text("START", encoding="utf-8")
+    other = tmp_path / "logs" / "chain_zara.log"
+    other.write_text("x", encoding="utf-8")
+    old = time.time() - 3 * 3600
+    os.utime(other, (old, old))
+    job = {"id": "j099", "status": "running", "label": "zara_v2",
+           "started_at": "2026-10-04T10:00:00+00:00"}   # no `log` field
+    # the only fresh file is the runner's own line for THIS job: not activity
+    assert job_quiet_s(job, tmp_path) > 3600

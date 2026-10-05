@@ -754,9 +754,15 @@ def job_quiet_s(job: dict, outputs_root: Path, now: float | None = None) -> floa
     """Seconds since this job last wrote ANYTHING, or None if we cannot tell.
 
     Looks at the runner's log for the job, its `.err` sidecar, and any script
-    log named for the job's label (the chain writes `chain_<char>.log`, which
-    the runner's own redirect never sees because the chain logs with Out-File
-    rather than to stdout).
+    log named for the job's label or dataset, under BOTH outputs/logs and
+    outputs/training. The chain writes `chain_<char>.log` with Out-File, which
+    the runner's own redirect never sees; training writes its progress to
+    stderr, landing in `outputs/training/<dataset>.log.err`.
+
+    Both roots matter and missing one is not a small bug: on 2026-10-04 the
+    NOW card reported marisol on epoch 7 of 24 while this function reported
+    two hours of silence, because the only file it could see was the
+    zero-byte one the runner touches once at start.
 
     A job that has never written a byte is the strongest signal there is, and
     it is the one this was built for: tess's log sat at 0 bytes for 4h 48m.
@@ -772,16 +778,28 @@ def job_quiet_s(job: dict, outputs_root: Path, now: float | None = None) -> floa
                 stamps.append(cand.stat().st_mtime)
     label = (job.get("label") or "").strip()
     if label:
-        logs = outputs_root / "logs"
         stem = character_of(label)
-        if logs.is_dir():
-            for cand in logs.glob(f"*{stem}*.log"):
-                # the runner's own line for this job is written once at START
-                # and would otherwise look like activity forever
-                if cand.name.startswith("gpu-" + str(job.get("id", ""))):
-                    continue
-                if cand.is_file():
-                    stamps.append(cand.stat().st_mtime)
+        # BOTH roots. Training writes under outputs/TRAINING, and writes its
+        # progress to stderr, so the live file is `<dataset>.log.err` there -
+        # which is why marisol read as silent for two hours while the NOW card
+        # was reporting her epoch from that very file. Match the dataset label
+        # too, not only the character: `marisol_v2.log.err` does not contain
+        # the bare stem for every naming convention we have used.
+        for root in (outputs_root / "logs", outputs_root / "training"):
+            if not root.is_dir():
+                continue
+            seen = set()
+            for needle in {stem, label}:
+                for pat in (f"*{needle}*.log", f"*{needle}*.log.err", f"*{needle}*.err"):
+                    for cand in root.glob(pat):
+                        # the runner's own line for this job is written once at
+                        # START and would otherwise look like activity forever
+                        if cand.name.startswith("gpu-" + str(job.get("id", ""))):
+                            continue
+                        if cand in seen or not cand.is_file():
+                            continue
+                        seen.add(cand)
+                        stamps.append(cand.stat().st_mtime)
     started = job.get("started_at")
     if not stamps:
         # nothing written at all: measure from when it started, which is the
