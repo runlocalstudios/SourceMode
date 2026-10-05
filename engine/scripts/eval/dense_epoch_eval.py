@@ -28,7 +28,7 @@ from sourcemode.render.workflow import load_template, prune_placeholder_loras, s
 # slots and is parsed as an int. "--scenes favorable" put "--scenes" into argv[9],
 # the epoch offset, and killed a queued 60-render job the instant it started -
 # after it had waited seven hours for the card. Split flags out first.
-_FLAGS = {"--scenes", "--epochs"}
+_FLAGS = {"--scenes", "--epochs", "--tag"}
 # Bare flags take no value. They are skipped here for the same reason the valued
 # ones are split out: anything left in argv lands in a positional slot by index.
 _BARE = {"--allow-incomplete-appearance"}
@@ -126,9 +126,16 @@ sys.path.insert(0, str(Path("scripts/eval").resolve()))
 from asset_scenes import asset_prompts  # noqa: E402
 SCENES = asset_prompts(TRIGGER)
 VERBATIM = True
-OUT = Path(f"outputs/dense_{SUB}_asset"); OUT.mkdir(parents=True, exist_ok=True)
-SET_ID = f"dense_{SUB}_asset"
-SCENES = SCENES[:N_SCENES]
+# --tag renders into its own folder and judge set. Without it a re-run with a
+# changed prompt finds the old scene_NN.png on disk, skips rendering, and judges
+# the previous prompt's images under the new name.
+_TAG = f"_{_FLAGVALS['--tag']}" if _FLAGVALS.get("--tag") else ""
+OUT = Path(f"outputs/dense_{SUB}_asset{_TAG}"); OUT.mkdir(parents=True, exist_ok=True)
+SET_ID = f"dense_{SUB}_asset{_TAG}"
+# There are ten asset looks. An n=20 confirmation renders each look twice, and the
+# second pass gets its own seeds (SEED + i, i = 10..19) - before this, asking for
+# 20 silently rendered 10.
+SCENES = (SCENES * -(-N_SCENES // len(SCENES)))[:N_SCENES]
 SEED = 8800
 
 

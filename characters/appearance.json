@@ -95,14 +95,11 @@
   "prompt": "a 25-year-old Irish woman with fair skin, a slim figure with a small waist and a medium-full bust, long straight auburn-copper hair with a soft wispy curtain fringe, green eyes and light freckles across her nose"
  },
  "marisol": {
-  "_note": "Age 27 from the game (none given). Hair and skin observed from her references: the bleached blonde shows darker roots at the parting, stated so the base model does not volunteer clean platinum.",
+  "_note": "Age 27 from the game (none given). Hair and skin observed from her references: the bleached blonde shows darker roots at the parting, stated so the base model does not volunteer clean platinum. Body text cut to large breasts only, 2026-10-05: Jeremy, on her v2 epoch eval, the curvy/hourglass wording overpowered the LoRA and rendered a body nothing like her references. No build/figure/frame on purpose - frame() would infer 'curvy frame' from them.",
   "ethnicity": "Latina",
-  "build": "curvy",
-  "bust": "full",
-  "figure": "curvy, hourglass",
+  "bust": "large",
   "features": "bleached blonde hair falling just past her shoulders with darker roots at the parting, brown eyes, light tan skin",
-  "frame": "curvy frame",
-  "prompt": "a curvy Latina young woman with an hourglass figure and a full bust, light tan skin, bleached blonde hair falling just past her shoulders with darker roots at the parting, brown eyes"
+  "prompt": "a Latina young woman with large breasts, light tan skin, bleached blonde hair falling just past her shoulders with darker roots at the parting, brown eyes"
  },
  "mei": {
   "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 27, property manager of The Flats; her `work` wardrobe should read front-desk professional. Age comes from the game.",
