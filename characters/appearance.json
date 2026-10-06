@@ -309,5 +309,10 @@
   "frame": "slim frame",
   "prompt": "a 29-year-old Irish woman with fair skin, a slim figure with a defined waist and a medium bust, long wavy dark brown hair, hazel-green eyes and freckles across her nose and cheeks",
   "age": 29
+ },
+ "gigi": {
+  "_note": "2026-10-06. Jeremy: white, tan, petite frame, medium breasts, long brown hair. Added from her three references: centre part, lighter sun-streaked ends, dark brown eyes. Ethnicity word left out on purpose (skin tone carries it; A/B on jojo/priyanka). Age 24 from the game. Teaches yoga mornings, tends bar nights.",
+  "frame": "petite frame",
+  "prompt": "a 24-year-old woman with tan skin, a petite frame and medium breasts, long straight dark brown hair with a centre part and lighter sun-streaked ends, and dark brown eyes"
  }
 }
