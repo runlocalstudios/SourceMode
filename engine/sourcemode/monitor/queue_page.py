@@ -858,6 +858,37 @@ def _state_of(job: dict, *, paused: bool, runner_alive: bool,
     return {"status": "next", "why": ""}
 
 
+_SWEEP_START = re.compile(r"START \S+ eval, epochs (\d+)-(\d+) x (\d+) scenes")
+
+
+def _sweep_progress(cfg: dict, run: dict | None) -> tuple[int, int] | None:
+    """(done, total) of a training job's closing epoch sweep, or None while it is
+    still training. Read from the job's own log: train_character.ps1 writes
+    `START <char> eval, epochs 16-24 x 10 scenes` after `END train`."""
+    if not run:
+        return None
+    from ..config import outputs_dir  # noqa: PLC0415
+
+    out = outputs_dir(cfg)
+    ds = run.get("label") or ""
+    log = out / "logs" / f"{ds}.log"
+    try:
+        lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return None
+    # only this run's lines: the log keeps every earlier attempt above it
+    starts = [i for i, l in enumerate(lines) if "checking approval for" in l]
+    tail = lines[starts[-1]:] if starts else lines
+    m = next((_SWEEP_START.search(l) for l in reversed(tail) if _SWEEP_START.search(l)), None)
+    if not m:
+        return None
+    a, b, scenes = (int(x) for x in m.groups())
+    root = out / f"dense_{ds}_asset"
+    done = sum(1 for e in range(a, b + 1)
+               for _ in (root / f"ep{e:02d}").glob("scene_*.png")) if root.is_dir() else 0
+    return done, (b - a + 1) * scenes
+
+
 def now_card(jobs: list[dict], status: dict | None,
              cfg_for_now: dict | None = None) -> dict | None:
     """What the card is doing - the ONE place `progress_line` exists.
@@ -885,10 +916,20 @@ def now_card(jobs: list[dict], status: dict | None,
     # and before this a stall flag for the wrong job too. Training numbers are
     # reported only when a training job is what is running.
     training_job = bool(run and run.get("kind") == "train")
+    # A train job ends with its own epoch sweep. Once that starts the trainer's
+    # tqdm is frozen at "step 3600 of 3600" and its log stops moving, so the card
+    # read finished-training and would have flagged a stall. In the sweep phase
+    # the job is a render job: count the sweep's images instead.
+    sweep = _sweep_progress(cfg_for_now, run) if (training_job and cfg_for_now) else None
+    if sweep:
+        training_job = False
     # A render job's progress is countable, so it gets the same treatment as a
     # training job's tqdm: done of total, and the time left at the measured rate.
     r_done = r_total = r_eta = None
-    if run and not training_job:
+    if sweep:
+        r_done, r_total = sweep
+        r_eta = max(0.0, (r_total - r_done) * _rate(cfg_for_now)["s_per_render"])
+    elif run and not training_job:
         got = render_count(run.get("cmd") or [])
         if got:
             r_total = got[0]
