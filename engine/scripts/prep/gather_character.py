@@ -31,6 +31,7 @@ CPU only - InsightFace runs on the processor, so this is safe beside a training
 or eval job. Nothing is written without --apply.
 """
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -108,10 +109,18 @@ def sources() -> list[tuple[Path, str]]:
             # top, ash and hannah are in a subfolder named for them. Searching only for
             # loose files missed all 80 of Ash's shots and would have trained her on
             # the 23 images in her base folder.
-            nested = sub / CHAR
-            if nested.is_dir():
+            # ...and a subfolder may be named for her and the run: gabi's hair
+            # top-up landed in `lora-gen-80/gabi-hair-topup-2026-10-06`, which an
+            # exact `<char>` match missed entirely. Whole name component before
+            # the first - or _ only: priya- must not take priyanka-.
+            for nested in sorted(x for x in sub.iterdir() if x.is_dir()):
+                if re.split(r"[-_]", nested.name.lower())[0] != CHAR:
+                    continue
+                if any(b in nested.name.lower() for b in BAD_DIR):
+                    skipped_dirs.append(f"{root}/{sub.name}/{nested.name}")
+                    continue
                 for p in sorted(nested.rglob("*")):
-                    take(p, f"{root}/{sub.name}/{CHAR}")
+                    take(p, f"{root}/{sub.name}/{nested.name}")
             for p in sorted(sub.glob(f"{CHAR}_*")):
                 take(p, f"{root}/{sub.name} (loose)")
     return out
