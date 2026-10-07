@@ -20,14 +20,14 @@
   "frame": "tiny frame"
  },
  "bri": {
-  "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 18, college freshman, Twitch streamer, loud and warm. Her wardrobe should read student, not club. Age comes from the game.",
+  "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 18, college freshman, Twitch streamer, loud and warm. Her wardrobe should read student, not club. Age comes from the game. 2026-10-06, Jeremy: 'lighter caramel ends' was never said and is wrong - it was read off studio lighting in one reference. Removed, with the ethnicity word (no race in prompts).",
   "ethnicity": "Latina",
   "build": "petite, slim",
   "bust": "full for her frame",
   "figure": "slim with a small waist",
-  "features": "very long straight dark brown hair with lighter caramel ends, brown eyes, warm tan skin",
+  "features": "very long straight dark brown hair, brown eyes, warm tan skin",
   "frame": "tiny frame",
-  "prompt": "a petite, slim Latina young woman with a small waist and a full bust for her frame, warm tan skin, very long straight dark brown hair with lighter caramel ends, brown eyes"
+  "prompt": "a petite, slim young woman with a small waist and a full bust for her frame, warm tan skin, very long straight dark brown hair, brown eyes"
  },
  "cat": {
   "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Her Lora-Gen run is COMPLETE at 77 of 80: three were moderated out (Jeremy, 2026-10-04), not a failed run, so 77 is the right count and needs no re-run. Game: 38, owns Obsidian and the Aire spa, independently wealthy, not easily impressed. She is NOT a dancer, so her `work` wardrobe should read as an owner in her own venue, not stage wear. Age comes from the game.",
