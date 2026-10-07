@@ -291,6 +291,25 @@ def confirm(character: str, fields: dict) -> dict:
                 rec[k] = v
             else:
                 rec.pop(k, None)
+    # Render age: overrides the game's age for prompts only (cat is 38 in the
+    # game and rendered gaunt and older still, 0/90 kept). Blank = the game's.
+    # Not in the fingerprint, so records confirmed before this keep their state.
+    # Jeremy, 2026-10-07: "age should only be there to really push it young or
+    # old" - for cat the LoRA carries it. age_in_prompt False drops the age
+    # phrase from her clause; the game's age still counts everywhere else.
+    if "state_age" in fields:
+        if fields.get("state_age") in (False, "false", "0", 0, ""):
+            rec["age_in_prompt"] = False
+        else:
+            rec.pop("age_in_prompt", None)
+    if "age" in fields:
+        a = str(fields.get("age") or "").strip()
+        if a:
+            if not a.isdigit() or not 18 <= int(a) <= 80:
+                raise ValueError("render age must be a whole number from 18 to 80")
+            rec["age"] = int(a)
+        else:
+            rec.pop("age", None)
     if not (rec.get("prompt") or "").strip():
         raise ValueError("a confirmed record needs a prompt")
     rec["confirmed"] = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -388,8 +407,9 @@ def clause(character: str) -> str:
     holds for the whole cast and not only the three with written descriptions.
     """
     c = character.lower()
-    age = age_of(c)
-    text = (_load()["look"].get(c) or {}).get("prompt", "") or ""
+    rec = _load()["look"].get(c) or {}
+    age = age_of(c) if rec.get("age_in_prompt", True) is not False else None
+    text = rec.get("prompt", "") or ""
     if age and text:
         # an entry that already opens with the age is left alone
         if re.match(rf"an?\s+{age}[- ]year[- ]old", text):

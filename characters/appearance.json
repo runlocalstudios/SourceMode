@@ -27,7 +27,11 @@
   "figure": "slim with a small waist",
   "features": "very long straight dark brown hair, brown eyes, warm tan skin",
   "frame": "tiny frame",
-  "prompt": "a petite, slim young woman with a small waist and a full bust for her frame, warm tan skin, very long straight dark brown hair, brown eyes"
+  "prompt": "a petite, slim young woman with a small waist and a full bust for her frame, warm tan skin, very long straight dark brown hair, brown eyes",
+  "confirmed": {
+   "at": "2026-10-07T02:07:49+00:00",
+   "fingerprint": "0e76c8726ec757e9"
+  }
  },
  "cat": {
   "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Her Lora-Gen run is COMPLETE at 77 of 80: three were moderated out (Jeremy, 2026-10-04), not a failed run, so 77 is the right count and needs no re-run. Game: 38, owns Obsidian and the Aire spa, independently wealthy, not easily impressed. She is NOT a dancer, so her `work` wardrobe should read as an owner in her own venue, not stage wear. Age comes from the game.",
@@ -36,8 +40,13 @@
   "bust": "full",
   "figure": "curvy, hourglass",
   "features": "very long straight light-brown hair with a centre part, brown eyes, olive-fair skin, strong defined brows, full lips",
-  "frame": "curvy frame",
-  "prompt": "a curvy white woman with Mediterranean colouring and an hourglass figure, a full bust, olive-fair skin, very long straight light-brown hair with a centre part, brown eyes, strong defined brows and full lips"
+  "frame": "slim frame",
+  "prompt": "a woman with a slim frame and an hourglass figure, a full bust, olive-fair skin, very long straight light-brown hair with a centre part, brown eyes, strong defined brows and full lips",
+  "confirmed": {
+   "at": "2026-10-07T22:00:31+00:00",
+   "fingerprint": "4fc1d712dabbd54c"
+  },
+  "age_in_prompt": false
  },
  "cici": {
   "ethnicity": "Latina - Colombian and Venezuelan",
@@ -163,8 +172,12 @@
   "bust": "full",
   "figure": "slim with a full bust",
   "features": "very long straight blonde hair with darker roots at the parting, brown eyes, fair skin",
-  "frame": "tiny frame",
-  "prompt": "a slim young woman with a full bust, fair skin, very long straight blonde hair with darker roots at the parting, brown eyes"
+  "frame": "slim frame",
+  "prompt": "a slim young woman with a full bust, fair skin, very long straight blonde hair with darker roots at the parting, brown eyes",
+  "confirmed": {
+   "at": "2026-10-07T21:55:21+00:00",
+   "fingerprint": "c10cf92df5a3be50"
+  }
  },
  "bianca": {
   "_note": "DRAFT, 2026-10-04 - read off her four reference photos, her shipped outfits and her twelve shipped selfies. The game record is self-contradictory on age: the structured `age` field says 27, her systemPrompt prose says 25. Taking the structured field, which is what the game actually reads. Correct any of this and the selfie pack picks it up on the next render.",
@@ -219,8 +232,12 @@
   "figure": "slim figure with a defined waist and a full bust",
   "features": "very long dark brown hair with soft waves, dark brown eyes, warm light skin",
   "frame": "slim frame",
-  "prompt": "a 23-year-old woman with a slim figure, a defined waist and a full bust, light olive skin, very long dark brown hair with soft waves, and dark brown eyes",
-  "age": 23
+  "prompt": "a 23-year-old woman with a slim figure, a defined waist and a full bust, light olive skin, long dark brown hair, and dark brown eyes",
+  "age": 23,
+  "confirmed": {
+   "at": "2026-10-07T21:55:46+00:00",
+   "fingerprint": "0c70981537c29837"
+  }
  },
  "keiko": {
   "_note": "Corrected by Jeremy, 2026-10-04. Half Asian, not fully - which is why her renders read mixed with sun-lightened brown hair. DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Asian is stated in her systemPrompt and her mother Hotaru owns Lumen Salon, so likely half Japanese - but her shipped renders read MIXED, with sun-lightened brown hair rather than black. Worth confirming which you want.",
@@ -307,8 +324,12 @@
   "figure": "slim figure with a defined waist and a medium bust",
   "features": "long wavy dark brown hair, hazel-green eyes, fair Irish skin, freckles across her nose and cheeks",
   "frame": "slim frame",
-  "prompt": "a 29-year-old Irish woman with fair skin, a slim figure with a defined waist and a medium bust, long wavy dark brown hair, hazel-green eyes and freckles across her nose and cheeks",
-  "age": 29
+  "prompt": "a 29-year-old woman with fair skin, a slim figure with a defined waist and a medium bust, long dark brown hair, brown eyes and slight freckles across her nose and cheeks",
+  "age": 29,
+  "confirmed": {
+   "at": "2026-10-07T02:09:07+00:00",
+   "fingerprint": "a7e74340e8421f2f"
+  }
  },
  "gigi": {
   "_note": "2026-10-06. Jeremy: white, tan, petite frame, medium breasts, long brown hair. Added from her three references: centre part, lighter sun-streaked ends, dark brown eyes. Ethnicity word left out on purpose (skin tone carries it; A/B on jojo/priyanka). Age 24 from the game. Teaches yoga mornings, tends bar nights.",

@@ -58,3 +58,21 @@ def test_a_note_edit_does_not_unconfirm(records):
 def test_an_empty_prompt_cannot_be_confirmed(records):
     with pytest.raises(ValueError):
         A.confirm("x", {"prompt": "   "})
+
+
+def test_render_age_overrides_and_blank_restores(records):
+    A.confirm("x", {"prompt": "a woman with red hair", "age": "29"})
+    assert json.loads(records.read_text(encoding="utf-8"))["x"]["age"] == 29
+    assert A.age_of("x") == 29
+    A.confirm("x", {"prompt": "a woman with red hair", "age": ""})
+    assert "age" not in json.loads(records.read_text(encoding="utf-8"))["x"]
+    with pytest.raises(ValueError):
+        A.confirm("x", {"prompt": "a woman with red hair", "age": "15"})
+
+
+def test_state_age_off_leaves_age_to_the_lora(records):
+    """cat, 2026-10-07: age only where it pushes young or old."""
+    A.confirm("x", {"prompt": "a woman with red hair", "state_age": False})
+    assert A.clause("x") == "a woman with red hair"
+    A.confirm("x", {"prompt": "a woman with red hair", "state_age": True})
+    assert A.clause("x").startswith("a 25-year-old")

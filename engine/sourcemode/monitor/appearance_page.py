@@ -49,7 +49,9 @@ def records() -> list[dict]:
         rec = look[c]
         g = A.game_facts(c)
         out.append({
-            "character": c, "age": A.age_of(c), "prompt": rec.get("prompt", ""),
+            "character": c, "age": A.age_of(c), "own_age": rec.get("age"),
+            "state_age": rec.get("age_in_prompt", True) is not False,
+            "game_age": (A._load()["ages"] or {}).get(c), "prompt": rec.get("prompt", ""),
             "frame": rec.get("frame", ""), "negative": rec.get("negative", ""),
             "note": rec.get("_note", ""), "confirmed": A.confirmed(c),
             "confirmed_at": (rec.get("confirmed") or {}).get("at"),
@@ -66,6 +68,8 @@ html,body{overflow-x:hidden}
 #app{display:block;max-width:760px;margin:0 auto;padding:0 var(--s3);box-sizing:border-box}
 #app,.col-main{min-width:0;width:100%;overflow-x:hidden}
 .lk{margin-bottom:var(--s4);min-width:0;max-width:100%;box-sizing:border-box}
+#who{width:100%;min-height:var(--tap);margin-bottom:var(--s2);background:var(--g1);color:var(--g9);
+  border:1px solid var(--g4);border-radius:var(--r2);padding:0 var(--s2);font-size:16px}
 .lk .refs{display:flex;gap:var(--s2);overflow-x:auto;padding-bottom:var(--s2);
   max-width:100%;-webkit-overflow-scrolling:touch}
 .lk .refs img{height:220px;border-radius:var(--r1);background:var(--photo);flex:none;cursor:zoom-in}
@@ -93,6 +97,7 @@ BODY = """
 <div class=wrap id=app>
   <div class=col-main>
     <h2>Looks</h2>
+    <select id=who aria-label="character"></select>
     <div class=card-sub id=sum>loading&hellip;</div>
     <div id=list></div>
   </div>
@@ -113,11 +118,35 @@ async function load(){
   draw();
 }
 function marked(t){ return SM.esc(t).replace(RACE,m=>'<mark>'+m+'</mark>'); }
+/* Jeremy, 2026-10-07: "I want to be able to revisit any of the girls' looks
+   from a drop down even if they are already approved" - cat's confirmed record
+   rendered her old and hard. The page opens on what still needs review; the
+   dropdown reaches anyone, confirmed or not. Kept in the hash so a reload or a
+   Confirm stays on the same character. */
+let pick=decodeURIComponent(location.hash.slice(1))||'';
+function drawPicker(){
+  const open=recs.filter(r=>!r.confirmed);
+  const opt=(v,t)=>'<option value="'+SM.esc(v)+'"'+(v===pick?' selected':'')+'>'+SM.esc(t)+'</option>';
+  $('who').innerHTML=opt('','Needs review ('+open.length+')')+opt('*','Everyone ('+recs.length+')')
+    +recs.slice().sort((a,b)=>a.character.localeCompare(b.character))
+      .map(r=>opt(r.character,r.character+(r.confirmed?'  ✓':'  • needs review'))).join('');
+}
+$('who').addEventListener('change',e=>{
+  pick=e.target.value; history.replaceState(null,'','#'+encodeURIComponent(pick)); draw();
+  window.scrollTo(0,0);
+});
+function shown(){
+  if(pick==='*') return recs;
+  if(pick) return recs.filter(r=>r.character===pick);
+  const open=recs.filter(r=>!r.confirmed);
+  return open.length?open:recs;
+}
 function draw(){
+  drawPicker();
   const open=recs.filter(r=>!r.confirmed).length;
   $('sum').textContent=open?(open+' of '+recs.length+' still to confirm. A sweep or shoot will not render a character until her record is confirmed.')
                             :('All '+recs.length+' confirmed.');
-  SM.set($('list'),null,recs.map(r=>{
+  SM.set($('list'),null,shown().map(r=>{
     const frames=FRAMES.includes(r.frame)?FRAMES:FRAMES.concat([r.frame]);
     return '<div class="card lk '+(r.confirmed?'e-done':'e-you')+'" data-c="'+SM.esc(r.character)+'">'
       +'<div class=card-head>'+SM.pill(r.confirmed?'done':'you')
@@ -128,6 +157,10 @@ function draw(){
       +(r.game?'<div class=game>Game: '+SM.esc(r.game)+'</div>':'')
       +'<textarea data-k=prompt spellcheck=false>'+SM.esc(r.prompt)+'</textarea>'
       +'<div class=hl data-hl>'+(r.race.length?marked(r.prompt):'No race words.')+'</div>'
+      +'<div class=row><label><input type=checkbox data-k=state_age style="width:auto;min-height:0;flex:none"'+(r.state_age?' checked':'')+'> State age</label>'
+      +'<input data-k=age inputmode=numeric style="flex:0 0 5em;width:5em" value="'
+        +SM.esc(r.own_age==null?'':String(r.own_age))+'" placeholder="'+SM.esc(r.game_age==null?'':String(r.game_age))+'">'
+        +'<span class=dim>'+(r.game_age!=null?'game: '+r.game_age+'; blank uses it':'not in the game')+'. Untick to leave age to the LoRA.</span></div>'
       +'<div class=row><label>Fit</label><select data-k=frame>'
         +frames.map(f=>'<option value="'+SM.esc(f)+'"'+(f===r.frame?' selected':'')+'>'+(f||'(none)')+'</option>').join('')
       +'</select><input data-k=negative placeholder="negative (optional)" value="'+SM.esc(r.negative||'')+'"></div>'
@@ -150,11 +183,11 @@ document.addEventListener('click',async e=>{
   if(img){ $('big').querySelector('img').src=img.src; $('big').classList.add('on'); return; }
   if(e.target.closest('#big')){ $('big').classList.remove('on'); return; }
   const b=e.target.closest('[data-act=confirm]'); if(!b) return;
-  const card=b.closest('.lk'), c=card.dataset.c, val=k=>card.querySelector('[data-k='+k+']').value;
+  const card=b.closest('.lk'), c=card.dataset.c, val=k=>card.querySelector('[data-k='+k+']').value, ticked=k=>card.querySelector('[data-k='+k+']').checked;
   b.disabled=true;
   try{
     await SM.postJSON('/appearance/'+encodeURIComponent(c)+'/confirm',
-      {prompt:val('prompt'),frame:val('frame'),negative:val('negative')});
+      {prompt:val('prompt'),frame:val('frame'),negative:val('negative'),age:val('age'),state_age:ticked('state_age')});
     SM.toast(c+' confirmed');
     await load();
   }catch(err){ SM.toast(err.message); b.disabled=false; }
@@ -193,7 +226,9 @@ def appearance_router(cfg: dict):
         from ..assets import appearance as A  # noqa: PLC0415
 
         try:
-            rec = A.confirm(char, {k: body.get(k, "") for k in A.CONFIRM_FIELDS})
+            rec = A.confirm(char, {**{k: body.get(k, "") for k in A.CONFIRM_FIELDS},
+                                   "age": body.get("age", ""),
+                                   "state_age": body.get("state_age", True)})
         except ValueError as e:
             raise HTTPException(400, str(e)) from e
         return {"character": char.lower(), "confirmed": rec["confirmed"]}
