@@ -273,9 +273,12 @@ hair_fix = {k: hair_clause(v) for k, v in read_jsonl(HAIR_OUT).items()}
 # braid and halfup were re-asked as a yes/no because the closed list was not
 # trustworthy on them; that answer wins. (Checked by eye afterwards: all 7 braids
 # were real - the first look missed them because the crop cut the braid off.)
+confirmed_hair: set[str] = set()
 if HAIR_CONFIRM.exists():
     for k, v in json.loads(HAIR_CONFIRM.read_text(encoding="utf-8")).items():
         hair_fix[k] = HAIR_OPTIONS.get(v, hair_fix.get(k))
+        if v in HAIR_OPTIONS:
+            confirmed_hair.add(k)
 # A garment noun means a separate item of clothing; anything else in a comma list
 # describes the garment before it (a neckline, a sleeve, a colour).
 GARMENTS = ("top", "shirt", "blouse", "sweater", "sweatshirt", "hoodie", "jumper",
@@ -403,7 +406,14 @@ for p in sorted(IMG.glob("*")):
         out.append(gaze[p.name])
     entry = PLAN.get(p.name)
     hair = hair_fix.get(p.name) or c.get("hair")
-    if entry and entry.get("hair"):
+    # A hair answer confirmed against the IMAGE (hair_confirm2 / hair_recheck)
+    # beats the plan: the plan says what was ASKED, and on a character whose hair
+    # cannot hold the asked style the generator substituted. nisha 2026-10-06:
+    # hair_recheck corrected 15 braid / high-ponytail captions and this step
+    # wrote the plan's braids straight back over them.
+    if p.name in confirmed_hair and hair:
+        pass
+    elif entry and entry.get("hair"):
         # the plan said what to render; record when the VL reads it differently so
         # the pair can be looked at, but write the plan's wording
         asked = entry["hair"]
