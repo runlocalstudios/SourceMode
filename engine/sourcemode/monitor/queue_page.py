@@ -286,10 +286,12 @@ function acts(j,i,n){
 }
 
 function drawCand(el,c){
-  el.className='jrow e-you';
+  /* Approved and waiting for HIM to queue it - not awaiting approval. The
+     yellow "Needs you" pill made gigi read as still unapproved (2026-10-06). */
+  el.className='jrow e-wait';
   const e=c.estimate||{};
   SM.set(el,null,'<div class=main>'
-    +'<div class=head>'+SM.pill('you')+'<span class=title>'+SM.esc(c.who)
+    +'<div class=head>'+SM.pill('wait','Approved')+'<span class=title>'+SM.esc(c.who)
       +' <span class=what>&mdash; approved, never trained</span></span></div>'
     +'<div class=why>approved '+SM.esc(SM.ago(c.approved_at))+' &middot; '
       +SM.esc(c.images)+' images</div>'

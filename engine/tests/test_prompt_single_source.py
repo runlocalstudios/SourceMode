@@ -127,8 +127,9 @@ def test_an_undocumented_character_fails_the_preflight():
 def test_a_documented_character_passes_it(monkeypatch):
     import sourcemode.assets.appearance as A
 
-    doc = {"look": {"x": {"age": 25, "prompt": "a woman with red hair", "frame": "curvy frame"}},
-           "ages": {}}
+    rec = {"age": 25, "prompt": "a woman with red hair", "frame": "curvy frame"}
+    rec["confirmed"] = {"fingerprint": A.record_fingerprint(rec)}   # Jeremy confirmed it
+    doc = {"look": {"x": rec}, "ages": {}}
     monkeypatch.setattr(A, "_load", lambda: doc)
     r = A.check("x")
     assert r["ok"] is True
@@ -138,10 +139,12 @@ def test_a_documented_character_passes_it(monkeypatch):
 def test_the_preflight_warns_without_blocking_on_the_soft_fields(monkeypatch):
     import sourcemode.assets.appearance as A
 
-    doc = {"look": {"y": {"prompt": "a woman"}}, "ages": {"y": 30}}
+    rec = {"prompt": "a woman"}
+    rec["confirmed"] = {"fingerprint": A.record_fingerprint(rec)}
+    doc = {"look": {"y": rec}, "ages": {"y": 30}}
     monkeypatch.setattr(A, "_load", lambda: doc)
     r = A.check("y")
-    assert r["ok"] is True                                   # age + prompt present
+    assert r["ok"] is True                         # age + prompt present, confirmed
     assert any(w.startswith("frame") for w in r["warnings"])
 
 

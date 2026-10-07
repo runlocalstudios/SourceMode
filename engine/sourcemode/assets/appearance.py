@@ -250,6 +250,62 @@ def negative(character: str) -> str:
 REQUIRED = ("age", "prompt")
 
 
+# --- confirmation ---------------------------------------------------------------
+# Jeremy, 2026-10-06: "they're so fucked up that I can't trust them." Bri's
+# "lighter caramel ends" and Jaina's freckles were drafted from reference photos,
+# marked "DRAFT - correct before her sweep", and rendered into both sweeps anyway:
+# a note in a file stopped nothing. A record is now CONFIRMED when he approves its
+# exact text on the Looks tab, bound to a fingerprint of the fields that reach a
+# prompt - so any later edit, by hand or by a script, unconfirms it - and check()
+# refuses an unconfirmed record like a missing one.
+CONFIRM_FIELDS = ("prompt", "frame", "negative")
+
+
+def record_fingerprint(rec: dict) -> str:
+    import hashlib  # noqa: PLC0415
+
+    blob = "\x1f".join(" ".join(str(rec.get(k) or "").split()) for k in CONFIRM_FIELDS)
+    return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:16]
+
+
+def confirmed(character: str) -> bool:
+    rec = _load()["look"].get((character or "").lower()) or {}
+    c = rec.get("confirmed") or {}
+    return bool(c.get("fingerprint")) and c["fingerprint"] == record_fingerprint(rec)
+
+
+def confirm(character: str, fields: dict) -> dict:
+    """Write his reviewed text and mark it confirmed. Only CONFIRM_FIELDS change;
+    an empty string clears a field (an empty frame means no fitted clause)."""
+    import json as _json  # noqa: PLC0415
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    global _cache
+    c = (character or "").lower()
+    doc = _json.loads(APPEARANCE.read_text(encoding="utf-8")) if APPEARANCE.is_file() else {}
+    rec = doc.setdefault(c, {})
+    for k in CONFIRM_FIELDS:
+        if k in fields:
+            v = " ".join(str(fields[k] or "").split())
+            if v:
+                rec[k] = v
+            else:
+                rec.pop(k, None)
+    if not (rec.get("prompt") or "").strip():
+        raise ValueError("a confirmed record needs a prompt")
+    rec["confirmed"] = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                        "fingerprint": record_fingerprint(rec)}
+    APPEARANCE.write_text(_json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    _cache = None
+    return rec
+
+
+def reload() -> None:
+    """Forget the cached records - the monitor is long-lived and reads them once."""
+    global _cache
+    _cache = None
+
+
 def check(character: str) -> dict:
     """What is missing from her record, for the pre-flight before GPU time.
 
@@ -269,6 +325,9 @@ def check(character: str) -> dict:
         missing.append("prompt - the appearance sentence every render carries "
                        "(ethnicity, build, hair colour and length, eyes, anything the "
                        "base model will not volunteer)")
+    elif not confirmed(c):
+        missing.append("confirmed - Jeremy has not confirmed this record; review it on "
+                       "the Looks tab (drafts carried invented details into two sweeps)")
     if not frame(c):
         warnings.append("frame - tiny / curvy / omit; without it no fitted clause is sent")
     refs = Path("C:/Epic Games/Files/cnc info/codex/references")

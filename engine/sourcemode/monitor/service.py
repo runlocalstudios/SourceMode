@@ -53,6 +53,8 @@ def create_app(cfg: dict, sampler: Sampler | None = None):
     app.include_router(epochs_router(cfg))
     app.include_router(shoots_router(cfg))
     app.include_router(character_router(cfg))
+    from .appearance_page import appearance_router  # noqa: PLC0415
+    app.include_router(appearance_router(cfg))
     return app
 
 
