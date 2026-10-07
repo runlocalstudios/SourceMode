@@ -360,7 +360,9 @@ def hub_router(cfg: dict, status=None):
 
     @r.get("/", response_class=HTMLResponse)
     def _hub():
-        return PAGE
+        # no-store: the iPad kept a cached shell after the Looks tab shipped and
+        # showed four tabs. The pages inside the frames already do this.
+        return HTMLResponse(PAGE, headers={"Cache-Control": "no-store"})
 
     @r.get("/hub/now")
     def _hub_now() -> dict:

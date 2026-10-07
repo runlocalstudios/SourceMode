@@ -173,7 +173,7 @@ def appearance_router(cfg: dict):
 
     @r.get("/appearance", response_class=HTMLResponse)
     def _page():
-        return PAGE
+        return HTMLResponse(PAGE, headers={"Cache-Control": "no-store"})
 
     @r.get("/appearance/list")
     def _list() -> list[dict]:

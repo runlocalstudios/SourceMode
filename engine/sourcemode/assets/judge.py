@@ -951,6 +951,10 @@ function foot(hist,left){
   let h='<div class=card-foot>'
     +(left?'<button class="btn btn-primary" data-act=nextset>Next set &middot; '
            +left+' left</button>':'')
+    /* Jeremy, 2026-10-07: "there is no way when it's on a screen like this to
+       choose a different set" - the results screen covers the set picker, and
+       with nothing left unjudged the only button was Review from the start. */
+    +'<button class="btn" data-act=pick>Choose a set</button>'
     +'<button class="btn" data-act=restart>Review from the start</button></div>';
   if(runs.length){
     h+='<details class=report><summary>Earlier runs ('+runs.length+')</summary>';
