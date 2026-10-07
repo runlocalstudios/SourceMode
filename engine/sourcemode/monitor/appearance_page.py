@@ -61,21 +61,26 @@ def records() -> list[dict]:
 
 
 OWN_CSS = r"""
-.lk{margin-bottom:var(--s4)}
+html,body{overflow-x:hidden}
+/* one column: the shared .wrap reserves a rail this page does not have */
+#app{display:block;max-width:760px;margin:0 auto;padding:0 var(--s3);box-sizing:border-box}
+#app,.col-main{min-width:0;width:100%;overflow-x:hidden}
+.lk{margin-bottom:var(--s4);min-width:0;max-width:100%;box-sizing:border-box}
 .lk .refs{display:flex;gap:var(--s2);overflow-x:auto;padding-bottom:var(--s2);
-  -webkit-overflow-scrolling:touch}
+  max-width:100%;-webkit-overflow-scrolling:touch}
 .lk .refs img{height:220px;border-radius:var(--r1);background:var(--photo);flex:none;cursor:zoom-in}
 .lk .game{font:var(--t-small);color:var(--g6);margin:var(--s2) 0}
 .lk textarea{width:100%;box-sizing:border-box;min-height:120px;padding:var(--s3);
   background:var(--g1);border:1px solid var(--g4);border-radius:var(--r2);color:var(--g9);
-  font-size:16px;line-height:1.45;resize:vertical}
+  font-family:inherit;font-size:16px;line-height:1.45;resize:vertical;overflow:hidden}
 .lk .hl{padding:var(--s2) var(--s3);background:var(--g0);border:1px dashed var(--g4);
   border-radius:var(--r2);font:var(--t-meta);color:var(--g7);margin-top:var(--s2)}
 .lk .hl mark{background:var(--stop-bg);color:var(--stop-ink);border-radius:3px;padding:0 2px}
 .lk .row{display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap;margin-top:var(--s2)}
 .lk select,.lk input{min-height:var(--tap);background:var(--g1);color:var(--g9);
   border:1px solid var(--g4);border-radius:var(--r2);padding:0 var(--s2);font-size:16px}
-.lk input{flex:1;min-width:160px}
+.lk input{flex:1;min-width:0;width:100%}
+.lk select{max-width:60%}
 .lk .note{font:var(--t-small);color:var(--g6);margin-top:var(--s2)}
 .lk details summary{cursor:pointer}
 #big{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);display:none;
@@ -130,8 +135,12 @@ function draw(){
       +(r.note?'<details class=note><summary>notes</summary>'+SM.esc(r.note)+'</details>':'')
       +'</div>';
   }).join(''));
+  for(const t of document.querySelectorAll('.lk textarea')) fit(t);
 }
+/* the whole prompt visible at once - no inner scrolling to read what she is */
+function fit(t){ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
 document.addEventListener('input',e=>{
+  if(e.target.tagName==='TEXTAREA') fit(e.target);
   if(e.target.dataset.k!=='prompt') return;
   const card=e.target.closest('.lk'), t=e.target.value, hl=card.querySelector('[data-hl]');
   hl.innerHTML=RACE.test(t)?marked(t):'No race words.'; RACE.lastIndex=0;
@@ -153,7 +162,7 @@ document.addEventListener('click',async e=>{
 load();
 """
 
-PAGE = page("Looks", OWN_CSS, BODY, OWN_JS)
+PAGE = page("Looks", BODY, OWN_JS, OWN_CSS)
 
 
 def appearance_router(cfg: dict):
