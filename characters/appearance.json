@@ -157,14 +157,14 @@
   "prompt": "a petite, extremely skinny East Asian young woman with a slender frame and perky breasts, fair light skin, very long straight dark brown hair, brown eyes"
  },
  "jaina": {
-  "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 25, serves at Bella Notte on weekdays and runs Jaina's Jewels, a handmade jewellery stall, at weekends. Note the jewellery: the no-jewellery rule is a TRAINING rule (an uncaptioned accessory binds to the trigger), and her training shots must still follow it - but her ASSET looks can wear her own pieces, and arguably should. Her Lora-Gen run was started 2026-10-04 and is expected to hit the image-generation limit and finish the following day.",
+  "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 25, serves at Bella Notte on weekdays and runs Jaina's Jewels, a handmade jewellery stall, at weekends. Note the jewellery: the no-jewellery rule is a TRAINING rule (an uncaptioned accessory binds to the trigger), and her training shots must still follow it - but her ASSET looks can wear her own pieces, and arguably should. Her Lora-Gen run was started 2026-10-04 and is expected to hit the image-generation limit and finish the following day. 2026-10-06, Jeremy: the freckles were never his and are wrong - drafted from a reference photo. Removed, with the ethnicity word.",
   "ethnicity": "white",
   "build": "slim",
   "bust": "full",
   "figure": "slim with a full bust",
-  "features": "very long straight blonde hair with darker roots at the parting, brown eyes, fair skin, light freckles across her chest",
+  "features": "very long straight blonde hair with darker roots at the parting, brown eyes, fair skin",
   "frame": "tiny frame",
-  "prompt": "a slim white young woman with a full bust, fair skin, very long straight blonde hair with darker roots at the parting, brown eyes and light freckles"
+  "prompt": "a slim young woman with a full bust, fair skin, very long straight blonde hair with darker roots at the parting, brown eyes"
  },
  "bianca": {
   "_note": "DRAFT, 2026-10-04 - read off her four reference photos, her shipped outfits and her twelve shipped selfies. The game record is self-contradictory on age: the structured `age` field says 27, her systemPrompt prose says 25. Taking the structured field, which is what the game actually reads. Correct any of this and the selfie pack picks it up on the next render.",
