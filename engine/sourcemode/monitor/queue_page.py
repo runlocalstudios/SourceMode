@@ -1741,6 +1741,16 @@ def queue_router(cfg: dict, status=None):
     def path():
         return q.queue_path(outputs_dir(cfg))
 
+    def checked(job_like: dict) -> None:
+        """Refuse, with the reasons, a job that would die in its first minute.
+        The same preflight `gpu add` runs; the page is not a way around it."""
+        from ..gpu.preflight import preflight  # noqa: PLC0415
+        from ..train.preview import preview_root  # noqa: PLC0415
+
+        problems = preflight(job_like, outputs_dir(cfg), preview_root(cfg))
+        if problems:
+            raise HTTPException(409, "would fail at once: " + "; ".join(problems))
+
     @router.get("/queue", response_class=HTMLResponse)
     def page() -> str:
         return PAGE
@@ -1857,6 +1867,7 @@ def queue_router(cfg: dict, status=None):
         dup = q.duplicate_of(doc, "train", ds)
         if dup:
             raise HTTPException(409, f"{ds} is already {dup['status']} in the queue")
+        checked({"cmd": training_command(cfg, ds), "cwd": str(ENGINE_ROOT), "requires_approval": ds})
         job = q.add(doc, kind="train", label=ds, cmd=training_command(cfg, ds),
                     cwd=str(ENGINE_ROOT), requires_approval=ds,
                     note=f"queued from the GPU page; approved {st['at']}")
@@ -1878,10 +1889,9 @@ def queue_router(cfg: dict, status=None):
         dup = q.duplicate_of(doc, "prep", char)
         if dup:
             raise HTTPException(409, f"{char} is already {dup['status']} in the queue")
-        job = q.add(doc, kind="prep", label=char,
-                    cmd=prep_command(cfg, char, cap=int(body.get("cap") or 100),
-                                     no_base=bool(body.get("no_base"))),
-                    cwd=str(ENGINE_ROOT),
+        cmd = prep_command(cfg, char, cap=int(body.get("cap") or 100), no_base=bool(body.get("no_base")))
+        checked({"cmd": cmd, "cwd": str(ENGINE_ROOT)})
+        job = q.add(doc, kind="prep", label=char, cmd=cmd, cwd=str(ENGINE_ROOT),
                     note="queued from the GPU page")
         q.save(path(), doc)
         return {"queued": job["id"], **queue_state(cfg)}
@@ -1932,6 +1942,7 @@ def queue_router(cfg: dict, status=None):
         dup = q.duplicate_of(doc, "shoot", label)
         if dup:
             raise HTTPException(409, f"exactly these shoots are already {dup['status']}")
+        checked({"cmd": shoot_command(cfg, char, sorted(ids)), "cwd": str(ENGINE_ROOT)})
         job = q.add(doc, kind="shoot", label=label,
                     cmd=shoot_command(cfg, char, sorted(ids)),
                     cwd=str(ENGINE_ROOT),

@@ -1038,6 +1038,9 @@ def gpu_add(
     note: str = typer.Option("", "--note"),
     allow_duplicate: bool = typer.Option(False, "--allow-duplicate",
                                          help="Queue this even though the same kind+label is already queued."),
+    no_check: bool = typer.Option(False, "--no-check",
+                                  help="Skip the preflight (script exists and compiles, checkpoints and "
+                                       "approval present, disk space) and queue it anyway."),
 ):
     """Append a job to the END of the queue. Appending is how work is requested."""
     from .config import ENGINE_ROOT  # noqa: PLC0415
@@ -1050,6 +1053,23 @@ def gpu_add(
         rprint(f"[red]{dup['id']} is already {dup['status']} for {kind}:{label}[/red]"
                " - pass --allow-duplicate if you really mean to run it twice")
         raise typer.Exit(1)
+    # A job that dies in its first minute is a bug in the invocation, not a
+    # result (jordan_v2: 1 s on disk space; mira_v2: 5 s on a path, three times).
+    # Everything the script's own guards would refuse is checked here, before
+    # the job can wait hours for the card and then fail.
+    if not no_check:
+        from .gpu.preflight import preflight  # noqa: PLC0415
+        from .train.preview import preview_root  # noqa: PLC0415
+
+        problems = preflight({"cmd": list(cmd), "cwd": cwd or str(ENGINE_ROOT),
+                              "requires_approval": requires_approval},
+                             out, preview_root(load_config()))
+        if problems:
+            rprint("[red]not queued[/red] - this job would fail at once:")
+            for p in problems:
+                rprint(f"  - {p}")
+            rprint("fix it, or pass --no-check to queue it anyway")
+            raise typer.Exit(1)
     job = q.add(doc, kind=kind, label=label, cmd=list(cmd), cwd=cwd or str(ENGINE_ROOT),
                 requires_approval=requires_approval, note=note)
     q.save(path, doc)

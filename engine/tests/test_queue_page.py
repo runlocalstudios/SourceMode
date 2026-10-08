@@ -235,15 +235,36 @@ def test_an_unapproved_dataset_is_never_offered(cfg_full, tmp_path):
 # --- queueing a training run from the page ---------------------------------
 
 @pytest.fixture
-def client_full(cfg_full):
+def client_full(cfg_full, monkeypatch):
     fastapi_testclient = pytest.importorskip("fastapi.testclient")
     from fastapi import FastAPI
 
     from sourcemode.monitor.queue_page import queue_router
 
+    # The preflight reads the real scripts, real checkpoints and the real disk;
+    # these tests are about the queue, so it is a no-op here and tested on its
+    # own below and in test_gpu_preflight.py.
+    monkeypatch.setattr("sourcemode.gpu.preflight.preflight", lambda job, outputs, previews=None: [])
     app = FastAPI()
     app.include_router(queue_router(cfg_full))
     return fastapi_testclient.TestClient(app)
+
+
+def test_a_job_the_preflight_would_fail_is_refused_with_the_reason(cfg_full, tmp_path, monkeypatch):
+    fastapi_testclient = pytest.importorskip("fastapi.testclient")
+    from fastapi import FastAPI
+
+    from sourcemode.monitor.queue_page import queue_router
+
+    monkeypatch.setattr("sourcemode.gpu.preflight.preflight",
+                        lambda job, outputs, previews=None: ["22.4 GB free; a training needs 45 GB"])
+    app = FastAPI()
+    app.include_router(queue_router(cfg_full))
+    c = fastapi_testclient.TestClient(app)
+    _approve(tmp_path, "marisol_v2")
+    r = c.post("/queue/training", json={"dataset": "marisol_v2"})
+    assert r.status_code == 409 and "45 GB" in r.json()["detail"]
+    assert q.load(q.queue_path(tmp_path))["jobs"] == []
 
 
 def test_queueing_training_builds_the_command_so_he_never_types_a_path(client_full, tmp_path):

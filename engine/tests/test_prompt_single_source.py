@@ -161,5 +161,6 @@ def test_the_preflight_flag_does_not_land_in_a_positional_slot():
     every positional after it. The exact bug class that once killed a job four
     seconds after it had waited seven hours for the card."""
     src = EVAL.read_text(encoding="utf-8")
-    assert '_BARE = {"--allow-incomplete-appearance"}' in src
+    m = re.search(r"_BARE = \{([^}]*)\}", src)
+    assert m and '"--allow-incomplete-appearance"' in m.group(1) and '"--no-description"' in m.group(1)
     assert re.search(r"elif _a in _BARE:\s*\n\s*_BARESEEN\.add\(_a\)", src)
