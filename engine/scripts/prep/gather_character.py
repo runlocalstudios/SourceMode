@@ -126,15 +126,32 @@ def sources() -> list[tuple[Path, str]]:
     return out
 
 
-# Gathering is CPU-only, so it can run while the card is busy training - which is
-# why it is pulled forward instead of queued behind. Re-running it later would
-# re-measure the whole pool for nothing, so a set that is already staged exits here
-# unless --force is given.
-if IMG.is_dir() and any(IMG.glob("src_*.png")) and "--force" not in sys.argv:
-    n = len(list(IMG.glob("src_*.png")))
-    print(f"{CHAR}: already staged ({n} images in {IMG}); nothing to do. --force to re-measure.")
-    print("GATHERDONE")
-    raise SystemExit(0)
+# A staged set is ADDED TO, never skipped. This used to exit at once with
+# "already staged; nothing to do" whenever image_src had anything in it - so
+# Casey's second chain run, queued at cap 190 to bring in her older folders,
+# staged nothing and said nothing (2026-10-08). Now the sources are listed (a
+# file walk, no model), anything not yet in the manifest is measured, and only a
+# run that finds nothing new stops here. Staged images keep their numbers.
+# --force re-measures everything and clears the captions, as before.
+man = json.loads((DS/"manifest.json").read_text(encoding="utf-8")) if (DS/"manifest.json").is_file() else []
+staged_before = {m.get("original") for m in man}
+n_staged = len(list(IMG.glob("src_*.png"))) if IMG.is_dir() else 0
+SRC = sources()
+ONLY_NEW = None
+if n_staged and "--force" not in sys.argv:
+    # what an earlier run already measured and rejected is not "new" either
+    _prev = json.loads((DS/"candidates_all.json").read_text(encoding="utf-8")) \
+        if (DS/"candidates_all.json").is_file() else {}
+    prior_rejected = _prev.get("rejected", [])
+    rejected_before = {(r["file"], r["prov"]) for r in prior_rejected}
+    ONLY_NEW = [(p, prov) for p, prov in SRC
+                if str(p) not in staged_before and (p.name, prov) not in rejected_before]
+    if not ONLY_NEW:
+        print(f"{CHAR}: already staged ({n_staged} images); no new images in any source; nothing to do")
+        print("GATHERDONE")
+        raise SystemExit(0)
+    print(f"{CHAR}: {n_staged} already staged; {len(ONLY_NEW)} new candidates to measure "
+          f"for the {max(0, CAP - n_staged)} slots left under cap {CAP}")
 
 # --force RE-STAGES and RENUMBERS src_NNN.png. Captions written against the old
 # numbering then describe a different photograph, silently: Amanda ended up with 75
@@ -191,7 +208,7 @@ def impostor(emb):
     return (best, mine, score) if best else None
 
 rows, reject = [], []
-for p, prov in sources():
+for p, prov in (SRC if ONLY_NEW is None else ONLY_NEW):
     try:
         im = Image.open(p).convert("RGB")
     except Exception as e:  # noqa: BLE001
@@ -245,8 +262,10 @@ designed = [r for r in rows if is_loragen(r)]
 others = sorted((r for r in rows if not is_loragen(r)),
                 key=lambda r: (-r["sim"], -r["bucket_px"]))
 designed.sort(key=lambda r: r["original"])
-keep = (designed + others)[:CAP]
-spill = (designed + others)[CAP:]
+# adding to a staged set: the cap counts what is already there
+slots = max(0, CAP - n_staged) if ONLY_NEW is not None else CAP
+keep = (designed + others)[:slots]
+spill = (designed + others)[slots:]
 
 by_prov: dict[str, int] = {}
 for r in rows:
@@ -293,7 +312,9 @@ for r in keep:
 (DS/"manifest.json").write_text(json.dumps(man, indent=1), encoding="utf-8")
 prior = json.loads((DS/"geometry.json").read_text(encoding="utf-8")) if (DS/"geometry.json").is_file() else {}
 (DS/"geometry.json").write_text(json.dumps({**prior, **geom}, indent=1), encoding="utf-8")
+# an incremental run keeps the earlier rejects on record, so they are not re-measured next time
 (DS/"candidates_all.json").write_text(json.dumps({"kept": keep, "over_cap": spill,
-    "rejected": [{"file": a, "prov": b, "why": c} for a, b, c in reject]}, indent=1), encoding="utf-8")
+    "rejected": (prior_rejected if ONLY_NEW is not None else [])
+                + [{"file": a, "prov": b, "why": c} for a, b, c in reject]}, indent=1), encoding="utf-8")
 print(f"\nstaged {len(geom)} new into {IMG} (set now {len(list(IMG.glob('src_*.png')))})")
 print("GATHERDONE")
