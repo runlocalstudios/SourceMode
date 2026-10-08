@@ -106,8 +106,19 @@ else:
 missing = [p for p in SCENES_IDX if p >= len(ALL)]
 if missing:
     raise SystemExit(f"scene index out of range: {missing} (have {len(ALL)})")
+# --find @clause swaps her WHOLE appearance description - the text between
+# "portrait of " and ", her body shape" - which is not one fixed string: up-style
+# looks drop the hair length from it. Jeremy, 2026-10-07, on cat: run prompts
+# "without character description at all".
+import re as _re  # noqa: E402
+
+_CLAUSE = _re.compile(r"(portrait of )(.*?)(, her body shape)")
+if FIND == "@clause":
+    missing = [i for i in SCENES_IDX if not _CLAUSE.search(ALL[i])]
+    if missing:
+        raise SystemExit(f"no appearance clause found in scenes {missing}")
 for p in (ALL[i] for i in SCENES_IDX):
-    if FIND not in p:
+    if FIND != "@clause" and FIND not in p:
         raise SystemExit(f"--find {FIND!r} is not in the prompt; nothing would change")
 
 cfg = load_config()
@@ -144,8 +155,13 @@ for arm_name, arm_text in ARMS:
     for i in SCENES_IDX:
         # the ONE substitution. An empty arm deletes the phrase and tidies the
         # comma it leaves behind, so the sentence still reads as English.
-        prompt = ALL[i].replace(FIND, arm_text) if arm_text else \
-            ALL[i].replace(FIND + ", ", "").replace(FIND, "")
+        if FIND == "@clause":
+            # "=" keeps her own clause for this scene (the control arm)
+            prompt = ALL[i] if arm_text == "=" else \
+                _CLAUSE.sub(lambda m: m.group(1) + arm_text + m.group(3), ALL[i], count=1)
+        else:
+            prompt = ALL[i].replace(FIND, arm_text) if arm_text else \
+                ALL[i].replace(FIND + ", ", "").replace(FIND, "")
         dest = d / f"scene_{i:02d}.png"
         try:
             if not dest.exists():
