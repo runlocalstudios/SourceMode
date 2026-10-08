@@ -391,6 +391,12 @@ def collect_images(dataset_dir: Path) -> list[dict]:
     """
     dataset_dir = Path(dataset_dir)
     dirs = [d for d in sorted(dataset_dir.iterdir()) if d.is_dir() and d.name.startswith("image")]
+    # A T2I set trains on image_src ONLY (write_dataset_toml). gabi_v2 also held
+    # an old edit dataset's image_face/image_rest, and this listed them beside
+    # the gathered set: 33 uncaptioned crops on the review page that would never
+    # have trained (2026-10-08).
+    if any(d.name == "image_src" for d in dirs):
+        dirs = [dataset_dir / "image_src"]
     if not dirs:
         dirs = [dataset_dir]
     out = []

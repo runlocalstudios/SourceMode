@@ -147,6 +147,22 @@ def run_vl(out_path, prompt, max_new, only=None):
     A GPU pass is the only step in dataset prep that needs the card, so not spending
     it on 80 images whose hair is already known is the whole point."""
     if out_path.exists():
+        # Incremental, never all-or-nothing: an existing file used to mean "done",
+        # so images added to a staged set after the first pass were never
+        # described - gabi's 33 adopted face crops, 2026-10-08. Ask only for the
+        # ones it lacks and append them.
+        have = set(read_jsonl(out_path))
+        want = set(only) if only is not None else {p.name for p in IMG.glob("src_*.png")}
+        missing = sorted(want - have)
+        if not missing:
+            return
+        part = out_path.with_suffix(".part.jsonl")
+        if part.exists():
+            part.unlink()
+        run_vl(part, prompt, max_new, only=missing)
+        with out_path.open("a", encoding="utf-8") as f:
+            f.write(part.read_text(encoding="utf-8"))
+        part.unlink()
         return
     src = IMG
     tmp = None
