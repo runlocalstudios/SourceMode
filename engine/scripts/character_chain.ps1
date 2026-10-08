@@ -26,7 +26,12 @@ param(
   # -NoBase still gathered 336 images for her against jaina's clean 81.
   [switch]$LoragenOnly,
   [switch]$RecheckAll,
-  [switch]$CullHairUp
+  [switch]$CullHairUp,
+  # Re-run the gather on a set that is already staged, ADDING what it finds -
+  # staged images keep their numbers. Without it the gather exits at once with
+  # "already staged; nothing to do", and -Cap is silently ignored: Casey,
+  # 2026-10-08, was queued at cap 190 and stayed at her 83.
+  [switch]$Force
 )
 $ErrorActionPreference = "Continue"
 # Repo paths, never a session scratchpad. $SP used to be one Claude session's
@@ -133,6 +138,7 @@ Free
 $gatherArgs = @("$PREP\gather_character.py", $Char, "--cap", "$Cap", "--apply")
 if ($NoBase) { $gatherArgs += "--no-base" }
 if ($LoragenOnly) { $gatherArgs += "--loragen-only" }
+if ($Force) { $gatherArgs += "--force" }
 $rc = Step "$Char gather" $gatherArgs "gather_$Char"
 if ($rc -ne 0) { Log "ABORT: nothing staged for $Char"; exit 1 }
 # CPU (MediaPipe). Writes gaze_mp.json, without which caption_from_vl.py

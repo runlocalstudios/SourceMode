@@ -1,14 +1,20 @@
-"""Take every image whose hair is UP out of a staged set, before captioning.
+"""Take the hair-UP images out of the OLDER part of a staged set.
 
     python scripts/prep/cull_hair_up.py <char> [--apply]
 
 Jeremy, 2026-10-08, on casey: her Lora-Gen run came back ~75 of 80 in the same
-high ponytail against a plan that asked for loose hair, and he does not want to
-review 190 images to cull them by hand - "remove any which clearly already have
-hair up". Asks the image two yes/no questions with the wordings that have
-measured well here (bun 4/4; ponytail by its gather point), and moves a yes to
-`_excluded/` - the same folder the Training sets page uses, so every one shows
-there as removed and can be put back with one tap. Nothing is deleted.
+high ponytail against a plan that asked for loose hair. The fix is to ADD her
+older images, which are mostly loose, to balance the set - "pull in the
+additional assets which would complement giving the full picture, not removing
+everything that was there". So the Lora-Gen shots and the references are never
+touched here; only the older, ranked-in images are asked, and a hair-up one
+among those is removed because it adds nothing the set does not already have.
+The first version culled the whole set and took 46 of her 80 Lora-Gen shots out.
+
+Asks each image two yes/no questions with the wordings that have measured well
+here (bun 4/4; ponytail by its gather point), and moves a yes to `_excluded/` -
+the same folder the Training sets page uses, so every one shows there as
+removed and can be put back with one tap. Nothing is deleted.
 
 Loads the VL, so it runs through the GPU queue.
 """
@@ -55,9 +61,18 @@ def ask(names, prompt, out):
     return yes
 
 
-names = sorted(p.name for p in IMG.glob("src_*.png"))
+# The gather's manifest says where each image came from; the designed set
+# (Lora-Gen shots, references) is kept whole whatever its hair.
+man = {m["file"]: m.get("batch", "") for m in json.loads((DS / "manifest.json").read_text(encoding="utf-8"))}
+designed = {n for n, b in man.items() if "lora-gen" in b or b == "references"}
+staged = sorted(p.name for p in IMG.glob("src_*.png"))
+names = [n for n in staged if n not in designed]
+print(f"{CHAR}: {len(staged)} staged, {len(staged) - len(names)} Lora-Gen/reference kept whole, "
+      f"{len(names)} older images to check", flush=True)
 if not names:
-    raise SystemExit(f"{CHAR}: nothing staged in {IMG}")
+    print("nothing to cull")
+    print("CULLHAIRUPDONE")
+    raise SystemExit(0)
 up: dict[str, str] = {}
 remaining = list(names)
 for label, q in QS:
