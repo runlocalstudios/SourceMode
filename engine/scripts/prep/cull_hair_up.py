@@ -46,7 +46,8 @@ def ask(names, prompt, out):
         shutil.rmtree(TMP)
     TMP.mkdir(parents=True)
     for n in names:
-        shutil.copy2(IMG / n, TMP / n)
+        if (IMG / n).is_file():     # he may have removed it on the page meanwhile
+            shutil.copy2(IMG / n, TMP / n)
     if out.exists():
         out.unlink()
     subprocess.run([str(VL), str(CAPTIONER), "--image_dir", str(TMP), "--model_path", VL_MODEL,

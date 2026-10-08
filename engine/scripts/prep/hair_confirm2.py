@@ -125,7 +125,13 @@ if TMP.exists():
 changed = sum(1 for n in names if result[n] != coarse[n])
 print(f"  labels changed from the closed list: {changed} of {len(names)}")
 if APPLY:
-    OUT.write_text(json.dumps(result, indent=1), encoding="utf-8")
+    # MERGE. This used to overwrite the file, and hair_recheck.py writes the SAME
+    # file for the Lora-Gen shots: casey 2026-10-08, a second pass of the chain
+    # ran this after her recheck and wiped 46 image-read ponytail verdicts, so
+    # the plan's "worn loose" went back onto ponytails.
+    prev = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
+    prev.update(result)
+    OUT.write_text(json.dumps(prev, indent=1), encoding="utf-8")
     print(f"  wrote {OUT.name}; re-run caption_from_vl.py {CHAR} to apply (it preserves nothing else - "
           f"use fix-in-place on a hand-edited set)")
 else:

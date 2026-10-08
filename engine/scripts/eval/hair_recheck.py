@@ -76,8 +76,13 @@ def ask(names, prompt, out):
     if TMP.exists():
         shutil.rmtree(TMP)
     TMP.mkdir(parents=True)
+    # Jeremy culls on the Training sets page while this runs - casey 2026-10-08,
+    # src_011 moved to _excluded between two questions and the copy raised, so
+    # the whole recheck died and the plan's hair stayed on every caption. An
+    # image that is gone is simply no longer asked.
     for n in names:
-        shutil.copy2(IMG / n, TMP / n)
+        if (IMG / n).is_file():
+            shutil.copy2(IMG / n, TMP / n)
     if out.exists():
         out.unlink()
     subprocess.run([str(VL), str(CAPTIONER), "--image_dir", str(TMP), "--model_path", VL_MODEL,
@@ -139,6 +144,8 @@ OUT.write_text(json.dumps(prev, indent=1), encoding="utf-8")
 changed = 0
 for n, label in sorted(result.items()):
     txt = IMG / (Path(n).stem + ".txt")
+    if not txt.is_file():      # removed on the page since it was asked
+        continue
     cur = txt.read_text(encoding="utf-8")
     new = HAIR_CLAUSE.sub(PHRASE[label], cur, count=1)
     if new != cur:
