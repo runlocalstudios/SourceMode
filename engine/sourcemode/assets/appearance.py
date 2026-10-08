@@ -70,6 +70,24 @@ def _article(age: int) -> str:
     return "an" if age in (8, 11, 18) or 80 <= age <= 89 else "a"
 
 
+def key_characters() -> list[str]:
+    """Every female key character the game declares, whether or not we have a
+    record for her yet. Jeremy, 2026-10-08: Jordan, Eve and Aura were missing
+    from the Looks tab - "they are key characters in the game - import all key
+    characters not currently there". The page lists them from here; a record
+    is written only when he confirms one, so nothing is invented for them."""
+    try:
+        src = GAME_CHARACTERS.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    out = []
+    for m in re.finditer(r"^  ([a-z0-9_]+):\s*\{(.*?)^  \},?\s*$", src, re.S | re.M):
+        body = m.group(2)
+        if re.search(r"keyCharacter:\s*true", body) and re.search(r"\bsex:\s*'F'", body):
+            out.append(m.group(1))
+    return sorted(set(out))
+
+
 def age_of(character: str) -> int | None:
     """appearance.json wins: a character the game does not list yet (or one whose
     art age differs from her written age) is set there."""

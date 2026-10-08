@@ -43,10 +43,11 @@ def records() -> list[dict]:
     A.reload()
     look = A._load()["look"]
     out = []
-    for c in sorted(look):
-        if c.startswith("_"):
-            continue
-        rec = look[c]
+    # every record we have, plus every key character the game has that we do
+    # not: she appears with empty fields, and confirming her writes the record
+    names = {c for c in look if not c.startswith("_")} | set(A.key_characters())
+    for c in sorted(names):
+        rec = look.get(c) or {}
         g = A.game_facts(c)
         out.append({
             "character": c, "age": A.age_of(c), "own_age": rec.get("age"),
