@@ -239,11 +239,48 @@ def plan_by_image():
     plan = load_plan()
     if not plan:
         return {}
+    subs = hair_substitutions()
     out = {}
     for r in json.loads(mf.read_text(encoding="utf-8")):
         m = SHOT_RE.search(Path(r.get("original", "")).name)
         if m and int(m.group(1)) in plan:
-            out[r["file"]] = plan[int(m.group(1))]
+            entry = plan[int(m.group(1))]
+            if int(m.group(1)) in subs:
+                entry = {**entry, "hair": subs[int(m.group(1))]}
+            out[r["file"]] = entry
+    return out
+
+
+def hair_substitutions() -> dict[int, str]:
+    """shot number -> the hair Codex ACTUALLY asked for, from its run record.
+
+    The lora-gen-80 skill swaps any style a character's hair is too short for and
+    writes the swap down: casey's record has 15 ("shot_001 -> Her hair is pulled
+    up into a ponytail."), nisha's used {shot, from, to}. Captions used to take
+    the plan's original braid regardless - nisha, 2026-10-06 - so a short-haired
+    character's swapped shots were captioned with a style she never wore.
+    """
+    base = Path("C:/Epic Games/Files/cnc info/codex")
+    recs = [p for root in ("outputs", "output") for p in (base / root).rglob(f"{CHAR}_run_record.json")]
+    out: dict[int, str] = {}
+    for rec in recs:
+        try:
+            doc = json.loads(rec.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for s in doc.get("hair_substitutions") or []:
+            if not isinstance(s, dict):
+                continue
+            sid = str(s.get("id") or s.get("shot") or "")
+            new = str(s.get("replacement") or s.get("to") or "").strip().rstrip(".")
+            m = re.search(r"(\d+)", sid)
+            if not (m and new):
+                continue
+            # "Her hair is pulled up into a ponytail" -> "her hair pulled up into a ponytail"
+            new = re.sub(r"^her hair (is|are)\s+", "her hair ", new, flags=re.I)
+            if not new.lower().startswith("her hair"):
+                new = "her hair " + new[0].lower() + new[1:]
+            out[int(m.group(1))] = new[0].lower() + new[1:]
     return out
 
 
