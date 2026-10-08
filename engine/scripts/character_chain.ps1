@@ -25,7 +25,8 @@ param(
   # Jeremy, 2026-10-04 - cat has eleven older run folders carrying her name and
   # -NoBase still gathered 336 images for her against jaina's clean 81.
   [switch]$LoragenOnly,
-  [switch]$RecheckAll
+  [switch]$RecheckAll,
+  [switch]$CullHairUp
 )
 $ErrorActionPreference = "Continue"
 # Repo paths, never a session scratchpad. $SP used to be one Claude session's
@@ -175,4 +176,9 @@ $rc = Step "$Char re-assemble"  @("$PREP\caption_from_vl.py", $Char)          "c
 # the Training sets tab and release the next chain.
 if ($rc -ne 0) { Log "ABORT: re-assemble failed, not writing the DONE marker"; exit 1 }
 Step "$Char preview"      @("$PREP\build_previews.py", $Char)           "preview_$Char"      | Out-Null
+# -CullHairUp: after the preview, so every removal shows on the page and restores
+# with one tap. Casey, 2026-10-08: "remove any which clearly already have hair up".
+if ($CullHairUp) {
+  Step "$Char cull hair up" @("$PREP\cull_hair_up.py", $Char, "--apply") "cull_hair_up_$Char" | Out-Null
+}
 Log "$($Char.ToUpper())DONE - on the Training sets tab for review"
