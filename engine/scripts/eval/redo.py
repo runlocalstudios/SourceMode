@@ -178,5 +178,5 @@ if not redone:
 # exactly these, keeping every verdict that still refers to the same pixels.
 make_set(ROOT, SET_ID, doc["title"], list(by_id.values()),
          question=doc.get("question", ""), reference=doc.get("reference"),
-         priority=doc.get("priority", 50))
+         priority=doc.get("priority", 50), meta=doc.get("meta"))
 log(f"REDODONE {SET_ID} {redone} re-rendered, back on the judge board")

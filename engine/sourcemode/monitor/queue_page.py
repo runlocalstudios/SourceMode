@@ -932,10 +932,10 @@ def now_card(jobs: list[dict], status: dict | None,
         r_done, r_total = sweep
         r_eta = max(0.0, (r_total - r_done) * _rate(cfg_for_now)["s_per_render"])
     elif run and not training_job:
-        got = render_count(run.get("cmd") or [])
+        got = job_expect(run)
         if got:
             r_total = got[0]
-            r_done = render_done(cfg_for_now, run.get("cmd") or []) if cfg_for_now else None
+            r_done = job_done(cfg_for_now, run) if cfg_for_now else None
             if r_done is not None:
                 rate = _rate(cfg_for_now)
                 per = rate["s_per_shot"] if run.get("kind") == "assets" else rate["s_per_render"]
@@ -1181,6 +1181,69 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
     return None
 
 
+def job_expect(job: dict) -> tuple[int, str] | None:
+    """What this job will render: the record made when it was queued, else the
+    command parse for the jobs queued before `expect` existed."""
+    e = job.get("expect") or {}
+    if e.get("total"):
+        return int(e["total"]), str(e.get("what") or "")
+    return render_count(job.get("cmd") or [])
+
+
+def job_done(cfg: dict, job: dict) -> int | None:
+    """How many images the job has written, counted where its record says."""
+    e = job.get("expect") or {}
+    if e.get("dir") and e.get("glob"):
+        root = Path(e["dir"])
+        return sum(1 for p in root.rglob(e["glob"]) if "_web" not in p.parts) if root.is_dir() else 0
+    return render_done(cfg, job.get("cmd") or [])
+
+
+def render_target(cfg: dict, cmd: list[str]) -> tuple[Path, str] | None:
+    """Where a render job writes and what to count there, for the shapes whose
+    output is one folder. A shoots job writes into several and keeps its own
+    counter in render_done()."""
+    from ..config import outputs_dir  # noqa: PLC0415
+
+    out = outputs_dir(cfg)
+    joined = " ".join(cmd)
+
+    def flag(name, default=None):
+        return cmd[cmd.index(name) + 1] if name in cmd and cmd.index(name) + 1 < len(cmd) else default
+
+    pos = [c for c in cmd if not c.startswith("--")]
+    try:
+        if "assets" in cmd and "render" in cmd and flag("--plan"):
+            import json as _json  # noqa: PLC0415
+
+            doc = _json.loads(Path(flag("--plan")).read_text(encoding="utf-8"))
+            return Path(flag("--out") or (out / "game-assets")) / doc["character"] / "renders", "shot_*.png"
+        if "prompt_ab.py" in joined:
+            i = next(k for k, c in enumerate(pos) if c.endswith("prompt_ab.py"))
+            return out / f"ab_{pos[i + 1]}_{flag('--tag', 'hair')}", "scene_*.png"
+        if "dense_epoch_eval.py" in joined:
+            i = next(k for k, c in enumerate(pos) if c.endswith("dense_epoch_eval.py"))
+            sub, tag = pos[i + 2], flag("--tag")
+            return out / f"dense_{sub}_asset{'_' + tag if tag else ''}", "scene_*.png"
+    except (OSError, ValueError, KeyError, StopIteration, IndexError):
+        return None
+    return None
+
+
+def expect_for(cfg: dict, cmd: list[str]) -> dict | None:
+    """The `expect` record for a job about to be queued - the one time the
+    command is parsed, with the result shown to whoever queues it."""
+    got = render_count(cmd)
+    if not got:
+        return None
+    n, how = got
+    e = {"total": n, "what": how}
+    t = render_target(cfg, cmd)
+    if t:
+        e["dir"], e["glob"] = str(t[0]), t[1]
+    return e
+
+
 def job_estimate(cfg: dict, job: dict) -> dict | None:
     """Wall-clock for any queued job, or None when its length is unknowable."""
     if job["kind"] == "train":
@@ -1195,7 +1258,7 @@ def job_estimate(cfg: dict, job: dict) -> dict | None:
                 "basis": "gather, gaze, captions, hair confirm, re-assemble, preview"
                          + (f" - median of {r['n_prep_runs']} past chains"
                             if r["prep_measured"] else " - assumed")}
-    got = render_count(job.get("cmd") or [])
+    got = job_expect(job)
     if not got:
         return None
     n, how = got
@@ -1704,7 +1767,8 @@ def queue_redo_if_complete(cfg: dict, set_id: str) -> dict | None:
     job = q.add(doc, kind="redo", label=set_id, cmd=redo_command(cfg, set_id),
                 cwd=str(ENGINE_ROOT),
                 note=f"{info['n']} rejected shot{'s' if info['n'] != 1 else ''} "
-                     f"re-rolled with new seeds")
+                     f"re-rolled with new seeds",
+                expect={"total": info["n"], "what": f"{info['n']} reject{'s' if info['n'] != 1 else ''}"})
     q.save(qp, doc)
     return job
 
@@ -1946,6 +2010,7 @@ def queue_router(cfg: dict, status=None):
         job = q.add(doc, kind="shoot", label=label,
                     cmd=shoot_command(cfg, char, sorted(ids)),
                     cwd=str(ENGINE_ROOT),
+                    expect=expect_for(cfg, shoot_command(cfg, char, sorted(ids))),
                     note=f"{len(ids)} shoots queued from the shoots page")
         q.save(path(), doc)
         return {"queued": job["id"], **queue_state(cfg)}

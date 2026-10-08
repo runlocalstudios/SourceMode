@@ -150,7 +150,9 @@ def run_pack(sh) -> int:
                                     arm=slot["category"]))
     if items:
         make_set(OUT_ROOT / "judge", f"pack_{CHAR}", f"{CHAR.title()} - wardrobe pack",
-                 items, question="Ship this one? K = yes, X = re-roll it.", priority=5)
+                 items, question="Ship this one? K = yes, X = re-roll it.", priority=5,
+                 meta={"character": CHAR, "shoot": sh.id,
+                       "renders_dir": OUT_ROOT / "game-assets" / CHAR / "renders"})
     log(f"  {sh.id}: {len(res)} shots -> judge set pack_{CHAR}; keepers go to "
         f"cutout and place")
     return len(res)
@@ -198,7 +200,8 @@ def run_shoot(sh) -> int:
         # shoots 1-3 judgeable rather than losing everything.
         make_set(OUT_ROOT / "judge", f"shoot_{CHAR}_{sh.id}",
                  f"{CHAR.title()} - {sh.label}", items,
-                 question="Keep this one? K = yes, X = re-roll it.", priority=5)
+                 question="Keep this one? K = yes, X = re-roll it.", priority=5,
+                 meta={"character": CHAR, "shoot": sh.id, "batch": sh.batch, "renders_dir": d})
         log(f"  {sh.id}: {len(items)} shots -> judge set shoot_{CHAR}_{sh.id}")
     else:
         log(f"  {sh.id}: nothing rendered, no judge set written")

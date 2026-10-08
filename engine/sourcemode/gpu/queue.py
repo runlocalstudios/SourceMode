@@ -79,9 +79,17 @@ def replace_retrying(tmp: Path, path: Path, tries: int = 100) -> None:
 
 
 def add(doc: dict, *, kind: str, label: str, cmd: list[str], cwd: str,
-        requires_approval: str | None = None, note: str = "") -> dict:
+        requires_approval: str | None = None, note: str = "",
+        expect: dict | None = None) -> dict:
     """Append a job at the END of the queue. Appending is the only way work is
-    requested: a session adds a job, it does not write its own launcher."""
+    requested: a session adds a job, it does not write its own launcher.
+
+    `expect` is what the job will produce, decided ONCE when it is queued:
+    {total, what, dir, glob} - how many images, in words, and where to count
+    them. The page used to re-parse every job's command line on every poll to
+    work that out, and every new job shape produced a wrong card ("28 looks"
+    for a two-look re-roll; a tagged sweep counted in the untagged folder).
+    """
     job = {
         "id": f"j{doc['next_id']:03d}",
         "kind": kind,
@@ -90,6 +98,7 @@ def add(doc: dict, *, kind: str, label: str, cmd: list[str], cwd: str,
         "cwd": cwd,
         "requires_approval": requires_approval,
         "note": note,
+        "expect": dict(expect) if expect else None,
         "status": "queued",
         "hold": False,
         "added_at": now(),

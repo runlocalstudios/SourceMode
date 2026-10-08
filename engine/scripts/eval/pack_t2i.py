@@ -134,7 +134,8 @@ if not done:
 
 make_set(OUT / "judge", f"pack_{CHAR}_t2i", f"{CHAR.title()} - wardrobe pack, T2I",
          items, question="Ship this one? K = yes, X = no.",
-         reference=plan.get("reference"), priority=5)
+         reference=plan.get("reference"), priority=5,
+         meta={"character": CHAR, "renders_dir": OUT / "game-assets-t2i" / CHAR / "renders"})
 
 log("")
 log(f"PACKT2IDONE {CHAR} {done} looks -> judge set pack_{CHAR}_t2i")

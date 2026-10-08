@@ -297,11 +297,18 @@ if not items:
 if len(items) < expected:
     log(f"WARNING: judge set has {len(items)} of an expected {expected} "
         f"({len(ran_eps)} epochs x {N_SCENES} scenes) - some scenes failed")
+# The dataset is the lora-datasets folder the checkpoints live in; the reader
+# used to parse it back out of the set id, and a --tag broke that parse.
+_DATASET = CKPT.parent.name if CKPT.parent.parent.name == "lora-datasets" else SUB
 if True:
     make_set(Path("outputs/judge"), SET_ID,
              f"{CHAR.title()} - Qwen LoRA epoch eval, epochs {GRID[0]}-{GRID[-1]} ({N_SCENES} scenes)", items,
              question="Is this her? K = yes, X = no.",
-             reference=REF_PATH, seed=61, priority=1)
+             reference=REF_PATH, seed=61, priority=1,
+             meta={"character": CHAR, "dataset": _DATASET, "output_name": SUB,
+                   "renders_dir": OUT, "epochs": ran_eps, "scenes": N_SCENES,
+                   "tag": _FLAGVALS.get("--tag") or "",
+                   "no_description": "--no-description" in _BARESEEN})
     log(f"judge set dense_{SUB}: {len(items)} images")
 male_total = sum(1 for r in rows if r.get("sex") == "M")
 log(f"gender check: {male_total}/{len(rows)} male" + ("  <-- INVESTIGATE" if male_total else "  (clean)"))

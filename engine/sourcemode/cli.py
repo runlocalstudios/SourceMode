@@ -1070,10 +1070,18 @@ def gpu_add(
                 rprint(f"  - {p}")
             rprint("fix it, or pass --no-check to queue it anyway")
             raise typer.Exit(1)
+    # What the job will produce, decided once here and shown back, so a wrong
+    # read of the command is visible now and not on the page an hour later.
+    from .monitor.queue_page import expect_for  # noqa: PLC0415
+
+    expect = expect_for(load_config(), list(cmd))
     job = q.add(doc, kind=kind, label=label, cmd=list(cmd), cwd=cwd or str(ENGINE_ROOT),
-                requires_approval=requires_approval, note=note)
+                requires_approval=requires_approval, note=note, expect=expect)
     q.save(path, doc)
     rprint(f"[green]queued[/green] {job['id']} {kind}:{label} at position {len(doc['jobs'])}")
+    if expect:
+        rprint(f"  will produce {expect['total']} images ({expect['what']})"
+               + (f" in {expect['dir']}" if expect.get("dir") else ""))
 
 
 @gpu_app.command("list")

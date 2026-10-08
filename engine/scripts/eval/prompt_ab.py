@@ -188,7 +188,9 @@ SET_ID = f"ab_{CHAR}_{TAG}"
 make_set(Path("outputs/judge"), SET_ID,
          f"{CHAR.title()} - prompt A/B on {FIND!r}",
          items, question="Is this her? K = yes, X = no.", priority=0,
-         reference=str(ref_hit))
+         reference=str(ref_hit),
+         meta={"character": CHAR, "output_name": SUB, "epoch": EPOCH, "renders_dir": OUT,
+               "find": FIND, "arms": dict(ARMS), "scenes": SCENES_IDX, "tag": TAG})
 log(f"judge set {SET_ID}: {len(items)} images")
 
 # a labelled sheet, because the question "did the pink come back" is answered by

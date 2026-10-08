@@ -103,7 +103,7 @@ def advance_pool(root: Path, set_id: str) -> dict:
         # Same ids, different pixels: drop_stale_verdicts re-opens exactly these.
         make_set(root, set_id, doc["title"], list(rows.values()),
                  question=doc.get("question", ""), reference=doc.get("reference"),
-                 priority=doc.get("priority", 50))
+                 priority=doc.get("priority", 50), meta=doc.get("meta"))
     return {"advanced": advanced, "exhausted": exhausted}
 
 

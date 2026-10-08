@@ -74,11 +74,19 @@ def judge_root(cfg: dict) -> Path:
 
 
 def make_set(root: Path, set_id: str, title: str, items: list[dict], *, question: str = "",
-             reference: str | Path | None = None, seed: int = 0, priority: int = 50) -> Path:
+             reference: str | Path | None = None, seed: int = 0, priority: int = 50,
+             meta: dict | None = None) -> Path:
     """Write a manifest. items: [{id, path, arm, group}]; ids unique within the set.
 
     The blind order is shuffled once here and stored, so revisits show the same
     sequence and the arm never leaks through position.
+
+    `meta` is what the WRITER knows and every reader used to re-derive from the
+    set id: `character`, `dataset`, `output_name`, `renders_dir`, and whatever
+    else describes the run. A tagged sweep id (dense_jaina_v2_asset_nofreckles)
+    was once parsed as a dataset called jaina_v2_asset_nofreckles - no
+    checkpoints found, every arm "pruned", three picks filed under characters
+    that do not exist. Carried here, nothing has to parse the name.
     """
     ids = [it["id"] for it in items]
     if len(set(ids)) != len(ids):
@@ -91,6 +99,7 @@ def make_set(root: Path, set_id: str, title: str, items: list[dict], *, question
     out.write_text(json.dumps({
         "id": set_id, "title": title, "question": question, "priority": priority,
         "reference": str(reference) if reference else None,
+        "meta": {k: (str(v) if isinstance(v, Path) else v) for k, v in (meta or {}).items()},
         "items": rows, "order": order,
     }, indent=1), encoding="utf-8")
     drop_stale_verdicts(root, set_id, {r["id"]: r["hash"] for r in rows}, prior)
@@ -367,6 +376,11 @@ def _dataset_of_set(doc: dict, output_name: str) -> str:
     bianca_lr2b). Falls back to the output_name when the id does not follow the
     convention.
     """
+    # Written by the eval that made the set, since 2026-10-08. The id parse
+    # below stays for the sets written before then.
+    meta_ds = (doc.get("meta") or {}).get("dataset")
+    if meta_ds:
+        return str(meta_ds)
     sid = str(doc.get("id") or "")
     for pre in ("dense_", "coarse_"):
         if sid.startswith(pre):
@@ -436,7 +450,7 @@ def epoch_board(root: Path, set_id: str, *, outputs: Path | None = None) -> dict
             r["tied"] = (top - r["low"]) <= TIE_LOW
         tied = [r for r in rows if r["tied"]]
         min(tied, key=lambda r: r["epoch"])["safer"] = True
-    character = _character_of(dataset)
+    character = (doc.get("meta") or {}).get("character") or _character_of(dataset)
     choice = load_choice(outputs, character) if outputs else None
     return {"set": set_id, "title": s["title"], "output_name": out_name,
             "dataset": dataset, "character": character,
