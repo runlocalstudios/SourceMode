@@ -371,9 +371,12 @@ def _dataset_of_set(doc: dict, output_name: str) -> str:
     for pre in ("dense_", "coarse_"):
         if sid.startswith(pre):
             body = sid[len(pre):]
-            for suf in ("_asset", "_fav"):
-                if body.endswith(suf):
-                    body = body[: -len(suf)]
+            # a --tag run is dense_<ds>_asset_<tag> (jaina_v2_asset_nofreckles).
+            # Stripping _asset only at the very end read the whole tail as the
+            # dataset: no checkpoints found, every arm shown "pruned", and the
+            # pick filed under a character that does not exist (2026-10-07).
+            import re as _re  # noqa: PLC0415
+            body = _re.sub(r"_(?:asset|fav)(?:_[a-z0-9]+)?$", "", body)
             return body or output_name
     return output_name
 
