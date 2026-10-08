@@ -24,7 +24,8 @@ param(
   # STRICTER than -NoBase: only codex/references and the lora-gen run folder.
   # Jeremy, 2026-10-04 - cat has eleven older run folders carrying her name and
   # -NoBase still gathered 336 images for her against jaina's clean 81.
-  [switch]$LoragenOnly
+  [switch]$LoragenOnly,
+  [switch]$RecheckAll
 )
 $ErrorActionPreference = "Continue"
 # Repo paths, never a session scratchpad. $SP used to be one Claude session's
@@ -163,7 +164,12 @@ Step "$Char hair confirm" @("$PREP\hair_confirm2.py", $Char, "--apply") "hair_co
 # or a long ponytail the generator substituted something else, and only asking
 # the image catches it - rivera 2026-10-05, marisol 2026-10-03. Run for everyone:
 # on long hair it confirms the braids, on short hair it corrects them.
-Step "$Char hair recheck" @("C:\dev\sourcemode\engine\scripts\eval\hair_recheck.py", $Char, "--apply") "hair_recheck_$Char" | Out-Null
+# -RecheckAll re-asks EVERY image, not only the length-dependent clauses. Casey,
+# 2026-10-08: the plan asked loose / half-up / clip and ~75 of 80 came back as a
+# ponytail, so the plan's "worn loose" would have been written on ponytails.
+$recheckArgs = @("C:\dev\sourcemode\engine\scripts\eval\hair_recheck.py", $Char, "--apply")
+if ($RecheckAll) { $recheckArgs += "--all" }
+Step "$Char hair recheck" $recheckArgs "hair_recheck_$Char" | Out-Null
 $rc = Step "$Char re-assemble"  @("$PREP\caption_from_vl.py", $Char)          "captions_${Char}2" 
 # A marker on an empty result is what let a failed caption step reach
 # the Training sets tab and release the next chain.
