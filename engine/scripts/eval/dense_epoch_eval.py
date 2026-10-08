@@ -31,7 +31,7 @@ from sourcemode.render.workflow import load_template, prune_placeholder_loras, s
 _FLAGS = {"--scenes", "--epochs", "--tag"}
 # Bare flags take no value. They are skipped here for the same reason the valued
 # ones are split out: anything left in argv lands in a positional slot by index.
-_BARE = {"--allow-incomplete-appearance"}
+_BARE = {"--allow-incomplete-appearance", "--no-description"}
 POS, _FLAGVALS, _BARESEEN = [], {}, set()
 _it = iter(sys.argv)
 for _a in _it:
@@ -124,6 +124,16 @@ if SCENE_SET != "asset":
         f"own prompts verbatim.")
 sys.path.insert(0, str(Path("scripts/eval").resolve()))
 from asset_scenes import asset_prompts  # noqa: E402
+# --no-description: Jeremy, 2026-10-08, on mei - "no character description at
+# all, just tag the photo caption with her Lora tag. I want to test if our
+# character descriptions are fucking it up". Her appearance sentence and the
+# fitted-frame clause come out of every scene; everything else in the prompt is
+# byte-identical, so the two runs differ in that one thing. "a woman" stays as
+# the sex anchor (see the jojo note above) - it is the same arm Cat's test ran.
+if "--no-description" in _BARESEEN:
+    import sourcemode.assets.render as _render  # noqa: E402
+    _render.appearance_clause = lambda character: "a woman"
+    _render.fitted_clause = lambda character: ""
 SCENES = asset_prompts(TRIGGER)
 VERBATIM = True
 # --tag renders into its own folder and judge set. Without it a re-run with a
