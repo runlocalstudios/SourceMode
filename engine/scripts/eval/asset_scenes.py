@@ -15,16 +15,24 @@ from sourcemode.assets.render import shot_prompt
 # they render the asset prompt verbatim and that is what a shipping asset needs. For
 # judging he wants a real setting - "it looks more real" - so every look carries one.
 # Everything else about the prompt stays byte-identical to what `assets render` emits.
+#
+# 2026-10-09: across 23 judged sweeps (1,720 verdicts) the four scenes lit flat or
+# cool - overcast, gym, dim restaurant, office - filled four of the bottom five
+# (28-35% keep) while every warm directional setting sat in the top half (41-49%).
+# The packs render on the grey key, so flat light was an eval-only penalty. Jeremy:
+# "We don't need to do a resweep, just change it to fix it." Those four now carry
+# warm directional light; the places stay. Sweeps judged before this date used the
+# old strings, so their scene_02/03/04/08 rates are not comparable to new ones.
 SETTINGS = [
     "soft window daylight, in a sunlit kitchen",
     "warm late-afternoon sun, on a quiet residential street",
-    "even overcast daylight, against a plain painted wall",
-    "cool gym lighting, in a modern gym with mirrors behind her",
-    "low warm restaurant light, in a dim dining room",
+    "warm afternoon sunlight, against a plain painted wall",
+    "warm late-afternoon window light, in a modern gym with mirrors behind her",
+    "warm directional restaurant light, in an elegant dining room",
     "soft gallery lighting, in an art gallery with pale walls",
     "evening street light, outside a bar at night",
     "soft window daylight, in a coffee shop by the window",
-    "even office lighting, in a bright open-plan office",
+    "warm window light, in a bright open-plan office",
     "golden-hour light, on a rooftop terrace at dusk",
 ]
 
