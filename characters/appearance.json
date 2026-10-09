@@ -67,39 +67,39 @@
  },
  "daisy": {
   "age": 20,
-  "_note": "DRAFT 2026-10-04, read off her reference photos. Not in chillafterdark, so no game record to check against; age from you, 2026-10-03. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
+  "_note": "DRAFT 2026-10-04, read off her reference photos. Not in chillafterdark, so no game record to check against; age from you, 2026-10-03. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "ethnicity": "Southeast Asian",
   "build": "slim with a small waist",
   "bust": "full",
   "figure": "slim figure with a small waist and a full bust",
   "features": "very long straight dark brown-black hair, dark brown eyes, light tan skin, freckles across her nose and cheeks, full lips",
   "frame": "slim frame",
-  "prompt": "a young woman with a slim figure, a small waist and a full bust, light tan skin, very long straight dark brown-black hair, dark brown eyes and full lips"
+  "prompt": "a young woman with a slim figure, a small waist and a full bust, light tan skin, very long dark brown-black hair, dark brown eyes and full lips"
  },
  "geena": {
-  "_note": "Jeremy, 2026-10-04: Black, with a lighter complexion - matches the game's systemPrompt, which says 'You are a Black woman'. Her hair is ALL-OVER vivid magenta-pink, not an underlayer like vivienne's; same lesson, it must be prompted. Her earlier sweep (dense_geena_v2) ran with NO record and therefore no pink in the prompt - treat its numbers as suspect. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
+  "_note": "Jeremy, 2026-10-04: Black, with a lighter complexion - matches the game's systemPrompt, which says 'You are a Black woman'. Her hair is ALL-OVER vivid magenta-pink, not an underlayer like vivienne's; same lesson, it must be prompted. Her earlier sweep (dense_geena_v2) ran with NO record and therefore no pink in the prompt - treat its numbers as suspect. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "ethnicity": "Black",
   "build": "curvy",
   "bust": "full, large",
   "figure": "curvy, hourglass, full bust and hips",
   "features": "long straight hair dyed vivid magenta-pink all over, brown eyes, light brown skin, full lips",
   "frame": "curvy frame",
-  "prompt": "a woman with a curvy hourglass figure and a full bust, light brown skin, long straight hair dyed vivid magenta-pink all over, brown eyes and full lips"
+  "prompt": "a woman with a curvy hourglass figure and a full bust, light brown skin, long hair dyed vivid magenta-pink all over, brown eyes and full lips"
  },
  "hannah": {
   "age": 29,
-  "_note": "Corrected by Jeremy, 2026-10-04. Her highlights are BLONDE, not caramel - thick bleached money-piece ribbons through dark brown. DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
+  "_note": "Corrected by Jeremy, 2026-10-04. Her highlights are BLONDE, not caramel - thick bleached money-piece ribbons through dark brown. DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "ethnicity": "Latina",
   "build": "curvy with a defined waist",
   "bust": "full",
   "figure": "curvy figure with a defined waist and a full bust",
   "features": "very long thick dark brown hair with thick bleached blonde face-framing highlights, warm brown eyes, tanned olive skin, strong dark brows, full lips",
   "frame": "curvy frame",
-  "prompt": "a woman with a curvy figure, a defined waist and a full bust, tanned olive skin, very long thick dark brown hair with thick bleached blonde face-framing highlights, warm brown eyes and full lips"
+  "prompt": "a woman with a curvy figure, a defined waist and a full bust, tanned olive skin, very long dark brown hair, warm brown eyes and full lips"
  },
  "maddie": {
   "age": 25,
-  "_note": "Corrected by Jeremy, 2026-10-04. Irish. DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03. Her wispy curtain fringe is in all four references - the same shape as raven's bangs, so it carries a negative. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
+  "_note": "Corrected by Jeremy, 2026-10-04. Irish. DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03. Her wispy curtain fringe is in all four references - the same shape as raven's bangs, so it carries a negative. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "ethnicity": "Irish",
   "build": "slim with a small waist",
   "bust": "medium-full",
@@ -107,7 +107,7 @@
   "features": "long straight auburn-copper hair with a soft wispy curtain fringe, green eyes, fair Irish skin, light freckles across her nose",
   "frame": "slim frame",
   "negative": "centre-parted hair with a bare forehead, no fringe",
-  "prompt": "a young woman with a slim figure, a small waist and a medium-full bust, fair skin, long straight auburn-copper hair with a wispy curtain fringe, and green eyes"
+  "prompt": "a young woman with a slim figure, a small waist and a medium-full bust, fair skin, long auburn-copper hair with a wispy curtain fringe, and green eyes"
  },
  "marisol": {
   "_note": "Age 27 from the game (none given). Hair and skin observed from her references: the bleached blonde shows darker roots at the parting, stated so the base model does not volunteer clean platinum. Body text cut to large breasts only, 2026-10-05: Jeremy, on her v2 epoch eval, the curvy/hourglass wording overpowered the LoRA and rendered a body nothing like her references. No build/figure/frame on purpose - frame() would infer 'curvy frame' from them. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
@@ -183,14 +183,14 @@
   "_note": "The pink MUST be prompted. Measured 2026-10-04 by matched-seed A/B at epoch 21, three scenes, identical seeds - the only variable was this phrase: 'long black hair' gave black with a faint warm strand; DELETING the colour entirely also gave black, so the LoRA did not learn the pink on its own; 'long black hair with vivid pink underlights beneath the top layer' gave her real pattern. Identity cosine went UP, not down: 0.611 / 0.572 / 0.672. The earlier do_not_prompt note claimed naming it 'spreads pink everywhere' and that the LoRA would learn the placement from the photos - both are false, and acting on them cost a 90-render sweep that scored 0/90. Same shape as priya's glasses: a trait correctly absent from the CAPTIONS still has to be stated at RENDER time. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab."
  },
  "zara": {
-  "_note": "Frame set by hand 2026-10-04 (keep tiny). Body text from Jeremy the same day; hair and skin from her reference photos. Age 19 matches the game. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
+  "_note": "Frame set by hand 2026-10-04 (keep tiny). Body text from Jeremy the same day; hair and skin from her reference photos. Age 19 matches the game. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "frame": "tiny frame",
   "ethnicity": "East Asian",
   "build": "petite, extremely skinny",
   "bust": "perky",
   "figure": "slim, slender frame",
   "features": "very long straight dark brown hair with a centre part, brown eyes, fair light skin",
-  "prompt": "a young woman with a petite, extremely skinny figure and perky breasts, fair light skin, very long straight dark brown hair and brown eyes"
+  "prompt": "a young woman with a petite, extremely skinny figure and perky breasts, fair light skin, very long dark brown hair and brown eyes"
  },
  "jaina": {
   "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 25, serves at Bella Notte on weekdays and runs Jaina's Jewels, a handmade jewellery stall, at weekends. Note the jewellery: the no-jewellery rule is a TRAINING rule (an uncaptioned accessory binds to the trigger), and her training shots must still follow it - but her ASSET looks can wear her own pieces, and arguably should. Her Lora-Gen run was started 2026-10-04 and is expected to hit the image-generation limit and finish the following day. 2026-10-06, Jeremy: the freckles were never his and are wrong - drafted from a reference photo. Removed, with the ethnicity word.",
@@ -224,14 +224,14 @@
   }
  },
  "ash": {
-  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Ethnicity is not stated in the game; her renders read white and deeply tanned. Waitress at Obsidian. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
+  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Ethnicity is not stated in the game; her renders read white and deeply tanned. Waitress at Obsidian. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "ethnicity": "White, deeply tanned",
   "build": "slim and athletic with a flat stomach and a narrow waist",
   "bust": "medium-full",
   "figure": "slim athletic figure, narrow waist, medium-full bust",
   "features": "very long loosely waved balayage hair - dark brown at the roots melting to caramel-blonde at the ends - warm brown eyes, tanned skin, freckles across her nose and cheeks",
   "frame": "slim athletic frame",
-  "prompt": "a young woman with a slim athletic figure, a narrow waist and a medium-full bust, deeply tanned skin, very long loosely waved balayage hair, dark brown at the roots and caramel-blonde at the ends, and warm brown eyes",
+  "prompt": "a young woman with a slim athletic figure, a narrow waist and a medium-full bust, deeply tanned skin, very long dark brown hair and warm brown eyes",
   "age": 24
  },
  "cindy": {
@@ -284,25 +284,25 @@
   "age_in_prompt": false
  },
  "keiko": {
-  "_note": "Corrected by Jeremy, 2026-10-04. Half Asian, not fully - which is why her renders read mixed with sun-lightened brown hair. DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Asian is stated in her systemPrompt and her mother Hotaru owns Lumen Salon, so likely half Japanese - but her shipped renders read MIXED, with sun-lightened brown hair rather than black. Worth confirming which you want. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
+  "_note": "Corrected by Jeremy, 2026-10-04. Half Asian, not fully - which is why her renders read mixed with sun-lightened brown hair. DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Asian is stated in her systemPrompt and her mother Hotaru owns Lumen Salon, so likely half Japanese - but her shipped renders read MIXED, with sun-lightened brown hair rather than black. Worth confirming which you want. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "ethnicity": "Half Asian",
   "build": "slim and petite, youthful",
   "bust": "small-medium",
   "figure": "slim petite youthful figure with a small-medium bust",
   "features": "very long wavy brown hair with sun-lightened caramel ends, warm brown eyes, golden-tan skin, a soft round face",
   "frame": "slim petite frame",
-  "prompt": "a young woman with a slim petite figure and a small-medium bust, golden-tan skin, very long wavy brown hair with sun-lightened caramel ends, and warm brown eyes",
+  "prompt": "a young woman with a slim petite figure and a small-medium bust, golden-tan skin, very long brown hair and warm brown eyes",
   "age": 18
  },
  "kimmy": {
-  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. One of only two blue-eyed characters in the cast, so the eye colour has to be prompted or the base model will give her brown. Church on Sundays, The Chill Trap in the evenings. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
+  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. One of only two blue-eyed characters in the cast, so the eye colour has to be prompted or the base model will give her brown. Church on Sundays, The Chill Trap in the evenings. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "ethnicity": "White",
   "build": "slim with a small waist",
   "bust": "full",
   "figure": "slim figure with a small waist and a full bust",
   "features": "very long straight light blonde hair, pale blue-grey eyes, fair skin, soft features",
   "frame": "slim frame",
-  "prompt": "a young woman with a slim figure, a small waist and a full bust, fair skin, very long straight light blonde hair and pale blue-grey eyes",
+  "prompt": "a young woman with a slim figure, a small waist and a full bust, fair skin, very long light blonde hair and pale blue-grey eyes",
   "age": 24
  },
  "maya": {
@@ -349,25 +349,25 @@
   "age_in_prompt": false
  },
  "sandra": {
-  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. The only redhead in the cast, so the hair colour must be prompted. 38 and a single mother; her shipped wardrobe is noticeably more covered than anyone else's and should stay that way. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
+  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. The only redhead in the cast, so the hair colour must be prompted. 38 and a single mother; her shipped wardrobe is noticeably more covered than anyone else's and should stay that way. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "ethnicity": "White",
   "build": "slim",
   "bust": "modest",
   "figure": "slim figure with a modest bust",
   "features": "long wavy copper-red hair, green eyes, fair freckled skin, warm laugh lines",
   "frame": "slim frame",
-  "prompt": "a woman with a slim figure and a modest bust, fair skin, long wavy copper-red hair and green eyes",
+  "prompt": "a woman with a slim figure and a modest bust, fair skin, long copper-red hair and green eyes",
   "age": 38
  },
  "trina": {
-  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Green eyes and platinum hair, both of which the base model will not volunteer. Works at Vale Contemporary in the Hill district. The game says age 33; her systemPrompt prose says 29. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
+  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Green eyes and platinum hair, both of which the base model will not volunteer. Works at Vale Contemporary in the Hill district. The game says age 33; her systemPrompt prose says 29. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "ethnicity": "White",
   "build": "curvy with an hourglass shape",
   "bust": "full",
   "figure": "curvy hourglass figure with a small waist and a full bust",
   "features": "very long loosely waved platinum-blonde hair, green eyes, light tanned skin, strong defined brows, full lips",
   "frame": "curvy frame",
-  "prompt": "a woman with a curvy hourglass figure, a small waist and a full bust, light tanned skin, very long loosely waved platinum-blonde hair, green eyes and full lips",
+  "prompt": "a woman with a curvy hourglass figure, a small waist and a full bust, light tanned skin, very long platinum-blonde hair, green eyes and full lips",
   "age": 33
  },
  "cassie": {
@@ -415,12 +415,12 @@
   }
  },
  "aura": {
-  "prompt": "a young woman with a curvy figure and a full bust, warm brown skin, very long loosely waved black hair, dark brown eyes and full lips",
+  "prompt": "a young woman with a curvy figure and a full bust, warm brown skin, very long black hair, dark brown eyes and full lips",
   "confirmed": {
-   "at": "2026-10-08T23:18:11+00:00",
-   "fingerprint": "ee6b82488b146f69"
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "156eaa3de3723d38"
   },
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does)."
  },
  "aya": {
   "prompt": "A young woman with an hourglass figure with massive natural breasts",
@@ -439,48 +439,92 @@
   }
  },
  "diane": {
-  "prompt": "a young woman with a slim figure and a small bust, lightly tanned olive skin, long wavy dark brown hair, light blue eyes and full lips",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "prompt": "a young woman with a slim figure and a small bust, lightly tanned olive skin, medium-length black hair, light blue eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "237ac83c9e1ea466"
+  }
  },
  "eve": {
-  "prompt": "a young woman with a slim figure, a small waist and a full bust, fair lightly tanned skin, very long wavy golden-blonde hair, blue eyes and full lips",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "prompt": "a young woman with a slim figure, a small waist and a full bust, fair lightly tanned skin, very long golden-blonde hair, blue eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "b7379eb3a87f6666"
+  }
  },
  "gwen": {
-  "prompt": "a young woman with a slim figure and a medium bust, fair skin, long wavy copper-red hair and green eyes",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "prompt": "a young woman with a slim figure and a medium bust, fair skin, long copper-red hair and green eyes",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "a30d8a29165b3216"
+  }
  },
  "jordan": {
-  "prompt": "a young woman with a slim figure, a small waist and a medium bust, deep brown skin, very long straight black hair with full bangs across her forehead, dark brown eyes and full lips",
+  "prompt": "a young woman with a slim figure, a small waist and a medium bust, deep brown skin, very long black hair with full bangs across her forehead, dark brown eyes and full lips",
   "negative": "bare forehead, hair swept back off the forehead, no bangs",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "db9ad480b3af04fb"
+  }
  },
  "kasia": {
-  "prompt": "a young woman with a slim figure and a medium bust, fair skin, very long straight platinum-blonde hair, blue-grey eyes and full lips",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "prompt": "a young woman with a slim figure and a medium bust, fair skin, very long platinum-blonde hair, blue-grey eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "01b32eede8a21ece"
+  }
  },
  "lena": {
-  "prompt": "a young woman with a slim figure and a medium bust, fair skin, long softly waved dark blonde hair, green-grey eyes and full lips",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "prompt": "a young woman with a slim figure and a medium bust, fair skin, long dark blonde hair, green-grey eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "bca5bc252af6d325"
+  }
  },
  "lizzie": {
-  "prompt": "a young woman with a curvy, full-figured body, wide hips and a large bust, light olive skin, shoulder-length straight black hair and dark brown eyes",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "prompt": "a young woman with a curvy, full-figured body, wide hips and a large bust, light olive skin, shoulder-length black hair and dark brown eyes",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "fd0c7cc1a1a3d90d"
+  }
  },
  "rivera": {
-  "prompt": "a woman with a curvy figure and a full bust, medium brown skin, shoulder-length straight black hair, dark brown eyes and full lips",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "prompt": "a woman with a curvy figure and a full bust, medium brown skin, shoulder-length black hair, dark brown eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "02764ef5b4c7788a"
+  }
  },
  "sarah": {
-  "prompt": "a young woman with a slim figure and a medium bust, fair skin, very long wavy hair dyed vivid cobalt blue all over, and light amber-brown eyes",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "prompt": "a young woman with a slim figure and a medium bust, fair skin, very long hair dyed vivid cobalt blue all over, and light amber-brown eyes",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "d99dcecad40b5188"
+  }
  },
  "sienna": {
-  "prompt": "a young woman with a slim hourglass figure, a small waist and a large bust, lightly tanned skin, very long straight brown hair with lighter caramel ends, dark brown eyes and full lips",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "prompt": "a young woman with a slim hourglass figure, a small waist and a large bust, lightly tanned skin, very long brown hair, dark brown eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "62064d74228cf80b"
+  }
  },
  "sunny": {
-  "prompt": "a young woman with a slim figure and a small-medium bust, golden tan skin, long wavy light brown hair with sun-lightened blonde strands, green eyes and full lips",
-  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+  "prompt": "a young woman with a slim figure and a small-medium bust, golden tan skin, long light brown hair, green eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "confirmed": {
+   "at": "2026-10-09T02:57:37+00:00",
+   "fingerprint": "abbaf4a05ca85ffc"
+  }
  }
 }
