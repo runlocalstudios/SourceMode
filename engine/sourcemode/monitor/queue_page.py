@@ -82,7 +82,7 @@ BODY = """
     <div id=removed></div>
   </div>
   <div class=col-rail>
-    <h2>Ready to train</h2>
+    <h2>Ready to train <span id=candcount class=dim></span></h2>
     <div id=cands></div>
     <div id=sweepwrap></div>
     <h2>Runner</h2>
@@ -371,6 +371,9 @@ function draw(){
       +'<span class=dim>a running job is never interrupted</span></div>';
   SM.set($('queuefoot'),null,foot);
   drawRemoved();
+  /* Jeremy, 2026-10-09: the count beside the header, so the rail says at a
+     glance how many approved sets are waiting for the card. */
+  $('candcount').textContent=cands.length?'· '+cands.length:'';
   if(!cands.length)
     SM.set($('cands'),null,'<div class=empty><b>Nothing waiting</b>'
       +'Everything approved is queued or trained.</div>');
