@@ -114,7 +114,13 @@
   "ethnicity": "Latina",
   "bust": "large",
   "features": "bleached blonde hair falling just past her shoulders with darker roots at the parting, brown eyes, light tan skin",
-  "prompt": "a young woman with large breasts, light tan skin, bleached blonde hair falling just past her shoulders with darker roots at the parting, and brown eyes"
+  "prompt": "a young woman with large breasts, bleached blonde hair falling just past her shoulders, brown eyes",
+  "frame": "slim frame",
+  "age_in_prompt": false,
+  "confirmed": {
+   "at": "2026-10-09T01:29:11+00:00",
+   "fingerprint": "b8bb01dc9692d3af"
+  }
  },
  "mei": {
   "_note": "DRAFT from her references + the game, 2026-10-04 - correct before her sweep. Game: 27, property manager of The Flats; her `work` wardrobe should read front-desk professional. Age comes from the game.",
@@ -409,11 +415,12 @@
   }
  },
  "aura": {
-  "prompt": "A young woman",
+  "prompt": "a young woman with a curvy figure and a full bust, warm brown skin, very long loosely waved black hair, dark brown eyes and full lips",
   "confirmed": {
    "at": "2026-10-08T23:18:11+00:00",
    "fingerprint": "ee6b82488b146f69"
-  }
+  },
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
  },
  "aya": {
   "prompt": "A young woman with an hourglass figure with massive natural breasts",
@@ -430,5 +437,50 @@
    "at": "2026-10-08T23:28:53+00:00",
    "fingerprint": "2d99a04681a075af"
   }
+ },
+ "diane": {
+  "prompt": "a young woman with a slim figure and a small bust, lightly tanned olive skin, long wavy dark brown hair, light blue eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+ },
+ "eve": {
+  "prompt": "a young woman with a slim figure, a small waist and a full bust, fair lightly tanned skin, very long wavy golden-blonde hair, blue eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+ },
+ "gwen": {
+  "prompt": "a young woman with a slim figure and a medium bust, fair skin, long wavy copper-red hair and green eyes",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+ },
+ "jordan": {
+  "prompt": "a young woman with a slim figure, a small waist and a medium bust, deep brown skin, very long straight black hair with full bangs across her forehead, dark brown eyes and full lips",
+  "negative": "bare forehead, hair swept back off the forehead, no bangs",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+ },
+ "kasia": {
+  "prompt": "a young woman with a slim figure and a medium bust, fair skin, very long straight platinum-blonde hair, blue-grey eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+ },
+ "lena": {
+  "prompt": "a young woman with a slim figure and a medium bust, fair skin, long softly waved dark blonde hair, green-grey eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+ },
+ "lizzie": {
+  "prompt": "a young woman with a curvy, full-figured body, wide hips and a large bust, light olive skin, shoulder-length straight black hair and dark brown eyes",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+ },
+ "rivera": {
+  "prompt": "a woman with a curvy figure and a full bust, medium brown skin, shoulder-length straight black hair, dark brown eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+ },
+ "sarah": {
+  "prompt": "a young woman with a slim figure and a medium bust, fair skin, very long wavy hair dyed vivid cobalt blue all over, and light amber-brown eyes",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+ },
+ "sienna": {
+  "prompt": "a young woman with a slim hourglass figure, a small waist and a large bust, lightly tanned skin, very long straight brown hair with lighter caramel ends, dark brown eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
+ },
+ "sunny": {
+  "prompt": "a young woman with a slim figure and a small-medium bust, golden tan skin, long wavy light brown hair with sun-lightened blonde strands, green eyes and full lips",
+  "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab."
  }
 }
