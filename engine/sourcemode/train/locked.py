@@ -231,3 +231,22 @@ def locked_files(cfg: dict, registry: Path | None = None) -> set[Path]:
         if base.is_dir():
             keep |= {p.resolve() for p in base.glob(f"*/lora*/{row['file']}")}
     return keep
+
+
+def unlock(cfg: dict, character: str, registry: Path | None = None) -> dict | None:
+    """Remove the lock and its vault copy. The ComfyUI copy stays - sweeps stage
+    every epoch there anyway and the eval expects them. Returns the row removed."""
+    c = _check_character(character)
+    entries = load_registry(registry)
+    row = entries.pop(c, None)
+    if row is None:
+        return None
+    _write_registry(entries, registry)
+    vt = vault_target(cfg, c, row["file"])
+    if vt.is_file():
+        vt.unlink()
+    try:
+        vt.parent.rmdir()
+    except OSError:
+        pass
+    return row

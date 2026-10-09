@@ -367,7 +367,7 @@ def check(character: str) -> dict:
         missing.append("confirmed - Jeremy has not confirmed this record; review it on "
                        "the Looks tab (drafts carried invented details into two sweeps)")
     if not frame(c):
-        warnings.append("frame - tiny / curvy / omit; without it no fitted clause is sent")
+        warnings.append("frame - tiny / petite / slim / medium build / athletic / curvy, or omit; without it no fitted clause is sent")
     refs = Path("C:/Epic Games/Files/cnc info/codex/references")
     if refs.is_dir() and not any(refs.glob(f"{c}_*")):
         warnings.append("no reference photo under codex/references - the eval cannot "

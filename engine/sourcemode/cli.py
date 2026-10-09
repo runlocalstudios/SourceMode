@@ -147,6 +147,24 @@ def lora_lock(
     rprint(f"[green]locked[/green] {character}: {row['file']} sha256 {row['sha256'][:12]}  -> characters/loras.json")
 
 
+@lora_app.command("unlock")
+def lora_unlock(character: str = typer.Argument(..., help="Character id.")):
+    """Remove her lock and vault copy. Also drops her epoch-choices record so the board shows no pick."""
+    from .train.locked import LockError, unlock  # noqa: PLC0415
+
+    cfg = load_config()
+    try:
+        row = unlock(cfg, character)
+    except LockError as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    choice = outputs_dir(cfg) / "epoch-choices" / f"{character.lower()}.json"
+    if choice.is_file():
+        choice.unlink()
+        rprint("epoch choice removed")
+    rprint(f"unlocked {character}: {row['file']}" if row else f"{character} was not locked")
+
+
 @lora_app.command("status")
 def lora_status():
     """Every locked character, where her file is, and whether both copies verify."""

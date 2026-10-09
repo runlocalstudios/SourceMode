@@ -102,3 +102,15 @@ def test_a_character_id_that_escapes_is_refused(world, bad):
     cfg, out, ck, reg = world
     with pytest.raises(L.LockError):
         L.lock(cfg, bad, ck / "zara_v2-000018.safetensors", epoch=18, dataset="zara_v2", registry=reg)
+
+
+def test_unlock_removes_the_row_and_the_vault_copy_only(world):
+    cfg, out, ck, reg = world
+    L.lock(cfg, "zara", ck / "zara_v2-000018.safetensors", epoch=18, dataset="zara_v2", registry=reg)
+    vault = Path(cfg["paths"]["library"]) / "loras" / "zara" / "zara_v2-000018.safetensors"
+    comfy = Path(cfg["comfyui"]["loras_dir"]) / "sourcemode" / "zara_v2" / "zara_v2-000018.safetensors"
+    row = L.unlock(cfg, "zara", registry=reg)
+    assert row["file"] == "zara_v2-000018.safetensors"
+    assert L.locked(cfg, "zara", registry=reg) is None and not vault.exists()
+    assert comfy.is_file() and (ck / "zara_v2-000018.safetensors").is_file()
+    assert L.unlock(cfg, "zara", registry=reg) is None

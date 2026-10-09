@@ -182,6 +182,54 @@ def pose_fields(character: str, slot: dict) -> dict:
                       "head_deg": head, "pitch": pitch, "expression": EXPRESSION_TYPES[ex_i]}}
 
 
+#: Jeremy, 2026-10-09: "review the prompts to ensure that they are optimized for
+#: qwen generation. Because if you're being overly wordy or writing with AI slop,
+#: it's a possibility that the issue is in the actual prompt itself, not being
+#: written in sort of human natural language."
+#:
+#: The "contract" prompt below is the Codex game-asset-gen scaffold, ported
+#: verbatim on 2026-10-02 - 1,900 characters of instruction prose ("Directions
+#: mean image-left/image-right as seen by the viewer", "ALWAYS", "never full-body")
+#: written for an instruction-following image API. Qwen-Image's encoder is a
+#: Qwen2.5-VL and the LoRA was trained on 32-word captions in one register:
+#: "gigi, a head-and-chest portrait, turned slightly toward her left, her hair in
+#: a braid over one shoulder, wearing a grey crew-neck sweatshirt, a neutral
+#: expression, natural sunlight, in a park pathway". The best asset numbers on
+#: record came from prompts in that register (jojo_intimate 108/120, 494 chars).
+#: "natural" says the same things - crop, body turn, head turn, gaze,
+#: expression, makeup, hair, outfit, light, setting - in the caption's words and
+#: order, about 70 words. PROMPT_STYLE is module state so the epoch eval can flip
+#: it for an A/B (`--natural-prompt`) without a second builder growing anywhere.
+PROMPT_STYLE = "contract"
+_NATURAL_EXPRESSION = {
+    "neutral": "a neutral expression", "closed-lip": "a soft closed-mouth smile",
+    "teeth": "a bright natural smile showing her teeth", "flirty": "a soft flirty smile",
+}
+
+
+def natural_prompt(character: str, slot: dict, trigger: str | None = None,
+                   backdrop: str | None = None) -> str:
+    """The asset prompt in the training caption's register. Same facts as the
+    contract prompt, caption vocabulary, caption order, no instructions."""
+    pf = pose_fields(character, slot)
+    asked = pf["asked"]
+    app = appearance_clause(character)
+    if is_up_style(slot.get("hair", "")):
+        app = drop_length(app)
+    # captions say "her left"; the contract says image-left. image-left is her right.
+    her = {"image-left": "her right", "image-right": "her left"}.get(asked["body_side"])
+    body = "facing the camera" if asked["body_side"] == "front" else f"in a three-quarter view toward {her}"
+    head = ("looking straight into the camera" if asked["head_side"] == "front"
+            else f"her face turned slightly toward {her}, looking into the camera")
+    crop = slot.get("framing_natural") or "framed from the upper thighs up"
+    outfit = slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"])
+    shot = slot.get("shot_type") or "standing portrait"
+    return (f"{trigger or character}, {app + ', ' if app else ''}a {shot} {crop}, {body}, {head}, "
+            f"{_NATURAL_EXPRESSION[asked['expression']]}, {slot.get('makeup') or MAKEUP}, "
+            f"{slot['hair']}, wearing {outfit}{fitted_clause(character)}, "
+            f"{backdrop or KEY_BACKDROP}. Photorealistic, natural skin texture, sharp focus.")
+
+
 def shot_prompt(character: str, slot: dict, trigger: str | None = None,
                 backdrop: str | None = None) -> str:
     """The trigger is the bare character name unless the plan overrides it; the rest
@@ -210,6 +258,8 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
         look = f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. Natural realistic human proportions, correct anatomy."
         return (f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, "
                 f"{slot['hair']}, {slot.get('makeup') or MAKEUP}. {look}")
+    if PROMPT_STYLE == "natural":
+        return natural_prompt(character, slot, trigger, backdrop)
     pf = pose_fields(character, slot)
     app = appearance_clause(character)
     # MEASURED 2026-10-04: a prompt that says her hair is long AND asks for it up

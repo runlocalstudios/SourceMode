@@ -702,16 +702,23 @@ function nextOpen(from){
   return n;
 }
 
+/* The write in flight. The thumb never waits for it, but the finish screen
+   must: Jeremy, 2026-10-09 - "I feel like I've reviewed all 90, but it says
+   I've reviewed 89". show() on the last verdict opened results() before the
+   POST landed, so /summary still counted 89. */
+let pending=null;
 async function verdict(v){
   if(!cur||idx>=cur.items.length||zoom>1) return;   /* zoomed = looking, not judging */
   const it=cur.items[idx];
   last={item:it.id,at:idx,prev:cur.verdicts[it.id]||null};
-  cur.verdicts[it.id]=v; idx=nextOpen(idx+1); show();  /* the thumb never waits */
+  cur.verdicts[it.id]=v; idx=nextOpen(idx+1);
+  const write=SM.postJSON('/judge/set/'+encodeURIComponent(cur.id)+'/verdict',{item:it.id,verdict:v});
+  pending=write;
+  show();  /* the thumb never waits */
   if(navigator.vibrate) navigator.vibrate(8);
   SM.toast(v==='keep'?'kept':'rejected',{label:'Undo',run:undo});
   try{
-    cur.verdicts=await SM.postJSON(
-      '/judge/set/'+encodeURIComponent(cur.id)+'/verdict',{item:it.id,verdict:v});
+    cur.verdicts=await write;
     checkRedo();
   }catch(e){
     /* Never let a lost write look like a recorded one. */
@@ -752,8 +759,9 @@ async function undo(){
   if(prev===null) delete cur.verdicts[item]; else cur.verdicts[item]=prev;
   show();
   try{
-    cur.verdicts=await SM.postJSON(
-      '/judge/set/'+encodeURIComponent(cur.id)+'/verdict',{item:item,verdict:prev});
+    const write=SM.postJSON('/judge/set/'+encodeURIComponent(cur.id)+'/verdict',{item:item,verdict:prev});
+    pending=write;
+    cur.verdicts=await write;
   }catch(e){
     if(snapshot) cur.verdicts[item]=snapshot; else delete cur.verdicts[item];
     show(); SM.toast('Could not undo - '+e.message);
@@ -851,6 +859,7 @@ function hideStage(){
 async function results(){
   hideStage();
   const box=$('results'); box.classList.add('on');
+  if(pending){ try{ await pending; }catch(e){} }   /* the last verdict must be on disk before we count */
   let board=null;
   try{ board=await SM.getJSON('/judge/set/'+encodeURIComponent(cur.id)+'/epochs'); }
   catch(e){ board=null; }        /* a 404 means "not an epoch sweep", not an error */

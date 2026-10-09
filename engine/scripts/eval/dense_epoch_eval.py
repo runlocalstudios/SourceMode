@@ -31,7 +31,7 @@ from sourcemode.render.workflow import load_template, prune_placeholder_loras, s
 _FLAGS = {"--scenes", "--epochs", "--tag"}
 # Bare flags take no value. They are skipped here for the same reason the valued
 # ones are split out: anything left in argv lands in a positional slot by index.
-_BARE = {"--allow-incomplete-appearance", "--no-description"}
+_BARE = {"--allow-incomplete-appearance", "--no-description", "--natural-prompt"}
 POS, _FLAGVALS, _BARESEEN = [], {}, set()
 _it = iter(sys.argv)
 for _a in _it:
@@ -134,6 +134,12 @@ if "--no-description" in _BARESEEN:
     import sourcemode.assets.render as _render  # noqa: E402
     _render.appearance_clause = lambda character: "a woman"
     _render.fitted_clause = lambda character: ""
+# --natural-prompt: Jeremy, 2026-10-09 - is the 1,900-character contract prompt
+# itself the problem? Same facts in the training caption's register, ~70 words.
+# Pair it with --tag so it lands in its own folder beside the contract run.
+if "--natural-prompt" in _BARESEEN:
+    import sourcemode.assets.render as _render  # noqa: E402
+    _render.PROMPT_STYLE = "natural"
 SCENES = asset_prompts(TRIGGER)
 VERBATIM = True
 # --tag renders into its own folder and judge set. Without it a re-run with a
