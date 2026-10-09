@@ -88,6 +88,33 @@ def library_apply(
         rprint(f"plan archived as {done.name}")
 
 
+@library_app.command("prune")
+def library_prune(
+    apply: bool = typer.Option(False, "--apply", help="Delete the rows in library/_prune.json."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="With --apply: print what would go; delete nothing."),
+    ab_days: int = typer.Option(7, "--ab-days", help="A/B sets older than this are listed."),
+):
+    """What a locked winner makes redundant: her sweeps, old A/B sets, her losing checkpoints. Plan first; --apply deletes."""
+    from . import library as L  # noqa: PLC0415
+    from .assets.judge import judge_root  # noqa: PLC0415
+
+    cfg = load_config()
+    lib = L.library_dir(cfg)
+    if not apply:
+        rows = L.prune_plan(cfg, outputs_dir(cfg), judge_root(cfg), ab_days=ab_days)
+        pj, pm = L.write_prune(rows, lib)
+        by = {}
+        for r in rows:
+            by[r["kind"]] = by.get(r["kind"], 0) + 1
+        rprint(f"{len(rows)} rows ({sum(r['bytes'] for r in rows) / 1e9:.1f} GB): "
+               + ", ".join(f"{k} {v}" for k, v in sorted(by.items())))
+        rprint(f"read [bold]{pm}[/bold]; delete with: sourcemode library prune --apply")
+        return
+    rows = json.loads((lib / "_prune.json").read_text(encoding="utf-8"))
+    for line in L.prune_apply(cfg, rows, judge_root(cfg), dry_run=dry_run):
+        rprint(line)
+
+
 @lora_app.command("lock")
 def lora_lock(
     character: str = typer.Argument(..., help="Character id, e.g. zara."),

@@ -334,3 +334,148 @@ def _rel_after_move(path_str: str, src: Path, engine_root: Path) -> Path | None:
         return Path(os.path.normpath(p)).relative_to(Path(os.path.normpath(src)))
     except ValueError:
         return None
+
+
+# --- pruning: what a locked winner makes redundant ---------------------------------
+#
+# Jeremy, 2026-10-09: "deleting every dense epoch eval photo set which already has
+# an approved epoch winner, we don't need those ... all AB test packs that are
+# older than 7 days." And the big one he did not ask for but the numbers made
+# plain: 278 checkpoints, 328 GB, of which 24 are locked. A winner is a LOCK
+# (train.locked) - committed, vaulted, hash-verified - and nothing here deletes
+# until every lock verifies. `prune_plan` writes the table; `prune_apply` deletes
+# the rows it is given, re-checking the lock set as it goes.
+
+PRUNE_AB_DAYS = 7
+
+
+def _newest_mtime(folder: Path) -> float | None:
+    newest = None
+    for r, _d, fs in os.walk(folder):
+        for f in fs:
+            m = os.path.getmtime(os.path.join(r, f))
+            newest = m if newest is None or m > newest else newest
+    return newest
+
+
+def _size(path: Path) -> int:
+    if path.is_file():
+        return path.stat().st_size
+    return sum(os.path.getsize(os.path.join(r, f)) for r, _d, fs in os.walk(path) for f in fs)
+
+
+def _is_ab(name: str) -> bool:
+    low = name.lower()
+    return low.startswith("ab_") or low.endswith("_ab") or "_ab_" in low
+
+
+def prune_plan(cfg: dict, outputs: Path, judge_root: Path, *, ab_days: int = PRUNE_AB_DAYS,
+               now: float | None = None) -> list[dict]:
+    """Rows of {action, kind, path, why, bytes, character, judge_sets}. Deletes nothing."""
+    from .train.locked import comfy_loras_dir, load_registry, locked_files  # noqa: PLC0415
+
+    now = now or time.time()
+    reg = load_registry()
+    locked_chars = set(reg)
+    keep = locked_files(cfg)
+    rows: list[dict] = []
+
+    def row(kind, path, why, char="", refs=()):
+        rows.append({"action": "delete", "kind": kind, "path": str(path), "why": why,
+                     "bytes": _size(path), "character": char, "judge_sets": list(refs)})
+
+    for d in sorted(p for p in outputs.glob("dense_*") if p.is_dir()):
+        char = _character_in(d.name, locked_chars)
+        if char:
+            row("folder", d, f"epoch sweep; {char} is locked to {reg[char]['file']}", char,
+                _judge_refs(judge_root, outputs, d))
+    for d in sorted(p for p in outputs.iterdir() if p.is_dir() and _is_ab(p.name)):
+        newest = _newest_mtime(d)
+        age = (now - newest) / 86400 if newest else None
+        if age is not None and age > ab_days:
+            row("folder", d, f"A/B set, {age:.0f} days old", _character_in(d.name, locked_chars) or "",
+                _judge_refs(judge_root, outputs, d))
+    base = outputs / "lora-datasets"
+    if base.is_dir():
+        for ds in sorted(p for p in base.iterdir() if p.is_dir()):
+            char = _character_in(ds.name, locked_chars)
+            if not char:
+                continue
+            for ck in sorted(ds.glob("lora*/*.safetensors")):
+                if ck.resolve() not in keep:
+                    row("file", ck, f"checkpoint that lost; {char} is locked to {reg[char]['file']}", char)
+    comfy = comfy_loras_dir(cfg) / "sourcemode"
+    if comfy.is_dir():
+        for ck in sorted(comfy.glob("*/*.safetensors")):
+            char = _character_in(ck.parent.name, locked_chars)
+            if char and ck.resolve() not in keep:
+                row("file", ck, f"staged in ComfyUI but not the lock; {char} is locked to {reg[char]['file']}", char)
+    return rows
+
+
+def write_prune(rows: list[dict], library: Path) -> tuple[Path, Path]:
+    library.mkdir(parents=True, exist_ok=True)
+    pj, pm = library / "_prune.json", library / "_prune.md"
+    pj.write_text(json.dumps(rows, indent=1), encoding="utf-8")
+    total = sum(r["bytes"] for r in rows)
+    lines = ["# Prune plan - nothing has been deleted", "",
+             f"`sourcemode library prune --apply` deletes every row below ({total / 1e9:.1f} GB). "
+             "Remove a row from the json to keep it. Every locked LoRA must verify first.", "",
+             "| kind | path | GB | why | judge sets |", "|---|---|---|---|---|"]
+    for r in rows:
+        lines.append(f"| {r['kind']} | `{r['path']}` | {r['bytes'] / 1e9:.2f} | {r['why']} | "
+                     f"{', '.join(r['judge_sets'])} |")
+    pm.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return pj, pm
+
+
+def _retire_sets(judge_root: Path, refs: list[str]) -> list[str]:
+    """sets/<id>.json -> retired/<id>.set.json, the convention already on disk."""
+    done = []
+    for ref in refs:
+        src = judge_root / ref
+        if src.is_file() and src.parent.name == "sets":
+            dst = judge_root / "retired" / (src.stem + ".set.json")
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(src), str(dst))
+            done.append(dst.name)
+    return done
+
+
+def prune_apply(cfg: dict, rows: list[dict], judge_root: Path, *, dry_run: bool = False) -> list[str]:
+    """Delete the rows. Refuses outright when any lock fails to verify - the losers
+    are only redundant while the winner is safe."""
+    from .train.locked import locked_files, verify  # noqa: PLC0415
+
+    bad = [r for r in verify(cfg) if not r["ok"]]
+    if bad:
+        return [f"REFUSED: {r['character']}: {'; '.join(r['problems'])}" for r in bad]
+    keep = locked_files(cfg)
+    log = []
+    for r in rows:
+        if r.get("action") != "delete":
+            continue
+        p = Path(r["path"])
+        if p.resolve() in keep:
+            log.append(f"SKIP {p}: locked")
+            continue
+        if not p.exists():
+            log.append(f"SKIP {p}: already gone")
+            continue
+        if r["kind"] == "folder":
+            age = _youngest_file_age_s(p)
+            if age is not None and age < SETTLE_S:
+                log.append(f"SKIP {p}: written {age:.0f}s ago - still in use")
+                continue
+        line = f"delete {r['kind']} {p} ({r['bytes'] / 1e9:.2f} GB)"
+        if dry_run:
+            log.append(line)
+            continue
+        if r["kind"] == "folder":
+            shutil.rmtree(p)
+            retired = _retire_sets(judge_root, r.get("judge_sets") or [])
+            line += f"; retired {', '.join(retired)}" if retired else ""
+        else:
+            p.unlink()
+        log.append(line)
+    return log

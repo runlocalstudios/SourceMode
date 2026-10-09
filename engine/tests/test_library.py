@@ -8,6 +8,7 @@ the assets we have been creating."
 import json
 import os
 import time
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -140,3 +141,70 @@ def test_apply_leaves_a_folder_a_running_job_is_still_writing(tree, tmp_path, mo
 def test_names_do_not_repeat_the_kind():
     assert L._classify("jojo_video", {"jojo"}) == ("jojo", "video", "clips", False)
     assert L._classify("flux_realism_ab", set()) == ("misc", "ab", "flux_realism", True)
+
+
+# --- pruning: what a locked winner makes redundant -------------------------------
+
+@pytest.fixture
+def locked_world(tree, tmp_path, monkeypatch):
+    """zara is locked to epoch 18; 19 is a loser. mei has a sweep but no lock.
+    ab_old is 30 days old, ab_cat_desc (from `tree`) is fresh."""
+    from sourcemode.train import locked as LK
+
+    engine, out, judge = tree
+    reg = tmp_path / "characters" / "loras.json"
+    monkeypatch.setattr(LK, "REGISTRY", reg)
+    cfg = {"paths": {"outputs": str(out), "library": str(tmp_path / "library")},
+           "comfyui": {"loras_dir": str(tmp_path / "comfy")}}
+    ck = out / "lora-datasets" / "zara_v2" / "lora"
+    ck.mkdir(parents=True)
+    (ck / "zara_v2-000018.safetensors").write_bytes(b"18")
+    (ck / "zara_v2-000019.safetensors").write_bytes(b"19")
+    LK.lock(cfg, "zara", ck / "zara_v2-000018.safetensors", epoch=18, dataset="zara_v2", registry=reg)
+    stray = Path(cfg["comfyui"]["loras_dir"]) / "sourcemode" / "zara_v2" / "zara_v2-000019.safetensors"
+    stray.write_bytes(b"19")
+    _png(out / "dense_zara_v2_asset" / "ep18" / "scene_00.png")
+    make_set(judge, "dense_zara_v2_asset", "zara sweep",
+             [{"id": "e18", "path": os.path.join("outputs", "dense_zara_v2_asset", "ep18", "scene_00.png"),
+               "arm": "zara_v2 epoch 18", "group": "0"}])
+    old = time.time() - 30 * 86400
+    _png(out / "selfie_ab" / "a.png", old)
+    return cfg, out, judge, ck, stray
+
+
+def test_prune_plan_lists_only_what_a_lock_makes_redundant(locked_world):
+    cfg, out, judge, ck, stray = locked_world
+    all_rows = L.prune_plan(cfg, out, judge)
+    rows = {Path(r["path"]).name: r for r in all_rows}
+    assert rows["dense_zara_v2_asset"]["kind"] == "folder" and rows["dense_zara_v2_asset"]["judge_sets"] == ["sets/dense_zara_v2_asset.json"]
+    assert "zara_v2-000019.safetensors" in rows and "zara_v2-000018.safetensors" not in rows
+    assert sum(1 for r in all_rows if r["path"].endswith("zara_v2-000019.safetensors")) == 2   # training + ComfyUI
+    assert "selfie_ab" in rows and "ab_cat_desc" not in rows          # 30 days vs fresh
+    assert "dense_mei_v2_asset_nodesc" not in rows                    # mei is not locked
+    assert all(r["action"] == "delete" for r in rows.values())
+
+
+def test_prune_apply_deletes_retires_and_keeps_the_lock(locked_world, tmp_path):
+    cfg, out, judge, ck, stray = locked_world
+    rows = L.prune_plan(cfg, out, judge)
+    dry = L.prune_apply(cfg, rows, judge, dry_run=True)
+    assert all(l.startswith("delete") for l in dry) and (out / "dense_zara_v2_asset").is_dir()
+    log = L.prune_apply(cfg, rows, judge)
+    assert not (out / "dense_zara_v2_asset").exists() and not (out / "selfie_ab").exists()
+    assert not (ck / "zara_v2-000019.safetensors").exists() and not stray.exists()
+    assert (ck / "zara_v2-000018.safetensors").is_file()
+    assert (judge / "retired" / "dense_zara_v2_asset.set.json").is_file()
+    assert not (judge / "sets" / "dense_zara_v2_asset.json").exists()
+    assert (out / "dense_mei_v2_asset_nodesc").is_dir()
+    assert any("retired dense_zara_v2_asset.set.json" in l for l in log)
+    pj, pm = L.write_prune(rows, tmp_path / "library")
+    assert "nothing has been deleted" in pm.read_text(encoding="utf-8")
+
+
+def test_prune_refuses_while_a_lock_does_not_verify(locked_world):
+    cfg, out, judge, ck, stray = locked_world
+    vault = Path(cfg["paths"]["library"]) / "loras" / "zara" / "zara_v2-000018.safetensors"
+    vault.write_bytes(b"tampered")
+    log = L.prune_apply(cfg, L.prune_plan(cfg, out, judge), judge)
+    assert log and log[0].startswith("REFUSED: zara")
+    assert (ck / "zara_v2-000019.safetensors").is_file() and (out / "dense_zara_v2_asset").is_dir()
