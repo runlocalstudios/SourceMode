@@ -360,8 +360,9 @@ def check(character: str) -> dict:
         missing.append("age - not in the game's characters.js and not in appearance.json")
     if not (rec.get("prompt") or "").strip():
         missing.append("prompt - the appearance sentence every render carries "
-                       "(ethnicity, build, hair colour and length, eyes, anything the "
-                       "base model will not volunteer)")
+                       "(figure, waist and bust, skin tone, hair length, texture and "
+                       "colour, eye colour - what drifts without body exposure; no age "
+                       "numeral, no ethnicity word, nothing that strongly changes the face)")
     elif not confirmed(c):
         missing.append("confirmed - Jeremy has not confirmed this record; review it on "
                        "the Looks tab (drafts carried invented details into two sweeps)")
