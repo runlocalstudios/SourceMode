@@ -88,14 +88,14 @@
  },
  "hannah": {
   "age": 29,
-  "_note": "Corrected by Jeremy, 2026-10-04. Her highlights are BLONDE, not caramel - thick bleached money-piece ribbons through dark brown. DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "_note": "Corrected by Jeremy, 2026-10-04. Her highlights are BLONDE, not caramel - thick bleached money-piece ribbons through dark brown. DRAFT 2026-10-04, read off her reference photos. She is not in chillafterdark, so there is no game record to check against - the age below is the one you gave on 2026-10-03. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does). 2026-10-08, Jeremy: keep the dye - the highlights are back.",
   "ethnicity": "Latina",
   "build": "curvy with a defined waist",
   "bust": "full",
   "figure": "curvy figure with a defined waist and a full bust",
   "features": "very long thick dark brown hair with thick bleached blonde face-framing highlights, warm brown eyes, tanned olive skin, strong dark brows, full lips",
   "frame": "curvy frame",
-  "prompt": "a woman with a curvy figure, a defined waist and a full bust, tanned olive skin, very long dark brown hair, warm brown eyes and full lips"
+  "prompt": "a woman with a curvy figure, a defined waist and a full bust, tanned olive skin, very long dark brown hair with bleached blonde face-framing highlights, warm brown eyes and full lips"
  },
  "maddie": {
   "age": 25,
@@ -224,14 +224,14 @@
   }
  },
  "ash": {
-  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Ethnicity is not stated in the game; her renders read white and deeply tanned. Waitress at Obsidian. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
+  "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Ethnicity is not stated in the game; her renders read white and deeply tanned. Waitress at Obsidian. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does). 2026-10-08, Jeremy: keep the dye - the highlights are back.",
   "ethnicity": "White, deeply tanned",
   "build": "slim and athletic with a flat stomach and a narrow waist",
   "bust": "medium-full",
   "figure": "slim athletic figure, narrow waist, medium-full bust",
   "features": "very long loosely waved balayage hair - dark brown at the roots melting to caramel-blonde at the ends - warm brown eyes, tanned skin, freckles across her nose and cheeks",
   "frame": "slim athletic frame",
-  "prompt": "a young woman with a slim athletic figure, a narrow waist and a medium-full bust, deeply tanned skin, very long dark brown hair and warm brown eyes",
+  "prompt": "a young woman with a slim athletic figure, a narrow waist and a medium-full bust, deeply tanned skin, very long balayage hair, dark brown at the roots and caramel-blonde at the ends, and warm brown eyes",
   "age": 24
  },
  "cindy": {
