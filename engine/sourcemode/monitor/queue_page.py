@@ -1746,6 +1746,14 @@ def queue_redo_if_complete(cfg: dict, set_id: str) -> dict | None:
     from ..gpu import queue as q  # noqa: PLC0415
 
     root = judge_root(cfg)
+    # A set he has declared finished is never re-rolled, whatever he rejects in
+    # it later. Jeremy, 2026-10-09: "Don't requeue any of the Jaina influencer
+    # stuff it's all fine" - the re-roll had already queued itself on his last
+    # verdict. `meta.no_redo` carries his words.
+    from ..assets.judge import load_set  # noqa: PLC0415
+
+    if ((load_set(root, set_id) or {}).get("meta") or {}).get("no_redo"):
+        return None
     info = redoable(root, set_id)
     if not info["n"]:
         return None
