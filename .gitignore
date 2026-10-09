@@ -52,6 +52,7 @@ engine/.pytest_cache/
 engine/*.egg-info/
 engine/outputs/
 outputs/
+/library/
 
 # generated artifacts
 characters/**/dataset/

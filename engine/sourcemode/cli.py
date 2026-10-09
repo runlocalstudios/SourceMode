@@ -26,6 +26,7 @@ pose_app = typer.Typer(no_args_is_help=True, help="Pose transfer: same character
 monitor_app = typer.Typer(no_args_is_help=True, help="Live readout of the GPU box for the control panel.")
 assets_app = typer.Typer(no_args_is_help=True, help="In-game asset production: background removal, review sheets.")
 gpu_app = typer.Typer(no_args_is_help=True, help="Serialised GPU work: one ordered queue, one runner, one job at a time.")
+library_app = typer.Typer(no_args_is_help=True, help="The library: every set by character, dated. plan writes the table; apply moves.")
 app.add_typer(source_app, name="source")
 app.add_typer(gates_app, name="gates")
 app.add_typer(prompts_app, name="prompts")
@@ -37,6 +38,52 @@ app.add_typer(pose_app, name="pose")
 app.add_typer(monitor_app, name="monitor")
 app.add_typer(assets_app, name="assets")
 app.add_typer(gpu_app, name="gpu")
+app.add_typer(library_app, name="library")
+
+
+@library_app.command("plan")
+def library_plan():
+    """Write library/_plan.md and _plan.json: old folder -> new folder. Moves nothing."""
+    from . import library as L  # noqa: PLC0415
+    from .assets import appearance as A  # noqa: PLC0415
+    from .assets.judge import judge_root  # noqa: PLC0415
+
+    cfg = load_config()
+    out = outputs_dir(cfg)
+    chars = {c for c in A._load()["look"] if not c.startswith("_")} | set(A.key_characters())
+    for sub in ("lora-datasets", "shoots", "game-assets", "photosets"):
+        if (out / sub).is_dir():
+            chars |= {p.name.split("_")[0].lower() for p in (out / sub).iterdir() if p.is_dir() and not p.name.startswith("_")}
+    rows = L.plan(out, judge_root(cfg), chars)
+    pj, pm = L.write_plan(rows, L.library_dir(cfg))
+    by = {}
+    for r in rows:
+        by[r["action"]] = by.get(r["action"], 0) + 1
+    rprint(f"{len(rows)} rows: " + ", ".join(f"{k} {v}" for k, v in sorted(by.items())))
+    rprint(f"read [bold]{pm}[/bold]; apply with: sourcemode library apply")
+
+
+@library_app.command("apply")
+def library_apply(
+    plan_file: Path | None = typer.Option(None, "--plan", help="Defaults to library/_plan.json."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Print what would move; touch nothing."),
+):
+    """Move every `move` row of the plan, rewrite the judge sets, link keepers into kept/."""
+    import time  # noqa: PLC0415
+
+    from . import library as L  # noqa: PLC0415
+    from .assets.judge import judge_root  # noqa: PLC0415
+
+    cfg = load_config()
+    lib = L.library_dir(cfg)
+    pf = plan_file or lib / "_plan.json"
+    rows = json.loads(pf.read_text(encoding="utf-8"))
+    for line in L.apply(rows, outputs_dir(cfg), lib, judge_root(cfg), dry_run=dry_run):
+        rprint(line)
+    if not dry_run:
+        done = pf.with_name(f"_plan.applied-{time.strftime('%Y%m%d-%H%M%S')}.json")
+        pf.rename(done)
+        rprint(f"plan archived as {done.name}")
 
 
 @assets_app.command("plan")

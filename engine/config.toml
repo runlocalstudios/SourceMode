@@ -9,6 +9,7 @@ port = 8188
 models = 'C:\ComfyUI\models'
 loras = 'C:\ComfyUI\models\loras'
 outputs = 'outputs'
+library = '../library'
 characters = '../characters'
 workflows = '../workflows'
 
