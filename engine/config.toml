@@ -4,6 +4,7 @@
 [comfyui]
 host = "127.0.0.1"   # local install found at C:\ComfyUI (v0.25.1), default port
 port = 8188
+loras_dir = 'C:/ComfyUI/models/loras'   # locked LoRAs are staged under <loras_dir>/sourcemode/<output name>/
 
 [paths]
 models = 'C:\ComfyUI\models'

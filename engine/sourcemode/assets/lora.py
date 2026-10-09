@@ -1,7 +1,8 @@
 """Which LoRA is a character's approved one, and is there one at all.
 
-Two things count as approved, and the order matters:
+Three things count as approved, and the order matters:
 
+0. a LOCK in characters/loras.json - committed, hashed, vaulted (train.locked)
 1. an epoch-choice record - she was swept, judged, and an epoch was picked
 2. a lora directory pruned to ONE checkpoint - the prune IS the choice, made
    by hand before the epoch board existed
@@ -37,9 +38,20 @@ def resolve_lora(cfg: dict, character: str) -> dict | None:
     """
     from ..config import outputs_dir  # noqa: PLC0415
     from ..train.epochs import checkpoint_dirs, load_choice  # noqa: PLC0415
+    from ..train.locked import locked  # noqa: PLC0415
 
     out = outputs_dir(cfg)
     c = character.lower()
+
+    # 0. the lock. characters/loras.json is committed and the bytes sit in the
+    # vault, so this answer survives a prune, a library move and a fresh
+    # checkout - which is the point. A locked file that is not staged in
+    # ComfyUI is still the answer; `sourcemode lora verify` is what says so.
+    lk = locked(cfg, c)
+    if lk:
+        return {"dataset": lk["dataset"], "name": lk["file"], "epoch": lk.get("epoch"),
+                "path": comfy_path(lk["file"]),
+                "why": f"locked: {lk.get('basis') or 'epoch ' + str(lk.get('epoch'))}"}
 
     rec = load_choice(out, c)
     if rec and rec.get("lora") and Path(rec["lora"]).is_file():

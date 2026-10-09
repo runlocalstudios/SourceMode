@@ -58,7 +58,7 @@
   "prompt": "A young woman with an hourglass figure, a large bust, a defined waist and full hips, warm tan skin, dark brown eyes, long dark hair",
   "age": 24,
   "_note": "age from Jeremy 2026-10-03; not in the game's characters.js",
-  "frame": "slim frame",
+  "frame": "curvy frame",
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-08T23:26:06+00:00",
@@ -115,7 +115,6 @@
   "bust": "large",
   "features": "bleached blonde hair falling just past her shoulders with darker roots at the parting, brown eyes, light tan skin",
   "prompt": "a young woman with large breasts, bleached blonde hair falling just past her shoulders, brown eyes",
-  "frame": "slim frame",
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-09T01:29:11+00:00",
@@ -389,10 +388,10 @@
  "gigi": {
   "_note": "2026-10-06. Jeremy: white, tan, petite frame, medium breasts, long brown hair. Added from her three references: centre part, lighter sun-streaked ends, dark brown eyes. Ethnicity word left out on purpose (skin tone carries it; A/B on jojo/priyanka). Age 24 from the game. Teaches yoga mornings, tends bar nights.",
   "frame": "petite frame",
-  "prompt": "a young woman with tan skin, a petite frame and medium breasts, long straight dark brown hair with a centre part and lighter sun-streaked ends, and dark brown eyes",
+  "prompt": "a young woman with tan skin, a petite frame and medium breasts, long dark brown hair, and dark brown eyes",
   "confirmed": {
-   "at": "2026-10-08T11:51:36+00:00",
-   "fingerprint": "308d75fe75b98de5"
+   "at": "2026-10-09T19:44:51+00:00",
+   "fingerprint": "35f4648418886dcc"
   },
   "age_in_prompt": false
  },
@@ -432,7 +431,6 @@
  },
  "crystal": {
   "prompt": "An 18 year old girl with medium skin tone and long black hair, slim frame with medium sized breasts",
-  "frame": "slim frame",
   "confirmed": {
    "at": "2026-10-08T23:28:53+00:00",
    "fingerprint": "2d99a04681a075af"

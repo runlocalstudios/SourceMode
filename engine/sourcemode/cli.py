@@ -27,6 +27,7 @@ monitor_app = typer.Typer(no_args_is_help=True, help="Live readout of the GPU bo
 assets_app = typer.Typer(no_args_is_help=True, help="In-game asset production: background removal, review sheets.")
 gpu_app = typer.Typer(no_args_is_help=True, help="Serialised GPU work: one ordered queue, one runner, one job at a time.")
 library_app = typer.Typer(no_args_is_help=True, help="The library: every set by character, dated. plan writes the table; apply moves.")
+lora_app = typer.Typer(no_args_is_help=True, help="The locked LoRA per character: lock, status, verify, restage.")
 app.add_typer(source_app, name="source")
 app.add_typer(gates_app, name="gates")
 app.add_typer(prompts_app, name="prompts")
@@ -38,6 +39,7 @@ app.add_typer(pose_app, name="pose")
 app.add_typer(monitor_app, name="monitor")
 app.add_typer(assets_app, name="assets")
 app.add_typer(gpu_app, name="gpu")
+app.add_typer(lora_app, name="lora")
 app.add_typer(library_app, name="library")
 
 
@@ -84,6 +86,80 @@ def library_apply(
         done = pf.with_name(f"_plan.applied-{time.strftime('%Y%m%d-%H%M%S')}.json")
         pf.rename(done)
         rprint(f"plan archived as {done.name}")
+
+
+@lora_app.command("lock")
+def lora_lock(
+    character: str = typer.Argument(..., help="Character id, e.g. zara."),
+    epoch: int | None = typer.Option(None, "--epoch", help="Epoch to lock; resolved in the dataset's lora folders."),
+    file: Path | None = typer.Option(None, "--file", help="Lock this exact .safetensors instead of resolving an epoch."),
+    dataset: str | None = typer.Option(None, "--dataset", help="Defaults to <character>_v2."),
+    output_name: str | None = typer.Option(None, "--output-name", help="Checkpoint prefix when it differs from the dataset (priyanka_v2b, daisy_ext)."),
+    basis: str = typer.Option("", "--basis", help="The evidence: which set, how many kept."),
+):
+    """Lock her LoRA: copy it to library/loras, stage it in ComfyUI, record it in characters/loras.json."""
+    from .train.epochs import checkpoint_for  # noqa: PLC0415
+    from .train.locked import LockError, lock  # noqa: PLC0415
+
+    cfg = load_config()
+    ds = dataset or f"{character.lower()}_v2"
+    src = file
+    if src is None:
+        if epoch is None:
+            raise typer.BadParameter("give --epoch or --file")
+        hit = checkpoint_for(outputs_dir(cfg), ds, output_name or ds, epoch)
+        if not hit:
+            rprint(f"[red]no checkpoint for {ds} epoch {epoch} on disk[/red]")
+            raise typer.Exit(1)
+        src = Path(hit)
+    try:
+        row = lock(cfg, character, src, epoch=epoch, dataset=ds, basis=basis, log=rprint)
+    except LockError as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    rprint(f"[green]locked[/green] {character}: {row['file']} sha256 {row['sha256'][:12]}  -> characters/loras.json")
+
+
+@lora_app.command("status")
+def lora_status():
+    """Every locked character, where her file is, and whether both copies verify."""
+    from .train.locked import registry_path, verify  # noqa: PLC0415
+
+    cfg = load_config()
+    rows = verify(cfg)
+    if not rows:
+        rprint(f"nothing locked yet ({registry_path()})")
+        return
+    for r in rows:
+        mark = "[green]ok[/green]" if r["ok"] else "[red]" + "; ".join(r["problems"]) + "[/red]"
+        rprint(f"{r['character']:10s} {r['file']:36s} ep {str(r['epoch'] or '?'):>3s}  {mark}   {r['basis']}")
+    bad = [r for r in rows if not r["ok"]]
+    rprint(f"{len(rows)} locked, {len(bad)} with a problem")
+
+
+@lora_app.command("verify")
+def lora_verify():
+    """Exit 1 if any locked LoRA is missing from the vault or ComfyUI, or differs from its hash."""
+    from .train.locked import verify  # noqa: PLC0415
+
+    bad = [r for r in verify(load_config()) if not r["ok"]]
+    for r in bad:
+        rprint(f"[red]{r['character']}: {'; '.join(r['problems'])}[/red]")
+    if bad:
+        raise typer.Exit(1)
+    rprint("[green]every locked LoRA verifies[/green]")
+
+
+@lora_app.command("restage")
+def lora_restage(character: str = typer.Argument(..., help="Character id.")):
+    """Copy her vault file back into ComfyUI."""
+    from .train.locked import LockError, restage  # noqa: PLC0415
+
+    try:
+        rprint(f"staged {restage(load_config(), character)}")
+    except LockError as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
 
 
 @assets_app.command("plan")

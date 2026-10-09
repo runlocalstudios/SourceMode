@@ -174,12 +174,28 @@ def epochs_router(cfg: dict):
     @r.post("/epochs/{character}")
     def _set(character: str, body: dict = Body(...)) -> dict:
         try:
-            return record_choice(
+            rec = record_choice(
                 out, character, dataset=str(body["dataset"]),
                 output_name=str(body.get("output_name") or ""),
                 epoch=int(body["epoch"]), from_set=str(body.get("from_set") or ""),
                 keep=body.get("keep"), n=body.get("n"), low=body.get("low"))
         except (KeyError, TypeError, ValueError) as exc:
             raise HTTPException(400, str(exc)) from exc
+        # The choice IS the lock. A record alone was how sunny's and bianca's
+        # best checkpoints went missing: chosen on the page, pruned from disk.
+        from .locked import LockError, lock  # noqa: PLC0415
+
+        if rec.get("lora"):
+            basis = f"{rec['from_set']} {rec.get('keep')}/{rec.get('n')} at epoch {rec['epoch']}"
+            try:
+                rec["locked"] = lock(cfg, character, Path(rec["lora"]), epoch=rec["epoch"],
+                                     dataset=rec["dataset"], basis=basis)
+            except LockError as exc:
+                rec["locked"] = None
+                rec["lock_error"] = str(exc)
+        else:
+            rec["locked"] = None
+            rec["lock_error"] = "checkpoint not on disk - nothing to lock"
+        return rec
 
     return r

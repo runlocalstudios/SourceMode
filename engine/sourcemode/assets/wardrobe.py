@@ -95,7 +95,7 @@ SHORT_HAIR: tuple[str, ...] = (
     "her hair swept to one side",
     "her hair held back on one side with a clip",
 )
-_SHORT = re.compile(r"\b(?:bob|pixie|chin-length|jaw-length|ear-length|cropped|buzzed|short hair)\b", re.I)
+_SHORT = re.compile(r"\b(?:bob|pixie|chin-length|jaw-length|ear-length|shoulder-length|cropped|buzzed|short hair)\b", re.I)
 
 
 def is_short_haired(character: str) -> bool:

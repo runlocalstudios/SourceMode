@@ -1,0 +1,272 @@
+{
+ "_comment": [
+  "The locked LoRA per character: file, epoch, sha256 and the evidence it was chosen on.",
+  "Written by `sourcemode lora lock` and by the epoch board; read by resolve_lora().",
+  "The vault copy is library/loras/<character>/<file>; `sourcemode lora verify` checks it.",
+  "Edit by hand only to unlock (delete the entry). Never retype a file name here."
+ ],
+ "amanda": {
+  "file": "amanda_internal_v2-000020.safetensors",
+  "epoch": 20,
+  "dataset": "amanda_internal_v2",
+  "output_name": "amanda_internal_v2",
+  "sha256": "361e160a057e96e45fc67cd64e548bdc218f552ac712e70621f8e49272409167",
+  "bytes": 1179978936,
+  "comfy": "sourcemode\\amanda_internal_v2\\amanda_internal_v2-000020.safetensors",
+  "basis": "the pack shipped on it; dense_amanda_internal_v2_asset 6/10 at ep20",
+  "locked_at": "2026-10-09T20:01:38+00:00"
+ },
+ "ash": {
+  "file": "ash_v2-000017.safetensors",
+  "epoch": 17,
+  "dataset": "ash_v2",
+  "output_name": "ash_v2",
+  "sha256": "a8eb9b9b94619817cd390ece35efe482fc90851b7a7c57261819bddaff3e9e67",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\ash_v2\\ash_v2-000017.safetensors",
+  "basis": "pruned to one; dense_ash_v2 6/10 at ep17",
+  "locked_at": "2026-10-09T20:00:47+00:00"
+ },
+ "bianca": {
+  "file": "bianca_v2-000020.safetensors",
+  "epoch": 20,
+  "dataset": "bianca_v2",
+  "output_name": "bianca_v2",
+  "sha256": "aef0b6e8059eb6a9813f5d4b1bfd315632d07b196c1fd6b8f2000d3ac73b0576",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\bianca_v2\\bianca_v2-000020.safetensors",
+  "basis": "what survived; dense_bianca_v2 9/20 at ep20 - her lr2 ep24 16/20 was deleted",
+  "locked_at": "2026-10-09T20:01:20+00:00"
+ },
+ "bri": {
+  "file": "bri_v2-000020.safetensors",
+  "epoch": 20,
+  "dataset": "bri_v2",
+  "output_name": "bri_v2",
+  "sha256": "e231a51d862fb7eea2b1b26612351ad74490178a84d94a56d45603d5e91b3996",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\bri_v2\\bri_v2-000020.safetensors",
+  "basis": "epoch-choices: dense_bri_v2_asset_nocaramel 12/20 at ep20",
+  "locked_at": "2026-10-09T19:58:50+00:00"
+ },
+ "cindy": {
+  "file": "cindy_v2-000023.safetensors",
+  "epoch": 23,
+  "dataset": "cindy_v2",
+  "output_name": "cindy_v2",
+  "sha256": "32ac0c6553f8a2cf7490a987828595616d095e3664216432dd8da4a5726b01d8",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\cindy_v2\\cindy_v2-000023.safetensors",
+  "basis": "pruned to one; dense_cindy_v2 6/10 at ep23",
+  "locked_at": "2026-10-09T20:00:38+00:00"
+ },
+ "daisy": {
+  "file": "daisy_ext-000006.safetensors",
+  "epoch": 30,
+  "dataset": "daisy_v2",
+  "output_name": "daisy_ext",
+  "sha256": "afe95d87bdb7d0c8aece16622dd6fd5432de3a16a2d0d6a3082f0304f522f89e",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\daisy_ext\\daisy_ext-000006.safetensors",
+  "basis": "dense_daisy_ext_asset 8/10 at ep30; continued run numbers from 1 so the file is -000006",
+  "locked_at": "2026-10-09T20:02:25+00:00"
+ },
+ "gabi": {
+  "file": "gabi_full-000010.safetensors",
+  "epoch": 10,
+  "dataset": "gabi_curated",
+  "output_name": "gabi_full",
+  "sha256": "c0293df206f24682db1f501cb7b832a83e5ab701be6bcc11c49095cda3d8b4cd",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\gabi_full\\gabi_full-000010.safetensors",
+  "basis": "gabi_r64_stage2 arm 'rank32 epoch 10 (current best)'; trained on trigger gabi_ch",
+  "locked_at": "2026-10-09T20:01:43+00:00"
+ },
+ "geena": {
+  "file": "geena_v2-000021.safetensors",
+  "epoch": 21,
+  "dataset": "geena_v2",
+  "output_name": "geena_v2",
+  "sha256": "26f6c3951ee932e4633c224fe71f7dd700afbbda2f9b0127192528cd6fb417de",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\geena_v2\\geena_v2-000021.safetensors",
+  "basis": "pruned to one; dense_geena_v2 4/10 at ep21 (tied with ep17)",
+  "locked_at": "2026-10-09T20:01:09+00:00"
+ },
+ "hannah": {
+  "file": "hannah_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "hannah_v2",
+  "output_name": "hannah_v2",
+  "sha256": "9b13d85c15c249196027f14fed45bac0bc0685c693005d06d551868f5c525ed7",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\hannah_v2\\hannah_v2-000022.safetensors",
+  "basis": "pruned to one; dense_hannah_v2 13/20 at ep22",
+  "locked_at": "2026-10-09T19:59:58+00:00"
+ },
+ "jaina": {
+  "file": "jaina_v2.safetensors",
+  "epoch": 24,
+  "dataset": "jaina_v2",
+  "output_name": "jaina_v2",
+  "sha256": "62c6104a805431dceb3eb5a8321c7d6ae3e6c52cef188785af0470c7d15646e0",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\jaina_v2\\jaina_v2.safetensors",
+  "basis": "epoch-choices: dense_jaina_v2_asset_nofreckles 17/20 at ep24",
+  "locked_at": "2026-10-09T19:58:54+00:00"
+ },
+ "jojo": {
+  "file": "jojo_v2-000016.safetensors",
+  "epoch": 16,
+  "dataset": "jojo_v2",
+  "output_name": "jojo_v2",
+  "sha256": "0d3e586fc500dd96b8074601e7582e4a6cc8eaf062bd1745ad1b44b67a399d16",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\jojo_v2\\jojo_v2-000016.safetensors",
+  "basis": "pruned to one; dense_jojo_v2 12/20 at ep16",
+  "locked_at": "2026-10-09T19:59:37+00:00"
+ },
+ "keiko": {
+  "file": "keiko_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "keiko_v2",
+  "output_name": "keiko_v2",
+  "sha256": "c0c1d3681fa1f1cf2f1954714908b58529bb824ac6a984fbae26579370a62ea5",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\keiko_v2\\keiko_v2-000022.safetensors",
+  "basis": "pruned to one; dense_keiko_v2 7/20 at ep22",
+  "locked_at": "2026-10-09T20:00:12+00:00"
+ },
+ "maddie": {
+  "file": "maddie_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "maddie_v2",
+  "output_name": "maddie_v2",
+  "sha256": "1ef9745ed7a2226795761828e2ad631bf6df355de3ef391105051c6e06b065ec",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\maddie_v2\\maddie_v2-000022.safetensors",
+  "basis": "pruned to one; dense_maddie_v2 15/20 at ep22",
+  "locked_at": "2026-10-09T19:59:17+00:00"
+ },
+ "marisol": {
+  "file": "marisol_v2-000020.safetensors",
+  "epoch": 20,
+  "dataset": "marisol_v2",
+  "output_name": "marisol_v2",
+  "sha256": "b61cd68bdcfad2ff0939336348108154878441494d3102f02bd542f27f41e024",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\marisol_v2\\marisol_v2-000020.safetensors",
+  "basis": "epoch-choices: dense_marisol_v2_asset_bodylite 18/20 at ep20",
+  "locked_at": "2026-10-09T19:58:45+00:00"
+ },
+ "maya": {
+  "file": "maya_v2-000016.safetensors",
+  "epoch": 16,
+  "dataset": "maya_v2",
+  "output_name": "maya_v2",
+  "sha256": "71d93aadc572b4f4a5ba01bbc17f3786dd2a190b08735437d0c0755b6aa9431c",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\maya_v2\\maya_v2-000016.safetensors",
+  "basis": "dense_maya_v2 13/20 at ep16 (ep14 11/20 also on disk)",
+  "locked_at": "2026-10-09T19:59:31+00:00"
+ },
+ "mei": {
+  "file": "mei_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "mei_v2",
+  "output_name": "mei_v2",
+  "sha256": "092cd3cd6d529f2bbaeee2fcdb25ec46be359c7fa6f58eda20c42d4292086f01",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\mei_v2\\mei_v2-000022.safetensors",
+  "basis": "verdicts: dense_mei_v2_asset_n20 13/20 at ep22",
+  "locked_at": "2026-10-09T19:59:06+00:00"
+ },
+ "mira": {
+  "file": "mira_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "mira_v2",
+  "output_name": "mira_v2",
+  "sha256": "8a35b7a466ad41b61b57299b286ce9e66b13e3a7d0123c941ae927c187e375ab",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\mira_v2\\mira_v2-000022.safetensors",
+  "basis": "pruned to one; dense_mira_v2 6/10 at ep22",
+  "locked_at": "2026-10-09T20:00:58+00:00"
+ },
+ "priya": {
+  "file": "priya_v2-000016.safetensors",
+  "epoch": 16,
+  "dataset": "priya_v2",
+  "output_name": "priya_v2",
+  "sha256": "133ad08c0250312a1c5db9d24c4f70acdaca964777ad1d7eff5c7ab9758e2ccc",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\priya_v2\\priya_v2-000016.safetensors",
+  "basis": "pruned to one; dense_priya_v2 6/10 at ep16",
+  "locked_at": "2026-10-09T20:00:52+00:00"
+ },
+ "priyanka": {
+  "file": "priyanka_v2b-000006.safetensors",
+  "epoch": 26,
+  "dataset": "priyanka_v2",
+  "output_name": "priyanka_v2b",
+  "sha256": "a95abe77ba9260e1c71a6e2e9e33ab29f5b3e048b752ca0830819380516738e6",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\priyanka_v2b\\priyanka_v2b-000006.safetensors",
+  "basis": "dense_priyanka_v2b 10/10 at ep26; continued run numbers from 1 so the file is -000006",
+  "locked_at": "2026-10-09T20:02:30+00:00"
+ },
+ "raven": {
+  "file": "raven_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "raven_v2",
+  "output_name": "raven_v2",
+  "sha256": "cd481481a737aac4f1e421a375de9f0ee87c6fbf1143829e9ec0e9a1b4e76f9e",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\raven_v2\\raven_v2-000022.safetensors",
+  "basis": "pruned to one; dense_raven_v2 12/20 at ep22",
+  "locked_at": "2026-10-09T19:59:50+00:00"
+ },
+ "sandra": {
+  "file": "sandra_v2-000021.safetensors",
+  "epoch": 21,
+  "dataset": "sandra_v2",
+  "output_name": "sandra_v2",
+  "sha256": "4cc0bd975480a356b3c86af1c2c37b2831bef0f04f770094a80a29992ed4d61a",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\sandra_v2\\sandra_v2-000021.safetensors",
+  "basis": "pruned to one; dense_sandra_v2 7/10 at ep21",
+  "locked_at": "2026-10-09T20:00:18+00:00"
+ },
+ "tess": {
+  "file": "tess_v2-000016.safetensors",
+  "epoch": 16,
+  "dataset": "tess_v2",
+  "output_name": "tess_v2",
+  "sha256": "7649b1c6bb882cea230db522a6311c94eaa003cc5e50420512a7ce9deea05b6a",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\tess_v2\\tess_v2-000016.safetensors",
+  "basis": "epoch-choices: dense_tess_v2_asset 7/10 at ep16",
+  "locked_at": "2026-10-09T19:58:59+00:00"
+ },
+ "trina": {
+  "file": "trina_v2-000023.safetensors",
+  "epoch": 23,
+  "dataset": "trina_v2",
+  "output_name": "trina_v2",
+  "sha256": "e29f39bef9dcc5f203e79988c056b2bba09716297c98dcb038b22d67078f9ff9",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\trina_v2\\trina_v2-000023.safetensors",
+  "basis": "pruned to one; dense_trina_v2 8/10 at ep23",
+  "locked_at": "2026-10-09T20:00:33+00:00"
+ },
+ "zara": {
+  "file": "zara_v2-000018.safetensors",
+  "epoch": 18,
+  "dataset": "zara_v2",
+  "output_name": "zara_v2",
+  "sha256": "1017c8509999b764b3df63a449acee14906101ecb4e2b1392f91bee1fa44fad5",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\zara_v2\\zara_v2-000018.safetensors",
+  "basis": "epoch-choices: dense_zara_v2_asset 9/10 at ep18",
+  "locked_at": "2026-10-09T19:58:41+00:00"
+ }
+}
