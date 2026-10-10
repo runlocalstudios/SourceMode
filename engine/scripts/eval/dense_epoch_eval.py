@@ -31,7 +31,7 @@ from sourcemode.render.workflow import load_template, prune_placeholder_loras, s
 _FLAGS = {"--scenes", "--epochs", "--tag"}
 # Bare flags take no value. They are skipped here for the same reason the valued
 # ones are split out: anything left in argv lands in a positional slot by index.
-_BARE = {"--allow-incomplete-appearance", "--no-description", "--natural-prompt"}
+_BARE = {"--allow-incomplete-appearance", "--no-description", "--natural-prompt", "--contract-prompt"}
 POS, _FLAGVALS, _BARESEEN = [], {}, set()
 _it = iter(sys.argv)
 for _a in _it:
@@ -134,11 +134,15 @@ if "--no-description" in _BARESEEN:
     import sourcemode.assets.render as _render  # noqa: E402
     _render.appearance_clause = lambda character: "a woman"
     _render.fitted_clause = lambda character: ""
-# --natural-prompt: Jeremy, 2026-10-09 - is the 1,900-character contract prompt
-# itself the problem? Same facts in the training caption's register, ~70 words.
-# Pair it with --tag so it lands in its own folder beside the contract run.
-if "--natural-prompt" in _BARESEEN:
-    import sourcemode.assets.render as _render  # noqa: E402
+# --natural-prompt / --contract-prompt: Jeremy, 2026-10-09 - is the 1,900-character
+# contract prompt itself the problem? Same facts in the training caption's register,
+# ~70 words. Natural won (cassie ep18 12/20 vs 5/10) and is now render's default, so
+# --natural-prompt is a no-op kept for old queue lines; --contract-prompt is the A/B
+# arm now. Pair either with --tag so it lands in its own folder.
+import sourcemode.assets.render as _render  # noqa: E402
+if "--contract-prompt" in _BARESEEN:
+    _render.PROMPT_STYLE = "contract"
+elif "--natural-prompt" in _BARESEEN:
     _render.PROMPT_STYLE = "natural"
 SCENES = asset_prompts(TRIGGER)
 VERBATIM = True

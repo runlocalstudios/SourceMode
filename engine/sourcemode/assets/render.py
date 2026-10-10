@@ -199,8 +199,13 @@ def pose_fields(character: str, slot: dict) -> dict:
 #: "natural" says the same things - crop, body turn, head turn, gaze,
 #: expression, makeup, hair, outfit, light, setting - in the caption's words and
 #: order, about 70 words. PROMPT_STYLE is module state so the epoch eval can flip
-#: it for an A/B (`--natural-prompt`) without a second builder growing anywhere.
-PROMPT_STYLE = "contract"
+#: it for an A/B without a second builder growing anywhere.
+#:
+#: 2026-10-09: "natural" became the default. Cassie epoch 18 kept 12/20 on it
+#: against 5/10 on the contract prompt, judged stricter than the sweep - Jeremy:
+#: "It was actually better than that ... It looks like we've solved our problems."
+#: The contract prompt stays as the A/B arm (`--contract-prompt` on the eval).
+PROMPT_STYLE = "natural"
 _NATURAL_EXPRESSION = {
     "neutral": "a neutral expression", "closed-lip": "a soft closed-mouth smile",
     "teeth": "a bright natural smile showing her teeth", "flirty": "a soft flirty smile",
@@ -210,7 +215,14 @@ _NATURAL_EXPRESSION = {
 def natural_prompt(character: str, slot: dict, trigger: str | None = None,
                    backdrop: str | None = None) -> str:
     """The asset prompt in the training caption's register. Same facts as the
-    contract prompt, caption vocabulary, caption order, no instructions."""
+    contract prompt, caption vocabulary, caption order, no instructions.
+
+    The four composition overrides a shoot, the selfie pack or the influencer
+    pack set (stance, framing, shot_type, avoid) are honoured here exactly as
+    the contract honours them: a selfie stays a phone selfie held above eye
+    level in her own room, a boudoir shot stays framed head to hips. A pack
+    slot sets none of them and gets the upper-thigh standing portrait.
+    """
     pf = pose_fields(character, slot)
     asked = pf["asked"]
     app = appearance_clause(character)
@@ -221,13 +233,18 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     body = "facing the camera" if asked["body_side"] == "front" else f"in a three-quarter view toward {her}"
     head = ("looking straight into the camera" if asked["head_side"] == "front"
             else f"her face turned slightly toward {her}, looking into the camera")
-    crop = slot.get("framing_natural") or "framed from the upper thighs up"
-    outfit = slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"])
     shot = slot.get("shot_type") or "standing portrait"
-    return (f"{trigger or character}, {app + ', ' if app else ''}a {shot} {crop}, {body}, {head}, "
+    # the pack's wording is what the A/B was judged on, byte for byte; a shoot's
+    # own framing sentence follows the shot type as its own clause
+    crop = f"a {shot}, {slot['framing']}" if slot.get("framing") else (
+        f"a {shot} {slot.get('framing_natural') or 'framed from the upper thighs up'}")
+    outfit = slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"])
+    stance = f", {slot['stance']}" if slot.get("stance") else ""
+    avoid = f" {slot['avoid']}" if slot.get("avoid") else ""
+    return (f"{trigger or character}, {app + ', ' if app else ''}{crop}, {body}, {head}{stance}, "
             f"{_NATURAL_EXPRESSION[asked['expression']]}, {slot.get('makeup') or MAKEUP}, "
             f"{slot['hair']}, wearing {outfit}{fitted_clause(character)}, "
-            f"{backdrop or KEY_BACKDROP}. Photorealistic, natural skin texture, sharp focus.")
+            f"{backdrop or KEY_BACKDROP}. Photorealistic, natural skin texture, sharp focus.{avoid}")
 
 
 def shot_prompt(character: str, slot: dict, trigger: str | None = None,

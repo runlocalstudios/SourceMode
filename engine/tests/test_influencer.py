@@ -70,8 +70,10 @@ def test_no_pose_puts_her_on_her_back():
 def test_every_prompt_goes_through_the_one_builder_without_footwear():
     for s in I.slots("zara", 1):
         p = shot_prompt("zara", s, "zara", backdrop=s["setting"])
-        assert p.startswith("zara. ")
+        assert p.startswith("zara, ")
         assert not re.search(r"\b(sneakers|heels|boots|sandals)\b", p), s["id"]
+        # the pack's composition rides along in the natural register too
+        assert "a casual iPhone snapshot, " in p and s["stance"] in p and s["avoid"] in p
 
 
 @pytest.mark.skipif(not GAME_CHARACTERS.is_file(), reason="game repo not checked out")

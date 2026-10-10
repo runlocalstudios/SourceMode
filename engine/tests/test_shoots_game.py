@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from sourcemode.assets import selfies
+from sourcemode.assets import render, selfies
 from sourcemode.assets.render import shot_prompt
 from sourcemode.assets.shoots import (
     BY_ID, CATALOG, buckets, estimate_seconds, plan_path, resolve, total_shots)
@@ -46,9 +46,14 @@ def test_selfie_pack_is_the_agreed_mix():
     assert all(x["setting"] and x["outfit"] and x["hair"] for x in s)
 
 
-def test_a_pack_slot_renders_exactly_what_it_did_before_the_selfie_overrides():
+def test_a_pack_slot_renders_exactly_what_it_did_before_the_selfie_overrides(monkeypatch):
     slot = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
             "outfit": "a blue sundress", "hair": "her hair worn loose"}
+    p = shot_prompt("nobody", slot)
+    assert "a standing portrait framed from the upper thighs up" in p
+    assert "phone selfie" not in p and "No studio lighting" not in p
+    # and the contract arm, still selectable, is untouched by the selfie overrides
+    monkeypatch.setattr(render, "PROMPT_STYLE", "contract")
     p = shot_prompt("nobody", slot)
     assert "New photorealistic standing portrait of" in p
     assert p.endswith("No profiles, rear views, seated poses, or off-camera gaze.")
@@ -61,8 +66,9 @@ def test_a_selfie_is_not_described_as_a_standing_portrait_that_forbids_sitting()
     sitting = [x for x in selfies.slots() if "sitting" in x["stance"]]
     assert sitting, "the pack should carry seated selfies"
     p = shot_prompt("nobody", sitting[0], backdrop=sitting[0]["setting"])
-    assert "New photorealistic phone selfie of" in p
+    assert "a phone selfie, " in p and "standing portrait" not in p
     assert "seated poses" not in p
+    assert sitting[0]["stance"] in p and sitting[0]["framing"] in p
     assert "this is a casual photo she took herself on her phone" in p
     # The backdrop is her real room - a selfie never gets the chroma plate.
     assert "#FF00FF" not in p
@@ -245,14 +251,14 @@ def test_makeup_reaches_every_path_from_the_one_builder():
 
     pack = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
             "outfit": "a sundress", "hair": "her hair worn loose"}
-    assert f"Makeup: {MAKEUP}" in shot_prompt("nobody", pack)
+    assert f", {MAKEUP}, " in shot_prompt("nobody", pack)
     sit = {**pack, "pose": "sitting"}
     assert MAKEUP in shot_prompt("nobody", sit)
     for sid in ("boudoir", "selfies"):
         slot = BY_ID[sid].plan()[0]
         assert MAKEUP in shot_prompt("nobody", slot, backdrop=slot["setting"])
     # and a slot may ask for less - a gym shot or a just-woken selfie
-    assert "Makeup: none, bare skin" in shot_prompt(
+    assert ", none, bare skin, " in shot_prompt(
         "nobody", {**pack, "makeup": "none, bare skin"})
 
 

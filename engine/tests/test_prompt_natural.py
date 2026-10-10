@@ -59,12 +59,27 @@ def test_natural_keeps_the_hair_and_footwear_rules(zara):
     assert "very long dark brown hair" in loose
 
 
-def test_shot_prompt_switches_on_module_state_and_defaults_to_the_contract(zara, monkeypatch):
-    contract = R.shot_prompt("zara", LOOKS[0])
-    assert "Crop:" in contract and len(contract) > 1200
-    monkeypatch.setattr(R, "PROMPT_STYLE", "natural")
+def test_shot_prompt_defaults_to_natural_and_switches_to_the_contract_on_module_state(zara, monkeypatch):
+    # 2026-10-09: natural is the default - cassie ep18 12/20 against 5/10, "we've solved our problems"
     natural = R.shot_prompt("zara", LOOKS[0])
     assert natural == R.natural_prompt("zara", LOOKS[0])
     assert len(natural) < 600
     # the eval's slot mapping (asset_scenes) goes through shot_prompt, so one flag flips every scene
     assert re.match(r"^zara, a young woman", natural)
+    monkeypatch.setattr(R, "PROMPT_STYLE", "contract")
+    contract = R.shot_prompt("zara", LOOKS[0])
+    assert "Crop:" in contract and len(contract) > 1200
+
+
+def test_natural_honours_a_shoots_composition_overrides(zara):
+    """A selfie or an influencer shot is not an upper-thigh standing portrait.
+    The four overrides the contract honours ride along in the natural register."""
+    slot = {**LOOKS[0], "shot_type": "phone selfie", "stance": "she is holding the phone above eye level",
+            "framing": "her head and chest fill the frame", "avoid": "No studio lighting."}
+    p = R.natural_prompt("zara", slot, backdrop="soft daylight, in her bedroom")
+    assert "a phone selfie, her head and chest fill the frame, " in p
+    assert "standing portrait" not in p and "upper thighs" not in p
+    assert ", she is holding the phone above eye level, " in p
+    assert p.endswith("sharp focus. No studio lighting.")
+    # a pack slot, which sets none of them, reads exactly as the A/B was judged
+    assert "a standing portrait framed from the upper thighs up, " in R.natural_prompt("zara", LOOKS[0])
