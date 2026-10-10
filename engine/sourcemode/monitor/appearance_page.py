@@ -3,7 +3,7 @@
     GET  /appearance                   the page
     GET  /appearance/list              every record, unconfirmed first
     GET  /appearance/ref?char=&name=   one reference photo (web-sized)
-    POST /appearance/<char>/confirm    {prompt, negative, age, state_age} -> confirmed record
+    POST /appearance/<char>/confirm    {prompt, negative} -> confirmed record
 
 Jeremy, 2026-10-06, after Bri's invented "lighter caramel ends" and Jaina's
 freckles: "I need to now review all of these because they're so fucked up that
@@ -51,9 +51,8 @@ def records() -> list[dict]:
         rec = look.get(c) or {}
         g = A.game_facts(c)
         out.append({
-            "character": c, "age": A.age_of(c), "own_age": rec.get("age"),
-            "state_age": rec.get("age_in_prompt", True) is not False,
-            "game_age": (A._load()["ages"] or {}).get(c), "prompt": rec.get("prompt", ""),
+            "character": c, "age": A.age_of(c),
+            "prompt": rec.get("prompt", ""),
             "negative": rec.get("negative", ""),
             "note": rec.get("_note", ""), "confirmed": A.confirmed(c),
             "confirmed_at": (rec.get("confirmed") or {}).get("at"),
@@ -157,10 +156,6 @@ function draw(){
       +(r.game?'<div class=game>Game: '+SM.esc(r.game)+'</div>':'')
       +'<textarea data-k=prompt spellcheck=false>'+SM.esc(r.prompt)+'</textarea>'
       +'<div class=hl data-hl>'+(r.race.length?marked(r.prompt):'No race words.')+'</div>'
-      +'<div class=row><label><input type=checkbox data-k=state_age style="width:auto;min-height:0;flex:none"'+(r.state_age?' checked':'')+'> State age</label>'
-      +'<input data-k=age inputmode=numeric style="flex:0 0 5em;width:5em" value="'
-        +SM.esc(r.own_age==null?'':String(r.own_age))+'" placeholder="'+SM.esc(r.game_age==null?'':String(r.game_age))+'">'
-        +'<span class=dim>'+(r.game_age!=null?'game: '+r.game_age+'; blank uses it':'not in the game')+'. Untick to leave age to the LoRA.</span></div>'
       +'<div class=row><label>Negative</label><input data-k=negative placeholder="negative (optional)" value="'+SM.esc(r.negative||'')+'"></div>'
       +'<div class=row><button class="btn btn-primary" data-act=confirm>'+(r.confirmed?'Save &amp; re-confirm':'Confirm')+'</button></div>'
       +(r.note?'<details class=note><summary>notes</summary>'+SM.esc(r.note)+'</details>':'')
@@ -181,11 +176,11 @@ document.addEventListener('click',async e=>{
   if(img){ $('big').querySelector('img').src=img.src; $('big').classList.add('on'); return; }
   if(e.target.closest('#big')){ $('big').classList.remove('on'); return; }
   const b=e.target.closest('[data-act=confirm]'); if(!b) return;
-  const card=b.closest('.lk'), c=card.dataset.c, val=k=>card.querySelector('[data-k='+k+']').value, ticked=k=>card.querySelector('[data-k='+k+']').checked;
+  const card=b.closest('.lk'), c=card.dataset.c, val=k=>card.querySelector('[data-k='+k+']').value;
   b.disabled=true;
   try{
     await SM.postJSON('/appearance/'+encodeURIComponent(c)+'/confirm',
-      {prompt:val('prompt'),negative:val('negative'),age:val('age'),state_age:ticked('state_age')});
+      {prompt:val('prompt'),negative:val('negative')});
     SM.toast(c+' confirmed');
     await load();
   }catch(err){ SM.toast(err.message); b.disabled=false; }
@@ -224,9 +219,7 @@ def appearance_router(cfg: dict):
         from ..assets import appearance as A  # noqa: PLC0415
 
         try:
-            rec = A.confirm(char, {**{k: body.get(k, "") for k in A.CONFIRM_FIELDS},
-                                   "age": body.get("age", ""),
-                                   "state_age": body.get("state_age", True)})
+            rec = A.confirm(char, {k: body.get(k, "") for k in A.CONFIRM_FIELDS})
         except ValueError as e:
             raise HTTPException(400, str(e)) from e
         return {"character": char.lower(), "confirmed": rec["confirmed"]}

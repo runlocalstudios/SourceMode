@@ -1,13 +1,11 @@
-"""The character's age and body/feature clause, for GENERATION prompts only.
+"""The character's body/feature clause, for GENERATION prompts only.
 
-Jeremy, 2026-10-03, on Kimmy's epoch eval: "kimmy's pictures also look plagued by
-looking too old. moving forward as a rule I want you to put the model's age in all
-generations. even if the lora is slightly older i have found this to help with my own
-image generations."
-
-So every generated image states her age. The age is the game's own, read from
-`chillafterdark/src/data/characters.js` and cached in `characters/ages.json`; the
-body/feature text, where one exists, comes from `characters/appearance.json`.
+The clause is her appearance text from `characters/appearance.json`, exactly as
+written. The age is NOT added to it. Jeremy, 2026-10-10: "Let's get rid of the age
+box. I'm gonna include it in the descriptions only when it's absolutely necessary."
+(This replaces the 2026-10-03 rule that every generation states the game's age.)
+The game's age, cached in `characters/ages.json`, is still read for the Looks tab
+and the pre-flight.
 
 NEVER put any of this in a training caption. Age, build and colouring are identity
 traits: a captioned trait stays variable and is never learned (assetgen rule b). It
@@ -63,11 +61,6 @@ def refresh_ages() -> dict[str, int]:
     global _cache
     _cache = None
     return ages
-
-
-def _article(age: int) -> str:
-    """"an 18-year-old", "an 11-year-old", "an 80-year-old" - but "a 19-year-old"."""
-    return "an" if age in (8, 11, 18) or 80 <= age <= 89 else "a"
 
 
 def key_characters() -> list[str]:
@@ -283,17 +276,8 @@ def confirm(character: str, fields: dict) -> dict:
                 rec[k] = v
             else:
                 rec.pop(k, None)
-    # Render age: overrides the game's age for prompts only (cat is 38 in the
-    # game and rendered gaunt and older still, 0/90 kept). Blank = the game's.
-    # Not in the fingerprint, so records confirmed before this keep their state.
-    # Jeremy, 2026-10-07: "age should only be there to really push it young or
-    # old" - for cat the LoRA carries it. age_in_prompt False drops the age
-    # phrase from her clause; the game's age still counts everywhere else.
-    if "state_age" in fields:
-        if fields.get("state_age") in (False, "false", "0", 0, ""):
-            rec["age_in_prompt"] = False
-        else:
-            rec.pop("age_in_prompt", None)
+    # Own age: overrides the game's age where age_of is read. Not in the
+    # fingerprint. Prompts never state it - an age goes in the text itself.
     if "age" in fields:
         a = str(fields.get("age") or "").strip()
         if a:
@@ -390,25 +374,11 @@ def drop_length(text: str) -> str:
     return out.strip(" ,")
 
 
-def clause(character: str, age: bool = True) -> str:
-    """"an 18-year-old, extremely petite..." - age first, then the body text if any.
+def clause(character: str) -> str:
+    """Her appearance text exactly as written - no age added, "" if she has none.
 
-    Returns a bare age phrase for characters with no appearance entry, so the age rule
-    holds for the whole cast and not only the three with written descriptions.
-
-    age=False drops the age phrase whatever the record says. The tiebreaker eval
-    set asks for that - Jeremy, 2026-10-10: "Make sure there's no age."
+    Jeremy, 2026-10-10: an age goes in the description itself, and only when it
+    is absolutely necessary.
     """
-    c = character.lower()
-    rec = _load()["look"].get(c) or {}
-    age_ok = age and rec.get("age_in_prompt", True) is not False
-    age = age_of(c) if age_ok else None
-    text = rec.get("prompt", "") or ""
-    if age and text:
-        # an entry that already opens with the age is left alone
-        if re.match(rf"an?\s+{age}[- ]year[- ]old", text):
-            return text
-        return f"{_article(age)} {age}-year-old, " + re.sub(r"^an?\s+", "", text)
-    if age:
-        return f"{_article(age)} {age}-year-old woman"
-    return text
+    rec = _load()["look"].get(character.lower()) or {}
+    return rec.get("prompt", "") or ""

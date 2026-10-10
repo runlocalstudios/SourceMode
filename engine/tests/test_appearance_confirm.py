@@ -70,9 +70,9 @@ def test_render_age_overrides_and_blank_restores(records):
         A.confirm("x", {"prompt": "a woman with red hair", "age": "15"})
 
 
-def test_state_age_off_leaves_age_to_the_lora(records):
-    """cat, 2026-10-07: age only where it pushes young or old."""
-    A.confirm("x", {"prompt": "a woman with red hair", "state_age": False})
+def test_the_clause_is_the_text_as_written_with_no_age_added(records):
+    """2026-10-10: an age goes in the description itself, only when necessary."""
+    A.confirm("x", {"prompt": "a woman with red hair"})
     assert A.clause("x") == "a woman with red hair"
-    A.confirm("x", {"prompt": "a woman with red hair", "state_age": True})
-    assert A.clause("x").startswith("a 25-year-old")
+    A.confirm("x", {"prompt": "a 25-year-old woman with red hair"})
+    assert A.clause("x") == "a 25-year-old woman with red hair"

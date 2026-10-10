@@ -144,7 +144,7 @@ TIEBREAKER_FRAMING = "framed from mid-thigh up"
 
 
 def tiebreaker_slot(s: dict) -> dict:
-    return dict(s, pose="standing", age=False, framing_natural=TIEBREAKER_FRAMING)
+    return dict(s, pose="standing", framing_natural=TIEBREAKER_FRAMING)
 
 
 def tiebreaker_prompts(trigger: str) -> list[str]:

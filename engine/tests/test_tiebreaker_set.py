@@ -29,7 +29,7 @@ FLAT = re.compile(r"\b(overcast|fluorescent|dim|cool|flat|harsh)\b", re.I)
 @pytest.fixture
 def zara(monkeypatch):
     monkeypatch.setattr(R, "appearance_clause",
-                        lambda c, age=True: ("a 22-year-old, " if age else "") + "a young woman with very long dark brown hair")
+                        lambda c: "a young woman with very long dark brown hair")
 
 
 def test_twenty_distinct_prompts_in_the_natural_register(zara):
@@ -46,9 +46,6 @@ def test_twenty_distinct_prompts_in_the_natural_register(zara):
 def test_no_age_whatever_the_record_says(zara):
     for p in tiebreaker_prompts("zara"):
         assert not AGE.search(p), p
-    # and on the real record of a character whose age IS normally in the prompt
-    assert AGE.search(clause("amanda"))
-    assert not AGE.search(clause("amanda", age=False))
     assert not any(AGE.search(p) for p in tiebreaker_prompts("amanda"))
 
 
@@ -86,11 +83,11 @@ def test_hair_and_footwear_rules_still_apply(zara):
 
 
 def test_a_pack_slot_is_byte_for_byte_unchanged(zara):
-    """The turn/expression/age picks only act when a slot sets them."""
+    """The turn/expression picks only act when a slot sets them."""
     slot = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
             "outfit": "a white tee and jeans", "hair": "her hair worn loose"}
     p = R.shot_prompt("zara", slot)
-    assert p.startswith("zara, a 22-year-old, a young woman")
+    assert p.startswith("zara, a young woman")
     assert "a standing portrait framed from the upper thighs up, facing the camera, looking straight into the camera, " in p
     assert R.pose_fields("zara", slot)["asked"]["slight"] is False
 

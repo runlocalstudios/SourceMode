@@ -80,12 +80,10 @@ KEY_BACKDROP = ("soft even studio lighting, a flat solid bright magenta #FF00FF 
                 "edge to edge with nothing else in frame, no shadows on it")
 
 
-def appearance_clause(character: str, age: bool = True) -> str:
-    """Age + body/feature text for the prompt. Never for a caption - see appearance.py.
-
-    age=False leaves the age out; only the tiebreaker eval set asks for that."""
+def appearance_clause(character: str) -> str:
+    """Body/feature text for the prompt. Never for a caption - see appearance.py."""
     from .appearance import clause  # noqa: PLC0415
-    return clause(character, age=age)
+    return clause(character)
 
 
 def is_up_style(hair_clause: str) -> bool:
@@ -239,7 +237,7 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     """
     pf = pose_fields(character, slot)
     asked = pf["asked"]
-    app = appearance_clause(character, age=slot.get("age", True))
+    app = appearance_clause(character)
     if is_up_style(slot.get("hair", "")):
         app = drop_length(app)
     # captions say "her left"; the contract says image-left. image-left is her right.
@@ -281,9 +279,9 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     Every one defaults to the wardrobe-pack value, so a pack slot is byte-for-byte
     unchanged. What is NOT overridable is everything that carries identity - her
     appearance clause, the expression table, the gaze rule - so it is
-    shared and cannot drift between the uses. Three narrower picks exist for the
+    shared and cannot drift between the uses. Two narrower picks exist for the
     tiebreaker eval set (2026-10-10): `turn` and `expression` choose from the
-    same tables rather than replacing them, and `age: False` leaves the age out.
+    same tables rather than replacing them.
     """
     # Hair too short to gather never gets an up-style, whoever wrote the slot -
     # wardrobe plans and the eval looks set hair per look, outside hair_options.
@@ -298,7 +296,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     if PROMPT_STYLE == "natural":
         return natural_prompt(character, slot, trigger, backdrop)
     pf = pose_fields(character, slot)
-    app = appearance_clause(character, age=slot.get("age", True))
+    app = appearance_clause(character)
     # MEASURED 2026-10-04: a prompt that says her hair is long AND asks for it up
     # renders the full length hanging down with a bun perched on top - 10 of 10
     # bun-prompted shots across geena and cindy, 30% kept against 83% for every

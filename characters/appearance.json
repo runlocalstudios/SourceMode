@@ -47,8 +47,7 @@
   "confirmed": {
    "at": "2026-10-09T20:29:11+00:00",
    "fingerprint": "ec854aed86acdf16"
-  },
-  "age_in_prompt": false
+  }
  },
  "cici": {
   "ethnicity": "Latina - Colombian and Venezuelan",
@@ -59,7 +58,6 @@
   "prompt": "A young woman with an hourglass figure, a large bust, a defined waist and full hips, warm tan skin, dark brown eyes, long dark hair",
   "age": 24,
   "_note": "age from Jeremy 2026-10-03; not in the game's characters.js",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:44:14+00:00",
    "fingerprint": "e1c69b717ea3ecb5"
@@ -74,7 +72,6 @@
   "figure": "slim figure with a small waist and a full bust",
   "features": "very long straight dark brown-black hair, dark brown eyes, light tan skin, freckles across her nose and cheeks, full lips",
   "prompt": "a young woman with a slim figure, a small waist and huge breasts, light tan skin, very long dark brown-black hair, dark brown eyes and full lips",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:44:58+00:00",
    "fingerprint": "9028d41a37809008"
@@ -88,7 +85,6 @@
   "figure": "curvy, hourglass, full bust and hips",
   "features": "long straight hair dyed vivid magenta-pink all over, brown eyes, light brown skin, full lips",
   "prompt": "a woman with a curvy hourglass figure and massive breasts, light brown skin, long hair dyed vivid magenta-pink all over, brown eyes and full lips",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:45:18+00:00",
    "fingerprint": "b97548f838146739"
@@ -103,7 +99,6 @@
   "figure": "curvy figure with a defined waist and a full bust",
   "features": "very long thick dark brown hair with thick bleached blonde face-framing highlights, warm brown eyes, tanned olive skin, strong dark brows, full lips",
   "prompt": "a young woman with an average frame, a defined waist and a gigantic fake breasts, tanned olive skin, very long dark brown hair with bleached blonde face-framing highlights, warm brown eyes and full lips",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:45:57+00:00",
    "fingerprint": "6240458ab84a2929"
@@ -119,7 +114,6 @@
   "features": "long straight auburn-copper hair with a soft wispy curtain fringe, green eyes, fair Irish skin, light freckles across her nose",
   "negative": "centre-parted hair with a bare forehead, no fringe",
   "prompt": "a young woman with a slim figure, a small waist and large natural breasts, fair skin, long auburn-copper hair with a wispy curtain fringe, and green eyes",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:47:01+00:00",
    "fingerprint": "b5102681e1f6c7c0"
@@ -131,7 +125,6 @@
   "bust": "large",
   "features": "bleached blonde hair falling just past her shoulders with darker roots at the parting, brown eyes, light tan skin",
   "prompt": "a young woman with large breasts, hourglass figure, bleached blonde hair falling just past her shoulders, brown eyes",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:47:28+00:00",
    "fingerprint": "c0f8159bc8e1214e"
@@ -147,8 +140,7 @@
   "confirmed": {
    "at": "2026-10-08T11:52:51+00:00",
    "fingerprint": "6b5a0b7abd4626d5"
-  },
-  "age_in_prompt": false
+  }
  },
  "mira": {
   "age": 18,
@@ -172,8 +164,7 @@
   "confirmed": {
    "at": "2026-10-08T11:54:19+00:00",
    "fingerprint": "adb89c1cb57bbd4b"
-  },
-  "age_in_prompt": false
+  }
  },
  "tess": {
   "_note": "Jeremy, 2026-10-04: \"I don't want you to define the box braids because that's part of the character. We don't want the LoRA to exclude that. We want it to recognize that that is just her.\" So the braids are named NOWHERE - not here, not in a per-look hair clause. They are in all 62 training frames, so an uncaptioned constant binds to the trigger and she simply has them. Naming a trait is what keeps it variable. Age comes from the game's characters.js - an `age` field here would override it, so there deliberately is none. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
@@ -182,7 +173,6 @@
   "figure": "slim, slender frame",
   "features": "hazel eyes, deep dark-brown skin, full lips, high cheekbones",
   "prompt": "a young woman with a very petite, slender figure, deep dark-brown skin, hazel eyes and full lips",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:48:44+00:00",
    "fingerprint": "1b51e7e285c504fc"
@@ -197,7 +187,6 @@
   "role_note": "exotic dancer - the internal shot plan should cover dance poses and revealing outfits the Codex plan cannot; local generation only. Train locally if the local approach does well on Amanda.",
   "prompt": "a young woman with a slim, slender figure and medium breasts, long black hair with vivid pink underlights beneath the top layer, and dark brown eyes",
   "_note": "The pink MUST be prompted. Measured 2026-10-04 by matched-seed A/B at epoch 21, three scenes, identical seeds - the only variable was this phrase: 'long black hair' gave black with a faint warm strand; DELETING the colour entirely also gave black, so the LoRA did not learn the pink on its own; 'long black hair with vivid pink underlights beneath the top layer' gave her real pattern. Identity cosine went UP, not down: 0.611 / 0.572 / 0.672. The earlier do_not_prompt note claimed naming it 'spreads pink everywhere' and that the LoRA would learn the placement from the photos - both are false, and acting on them cost a 90-render sweep that scored 0/90. Same shape as priya's glasses: a trait correctly absent from the CAPTIONS still has to be stated at RENDER time. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:50:46+00:00",
    "fingerprint": "ef411da5be8ef7d0"
@@ -211,7 +200,6 @@
   "figure": "slim, slender frame",
   "features": "very long straight dark brown hair with a centre part, brown eyes, fair light skin",
   "prompt": "a young woman with a petite, extremely skinny figure and perky breasts, fair light skin, very long dark brown hair and brown eyes",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:51:07+00:00",
    "fingerprint": "7aa8ee29b680eb2f"
@@ -228,8 +216,7 @@
   "confirmed": {
    "at": "2026-10-08T11:51:44+00:00",
    "fingerprint": "78663d7ccca0d12f"
-  },
-  "age_in_prompt": false
+  }
  },
  "bianca": {
   "_note": "DRAFT, 2026-10-04 - read off her four reference photos, her shipped outfits and her twelve shipped selfies. The game record is self-contradictory on age: the structured `age` field says 27, her systemPrompt prose says 25. Taking the structured field, which is what the game actually reads. Correct any of this and the selfie pack picks it up on the next render.",
@@ -240,7 +227,6 @@
   "features": "very long straight bleach-blonde hair with slightly darker roots, warm brown eyes, lightly tanned skin, freckles across her nose and cheeks, full lips",
   "prompt": "a young woman with a slim athletic figure, a small waist and medium breasts, lightly tanned skin, long bleached-blonde hair, dark brown eyes",
   "age": 27,
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:51:54+00:00",
    "fingerprint": "29a2ee8a2e3b88b9"
@@ -255,7 +241,6 @@
   "features": "very long loosely waved balayage hair - dark brown at the roots melting to caramel-blonde at the ends - warm brown eyes, tanned skin, freckles across her nose and cheeks",
   "prompt": "a young woman with a slim athletic figure and medium breasts, tanned skin, long balayage hair, and warm brown eyes",
   "age": 24,
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:43:57+00:00",
    "fingerprint": "a1d9a79e8c6b5802"
@@ -271,7 +256,6 @@
   "prompt": "a young woman with light brown skin, a slim figure with a small waist and a medium bust, very long platinum-blonde dyed hair, dark brown eyes and full lips",
   "age": 24,
   "negative": "red or copper roots, warm orange tones in the hair, dark regrowth",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-08T23:27:01+00:00",
    "fingerprint": "199e74cfcf1baf37"
@@ -286,7 +270,6 @@
   "features": "very long straight jet-black hair, dark brown eyes, light olive skin, full lips",
   "prompt": "a young woman with a slim petite figure, a small waist and a medium bust, light olive skin, very long straight jet-black hair, dark brown eyes and full lips",
   "age": 20,
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-09T01:20:38+00:00",
    "fingerprint": "285f6a2d196915e2"
@@ -304,8 +287,7 @@
   "confirmed": {
    "at": "2026-10-08T11:52:44+00:00",
    "fingerprint": "0f19b371baf8f444"
-  },
-  "age_in_prompt": false
+  }
  },
  "keiko": {
   "_note": "Corrected by Jeremy, 2026-10-04. Half Asian, not fully - which is why her renders read mixed with sun-lightened brown hair. DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Asian is stated in her systemPrompt and her mother Hotaru owns Lumen Salon, so likely half Japanese - but her shipped renders read MIXED, with sun-lightened brown hair rather than black. Worth confirming which you want. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
@@ -330,7 +312,6 @@
   "features": "very long straight light blonde hair, pale blue-grey eyes, fair skin, soft features",
   "prompt": "a young woman with a slim figure, a small waist and a large breasts, fair skin, very long blonde hair and pale blue eyes",
   "age": 24,
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:42:25+00:00",
    "fingerprint": "1f00c38f02684315"
@@ -345,7 +326,6 @@
   "features": "very long dark brown hair with a vivid turquoise dyed underlayer showing at the ends beneath the top layer, dark brown eyes, olive-tan skin, freckles across her nose, strong dark brows",
   "prompt": "a young woman with a slim athletic figure, a narrow waist and medium breasts, olive-tan skin, very long dark brown hair, and dark brown eyes",
   "age": 26,
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:48:06+00:00",
    "fingerprint": "ef4bcbe8abf8d330"
@@ -363,8 +343,7 @@
   "confirmed": {
    "at": "2026-10-08T11:53:56+00:00",
    "fingerprint": "89ac60dc3c81afc5"
-  },
-  "age_in_prompt": false
+  }
  },
  "priyanka": {
   "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. Indian is stated in her systemPrompt. Teaching assistant at Chill Coast University. Her epoch-26 extension is the project record for a rescued undertrained run: 21% -> 64%. 2026-10-05: ethnicity word removed, skin tone kept - matched-seed A/B on jojo and priyanka influencer shots: with it 2/4 each, skin tone only 4/4, neither 4/4 (Jeremy: 'too ethnic'). priya given the same change untested.",
@@ -378,8 +357,7 @@
   "confirmed": {
    "at": "2026-10-08T11:54:07+00:00",
    "fingerprint": "b675812358650f0e"
-  },
-  "age_in_prompt": false
+  }
  },
  "sandra": {
   "_note": "DRAFT 2026-10-04, read off her shipped game outfits and reference photos. Correct anything wrong - this clause goes into every render. The only redhead in the cast, so the hair colour must be prompted. 38 and a single mother; her shipped wardrobe is noticeably more covered than anyone else's and should stay that way. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
@@ -390,7 +368,6 @@
   "features": "long wavy copper-red hair, green eyes, fair freckled skin, warm laugh lines",
   "prompt": "a woman with a slim figure and a modest bust, fair skin, long copper-red hair and brown eyes",
   "age": 38,
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:48:27+00:00",
    "fingerprint": "eb6affe9f5cc08ee"
@@ -405,7 +382,6 @@
   "features": "very long loosely waved platinum-blonde hair, green eyes, light tanned skin, strong defined brows, full lips",
   "prompt": "a young woman with a curvy hourglass figure, a small waist and large breasts, light tanned skin, very long platinum-blonde hair, green eyes and full lips",
   "age": 33,
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:50:18+00:00",
    "fingerprint": "59b9459842bdf40d"
@@ -423,8 +399,7 @@
   "confirmed": {
    "at": "2026-10-08T11:51:04+00:00",
    "fingerprint": "de7f65253793ef60"
-  },
-  "age_in_prompt": false
+  }
  },
  "gigi": {
   "_note": "2026-10-06. Jeremy: white, tan, petite frame, medium breasts, long brown hair. Added from her three references: centre part, lighter sun-streaked ends, dark brown eyes. Ethnicity word left out on purpose (skin tone carries it; A/B on jojo/priyanka). Age 24 from the game. Teaches yoga mornings, tends bar nights.",
@@ -432,8 +407,7 @@
   "confirmed": {
    "at": "2026-10-09T19:44:51+00:00",
    "fingerprint": "073e2b73cbd80b65"
-  },
-  "age_in_prompt": false
+  }
  },
  "nisha": {
   "_note": "2026-10-06. Jeremy: skinny, medium brown skin, black wavy hair a little past her shoulders, brown eyes. Added from her four references: layered tousled waves, thick dark defined eyebrows, full lips. No ethnicity word (skin tone carries it; jojo/priyanka A/B). Age 26 from the game; a nurse at Chill General.",
@@ -441,12 +415,10 @@
   "confirmed": {
    "at": "2026-10-08T11:53:45+00:00",
    "fingerprint": "1445a2d8c0e466e3"
-  },
-  "age_in_prompt": false
+  }
  },
  "casey": {
   "prompt": "a young woman with blonde hair, blue eyes, a little heavyset",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-08T12:12:50+00:00",
    "fingerprint": "0949d88470788f7d"
@@ -462,7 +434,6 @@
  },
  "aya": {
   "prompt": "A young woman with an average frame and an hourglass figure with massive natural breasts",
-  "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:51:32+00:00",
    "fingerprint": "79c026afa219a3ac"
