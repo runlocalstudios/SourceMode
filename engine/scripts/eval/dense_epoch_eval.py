@@ -116,14 +116,20 @@ from sourcemode.assets.appearance import negative as appearance_negative  # noqa
 # again it goes through shot_prompt with a framing argument, not through a
 # second builder. Results from different scene sets were never comparable and
 # still are not: jojo read 77-90% on asset runs and 29% on the bare sweep.
+#
+# --scenes tiebreaker (2026-10-10): twenty distinct prompts through the SAME
+# builder and record - front or slight turn, simple expressions, mid-thigh crop,
+# no age, warm light, mostly indoors - for the sweeps too close to call on the
+# asset set. Jeremy: "call it the tiebreaker set so I can just tell you to run
+# the tiebreaker set." Its folder and judge set are dense_<sub>_tiebreaker.
 SCENE_SET = _FLAGVALS.get("--scenes", "asset")
-if SCENE_SET != "asset":
+if SCENE_SET not in ("asset", "tiebreaker"):
     raise SystemExit(
         f"--scenes {SCENE_SET} is shelved (2026-10-02): it built its own prompt with no "
         f"age and no appearance. Use --scenes asset, which renders the asset generator's "
-        f"own prompts verbatim.")
+        f"own prompts verbatim, or --scenes tiebreaker.")
 sys.path.insert(0, str(Path("scripts/eval").resolve()))
-from asset_scenes import asset_prompts  # noqa: E402
+from asset_scenes import asset_prompts, tiebreaker_prompts  # noqa: E402
 # --no-description: Jeremy, 2026-10-08, on mei - "no character description at
 # all, just tag the photo caption with her Lora tag. I want to test if our
 # character descriptions are fucking it up". Her appearance sentence and the
@@ -132,7 +138,7 @@ from asset_scenes import asset_prompts  # noqa: E402
 # the sex anchor (see the jojo note above) - it is the same arm Cat's test ran.
 if "--no-description" in _BARESEEN:
     import sourcemode.assets.render as _render  # noqa: E402
-    _render.appearance_clause = lambda character: "a woman"
+    _render.appearance_clause = lambda character, **_: "a woman"
     _render.fitted_clause = lambda character: ""
 # --natural-prompt / --contract-prompt: Jeremy, 2026-10-09 - is the 1,900-character
 # contract prompt itself the problem? Same facts in the training caption's register,
@@ -144,14 +150,14 @@ if "--contract-prompt" in _BARESEEN:
     _render.PROMPT_STYLE = "contract"
 elif "--natural-prompt" in _BARESEEN:
     _render.PROMPT_STYLE = "natural"
-SCENES = asset_prompts(TRIGGER)
+SCENES = tiebreaker_prompts(TRIGGER) if SCENE_SET == "tiebreaker" else asset_prompts(TRIGGER)
 VERBATIM = True
 # --tag renders into its own folder and judge set. Without it a re-run with a
 # changed prompt finds the old scene_NN.png on disk, skips rendering, and judges
 # the previous prompt's images under the new name.
 _TAG = f"_{_FLAGVALS['--tag']}" if _FLAGVALS.get("--tag") else ""
-OUT = Path(f"outputs/dense_{SUB}_asset{_TAG}"); OUT.mkdir(parents=True, exist_ok=True)
-SET_ID = f"dense_{SUB}_asset{_TAG}"
+OUT = Path(f"outputs/dense_{SUB}_{SCENE_SET}{_TAG}"); OUT.mkdir(parents=True, exist_ok=True)
+SET_ID = f"dense_{SUB}_{SCENE_SET}{_TAG}"
 # There are ten asset looks. An n=20 confirmation renders each look twice, and the
 # second pass gets its own seeds (SEED + i, i = 10..19) - before this, asking for
 # 20 silently rendered 10.
@@ -312,12 +318,13 @@ if len(items) < expected:
 _DATASET = CKPT.parent.name if CKPT.parent.parent.name == "lora-datasets" else SUB
 if True:
     make_set(Path("outputs/judge"), SET_ID,
-             f"{CHAR.title()} - Qwen LoRA epoch eval, epochs {GRID[0]}-{GRID[-1]} ({N_SCENES} scenes)", items,
+             f"{CHAR.title()} - Qwen LoRA epoch eval, epochs {GRID[0]}-{GRID[-1]} ({N_SCENES} scenes"
+             + (", tiebreaker set" if SCENE_SET == "tiebreaker" else "") + ")", items,
              question="Is this her? K = yes, X = no.",
              reference=REF_PATH, seed=61, priority=1,
              meta={"character": CHAR, "dataset": _DATASET, "output_name": SUB,
                    "renders_dir": OUT, "epochs": ran_eps, "scenes": N_SCENES,
-                   "tag": _FLAGVALS.get("--tag") or "",
+                   "tag": _FLAGVALS.get("--tag") or "", "scene_set": SCENE_SET,
                    "no_description": "--no-description" in _BARESEEN})
     log(f"judge set dense_{SUB}: {len(items)} images")
 male_total = sum(1 for r in rows if r.get("sex") == "M")

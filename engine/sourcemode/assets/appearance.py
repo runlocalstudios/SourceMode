@@ -419,15 +419,19 @@ def drop_length(text: str) -> str:
     return out.strip(" ,")
 
 
-def clause(character: str) -> str:
+def clause(character: str, age: bool = True) -> str:
     """"an 18-year-old, extremely petite..." - age first, then the body text if any.
 
     Returns a bare age phrase for characters with no appearance entry, so the age rule
     holds for the whole cast and not only the three with written descriptions.
+
+    age=False drops the age phrase whatever the record says. The tiebreaker eval
+    set asks for that - Jeremy, 2026-10-10: "Make sure there's no age."
     """
     c = character.lower()
     rec = _load()["look"].get(c) or {}
-    age = age_of(c) if rec.get("age_in_prompt", True) is not False else None
+    age_ok = age and rec.get("age_in_prompt", True) is not False
+    age = age_of(c) if age_ok else None
     text = rec.get("prompt", "") or ""
     if age and text:
         # an entry that already opens with the age is left alone

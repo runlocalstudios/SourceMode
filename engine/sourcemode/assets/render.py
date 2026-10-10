@@ -80,10 +80,12 @@ KEY_BACKDROP = ("soft even studio lighting, a flat solid bright magenta #FF00FF 
                 "edge to edge with nothing else in frame, no shadows on it")
 
 
-def appearance_clause(character: str) -> str:
-    """Age + body/feature text for the prompt. Never for a caption - see appearance.py."""
+def appearance_clause(character: str, age: bool = True) -> str:
+    """Age + body/feature text for the prompt. Never for a caption - see appearance.py.
+
+    age=False leaves the age out; only the tiebreaker eval set asks for that."""
     from .appearance import clause  # noqa: PLC0415
-    return clause(character)
+    return clause(character, age=age)
 
 
 def is_up_style(hair_clause: str) -> bool:
@@ -151,20 +153,36 @@ def describe_yaw(degrees: int) -> str:
         return "FRONT: breastbone and pelvis face the lens; both shoulders equally near the camera, torso breadth balanced on both sides"
     side = "image-left" if degrees < 0 else "image-right"
     near = "image-right" if degrees < 0 else "image-left"
+    if abs(degrees) < 20:
+        return (f"SLIGHT turn toward {side} (about {abs(degrees)} degrees): breastbone and pelvis "
+                f"angled just off the lens toward {side}; the shoulder on {near} a little nearer the camera")
     return (f"THREE-QUARTER toward {side} (about {abs(degrees)} degrees): "
             f"breastbone and pelvis point toward {side}; the shoulder on {near} is nearer the camera; "
             f"the shoulder on {side} recedes; chest and waist visibly foreshortened, "
             "far upper arm partly obscured by the torso. Rotate the whole torso, not just one shoulder")
 
 
+#: A slot may name its turn and expression outright instead of taking the ones
+#: the look number seeds. The tiebreaker eval set (asset_scenes.TIEBREAKER) is
+#: what asks: Jeremy, 2026-10-10 - "either front facing or a very slight angle
+#: looking at the camera with very simple expressions like a closed lip smile a
+#: broad smile or a neutral expression". "slight" turns the body and head 10-15
+#: degrees against the pack's 35-45 / 20-30. A pack slot sets neither and is
+#: byte-for-byte unchanged.
+TURNS = ("front", "left", "right", "slight-left", "slight-right")
+
+
 def pose_fields(character: str, slot: dict) -> dict:
     """Screen-relative body geometry and an independent head pose, seeded per look."""
     look = int(slot.get("look", 1))
-    family = ("front", "left", "right")[(look - 1) % 3]
+    family = slot.get("turn") or ("front", "left", "right")[(look - 1) % 3]
+    if family not in TURNS:
+        raise ValueError(f"turn must be one of {TURNS}, got {family!r}")
+    slight = family.startswith("slight-")
     rng = random.Random(f"{character}-{slot.get('id', look)}")
-    sign = {"front": 0, "left": -1, "right": 1}[family]
-    body = sign * rng.randint(35, 45)
-    head = sign * rng.randint(20, 30)
+    sign = {"front": 0, "left": -1, "right": 1}[family.removeprefix("slight-")]
+    body = sign * (rng.randint(10, 15) if slight else rng.randint(35, 45))
+    head = sign * (rng.randint(10, 15) if slight else rng.randint(20, 30))
     pitch = ("level", "slightly lowered", "slightly raised")[(look - 1) % 3]
     if sign:
         side = "image-left" if sign < 0 else "image-right"
@@ -174,12 +192,17 @@ def pose_fields(character: str, slot: dict) -> dict:
         head_turn = "Nose faces the lens, both cheeks similarly visible; her eyes locked on the lens, direct eye contact with the viewer"
     cat_i = CATEGORY_ORDER.index(slot["category"]) if slot.get("category") in CATEGORY_ORDER else 0
     ex_i = (look - 1 + cat_i * 3) % len(EXPRESSIONS)
-    side = {"front": "front", "left": "image-left", "right": "image-right"}[family]
+    if slot.get("expression"):
+        if slot["expression"] not in EXPRESSION_TYPES:
+            raise ValueError(f"expression must be one of {sorted(set(EXPRESSION_TYPES))}, got {slot['expression']!r}")
+        ex_i = EXPRESSION_TYPES.index(slot["expression"])
+    side = {"front": "front", "left": "image-left", "right": "image-right"}[family.removeprefix("slight-")]
     return {"body": describe_yaw(body), "head": f"{head_turn}; chin {pitch}; no lateral head tilt",
             "expression": EXPRESSIONS[ex_i],
             # the structured ask, for adherence.check() against the measured render
             "asked": {"crop": "upper-thigh-up", "body_side": side, "body_deg": body, "head_side": side,
-                      "head_deg": head, "pitch": pitch, "expression": EXPRESSION_TYPES[ex_i]}}
+                      "head_deg": head, "pitch": pitch, "expression": EXPRESSION_TYPES[ex_i],
+                      "slight": slight}}
 
 
 #: Jeremy, 2026-10-09: "review the prompts to ensure that they are optimized for
@@ -225,14 +248,18 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     """
     pf = pose_fields(character, slot)
     asked = pf["asked"]
-    app = appearance_clause(character)
+    app = appearance_clause(character, age=slot.get("age", True))
     if is_up_style(slot.get("hair", "")):
         app = drop_length(app)
     # captions say "her left"; the contract says image-left. image-left is her right.
     her = {"image-left": "her right", "image-right": "her left"}.get(asked["body_side"])
-    body = "facing the camera" if asked["body_side"] == "front" else f"in a three-quarter view toward {her}"
-    head = ("looking straight into the camera" if asked["head_side"] == "front"
-            else f"her face turned slightly toward {her}, looking into the camera")
+    if asked["body_side"] == "front":
+        body, head = "facing the camera", "looking straight into the camera"
+    elif asked.get("slight"):
+        body, head = f"turned slightly toward {her}", "looking into the camera"
+    else:
+        body = f"in a three-quarter view toward {her}"
+        head = f"her face turned slightly toward {her}, looking into the camera"
     shot = slot.get("shot_type") or "standing portrait"
     # the pack's wording is what the A/B was judged on, byte for byte; a shoot's
     # own framing sentence follows the shot type as its own clause
@@ -262,8 +289,10 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
 
     Every one defaults to the wardrobe-pack value, so a pack slot is byte-for-byte
     unchanged. What is NOT overridable is everything that carries identity - her
-    age, appearance clause, frame, the expression table, the gaze rule - so it is
-    shared and cannot drift between the uses.
+    appearance clause, frame, the expression table, the gaze rule - so it is
+    shared and cannot drift between the uses. Three narrower picks exist for the
+    tiebreaker eval set (2026-10-10): `turn` and `expression` choose from the
+    same tables rather than replacing them, and `age: False` leaves the age out.
     """
     # Hair too short to gather never gets an up-style, whoever wrote the slot -
     # wardrobe plans and the eval looks set hair per look, outside hair_options.
@@ -278,7 +307,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     if PROMPT_STYLE == "natural":
         return natural_prompt(character, slot, trigger, backdrop)
     pf = pose_fields(character, slot)
-    app = appearance_clause(character)
+    app = appearance_clause(character, age=slot.get("age", True))
     # MEASURED 2026-10-04: a prompt that says her hair is long AND asks for it up
     # renders the full length hanging down with a bun perched on top - 10 of 10
     # bun-prompted shots across geena and cindy, 30% kept against 83% for every

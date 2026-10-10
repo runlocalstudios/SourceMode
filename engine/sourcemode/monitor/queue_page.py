@@ -1170,7 +1170,7 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
             i = next(k for k, c in enumerate(pos) if c.endswith("dense_epoch_eval.py"))
             sub = pos[i + 2]
             scenes = flag("--scenes", "")
-            suffix = {"asset": "_asset", "favorable": "_fav"}.get(scenes, "")
+            suffix = {"asset": "_asset", "tiebreaker": "_tiebreaker", "favorable": "_fav"}.get(scenes, "")
             # asset is the eval's default scene set, and --tag renders into its
             # own folder beside it - so both have to be in the path counted
             if not scenes:

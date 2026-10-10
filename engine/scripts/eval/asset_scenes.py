@@ -55,6 +55,105 @@ def asset_prompts(trigger: str) -> list[str]:
             for i, l in enumerate(LOOKS)]
 
 
+# THE TIEBREAKER SET. Jeremy, 2026-10-10, after vivienne's natural sweep: "some of
+# the pictures look exactly like her and some look horrible with weird lighting
+# ... create 20 new prompts that are all portraits from mid thigh up either front
+# facing or a very slight angle looking at the camera with very simple expressions
+# like a closed lip smile a broad smile or a neutral expression ... no age ...
+# varied outfits, varied backgrounds, some blurred backgrounds, some non-blurred
+# backgrounds, mostly indoors ... separate from the normal one ... call it the
+# tiebreaker set so I can just tell you to run the tiebreaker set."
+#
+# Twenty distinct prompts, so an n=20 run renders each once (the asset set
+# renders its ten twice). Same builder, same appearance record, same makeup,
+# fitted and footwear rules as the pack; what differs is held in the slot:
+#   turn        front x10, slight-left x5, slight-right x5 - never three-quarter
+#   expression  closed-lip x8, neutral x6, teeth x6 - never flirty
+#   hair        loose x10, half pinned back x4, low ponytail x4, high ponytail x2
+#               (up-styles cost ~9 points across 23 sweeps; no buns, no braids)
+#   framing     mid-thigh up, his words
+#   age         off, whatever the record says
+#   light       warm or soft directional in every one - flat, cool, overcast and
+#               dim light cost ~15 points and are what "weird lighting" looks like
+#   setting     15 indoors, 5 out; 8 softly blurred behind her, 12 sharp
+# Numbers from this set are not comparable to the asset set's; compare sweep to
+# sweep within it only.
+TIEBREAKER = [
+    {"id": "tb_01", "look": 1, "turn": "front", "expression": "closed-lip", "hair": "her hair worn loose",
+     "outfit": "a cream ribbed knit sweater and dark jeans",
+     "setting": "soft window daylight, in a living room softly blurred behind her"},
+    {"id": "tb_02", "look": 2, "turn": "slight-left", "expression": "neutral", "hair": "her hair in a low ponytail",
+     "outfit": "a white button-down shirt tucked into high-waisted black trousers",
+     "setting": "warm window light, in a bright open-plan office"},
+    {"id": "tb_03", "look": 3, "turn": "front", "expression": "teeth", "hair": "her hair worn loose",
+     "outfit": "a fitted black turtleneck and a camel wool skirt",
+     "setting": "warm directional light, in a cafe with the counter softly blurred behind her"},
+    {"id": "tb_04", "look": 4, "turn": "slight-right", "expression": "closed-lip", "hair": "her hair half pinned back",
+     "outfit": "a navy silk blouse and tailored grey trousers",
+     "setting": "warm afternoon sunlight, against a plain painted wall"},
+    {"id": "tb_05", "look": 5, "turn": "front", "expression": "neutral", "hair": "her hair worn loose",
+     "outfit": "a soft grey hoodie and black leggings",
+     "setting": "soft window daylight, in a tidy bedroom"},
+    {"id": "tb_06", "look": 6, "turn": "front", "expression": "teeth", "hair": "her hair in a high ponytail",
+     "outfit": "a black sports bra and high-waisted leggings",
+     "setting": "warm window light, in a home workout room softly blurred behind her"},
+    {"id": "tb_07", "look": 7, "turn": "slight-left", "expression": "closed-lip", "hair": "her hair worn loose",
+     "outfit": "a burgundy wrap dress",
+     "setting": "warm directional restaurant light, in an elegant dining room"},
+    {"id": "tb_08", "look": 8, "turn": "front", "expression": "neutral", "hair": "her hair in a low ponytail",
+     "outfit": "a light blue denim jacket over a white tee",
+     "setting": "warm late-afternoon sun, on a quiet residential street"},
+    {"id": "tb_09", "look": 9, "turn": "slight-right", "expression": "teeth", "hair": "her hair worn loose",
+     "outfit": "a sage green linen shirt dress",
+     "setting": "golden-hour light, on a rooftop terrace with the city softly blurred behind her"},
+    {"id": "tb_10", "look": 10, "turn": "front", "expression": "closed-lip", "hair": "her hair half pinned back",
+     "outfit": "an emerald green satin blouse and black trousers",
+     "setting": "soft gallery lighting, in an art gallery with pale walls"},
+    {"id": "tb_11", "look": 11, "turn": "slight-right", "expression": "neutral", "hair": "her hair worn loose",
+     "outfit": "a black fitted cocktail dress with thin straps",
+     "setting": "warm evening light, in a hotel lobby with the lamps softly blurred behind her"},
+    {"id": "tb_12", "look": 12, "turn": "slight-left", "expression": "teeth", "hair": "her hair in a low ponytail",
+     "outfit": "a white cotton blouse and a pleated navy skirt",
+     "setting": "soft window daylight, in a sunlit kitchen"},
+    {"id": "tb_13", "look": 13, "turn": "front", "expression": "closed-lip", "hair": "her hair worn loose",
+     "outfit": "an oversized oatmeal cardigan over a white camisole",
+     "setting": "warm lamplight, in a cosy reading nook with bookshelves behind her"},
+    {"id": "tb_14", "look": 14, "turn": "slight-left", "expression": "neutral", "hair": "her hair worn loose",
+     "outfit": "a charcoal blazer over a white shirt",
+     "setting": "warm window light, in a glass-walled meeting room"},
+    {"id": "tb_15", "look": 15, "turn": "front", "expression": "teeth", "hair": "her hair in a high ponytail",
+     "outfit": "a red zip-up track jacket and black joggers",
+     "setting": "warm afternoon sunlight, in a park with the trees softly blurred behind her"},
+    {"id": "tb_16", "look": 16, "turn": "front", "expression": "closed-lip", "hair": "her hair in a low ponytail",
+     "outfit": "a dusty pink knit top and light-wash jeans",
+     "setting": "soft window daylight, in a coffee shop by the window"},
+    {"id": "tb_17", "look": 17, "turn": "slight-left", "expression": "closed-lip", "hair": "her hair worn loose",
+     "outfit": "a black leather jacket over a grey tee",
+     "setting": "warm evening street light, outside a bar at night with the street softly blurred behind her"},
+    {"id": "tb_18", "look": 18, "turn": "front", "expression": "closed-lip", "hair": "her hair half pinned back",
+     "outfit": "a lilac satin slip dress",
+     "setting": "warm directional light, in a bedroom softly blurred behind her"},
+    {"id": "tb_19", "look": 19, "turn": "slight-right", "expression": "teeth", "hair": "her hair worn loose",
+     "outfit": "a navy-and-white striped long-sleeve top and dark jeans",
+     "setting": "warm late-afternoon sun, on a balcony with a plain wall behind her"},
+    {"id": "tb_20", "look": 20, "turn": "slight-right", "expression": "neutral", "hair": "her hair half pinned back",
+     "outfit": "a cream blouse tucked into a navy A-line skirt",
+     "setting": "warm window light, in a bright hallway with a plain white wall behind her"},
+]
+TIEBREAKER_FRAMING = "framed from mid-thigh up"
+
+
+def tiebreaker_slot(s: dict) -> dict:
+    return dict(s, pose="standing", age=False, framing_natural=TIEBREAKER_FRAMING)
+
+
+def tiebreaker_prompts(trigger: str) -> list[str]:
+    return [shot_prompt(trigger, tiebreaker_slot(s), backdrop=s["setting"]) for s in TIEBREAKER]
+
+
 if __name__ == "__main__":
     for p in asset_prompts("amanda"):
+        print(p[:160], "...")
+    print()
+    for p in tiebreaker_prompts("amanda"):
         print(p[:160], "...")
