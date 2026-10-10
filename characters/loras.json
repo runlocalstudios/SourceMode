@@ -159,6 +159,17 @@
   "basis": "pruned to one; dense_jojo_v2 12/20 at ep16",
   "locked_at": "2026-10-09T19:59:37+00:00"
  },
+ "jordan": {
+  "file": "jordan_v2-000020.safetensors",
+  "epoch": 20,
+  "dataset": "jordan_v2",
+  "output_name": "jordan_v2",
+  "sha256": "ed52f491bcaa24c418300d7e001c254f1120475d7a0ea5aa6d027a3f9b853afd",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\jordan_v2\\jordan_v2-000020.safetensors",
+  "basis": "dense_jordan_v2_asset 9/10 at epoch 20 (his pick 2026-10-09 20:34 UTC)",
+  "locked_at": "2026-10-10T00:11:09+00:00"
+ },
  "keiko": {
   "file": "keiko_v2-000022.safetensors",
   "epoch": 22,
