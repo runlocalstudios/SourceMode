@@ -12,7 +12,8 @@ too late:
   vivienne  swept 90 renders at 0/90 because her record said nothing about the
             pink underlayer, so the prompt said "long black hair"
   cici      had every outfit described as "fitted to her tiny frame" because
-            `frame` was hardcoded and her record said curvy
+            `frame` was hardcoded and her record said curvy (the clause and
+            the Fit field are gone since 2026-10-10; the prompt carries it)
   raven     had a bangs negative that lived in the eval and never reached her
             wardrobe pack
   maya      ships with a turquoise hair underlayer that no record mentioned
@@ -50,8 +51,6 @@ FIELDS = (
                              "else has to be said"),
     ("build", "Build", "need", "petite / slim and athletic / curvy hourglass"),
     ("bust", "Bust", "want", "small / medium / full - it changes how every outfit sits"),
-    ("frame", "Frame", "want", 'the two words an outfit is "fitted to" - "tiny frame", '
-                               '"curvy frame". Blank means no clause, never a default'),
     ("features", "Other features", "want", "freckles, glasses, strong brows, full lips - "
                                            "anything you would notice first"),
     ("negative", "Never render", "want", "what the base model reverts to without being "
@@ -110,8 +109,6 @@ def appearance_record(d: dict) -> dict:
     }
     if d.get("bust"):
         rec["bust"] = d["bust"]
-    if d.get("frame"):
-        rec["frame"] = d["frame"]
     if d.get("negative"):
         rec["negative"] = d["negative"]
     return rec
@@ -145,8 +142,6 @@ def thin(d: dict) -> list[str]:
     """Fields that are not required but whose absence has cost real GPU time.
     Never blocking - this is a prompt to look, the way every gate here is."""
     out = []
-    if not str(d.get("frame", "")).strip():
-        out.append("Frame - without it no outfit gets a \"fitted to her ...\" clause")
     if not str(d.get("bust", "")).strip():
         out.append("Bust - it changes how every top and dress sits")
     if not str(d.get("style", "")).strip():

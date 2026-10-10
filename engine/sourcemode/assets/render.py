@@ -104,21 +104,12 @@ def character_negative(character: str) -> str:
     return negative(character)
 
 
-def fitted_clause(character: str) -> str:
-    """", fitted to her tiny frame" - or NOTHING when her record does not say.
-
-    This used to be hardcoded, so every character was told she had a tiny frame.
-    It was written for amanda and is right for her; it is wrong for cici, whose
-    own record says curvy and hourglass, and for anyone else more curvaceous.
-    An empty frame yields an empty string, never a default: asserting a body
-    shape the character's data contradicts is how vivienne's renders came back
-    with black hair.
-    """
-    from .appearance import frame  # noqa: PLC0415
-    f = frame(character)
-    return f", fitted to her {f}" if f else ""
-
-
+#: There is no "fitted to her <frame>" clause any more. Jeremy, 2026-10-10:
+#: "Get rid of the fit drop down. It's too confusing ... I already have the
+#: description in there for pretty much every character, and there's no reason
+#: to limit it to five types of frames." The appearance clause is the only
+#: body text a prompt carries; vivienne's had been getting "tiny frame" from a
+#: fallback her description never said.
 #: Footwear in an outfit fights the upper-thigh crop. Jeremy, 2026-10-05: "none
 #: of the game assets are ever supposed to have shoes unless I specifically ask.
 #: they are always meant to be mid or high thigh up". zara casual_01 asked for
@@ -270,7 +261,7 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     avoid = f" {slot['avoid']}" if slot.get("avoid") else ""
     return (f"{trigger or character}, {app + ', ' if app else ''}{crop}, {body}, {head}{stance}, "
             f"{_NATURAL_EXPRESSION[asked['expression']]}, {slot.get('makeup') or MAKEUP}, "
-            f"{slot['hair']}, wearing {outfit}{fitted_clause(character)}, "
+            f"{slot['hair']}, wearing {outfit}, "
             f"{backdrop or KEY_BACKDROP}. Photorealistic, natural skin texture, sharp focus.{avoid}")
 
 
@@ -289,7 +280,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
 
     Every one defaults to the wardrobe-pack value, so a pack slot is byte-for-byte
     unchanged. What is NOT overridable is everything that carries identity - her
-    appearance clause, frame, the expression table, the gaze rule - so it is
+    appearance clause, the expression table, the gaze rule - so it is
     shared and cannot drift between the uses. Three narrower picks exist for the
     tiebreaker eval set (2026-10-10): `turn` and `expression` choose from the
     same tables rather than replacing them, and `age: False` leaves the age out.
@@ -329,7 +320,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
             f"Makeup: {slot.get('makeup') or MAKEUP}. "
             f"Pose: {slot.get('stance') or STANCE}. "
             f"Hair: {slot['hair']}. "
-            f"Outfit: {slot['outfit'] if slot.get('shoes') else drop_footwear(slot['outfit'])}{fitted_clause(character)}. "
+            f"Outfit: {slot['outfit'] if slot.get('shoes') else drop_footwear(slot['outfit'])}. "
             f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. "
             f"Natural realistic human proportions, correct anatomy. "
             + (slot.get("avoid") or "No profiles, rear views, seated poses, or off-camera gaze."))

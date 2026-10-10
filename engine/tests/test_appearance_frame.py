@@ -1,103 +1,64 @@
-"""An asset prompt may not assert a body shape the character's data contradicts.
+"""A prompt says nothing about her body beyond her own appearance sentence.
 
-`render.py` hardcoded ", fitted to her tiny frame" into every character's
-prompt. It was written for amanda and is correct for her; it was also being
-sent for cici, whose own record reads "curvy", "hourglass", "large bust, full
-hips", and would have been sent for marisol and geena.
-
-Same defect as vivienne's prompt saying "long black hair" over a LoRA trained
-on pink underlights: explicit text beats a learned association, so a wrong
-assertion is worse than silence. Silence is therefore the default.
+History: `render.py` hardcoded ", fitted to her tiny frame" for everyone
+(right for amanda, wrong for cici). A per-character Fit field replaced it,
+with a fallback that derived "tiny frame" from `figure` - which is how
+vivienne, whose sentence says "slim, slender figure", was being told she had
+a tiny frame her description never used. Jeremy, 2026-10-10: "Get rid of the
+fit drop down. It's too confusing ... there's no reason to limit it to five
+types of frames when we can have somebody with a skinny frame but super wide
+hips." The clause, the field and the fallback are gone.
 """
 
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
-from sourcemode.assets.appearance import frame
-from sourcemode.assets.render import fitted_clause, shot_prompt
+import sourcemode.assets.appearance as A
+from sourcemode.assets.appearance import APPEARANCE, CONFIRM_FIELDS, clause
+from sourcemode.assets.render import shot_prompt
 
 SLOT = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
         "outfit": "a pleated mini skirt and a cropped tee", "hair": "her hair worn loose"}
+CHARS = [k for k in json.loads(APPEARANCE.read_text(encoding="utf-8")) if not k.startswith("_")]
 
 
 def test_no_body_shape_is_hardcoded_in_the_prompt_builder():
-    """The literal that caused this must not come back.
-
-    Scoped to shot_prompt's own body with its docstring removed, because
-    fitted_clause's docstring quotes the phrase on purpose to explain it.
-    """
-    import ast
     import inspect
-    import textwrap
 
     import sourcemode.assets.render as R
 
-    tree = ast.parse(textwrap.dedent(inspect.getsource(R.shot_prompt)))
-    fn = tree.body[0]
-    if (fn.body and isinstance(fn.body[0], ast.Expr)
-            and isinstance(fn.body[0].value, ast.Constant)
-            and isinstance(fn.body[0].value.value, str)):
-        fn.body = fn.body[1:]                      # drop the docstring
-    body = ast.unparse(fn)
-    for shape in ("tiny frame", "curvy frame", "petite", "large bust"):
-        assert shape not in body, f"shot_prompt hard-codes {shape!r}"
-    assert "fitted_clause(character)" in body
+    body = inspect.getsource(R.shot_prompt) + inspect.getsource(R.natural_prompt)
+    for shape in ("tiny frame", "curvy frame", "fitted to her", "fitted_clause", "petite", "large bust"):
+        assert shape not in body, f"the prompt builder still carries {shape!r}"
+    assert not hasattr(R, "fitted_clause") and not hasattr(A, "frame")
 
 
-def test_a_character_with_no_record_is_told_nothing():
-    """Before this, EVERY character was told she had a tiny frame.
-
-    Named characters are deliberately not hard-coded here: this test used to
-    cite marisol and geena, and broke the day they were documented - which is
-    the right outcome for them and the wrong reason for a test to fail. The
-    rule is about the absence of a record, so the subject is a name that has
-    none and never will.
-    """
-    for who in ("nobody_who_does_not_exist", "", "a_name_with_no_record"):
-        assert frame(who) == ""
-        assert fitted_clause(who) == ""
-        assert "fitted to her" not in shot_prompt(who or "x", SLOT, who or "x")
+@pytest.mark.parametrize("who", CHARS)
+def test_the_only_body_text_in_a_prompt_is_her_own_sentence(who):
+    p = shot_prompt(who, SLOT, who)
+    sentence = clause(who)
+    assert not sentence or sentence in p
+    # the key backdrop says "nothing else in frame"; his own sentence may say "petite frame"
+    rest = p.replace(sentence, "")
+    assert "fitted to her" not in p and not re.search(r"\b(?!in\b)\w+ frame\b", rest), p
 
 
-@pytest.mark.parametrize(("who", "want"), [("amanda", "tiny"), ("zara", "tiny"),
-                                           # cici: curvy -> average on the Looks tab, 2026-10-10
-                                           ("cici", "average")])
-def test_the_frame_comes_from_the_characters_own_record(who, want):
-    assert want in frame(who)
-    assert f"fitted to her {want} frame" in shot_prompt(who, SLOT, who)
-
-
-def test_cici_is_never_called_tiny():
-    """Her record says curvy and hourglass; the renderer said tiny."""
-    assert "tiny" not in shot_prompt("cici", SLOT, "cici")
-
-
-def test_a_frame_is_derived_only_from_body_text_that_says_so(tmp_path, monkeypatch):
-    """No body text means no frame - the fallback never guesses a default."""
-    import sourcemode.assets.appearance as A
-
-    doc = {"look": {"nobody": {"age": 25, "build": "", "figure": ""},
-                    "slim_one": {"age": 25, "figure": "slim, slender frame"},
-                    "curvy_one": {"age": 25, "build": "curvy", "figure": "hourglass"},
-                    "vague_one": {"age": 25, "build": "average", "figure": "normal"}},
-           "ages": {}}
+def test_a_record_with_no_sentence_gets_no_body_text(monkeypatch):
+    doc = {"look": {"nobody": {"age": 25, "build": "slim", "figure": "slim, slender frame"}}, "ages": {}}
     monkeypatch.setattr(A, "_load", lambda: doc)
-    assert A.frame("nobody") == ""
-    assert A.frame("vague_one") == ""          # unrecognised text is not a guess
-    assert A.frame("slim_one") == "tiny frame"
-    assert A.frame("curvy_one") == "curvy frame"
-    assert A.frame("not_in_the_file") == ""
+    assert not re.search(r"\b(?!in\b)\w+ frame\b", shot_prompt("nobody", SLOT, "nobody"))
 
 
-def test_an_explicit_frame_overrides_the_derivation(monkeypatch):
-    import sourcemode.assets.appearance as A
-
-    doc = {"look": {"x": {"age": 25, "build": "curvy", "frame": "tiny frame"}}, "ages": {}}
-    monkeypatch.setattr(A, "_load", lambda: doc)
-    assert A.frame("x") == "tiny frame"
+def test_the_fit_field_is_not_a_confirmation_field_and_no_record_carries_it():
+    assert CONFIRM_FIELDS == ("prompt", "negative")
+    d = json.loads(APPEARANCE.read_text(encoding="utf-8"))
+    for k, v in d.items():
+        if not k.startswith("_"):
+            assert isinstance(v, dict) and "frame" not in v, k
 
 
 @pytest.mark.parametrize(("outfit", "want"), [
@@ -116,15 +77,3 @@ def test_footwear_is_dropped_from_a_thigh_up_asset(outfit, want):
     assert "sneakers" not in p and "boots" not in p
     assert "sneakers" in shot_prompt("x", dict(SLOT, outfit=outfit, shoes=True), "x") \
         or "sneakers" not in outfit
-
-
-def test_the_appearance_file_is_still_valid_json_and_keyed_by_character():
-    from sourcemode.assets.appearance import APPEARANCE
-
-    d = json.loads(APPEARANCE.read_text(encoding="utf-8"))
-    for k, v in d.items():
-        if k.startswith("_"):
-            continue
-        assert isinstance(v, dict), k
-        if "frame" in v:
-            assert isinstance(v["frame"], str) and v["frame"].strip(), k

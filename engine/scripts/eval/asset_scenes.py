@@ -65,8 +65,8 @@ def asset_prompts(trigger: str) -> list[str]:
 # tiebreaker set so I can just tell you to run the tiebreaker set."
 #
 # Twenty distinct prompts, so an n=20 run renders each once (the asset set
-# renders its ten twice). Same builder, same appearance record, same makeup,
-# fitted and footwear rules as the pack; what differs is held in the slot:
+# renders its ten twice). Same builder, same appearance record, same makeup
+# and footwear rules as the pack; what differs is held in the slot:
 #   turn        front x10, slight-left x5, slight-right x5 - never three-quarter
 #   expression  closed-lip x8, neutral x6, teeth x6 - never flirty
 #   hair        loose x10, half pinned back x4, low ponytail x4, high ponytail x2

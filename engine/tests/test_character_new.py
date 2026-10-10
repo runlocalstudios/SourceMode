@@ -18,7 +18,7 @@ FULL = {
     "character": "nova", "name": "Nova", "age": "27", "ethnicity": "Latina",
     "skin": "olive-tan", "build": "slim and athletic",
     "hair": "very long dark brown hair with a vivid turquoise dyed underlayer",
-    "eyes": "dark brown eyes", "bust": "medium", "frame": "slim athletic frame",
+    "eyes": "dark brown eyes", "bust": "medium",
     "features": "freckles across her nose", "job": "bartender",
     "style": "edgy downtown", "palette": "black and rust",
     "avoid": "nothing pastel", "negative": "plain brown hair with no colour",
@@ -42,12 +42,12 @@ def test_the_composed_clause_carries_the_dyed_layer():
     assert "olive-tan skin" in c
 
 
-def test_a_blank_frame_is_never_defaulted():
-    # render.py hardcoded "fitted to her tiny frame" for everyone, which was
-    # true for amanda and asserted for cici, whose record says curvy.
-    rec = appearance_record({**FULL, "frame": ""})
-    assert "frame" not in rec
-    assert "Frame" in " ".join(thin({**FULL, "frame": ""}))
+def test_the_form_has_no_frame_field():
+    # render.py hardcoded "fitted to her tiny frame" for everyone, then a Fit
+    # field replaced it, then Jeremy dropped the clause (2026-10-10): the
+    # prompt sentence is the whole body description.
+    assert "frame" not in {k for k, *_ in FIELDS}
+    assert "frame" not in appearance_record({**FULL, "frame": "tiny frame"})
 
 
 def test_a_negative_is_carried_onto_the_record():
@@ -58,9 +58,9 @@ def test_a_negative_is_carried_onto_the_record():
 
 def test_thin_warns_without_blocking():
     # Gates annotate; they do not block. A thin record still creates.
-    lean = {k: v for k, v in FULL.items() if k not in ("frame", "bust", "style", "job")}
+    lean = {k: v for k, v in FULL.items() if k not in ("bust", "style", "job")}
     assert missing(lean) == []
-    assert len(thin(lean)) == 4
+    assert len(thin(lean)) == 3
 
 
 def test_the_game_snippet_tells_you_to_keep_the_two_ages_equal():

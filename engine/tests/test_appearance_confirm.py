@@ -17,7 +17,7 @@ import sourcemode.assets.appearance as A
 def records(tmp_path, monkeypatch):
     p = tmp_path / "appearance.json"
     p.write_text(json.dumps({"x": {"age": 25, "prompt": "a 25-year-old woman with red hair",
-                                   "frame": "slim frame"}}), encoding="utf-8")
+                                   "negative": "no bangs"}}), encoding="utf-8")
     monkeypatch.setattr(A, "APPEARANCE", p)
     monkeypatch.setattr(A, "_cache", None)
     yield p
@@ -30,10 +30,10 @@ def test_an_unconfirmed_record_is_refused_like_a_missing_one(records):
 
 
 def test_confirm_writes_his_text_and_passes(records):
-    A.confirm("x", {"prompt": "a 25-year-old woman with  black hair", "frame": "", "negative": ""})
+    A.confirm("x", {"prompt": "a 25-year-old woman with  black hair", "negative": ""})
     rec = json.loads(records.read_text(encoding="utf-8"))["x"]
     assert rec["prompt"] == "a 25-year-old woman with black hair"
-    assert "frame" not in rec                 # an empty field is cleared, not kept
+    assert "negative" not in rec              # an empty field is cleared, not kept
     assert A.confirmed("x") and A.check("x")["ok"]
 
 

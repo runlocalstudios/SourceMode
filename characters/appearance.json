@@ -17,11 +17,10 @@
   "features": "fair-olive skin, dark brown eyes, long dark brown hair, light freckles across the nose and cheeks",
   "prompt": "a young woman with an extremely petite, very skinny figure, a tiny waist and massive firm breasts, fair skin, long dark brown hair and dark brown eyes",
   "age": 18,
-  "frame": "tiny frame",
   "_note": "2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab.",
   "confirmed": {
    "at": "2026-10-10T02:43:05+00:00",
-   "fingerprint": "38855a2aad369792"
+   "fingerprint": "08848d3b0706688d"
   }
  },
  "bri": {
@@ -31,11 +30,10 @@
   "bust": "full for her frame",
   "figure": "slim with a small waist",
   "features": "very long straight dark brown hair, brown eyes, warm tan skin",
-  "frame": "tiny frame",
   "prompt": "a petite, slim young woman with a small waist and a full bust for her frame, warm tan skin, very long straight dark brown hair, brown eyes",
   "confirmed": {
    "at": "2026-10-07T02:07:49+00:00",
-   "fingerprint": "0e76c8726ec757e9"
+   "fingerprint": "7969c47858512e40"
   }
  },
  "cat": {
@@ -45,11 +43,10 @@
   "bust": "full",
   "figure": "curvy, hourglass",
   "features": "very long straight light-brown hair with a centre part, brown eyes, olive-fair skin, strong defined brows, full lips",
-  "frame": "slim frame",
   "prompt": "a woman with a slim frame and an hourglass figure, large breasts, olive-fair skin, very long hair, brown eyes",
   "confirmed": {
    "at": "2026-10-09T20:29:11+00:00",
-   "fingerprint": "dc116a407fd8027a"
+   "fingerprint": "ec854aed86acdf16"
   },
   "age_in_prompt": false
  },
@@ -62,11 +59,10 @@
   "prompt": "A young woman with an hourglass figure, a large bust, a defined waist and full hips, warm tan skin, dark brown eyes, long dark hair",
   "age": 24,
   "_note": "age from Jeremy 2026-10-03; not in the game's characters.js",
-  "frame": "average frame",
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:44:14+00:00",
-   "fingerprint": "cc1bb414ef570a83"
+   "fingerprint": "e1c69b717ea3ecb5"
   }
  },
  "daisy": {
@@ -77,12 +73,11 @@
   "bust": "full",
   "figure": "slim figure with a small waist and a full bust",
   "features": "very long straight dark brown-black hair, dark brown eyes, light tan skin, freckles across her nose and cheeks, full lips",
-  "frame": "slim frame",
   "prompt": "a young woman with a slim figure, a small waist and huge breasts, light tan skin, very long dark brown-black hair, dark brown eyes and full lips",
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:44:58+00:00",
-   "fingerprint": "2fe642f4833c10ee"
+   "fingerprint": "9028d41a37809008"
   }
  },
  "geena": {
@@ -92,12 +87,11 @@
   "bust": "full, large",
   "figure": "curvy, hourglass, full bust and hips",
   "features": "long straight hair dyed vivid magenta-pink all over, brown eyes, light brown skin, full lips",
-  "frame": "curvy frame",
   "prompt": "a woman with a curvy hourglass figure and massive breasts, light brown skin, long hair dyed vivid magenta-pink all over, brown eyes and full lips",
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:45:18+00:00",
-   "fingerprint": "2bbbb921fe8f24c2"
+   "fingerprint": "b97548f838146739"
   }
  },
  "hannah": {
@@ -108,12 +102,11 @@
   "bust": "full",
   "figure": "curvy figure with a defined waist and a full bust",
   "features": "very long thick dark brown hair with thick bleached blonde face-framing highlights, warm brown eyes, tanned olive skin, strong dark brows, full lips",
-  "frame": "average frame",
   "prompt": "a young woman with an average frame, a defined waist and a gigantic fake breasts, tanned olive skin, very long dark brown hair with bleached blonde face-framing highlights, warm brown eyes and full lips",
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:45:57+00:00",
-   "fingerprint": "8237434332045493"
+   "fingerprint": "6240458ab84a2929"
   }
  },
  "maddie": {
@@ -124,13 +117,12 @@
   "bust": "medium-full",
   "figure": "slim figure with a small waist and a medium-full bust",
   "features": "long straight auburn-copper hair with a soft wispy curtain fringe, green eyes, fair Irish skin, light freckles across her nose",
-  "frame": "slim frame",
   "negative": "centre-parted hair with a bare forehead, no fringe",
   "prompt": "a young woman with a slim figure, a small waist and large natural breasts, fair skin, long auburn-copper hair with a wispy curtain fringe, and green eyes",
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:47:01+00:00",
-   "fingerprint": "78335b6a93b15cc2"
+   "fingerprint": "b5102681e1f6c7c0"
   }
  },
  "marisol": {
@@ -142,7 +134,7 @@
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:47:28+00:00",
-   "fingerprint": "de65144aa447b9c3"
+   "fingerprint": "c0f8159bc8e1214e"
   }
  },
  "mei": {
@@ -151,11 +143,10 @@
   "build": "petite, slim",
   "figure": "slim, slender frame",
   "features": "long dark brown hair worn loose and tousled with soft waves, dark brown eyes, fair skin",
-  "frame": "slim frame",
   "prompt": "a petite, slim young woman with a slender frame, fair skin, long dark brown hair, dark brown eyes",
   "confirmed": {
    "at": "2026-10-08T11:52:51+00:00",
-   "fingerprint": "5dee75ead28be772"
+   "fingerprint": "6b5a0b7abd4626d5"
   },
   "age_in_prompt": false
  },
@@ -167,11 +158,10 @@
   "bust": "medium",
   "figure": "slim petite youthful figure with a medium bust",
   "features": "very long straight dark brown-black hair, warm brown eyes, medium tan skin, light freckles across her cheeks",
-  "frame": "slim petite frame",
   "prompt": "an 18 year old girl with medium tan skin, a slim petite youthful figure with a medium bust, very long straight dark brown-black hair, warm brown eyes and light freckles across her cheeks",
   "confirmed": {
    "at": "2026-10-08T11:53:27+00:00",
-   "fingerprint": "30b0cf40cec21f32"
+   "fingerprint": "553d60b0ddecf0c3"
   }
  },
  "raven": {
@@ -179,10 +169,9 @@
   "features": "a full fringe falling straight across her forehead to just above her eyebrows, soft and slightly wispy rather than blunt cut",
   "prompt": "a young woman, her purple hair worn with full bangs falling straight across her forehead to just above her eyebrows, soft and slightly wispy rather than blunt cut. she has a petite body with medium perky breasts, dark brown eyes.",
   "negative": "no bangs, bare forehead, exposed forehead, forehead fully visible, hair swept back off the forehead, centre parting, middle part, hair tucked behind the hairline, curtain bangs, side-swept bangs, receding hairline",
-  "frame": "petite frame",
   "confirmed": {
    "at": "2026-10-08T11:54:19+00:00",
-   "fingerprint": "3ea6c04159bdb6cf"
+   "fingerprint": "adb89c1cb57bbd4b"
   },
   "age_in_prompt": false
  },
@@ -192,12 +181,11 @@
   "build": "very petite",
   "figure": "slim, slender frame",
   "features": "hazel eyes, deep dark-brown skin, full lips, high cheekbones",
-  "frame": "tiny frame",
   "prompt": "a young woman with a very petite, slender figure, deep dark-brown skin, hazel eyes and full lips",
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:48:44+00:00",
-   "fingerprint": "3bedda71a6472077"
+   "fingerprint": "1b51e7e285c504fc"
   }
  },
  "vivienne": {
@@ -212,12 +200,11 @@
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:50:46+00:00",
-   "fingerprint": "29da1f6554ad4b19"
+   "fingerprint": "ef411da5be8ef7d0"
   }
  },
  "zara": {
   "_note": "Frame set by hand 2026-10-04 (keep tiny). Body text from Jeremy the same day; hair and skin from her reference photos. Age 19 matches the game. 2026-10-08: prompt reworked to the gabi pattern (Jeremy): age numeral, ethnicity word, freckles, brows and face-shape words removed; body, skin, hair and eyes kept. Unconfirmed until he confirms it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
-  "frame": "tiny frame",
   "ethnicity": "East Asian",
   "build": "petite, extremely skinny",
   "bust": "perky",
@@ -227,7 +214,7 @@
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:51:07+00:00",
-   "fingerprint": "e4f35f640571ec2e"
+   "fingerprint": "7aa8ee29b680eb2f"
   }
  },
  "jaina": {
@@ -237,11 +224,10 @@
   "bust": "full",
   "figure": "slim with a full bust",
   "features": "very long straight blonde hair with darker roots at the parting, brown eyes, fair skin",
-  "frame": "slim frame",
   "prompt": "a slim young woman with a full bust, fair skin, very long straight blonde hair with darker roots at the parting, brown eyes",
   "confirmed": {
    "at": "2026-10-08T11:51:44+00:00",
-   "fingerprint": "c10cf92df5a3be50"
+   "fingerprint": "78663d7ccca0d12f"
   },
   "age_in_prompt": false
  },
@@ -252,13 +238,12 @@
   "bust": "full",
   "figure": "slim athletic figure, small waist, full bust",
   "features": "very long straight bleach-blonde hair with slightly darker roots, warm brown eyes, lightly tanned skin, freckles across her nose and cheeks, full lips",
-  "frame": "slim athletic frame",
-  "prompt": "a young woman with a slim athletic figure, a small waist and a full bust, lightly tanned skin, long straight bleach-blonde hair, dark brown eyes",
+  "prompt": "a young woman with a slim athletic figure, a small waist and medium breasts, lightly tanned skin, long bleached-blonde hair, dark brown eyes",
   "age": 27,
   "age_in_prompt": false,
   "confirmed": {
-   "at": "2026-10-08T23:24:56+00:00",
-   "fingerprint": "ed824305491aef8c"
+   "at": "2026-10-10T02:51:54+00:00",
+   "fingerprint": "29a2ee8a2e3b88b9"
   }
  },
  "ash": {
@@ -268,13 +253,12 @@
   "bust": "medium-full",
   "figure": "slim athletic figure, narrow waist, medium-full bust",
   "features": "very long loosely waved balayage hair - dark brown at the roots melting to caramel-blonde at the ends - warm brown eyes, tanned skin, freckles across her nose and cheeks",
-  "frame": "slim athletic frame",
   "prompt": "a young woman with a slim athletic figure and medium breasts, tanned skin, long balayage hair, and warm brown eyes",
   "age": 24,
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:43:57+00:00",
-   "fingerprint": "a7cafe557e21ca63"
+   "fingerprint": "a1d9a79e8c6b5802"
   }
  },
  "cindy": {
@@ -284,14 +268,13 @@
   "bust": "medium",
   "figure": "slim figure with a small waist and a medium bust",
   "features": "very long loosely waved platinum-blonde dyed hair, warm brown eyes, light caramel-brown skin, full lips",
-  "frame": "slim frame",
   "prompt": "a young woman with light brown skin, a slim figure with a small waist and a medium bust, very long platinum-blonde dyed hair, dark brown eyes and full lips",
   "age": 24,
   "negative": "red or copper roots, warm orange tones in the hair, dark regrowth",
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-08T23:27:01+00:00",
-   "fingerprint": "2df7c7d01779a607"
+   "fingerprint": "199e74cfcf1baf37"
   }
  },
  "gabi": {
@@ -301,13 +284,12 @@
   "bust": "medium",
   "figure": "slim petite figure with a small waist and a medium bust",
   "features": "very long straight jet-black hair, dark brown eyes, light olive skin, full lips",
-  "frame": "slim petite frame",
   "prompt": "a young woman with a slim petite figure, a small waist and a medium bust, light olive skin, very long straight jet-black hair, dark brown eyes and full lips",
   "age": 20,
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-09T01:20:38+00:00",
-   "fingerprint": "25a13ccb66e2b7af"
+   "fingerprint": "285f6a2d196915e2"
   }
  },
  "jojo": {
@@ -317,12 +299,11 @@
   "bust": "full",
   "figure": "slim figure with a defined waist and a full bust",
   "features": "very long dark brown hair with soft waves, dark brown eyes, warm light skin",
-  "frame": "slim frame",
   "prompt": "a young woman with a slim figure, a defined waist and a full bust, light olive skin, long dark brown hair, and dark brown eyes",
   "age": 23,
   "confirmed": {
    "at": "2026-10-08T11:52:44+00:00",
-   "fingerprint": "7fbe3ced713b2f25"
+   "fingerprint": "0f19b371baf8f444"
   },
   "age_in_prompt": false
  },
@@ -333,12 +314,11 @@
   "bust": "small-medium",
   "figure": "slim petite youthful figure with a small-medium bust",
   "features": "very long wavy brown hair with sun-lightened caramel ends, warm brown eyes, golden-tan skin, a soft round face",
-  "frame": "slim petite frame",
   "prompt": "a young woman with a slim petite figure and small breasts, golden-tan skin, long hair and warm brown eyes",
   "age": 18,
   "confirmed": {
    "at": "2026-10-10T02:46:38+00:00",
-   "fingerprint": "79cb22742bb36cab"
+   "fingerprint": "703268d850f9c821"
   }
  },
  "kimmy": {
@@ -348,13 +328,12 @@
   "bust": "full",
   "figure": "slim figure with a small waist and a full bust",
   "features": "very long straight light blonde hair, pale blue-grey eyes, fair skin, soft features",
-  "frame": "slim frame",
   "prompt": "a young woman with a slim figure, a small waist and a large breasts, fair skin, very long blonde hair and pale blue eyes",
   "age": 24,
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:42:25+00:00",
-   "fingerprint": "8b7cb39215af413d"
+   "fingerprint": "1f00c38f02684315"
   }
  },
  "maya": {
@@ -364,13 +343,12 @@
   "bust": "medium",
   "figure": "slim athletic figure with a narrow waist and a medium bust",
   "features": "very long dark brown hair with a vivid turquoise dyed underlayer showing at the ends beneath the top layer, dark brown eyes, olive-tan skin, freckles across her nose, strong dark brows",
-  "frame": "slim athletic frame",
   "prompt": "a young woman with a slim athletic figure, a narrow waist and medium breasts, olive-tan skin, very long dark brown hair, and dark brown eyes",
   "age": 26,
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:48:06+00:00",
-   "fingerprint": "1ebedc33ccd9f38e"
+   "fingerprint": "ef4bcbe8abf8d330"
   }
  },
  "priya": {
@@ -380,12 +358,11 @@
   "bust": "full",
   "figure": "slim hourglass figure with a small waist and a full bust",
   "features": "a chin-length dark brown bob parted to one side, black-framed rectangular glasses she always wears, dark brown eyes, medium brown skin, full lips",
-  "frame": "slim frame",
   "prompt": "a young woman with light brown skin, a slim hourglass figure with a small waist and a massive breasts, a chin-length dark brown bob, black-framed rectangular glasses, dark brown eyes and full lips",
   "age": 22,
   "confirmed": {
    "at": "2026-10-08T11:53:56+00:00",
-   "fingerprint": "90dcbac4ef2530e4"
+   "fingerprint": "89ac60dc3c81afc5"
   },
   "age_in_prompt": false
  },
@@ -396,12 +373,11 @@
   "bust": "small-medium",
   "figure": "slim petite figure with a small waist and a small-medium bust",
   "features": "very long straight black hair, dark brown eyes, medium brown skin, a warm open face",
-  "frame": "slim frame",
   "prompt": "a young woman with light brown skin, a slim petite figure with a small waist and large breasts, very long straight black hair, dark brown eyes and a warm open face",
   "age": 20,
   "confirmed": {
    "at": "2026-10-08T11:54:07+00:00",
-   "fingerprint": "93ac18c8d50295bc"
+   "fingerprint": "b675812358650f0e"
   },
   "age_in_prompt": false
  },
@@ -412,13 +388,12 @@
   "bust": "modest",
   "figure": "slim figure with a modest bust",
   "features": "long wavy copper-red hair, green eyes, fair freckled skin, warm laugh lines",
-  "frame": "slim frame",
   "prompt": "a woman with a slim figure and a modest bust, fair skin, long copper-red hair and brown eyes",
   "age": 38,
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:48:27+00:00",
-   "fingerprint": "7e9d0e199580e02a"
+   "fingerprint": "eb6affe9f5cc08ee"
   }
  },
  "trina": {
@@ -428,13 +403,12 @@
   "bust": "full",
   "figure": "curvy hourglass figure with a small waist and a full bust",
   "features": "very long loosely waved platinum-blonde hair, green eyes, light tanned skin, strong defined brows, full lips",
-  "frame": "average frame",
   "prompt": "a young woman with a curvy hourglass figure, a small waist and large breasts, light tanned skin, very long platinum-blonde hair, green eyes and full lips",
   "age": 33,
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:50:18+00:00",
-   "fingerprint": "457932e8b48af614"
+   "fingerprint": "59b9459842bdf40d"
   }
  },
  "cassie": {
@@ -444,32 +418,29 @@
   "bust": "medium",
   "figure": "slim figure with a defined waist and a medium bust",
   "features": "long wavy dark brown hair, hazel-green eyes, fair Irish skin, freckles across her nose and cheeks",
-  "frame": "slim frame",
   "prompt": "A young woman with fair skin, a slim figure with a defined waist and a medium bust, long dark brown hair, brown eyes and slight freckles across her nose and cheeks",
   "age": 29,
   "confirmed": {
    "at": "2026-10-08T11:51:04+00:00",
-   "fingerprint": "e4864f27ab48a99e"
+   "fingerprint": "de7f65253793ef60"
   },
   "age_in_prompt": false
  },
  "gigi": {
   "_note": "2026-10-06. Jeremy: white, tan, petite frame, medium breasts, long brown hair. Added from her three references: centre part, lighter sun-streaked ends, dark brown eyes. Ethnicity word left out on purpose (skin tone carries it; A/B on jojo/priyanka). Age 24 from the game. Teaches yoga mornings, tends bar nights.",
-  "frame": "petite frame",
   "prompt": "a young woman with tan skin, a petite frame and medium breasts, long dark brown hair, and dark brown eyes",
   "confirmed": {
    "at": "2026-10-09T19:44:51+00:00",
-   "fingerprint": "35f4648418886dcc"
+   "fingerprint": "073e2b73cbd80b65"
   },
   "age_in_prompt": false
  },
  "nisha": {
   "_note": "2026-10-06. Jeremy: skinny, medium brown skin, black wavy hair a little past her shoulders, brown eyes. Added from her four references: layered tousled waves, thick dark defined eyebrows, full lips. No ethnicity word (skin tone carries it; jojo/priyanka A/B). Age 26 from the game; a nurse at Chill General.",
-  "frame": "slim frame",
   "prompt": "a young woman with medium brown skin and a skinny, slim frame, black layered hair in soft tousled waves falling just past her shoulders, thick dark defined eyebrows, dark brown eyes and full lips",
   "confirmed": {
    "at": "2026-10-08T11:53:45+00:00",
-   "fingerprint": "9cdd6889c4990abc"
+   "fingerprint": "1445a2d8c0e466e3"
   },
   "age_in_prompt": false
  },
@@ -478,14 +449,14 @@
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-08T12:12:50+00:00",
-   "fingerprint": "21daa9a1bd71f9bf"
+   "fingerprint": "0949d88470788f7d"
   }
  },
  "aura": {
   "prompt": "a young woman with a curvy figure and a full bust, warm brown skin, very long black hair, dark brown eyes and full lips",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "156eaa3de3723d38"
+   "fingerprint": "57351a788327953c"
   },
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does)."
  },
@@ -494,14 +465,14 @@
   "age_in_prompt": false,
   "confirmed": {
    "at": "2026-10-10T02:51:32+00:00",
-   "fingerprint": "ea9fb41d815ff0be"
+   "fingerprint": "79c026afa219a3ac"
   }
  },
  "crystal": {
   "prompt": "An 18 year old girl with medium skin tone and long black hair, slim frame with medium sized breasts, full lips",
   "confirmed": {
    "at": "2026-10-10T02:44:33+00:00",
-   "fingerprint": "c95e2d38af35a0be"
+   "fingerprint": "895413da7060d85a"
   }
  },
  "diane": {
@@ -509,7 +480,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "237ac83c9e1ea466"
+   "fingerprint": "eaf85a6d3f6bd24c"
   }
  },
  "eve": {
@@ -517,7 +488,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "b7379eb3a87f6666"
+   "fingerprint": "8ba1832ddade1961"
   }
  },
  "gwen": {
@@ -525,7 +496,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "a30d8a29165b3216"
+   "fingerprint": "9aa86f8431a9fa4d"
   }
  },
  "jordan": {
@@ -534,7 +505,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "db9ad480b3af04fb"
+   "fingerprint": "0092fec0528a3abb"
   }
  },
  "kasia": {
@@ -542,7 +513,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "01b32eede8a21ece"
+   "fingerprint": "925ed5d7fc87f775"
   }
  },
  "lena": {
@@ -550,7 +521,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "bca5bc252af6d325"
+   "fingerprint": "7e090d642d7b38c7"
   }
  },
  "lizzie": {
@@ -558,7 +529,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "fd0c7cc1a1a3d90d"
+   "fingerprint": "d1b27fc97e73663a"
   }
  },
  "rivera": {
@@ -566,7 +537,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "02764ef5b4c7788a"
+   "fingerprint": "c246b54e8186fb68"
   }
  },
  "sarah": {
@@ -574,7 +545,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "d99dcecad40b5188"
+   "fingerprint": "f25b069da6c3ede1"
   }
  },
  "sienna": {
@@ -582,7 +553,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "62064d74228cf80b"
+   "fingerprint": "1e8c3565607a9863"
   }
  },
  "sunny": {
@@ -590,7 +561,7 @@
   "_note": "DRAFT 2026-10-08, read off her reference photos and Lora-Gen shots at Jeremy's request ('fill in all the rest that are blank based on what you see in the photos'). Gabi pattern: figure, bust, skin, hair, eyes, lips - no age, no ethnicity word, no freckles. Confirm or correct it on the Looks tab. 2026-10-08, Jeremy: hair is colour, dye and length only - no texture word, no highlights or lightened ends (they do not render when prompted; an all-over dye or underlayer does).",
   "confirmed": {
    "at": "2026-10-09T02:57:37+00:00",
-   "fingerprint": "abbaf4a05ca85ffc"
+   "fingerprint": "723a6a36899f9929"
   }
  }
 }

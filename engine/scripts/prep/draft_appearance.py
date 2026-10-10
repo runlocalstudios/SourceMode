@@ -31,7 +31,6 @@ NEW = {
         "features": ("very long loosely waved balayage hair - dark brown at the roots "
                      "melting to caramel-blonde at the ends - warm brown eyes, tanned "
                      "skin, freckles across her nose and cheeks"),
-        "frame": "slim athletic frame",
         "prompt": ("a 24-year-old deeply tanned white woman with a slim athletic figure, "
                    "a narrow waist and a medium-full bust, very long loosely waved "
                    "balayage hair that is dark brown at the roots and caramel-blonde at "
@@ -48,7 +47,6 @@ NEW = {
         "figure": "slim figure with a small waist and a medium bust",
         "features": ("very long loosely waved honey-blonde dyed hair, warm brown eyes, "
                      "light caramel-brown skin, full lips"),
-        "frame": "slim frame",
         "prompt": ("a 24-year-old Black woman with light caramel-brown skin, a slim "
                    "figure with a small waist and a medium bust, very long loosely waved "
                    "honey-blonde dyed hair, warm brown eyes and full lips"),
@@ -64,7 +62,6 @@ NEW = {
         "figure": "slim petite figure with a small waist and a medium bust",
         "features": ("very long straight jet-black hair, dark brown eyes, light olive "
                      "skin, full lips"),
-        "frame": "slim petite frame",
         "prompt": ("a 20-year-old Latina woman with a slim petite figure, a small waist "
                    "and a medium bust, light olive skin, very long straight jet-black "
                    "hair, dark brown eyes and full lips"),
@@ -80,7 +77,6 @@ NEW = {
         "figure": "slim figure with a defined waist and a full bust",
         "features": ("very long dark brown hair with soft waves, dark brown eyes, warm "
                      "light skin"),
-        "frame": "slim frame",
         "prompt": ("a 23-year-old East Asian woman with a slim figure, a defined waist "
                    "and a full bust, warm light skin, very long dark brown hair with "
                    "soft waves, and dark brown eyes"),
@@ -97,7 +93,6 @@ NEW = {
         "figure": "slim petite youthful figure with a small-medium bust",
         "features": ("very long wavy brown hair with sun-lightened caramel ends, warm "
                      "brown eyes, golden-tan skin, a soft round face"),
-        "frame": "slim petite frame",
         "prompt": ("an 18-year-old Asian woman with a slim petite youthful figure, "
                    "golden-tan skin, very long wavy brown hair with sun-lightened "
                    "caramel ends, warm brown eyes and a soft round face"),
@@ -113,7 +108,6 @@ NEW = {
         "figure": "slim figure with a small waist and a full bust",
         "features": ("very long straight light blonde hair, pale blue-grey eyes, fair "
                      "skin, soft features"),
-        "frame": "slim frame",
         "prompt": ("a 24-year-old white woman with fair skin, a slim figure with a small "
                    "waist and a full bust, very long straight light blonde hair, pale "
                    "blue-grey eyes and soft features"),
@@ -132,7 +126,6 @@ NEW = {
         "features": ("very long dark brown hair with a vivid turquoise dyed underlayer "
                      "showing at the ends beneath the top layer, dark brown eyes, "
                      "olive-tan skin, freckles across her nose, strong dark brows"),
-        "frame": "slim athletic frame",
         "prompt": ("a 26-year-old Latina woman with olive-tan skin, a slim athletic "
                    "figure with a narrow waist and a medium bust, very long dark brown "
                    "hair with a vivid turquoise dyed underlayer showing at the ends "
@@ -153,7 +146,6 @@ NEW = {
         "features": ("a chin-length dark brown bob parted to one side, black-framed "
                      "rectangular glasses she always wears, dark brown eyes, medium "
                      "brown skin, full lips"),
-        "frame": "slim frame",
         "prompt": ("a 22-year-old Indian woman with medium brown skin, a slim hourglass "
                    "figure with a small waist and a full bust, a chin-length dark brown "
                    "bob parted to one side, black-framed rectangular glasses, dark brown "
@@ -170,7 +162,6 @@ NEW = {
         "figure": "slim petite figure with a small waist and a small-medium bust",
         "features": ("very long straight black hair, dark brown eyes, medium brown skin, "
                      "a warm open face"),
-        "frame": "slim petite frame",
         "prompt": ("a 20-year-old Indian woman with medium brown skin, a slim petite "
                    "figure with a small waist, very long straight black hair, dark brown "
                    "eyes and a warm open face"),
@@ -187,7 +178,6 @@ NEW = {
         "figure": "slim figure with a modest bust",
         "features": ("long wavy copper-red hair, green eyes, fair freckled skin, warm "
                      "laugh lines"),
-        "frame": "slim frame",
         "prompt": ("a 38-year-old white woman with fair freckled skin, a slim figure "
                    "with a modest bust, long wavy copper-red hair and green eyes"),
         "age": 38,
@@ -203,7 +193,6 @@ NEW = {
         "figure": "curvy hourglass figure with a small waist and a full bust",
         "features": ("very long loosely waved platinum-blonde hair, green eyes, light "
                      "tanned skin, strong defined brows, full lips"),
-        "frame": "curvy frame",
         "prompt": ("a 33-year-old white woman with light tanned skin, a curvy hourglass "
                    "figure with a small waist and a full bust, very long loosely waved "
                    "platinum-blonde hair, green eyes, strong defined brows and full lips"),

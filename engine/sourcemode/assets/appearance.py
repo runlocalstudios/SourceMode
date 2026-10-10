@@ -96,37 +96,11 @@ def age_of(character: str) -> int | None:
     return int(own) if own else _load()["ages"].get(c)
 
 
-def frame(character: str) -> str:
-    """How an outfit sits on THIS character - "tiny frame", "curvy frame".
-
-    Empty when her record does not say, and an empty frame must produce no
-    clause at all. `render.py` hardcoded "fitted to her tiny frame" for every
-    character: true for amanda, who it was written for, and asserted for
-    everyone else. cici's own record reads "curvy, hourglass, large bust, full
-    hips" and the renderer was still telling the model she was tiny.
-
-    That is the same defect as vivienne's "long black hair" - a prompt stating a
-    trait the character's data contradicts - and it costs the same way, because
-    explicit text beats a LoRA's learned association.
-
-    `frame` is read first so the wording can be set deliberately; otherwise it
-    is taken from `build`/`figure`, and anything that does not reduce to a short
-    phrase is left out rather than guessed at.
-    """
-    rec = _load()["look"].get(character.lower()) or {}
-    own = (rec.get("frame") or "").strip()
-    if own:
-        return own
-    blob = " ".join(str(rec.get(k) or "") for k in ("build", "figure")).lower()
-    if not blob.strip():
-        return ""
-    # Only the two shapes that actually change how clothing reads. A record that
-    # says neither gets no clause, which is the safe answer.
-    if any(w in blob for w in ("petite", "skinny", "slim", "slender", "tiny")):
-        return "tiny frame"
-    if any(w in blob for w in ("curvy", "hourglass", "full hips", "thick", "voluptuous")):
-        return "curvy frame"
-    return ""
+# `frame` and the "fitted to her <frame>" clause are gone. Jeremy, 2026-10-10:
+# "Get rid of the fit drop down. It's too confusing ... there's no reason to
+# limit it to five types of frames when we can have somebody with a skinny
+# frame but super wide hips." The prompt field carries the whole body; a
+# fallback derived from `figure` had been sending vivienne "tiny frame".
 
 
 # Words the game's own prose uses about how a character LOOKS. Deliberately
@@ -276,7 +250,7 @@ REQUIRED = ("age", "prompt")
 # exact text on the Looks tab, bound to a fingerprint of the fields that reach a
 # prompt - so any later edit, by hand or by a script, unconfirms it - and check()
 # refuses an unconfirmed record like a missing one.
-CONFIRM_FIELDS = ("prompt", "frame", "negative")
+CONFIRM_FIELDS = ("prompt", "negative")
 
 
 def record_fingerprint(rec: dict) -> str:
@@ -294,7 +268,7 @@ def confirmed(character: str) -> bool:
 
 def confirm(character: str, fields: dict) -> dict:
     """Write his reviewed text and mark it confirmed. Only CONFIRM_FIELDS change;
-    an empty string clears a field (an empty frame means no fitted clause)."""
+    an empty string clears a field (an empty negative means none)."""
     import json as _json  # noqa: PLC0415
     from datetime import datetime, timezone  # noqa: PLC0415
 
@@ -349,9 +323,8 @@ def check(character: str) -> dict:
     `missing` are the fields the render prompt cannot do without: an age, and
     the appearance sentence. Without them the prompt is the trigger alone, and
     every trait the LoRA will not carry is lost - vivienne's sweep scored 0/90
-    that way. `warnings` are the things worth having: a frame so an outfit sits
-    on the right body, and a reference photo that embeds so the eval can score
-    and the judge page can show her.
+    that way. `warnings` are the things worth having: a reference photo that
+    embeds so the eval can score and the judge page can show her.
     """
     c = character.lower()
     rec = _load()["look"].get(c) or {}
@@ -366,8 +339,6 @@ def check(character: str) -> dict:
     elif not confirmed(c):
         missing.append("confirmed - Jeremy has not confirmed this record; review it on "
                        "the Looks tab (drafts carried invented details into two sweeps)")
-    if not frame(c):
-        warnings.append("frame - tiny / petite / slim / average / athletic / curvy, or omit; without it no fitted clause is sent")
     refs = Path("C:/Epic Games/Files/cnc info/codex/references")
     if refs.is_dir() and not any(refs.glob(f"{c}_*")):
         warnings.append("no reference photo under codex/references - the eval cannot "

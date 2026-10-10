@@ -132,14 +132,13 @@ sys.path.insert(0, str(Path("scripts/eval").resolve()))
 from asset_scenes import asset_prompts, tiebreaker_prompts  # noqa: E402
 # --no-description: Jeremy, 2026-10-08, on mei - "no character description at
 # all, just tag the photo caption with her Lora tag. I want to test if our
-# character descriptions are fucking it up". Her appearance sentence and the
-# fitted-frame clause come out of every scene; everything else in the prompt is
+# character descriptions are fucking it up". Her appearance sentence comes
+# out of every scene; everything else in the prompt is
 # byte-identical, so the two runs differ in that one thing. "a woman" stays as
 # the sex anchor (see the jojo note above) - it is the same arm Cat's test ran.
 if "--no-description" in _BARESEEN:
     import sourcemode.assets.render as _render  # noqa: E402
     _render.appearance_clause = lambda character, **_: "a woman"
-    _render.fitted_clause = lambda character: ""
 # --natural-prompt / --contract-prompt: Jeremy, 2026-10-09 - is the 1,900-character
 # contract prompt itself the problem? Same facts in the training caption's register,
 # ~70 words. Natural won (cassie ep18 12/20 vs 5/10) and is now render's default, so

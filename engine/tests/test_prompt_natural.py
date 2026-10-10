@@ -25,7 +25,6 @@ LOOKS = [
 def zara(monkeypatch):
     monkeypatch.setattr(R, "appearance_clause",
                         lambda c, age=True: "a young woman with a petite figure, fair skin, very long dark brown hair and brown eyes")
-    monkeypatch.setattr(R, "fitted_clause", lambda c: ", fitted to her tiny frame")
 
 
 def test_natural_is_short_and_in_the_captions_register(zara):

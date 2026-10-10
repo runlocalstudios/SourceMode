@@ -30,7 +30,6 @@ FLAT = re.compile(r"\b(overcast|fluorescent|dim|cool|flat|harsh)\b", re.I)
 def zara(monkeypatch):
     monkeypatch.setattr(R, "appearance_clause",
                         lambda c, age=True: ("a 22-year-old, " if age else "") + "a young woman with very long dark brown hair")
-    monkeypatch.setattr(R, "fitted_clause", lambda c: "")
 
 
 def test_twenty_distinct_prompts_in_the_natural_register(zara):

@@ -3,7 +3,7 @@
     GET  /appearance                   the page
     GET  /appearance/list              every record, unconfirmed first
     GET  /appearance/ref?char=&name=   one reference photo (web-sized)
-    POST /appearance/<char>/confirm    {prompt, frame, negative} -> confirmed record
+    POST /appearance/<char>/confirm    {prompt, negative, age, state_age} -> confirmed record
 
 Jeremy, 2026-10-06, after Bri's invented "lighter caramel ends" and Jaina's
 freckles: "I need to now review all of these because they're so fucked up that
@@ -27,7 +27,8 @@ RACE = re.compile(r"\b(?:white|black|latina|latino|hispanic|asian|half-asian|eas
                   r"southeast asian|south asian|indian|filipina|korean|japanese|chinese|"
                   r"vietnamese|thai|irish|italian|italian-american|mediterranean|caucasian|"
                   r"african|middle eastern|arab|persian|mixed|biracial)\b", re.I)
-FRAMES = ("", "tiny frame", "petite frame", "slim frame", "average frame", "athletic frame", "curvy frame")
+# The Fit dropdown is gone - Jeremy, 2026-10-10: "It's too confusing ... I
+# already have the description in there for pretty much every character."
 
 
 def _refs(char: str) -> list[str]:
@@ -53,7 +54,7 @@ def records() -> list[dict]:
             "character": c, "age": A.age_of(c), "own_age": rec.get("age"),
             "state_age": rec.get("age_in_prompt", True) is not False,
             "game_age": (A._load()["ages"] or {}).get(c), "prompt": rec.get("prompt", ""),
-            "frame": rec.get("frame", ""), "negative": rec.get("negative", ""),
+            "negative": rec.get("negative", ""),
             "note": rec.get("_note", ""), "confirmed": A.confirmed(c),
             "confirmed_at": (rec.get("confirmed") or {}).get("at"),
             "race": sorted({m.group(0) for m in RACE.finditer(rec.get("prompt", ""))}),
@@ -111,7 +112,6 @@ const $=id=>document.getElementById(id);
 let recs=[];
 const refUrl=(c,n)=>'/appearance/ref?char='+encodeURIComponent(c)+'&name='+encodeURIComponent(n);
 const RACE=/\b(white|black|latina|latino|hispanic|asian|half-asian|east asian|southeast asian|south asian|indian|filipina|korean|japanese|chinese|vietnamese|thai|irish|italian|italian-american|mediterranean|caucasian|african|middle eastern|arab|persian|mixed|biracial)\b/gi;
-const FRAMES=['','tiny frame','petite frame','slim frame','average frame','athletic frame','curvy frame'];
 
 async function load(){
   try{ recs=await SM.getJSON('/appearance/list'); }
@@ -148,7 +148,6 @@ function draw(){
   $('sum').textContent=open?(open+' of '+recs.length+' still to confirm. A sweep or shoot will not render a character until her record is confirmed.')
                             :('All '+recs.length+' confirmed.');
   SM.set($('list'),null,shown().map(r=>{
-    const frames=FRAMES.includes(r.frame)?FRAMES:FRAMES.concat([r.frame]);
     return '<div class="card lk '+(r.confirmed?'e-done':'e-you')+'" data-c="'+SM.esc(r.character)+'">'
       +'<div class=card-head>'+SM.pill(r.confirmed?'done':'you')
       +'<h3>'+SM.esc(r.character)+(r.age?' &middot; '+r.age:'')+'</h3>'
@@ -162,9 +161,7 @@ function draw(){
       +'<input data-k=age inputmode=numeric style="flex:0 0 5em;width:5em" value="'
         +SM.esc(r.own_age==null?'':String(r.own_age))+'" placeholder="'+SM.esc(r.game_age==null?'':String(r.game_age))+'">'
         +'<span class=dim>'+(r.game_age!=null?'game: '+r.game_age+'; blank uses it':'not in the game')+'. Untick to leave age to the LoRA.</span></div>'
-      +'<div class=row><label>Fit</label><select data-k=frame>'
-        +frames.map(f=>'<option value="'+SM.esc(f)+'"'+(f===r.frame?' selected':'')+'>'+(f||'(none)')+'</option>').join('')
-      +'</select><input data-k=negative placeholder="negative (optional)" value="'+SM.esc(r.negative||'')+'"></div>'
+      +'<div class=row><label>Negative</label><input data-k=negative placeholder="negative (optional)" value="'+SM.esc(r.negative||'')+'"></div>'
       +'<div class=row><button class="btn btn-primary" data-act=confirm>'+(r.confirmed?'Save &amp; re-confirm':'Confirm')+'</button></div>'
       +(r.note?'<details class=note><summary>notes</summary>'+SM.esc(r.note)+'</details>':'')
       +'</div>';
@@ -188,7 +185,7 @@ document.addEventListener('click',async e=>{
   b.disabled=true;
   try{
     await SM.postJSON('/appearance/'+encodeURIComponent(c)+'/confirm',
-      {prompt:val('prompt'),frame:val('frame'),negative:val('negative'),age:val('age'),state_age:ticked('state_age')});
+      {prompt:val('prompt'),negative:val('negative'),age:val('age'),state_age:ticked('state_age')});
     SM.toast(c+' confirmed');
     await load();
   }catch(err){ SM.toast(err.message); b.disabled=false; }
