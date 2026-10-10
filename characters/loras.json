@@ -49,6 +49,28 @@
   "basis": "epoch-choices: dense_bri_v2_asset_nocaramel 12/20 at ep20",
   "locked_at": "2026-10-09T19:58:50+00:00"
  },
+ "cassie": {
+  "file": "cassie_v2-000018.safetensors",
+  "epoch": 18,
+  "dataset": "cassie_v2",
+  "output_name": "cassie_v2",
+  "sha256": "0e704b816754c3ade335535c65c08bfbfb1cafdeb34ae40405d7cb3fa125e21f",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\cassie_v2\\cassie_v2-000018.safetensors",
+  "basis": "dense_cassie_v2_asset_natural 12/20 at epoch 18",
+  "locked_at": "2026-10-09T23:55:17+00:00"
+ },
+ "cat": {
+  "file": "cat_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "cat_v2",
+  "output_name": "cat_v2",
+  "sha256": "47d20cb8af67737a6ec1800c1330f3f2aff7c5f36bbd060b8cbc2d2174d7fcfa",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\cat_v2\\cat_v2-000022.safetensors",
+  "basis": "dense_cat_v2_asset_natural 16/20 at epoch 22",
+  "locked_at": "2026-10-09T23:56:18+00:00"
+ },
  "cindy": {
   "file": "cindy_v2-000023.safetensors",
   "epoch": 23,
@@ -92,6 +114,17 @@
   "comfy": "sourcemode\\geena_v2\\geena_v2-000021.safetensors",
   "basis": "pruned to one; dense_geena_v2 4/10 at ep21 (tied with ep17)",
   "locked_at": "2026-10-09T20:01:09+00:00"
+ },
+ "gigi": {
+  "file": "gigi_v2.safetensors",
+  "epoch": 24,
+  "dataset": "gigi_v2",
+  "output_name": "gigi_v2",
+  "sha256": "33e38f65f01738f08f20a86b74fe4518a0fc62c944563fdb8893bd173d757404",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\gigi_v2\\gigi_v2.safetensors",
+  "basis": "dense_gigi_v2_asset_desc2 7/10 at epoch 24",
+  "locked_at": "2026-10-09T23:50:54+00:00"
  },
  "hannah": {
   "file": "hannah_v2-000022.safetensors",
@@ -178,8 +211,8 @@
   "sha256": "092cd3cd6d529f2bbaeee2fcdb25ec46be359c7fa6f58eda20c42d4292086f01",
   "bytes": 1179978912,
   "comfy": "sourcemode\\mei_v2\\mei_v2-000022.safetensors",
-  "basis": "verdicts: dense_mei_v2_asset_n20 13/20 at ep22",
-  "locked_at": "2026-10-09T19:59:06+00:00"
+  "basis": "dense_mei_v2_asset_natural 19/20 at epoch 22",
+  "locked_at": "2026-10-09T23:56:50+00:00"
  },
  "mira": {
   "file": "mira_v2-000022.safetensors",
