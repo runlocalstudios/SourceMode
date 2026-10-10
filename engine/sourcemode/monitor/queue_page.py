@@ -1227,7 +1227,8 @@ def render_target(cfg: dict, cmd: list[str]) -> tuple[Path, str] | None:
         if "dense_epoch_eval.py" in joined:
             i = next(k for k, c in enumerate(pos) if c.endswith("dense_epoch_eval.py"))
             sub, tag = pos[i + 2], flag("--tag")
-            return out / f"dense_{sub}_asset{'_' + tag if tag else ''}", "scene_*.png"
+            scene_set = flag("--scenes") or "asset"       # asset or tiebreaker
+            return out / f"dense_{sub}_{scene_set}{'_' + tag if tag else ''}", "scene_*.png"
     except (OSError, ValueError, KeyError, StopIteration, IndexError):
         return None
     return None
