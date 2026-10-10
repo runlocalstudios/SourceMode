@@ -979,6 +979,9 @@ def now_card(jobs: list[dict], status: dict | None,
         "job_id": run["id"] if run else None,
         "who": (run or {}).get("who"), "what": (run or {}).get("what"),
         "kind": (run or {}).get("kind"),
+        # a train job's own sweep reports as renders; plan() must not add the
+        # sweep estimate on top of an eta that already IS the sweep
+        "phase": "sweep" if sweep else ("train" if training_job else None),
         "epoch": tr.get("epoch") if training_job else None,
         "epochs": tr.get("epochs") if training_job else None,
         "step": step if training_job else r_done,
@@ -1613,7 +1616,11 @@ def plan(cfg: dict, status: dict | None = None) -> dict:
             continue
         est = j["estimate"] or {}
         if j["status"] == "running":
-            sweep = (est.get("sweep_s") or 0.0) if j["kind"] == "train" else 0.0
+            # Rivera, 2026-10-10: "20 of 90 renders ... then the sweep at 134m"
+            # - the job was already IN its sweep, and the eta below was the
+            # sweep's own. Add the sweep only while the trainer is still training.
+            sweep = ((est.get("sweep_s") or 0.0)
+                     if j["kind"] == "train" and nowb.get("phase") != "sweep" else 0.0)
             if nowb.get("eta_s") is not None:
                 # the trainer's own tqdm ETA, then the sweep this SAME job owns
                 # ("LoRA training, then the epoch sweep" is one queue entry)
