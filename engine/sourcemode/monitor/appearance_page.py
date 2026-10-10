@@ -27,7 +27,7 @@ RACE = re.compile(r"\b(?:white|black|latina|latino|hispanic|asian|half-asian|eas
                   r"southeast asian|south asian|indian|filipina|korean|japanese|chinese|"
                   r"vietnamese|thai|irish|italian|italian-american|mediterranean|caucasian|"
                   r"african|middle eastern|arab|persian|mixed|biracial)\b", re.I)
-FRAMES = ("", "tiny frame", "petite frame", "slim frame", "medium build", "athletic frame", "curvy frame")
+FRAMES = ("", "tiny frame", "petite frame", "slim frame", "average frame", "athletic frame", "curvy frame")
 
 
 def _refs(char: str) -> list[str]:
@@ -111,7 +111,7 @@ const $=id=>document.getElementById(id);
 let recs=[];
 const refUrl=(c,n)=>'/appearance/ref?char='+encodeURIComponent(c)+'&name='+encodeURIComponent(n);
 const RACE=/\b(white|black|latina|latino|hispanic|asian|half-asian|east asian|southeast asian|south asian|indian|filipina|korean|japanese|chinese|vietnamese|thai|irish|italian|italian-american|mediterranean|caucasian|african|middle eastern|arab|persian|mixed|biracial)\b/gi;
-const FRAMES=['','tiny frame','petite frame','slim frame','medium build','athletic frame','curvy frame'];
+const FRAMES=['','tiny frame','petite frame','slim frame','average frame','athletic frame','curvy frame'];
 
 async function load(){
   try{ recs=await SM.getJSON('/appearance/list'); }

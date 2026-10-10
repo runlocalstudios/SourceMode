@@ -63,7 +63,8 @@ def test_a_character_with_no_record_is_told_nothing():
 
 
 @pytest.mark.parametrize(("who", "want"), [("amanda", "tiny"), ("zara", "tiny"),
-                                           ("cici", "curvy")])
+                                           # cici: curvy -> average on the Looks tab, 2026-10-10
+                                           ("cici", "average")])
 def test_the_frame_comes_from_the_characters_own_record(who, want):
     assert want in frame(who)
     assert f"fitted to her {want} frame" in shot_prompt(who, SLOT, who)
