@@ -726,6 +726,12 @@ def with_clause(caption: str, clause: str,
 
 
 OFF_CAM = "looking off camera"
+#: Every off-camera wording in the live sets, 2026-10-10: "looking off camera"
+#: 683, "looking just off camera" 152, "looking slightly off camera" 7, plus
+#: "...off camera at a computer screen" and "looking down and away from the
+#: camera". Matching only the first read kasia src_003's "just off camera" as
+#: "Currently: Looking at".
+_OFF_CAM_RE = re.compile(r"^looking\b.*\b(?:off camera|away from the camera)\b", re.I)
 
 
 def gaze_fix(caption: str, uncertain: list | None) -> dict | None:
@@ -740,9 +746,9 @@ def gaze_fix(caption: str, uncertain: list | None) -> dict | None:
     Every row in the list carries it, not just the fix bar.
     """
     parts = [x.strip() for x in (caption or "").split(",") if x.strip()]
-    if OFF_CAM in parts:
+    if any(_OFF_CAM_RE.search(x) for x in parts):
         return {"kind": "at_cam", "current": "Looking off",
-                "caption": ", ".join(x for x in parts if x != OFF_CAM)}
+                "caption": ", ".join(x for x in parts if not _OFF_CAM_RE.search(x))}
     if "gaze?" in (uncertain or []):
         return {"kind": "off_cam", "current": "Looking at",
                 "caption": with_clause(caption or "", OFF_CAM)}

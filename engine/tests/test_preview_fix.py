@@ -311,3 +311,17 @@ def test_a_same_second_edit_explains_a_lapsed_approval(tmp_path):
     assert rec["stale"] is True
     assert rec["n_since"] >= 1
     assert rec["since"][-1]["image"] == "0.png"
+
+
+def test_every_off_camera_wording_reads_looking_off():
+    """kasia src_003 said "looking just off camera" and read "Looking at"."""
+    from sourcemode.train.preview import gaze_fix
+
+    for clause in ("looking just off camera", "looking slightly off camera",
+                   "looking off camera at a computer screen",
+                   "looking down and away from the camera"):
+        g = gaze_fix(f"kasia, a waist-up portrait, {clause}, her hair in a ponytail", ["gaze?"])
+        assert g["current"] == "Looking off", clause
+        assert g["caption"] == "kasia, a waist-up portrait, her hair in a ponytail"
+    # a look that is not off camera is left alone
+    assert gaze_fix("x, looking over her shoulder", []) is None
