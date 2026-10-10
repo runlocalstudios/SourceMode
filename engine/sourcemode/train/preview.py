@@ -672,6 +672,7 @@ def set_caption(root: Path, ds_id: str, name: str, caption: str) -> dict:
     (root / "previews" / f"{ds_id}.json").write_text(json.dumps(doc, indent=1), encoding="utf-8")
     return {"name": name, "caption": caption, "missing": entry["missing"],
             "uncertain": entry.get("uncertain", []), "uncaptioned": entry["uncaptioned"],
+            "gaze_fix": gaze_fix(caption, entry.get("uncertain")),
             "fingerprint": doc["fingerprint"], "captions": doc["captions"], "approval": approval_state(root, ds_id)}
 
 
@@ -724,6 +725,27 @@ def with_clause(caption: str, clause: str,
     return ", ".join(parts)
 
 
+OFF_CAM = "looking off camera"
+
+
+def gaze_fix(caption: str, uncertain: list | None) -> dict | None:
+    """The one gaze button a row gets, both ways. Jeremy, 2026-10-10: a row
+    captioned off camera gets "Looking at", which takes the clause out (looking
+    at the lens is the default and is never captioned); a row flagged `gaze?`
+    that does not say it gets "Off cam", which puts it in. Every row in the
+    list carries it, not just the fix bar - the bar alone left the button
+    missing on rows already captioned off camera and on every unfixed row.
+    """
+    parts = [x.strip() for x in (caption or "").split(",") if x.strip()]
+    if OFF_CAM in parts:
+        return {"kind": "at_cam", "label": "Looking at",
+                "caption": ", ".join(x for x in parts if x != OFF_CAM)}
+    if "gaze?" in (uncertain or []):
+        return {"kind": "off_cam", "label": "Off cam",
+                "caption": with_clause(caption or "", OFF_CAM)}
+    return None
+
+
 def fix_rows(root: Path, ds_id: str) -> dict:
     """The short list: only rows with something to DO, each with its suggestion.
 
@@ -740,10 +762,7 @@ def fix_rows(root: Path, ds_id: str) -> dict:
         reasons = (["NO CAPTION"] if im.get("uncaptioned") else []) \
             + list(im.get("uncertain") or [])
         cap = im.get("caption") or ""
-        sug = None
-        if "gaze?" in reasons and "looking off camera" not in cap:
-            sug = {"kind": "off_cam",
-                   "caption": with_clause(cap, "looking off camera")}
+        sug = gaze_fix(cap, im.get("uncertain"))
         rows.append({"name": im["name"], "reasons": reasons, "caption": cap,
                      "suggestion": sug})
     rows.sort(key=lambda r: (0 if "NO CAPTION" in r["reasons"] else 1, r["name"]))
@@ -868,7 +887,9 @@ def preview_payload(root: Path, ds_id: str) -> dict | None:
     doc = load_preview(root, ds_id)
     if doc is None:
         return None
-    strip = lambda ims: [{k: v for k, v in im.items() if k not in ("path", "home")} for im in ims]
+    strip = lambda ims: [{**{k: v for k, v in im.items() if k not in ("path", "home")},
+                          "gaze_fix": gaze_fix(im.get("caption", ""), im.get("uncertain"))}
+                         for im in ims]
     return {**doc, "approval": approval_record(root, ds_id),
             "appearance": _appearance_for(ds_id),
             "images": strip(doc["images"]), "excluded": strip(doc.get("excluded", []))}
@@ -930,6 +951,7 @@ OWN_CSS = r"""
   background:var(--photo);cursor:zoom-in}
 .drow .cap{flex:1;min-width:0}
 .drow.out{opacity:.4}
+.drow .gz:not(:empty){margin-top:var(--s2)}
 .drow.hide{display:none}
 .drow .rowtop{display:flex;gap:var(--s2);align-items:flex-start}
 .drow .rowtop .cap-box{flex:1}
@@ -1120,6 +1142,10 @@ function chipsFor(im){
     +(im.missing||[]).map(m=>'<span class=chip>no '+SM.esc(m)+'</span>').join('');
 }
 const looks=im=>!!(im.uncaptioned||(im.uncertain||[]).length);
+/* "Looking at" on a row captioned off camera, "Off cam" on a gaze? row that
+   is not - gaze_fix() on the server decides which, the page only draws it */
+const gazeBtn=im=>im.gaze_fix?'<button class="btn" data-act=gaze data-name="'
+  +SM.esc(im.name)+'">'+SM.esc(im.gaze_fix.label)+'</button>':'';
 
 function rows(){
   const all=[...(set.images||[]).map(i=>({...i,_out:false})),
@@ -1142,6 +1168,7 @@ function rows(){
       +' title="'+(im._out?'put back in the training set':'remove from the training set')
       +'">'+(im._out?'&#8626;':'&#10007;')+'</button>'
       +'</div><div class=chips>'+chipsFor(im)+'</div>'
+      +'<div class=gz data-gz>'+gazeBtn(im)+'</div>'
       +'<div class=meta>'+SM.esc(im.name)+(meta?' · '+meta:'')+'</div>'
       +'</div></div>';
   }
@@ -1242,7 +1269,7 @@ function fixBar(){
     +'<span class=lbl><b>Fix '+(fixAt+1)+' of '+fix.rows.length+'</b>'
     +'<span>'+SM.esc(row.reasons.join(' · '))+'</span></span>'
     +(sug?'<button class="btn btn-primary" data-act=applysug data-name="'
-       +SM.esc(row.name)+'">Apply &ldquo;off cam&rdquo;</button>':'')
+       +SM.esc(row.name)+'">'+SM.esc(sug.label)+'</button>':'')
     +'<button class="btn" data-act=fixnext>'+(fixAt+1>=fix.rows.length?'Done':'Skip')
     +'</button>'
     +'<button class="btn btn-icon btn-ghost" data-act=endfix aria-label="leave fix mode">'
@@ -1270,6 +1297,7 @@ document.addEventListener('click',async e=>{
     if(a==='approve') await approve(b.dataset.v==='1');
     else if(a==='toggle') await toggle(b.dataset.name,b.dataset.out==='1');
     else if(a==='applysug') await applySuggestion(b.dataset.name);
+    else if(a==='gaze') await applyGaze(b.dataset.name);
   }catch(err){ SM.toast(err.message); }
   finally{ b.disabled=false; }
 });
@@ -1349,10 +1377,22 @@ function applyCaption(name,r){
   }
   const ent=[...(set.images||[]),...(set.excluded||[])].find(i=>i&&i.name===name);
   if(ent){ ent.caption=r.caption; ent.missing=r.missing;
-           ent.uncertain=r.uncertain; ent.uncaptioned=r.uncaptioned; }
+           ent.uncertain=r.uncertain; ent.uncaptioned=r.uncaptioned;
+           ent.gaze_fix=r.gaze_fix;
+           const gz=el&&el.querySelector('[data-gz]'); if(gz) gz.innerHTML=gazeBtn(ent); }
   set.captions=r.captions; set.approval=r.approval;
   refreshLook(name,r);
   refreshFix().then(()=>{ header(); bar(); });
+}
+
+async function applyGaze(name){
+  const ent=[...(set.images||[]),...(set.excluded||[])].find(i=>i&&i.name===name);
+  if(!ent||!ent.gaze_fix) return;
+  const label=ent.gaze_fix.label;
+  const r=await SM.postJSON('/dataset/'+encodeURIComponent(set.id)+'/caption',
+    {name:name,caption:ent.gaze_fix.caption});
+  applyCaption(name,r);
+  SM.toast(label==='Off cam'?'captioned looking off camera':'off-camera clause removed');
 }
 
 async function applySuggestion(name){

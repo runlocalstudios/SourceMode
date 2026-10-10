@@ -111,12 +111,45 @@ def test_only_a_gaze_row_gets_a_suggestion(tmp_path):
     assert rows["d.png"]["suggestion"] is None   # nothing automatic fits
 
 
-def test_a_gaze_row_that_already_says_it_gets_no_suggestion(tmp_path):
+def test_a_gaze_row_that_already_says_it_gets_looking_at(tmp_path):
     root, _ = _ds(tmp_path, [
         {"name": "c.png", "caption": "x, looking off camera, her hair loose",
          "uncertain": ["gaze?"]},
     ])
-    assert fix_rows(root, "t_v2")["rows"][0]["suggestion"] is None
+    sug = fix_rows(root, "t_v2")["rows"][0]["suggestion"]
+    assert sug["kind"] == "at_cam" and sug["label"] == "Looking at"
+    assert sug["caption"] == "x, her hair loose"
+
+
+def test_gaze_fix_both_ways_and_round_trips():
+    from sourcemode.train.preview import gaze_fix
+
+    cap = "x, waist-up, her hair loose"
+    off = gaze_fix(cap, ["gaze?"])
+    assert off["label"] == "Off cam"
+    assert off["caption"] == "x, waist-up, looking off camera, her hair loose"
+    back = gaze_fix(off["caption"], ["gaze?"])
+    assert back["label"] == "Looking at" and back["caption"] == cap
+    # captioned off camera without a flag still gets "Looking at"
+    assert gaze_fix(off["caption"], [])["label"] == "Looking at"
+    # unflagged and not captioned: nothing
+    assert gaze_fix(cap, []) is None and gaze_fix(cap, ["not lora-gen"]) is None
+
+
+def test_every_row_in_the_payload_and_every_save_carries_its_gaze_button(tmp_path):
+    from sourcemode.train.preview import preview_payload, set_caption
+
+    root, _ = _ds(tmp_path, [
+        {"name": "c.png", "caption": "x, waist-up", "uncertain": ["gaze?"]},
+        {"name": "d.png", "caption": "x, looking off camera"},
+        {"name": "e.png", "caption": "x, waist-up"},
+    ])
+    by = {im["name"]: im["gaze_fix"] for im in preview_payload(root, "t_v2")["images"]}
+    assert by["c.png"]["label"] == "Off cam"
+    assert by["d.png"]["label"] == "Looking at"
+    assert by["e.png"] is None
+    r = set_caption(root, "t_v2", "c.png", by["c.png"]["caption"])
+    assert r["gaze_fix"]["label"] == "Looking at"
 
 
 def test_by_reason_counts_and_offers_a_bulk_where_one_exists(tmp_path):
