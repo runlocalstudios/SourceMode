@@ -94,15 +94,15 @@
   "locked_at": "2026-10-09T20:02:25+00:00"
  },
  "gabi": {
-  "file": "gabi_full-000010.safetensors",
-  "epoch": 10,
-  "dataset": "gabi_curated",
-  "output_name": "gabi_full",
-  "sha256": "c0293df206f24682db1f501cb7b832a83e5ab701be6bcc11c49095cda3d8b4cd",
-  "bytes": 1179978920,
-  "comfy": "sourcemode\\gabi_full\\gabi_full-000010.safetensors",
-  "basis": "gabi_r64_stage2 arm 'rank32 epoch 10 (current best)'; trained on trigger gabi_ch",
-  "locked_at": "2026-10-09T20:01:43+00:00"
+  "file": "gabi_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "gabi_v2",
+  "output_name": "gabi_v2",
+  "sha256": "9f1496a25b0cac8d7ec39334f735b47c291b139e3bce20305110013c22eb3466",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\gabi_v2\\gabi_v2-000022.safetensors",
+  "basis": "dense_gabi_v2_asset 10/10 at epoch 22",
+  "locked_at": "2026-10-10T13:41:37+00:00"
  },
  "geena": {
   "file": "geena_v2-000021.safetensors",
@@ -180,6 +180,17 @@
   "comfy": "sourcemode\\keiko_v2\\keiko_v2-000022.safetensors",
   "basis": "pruned to one; dense_keiko_v2 7/20 at ep22",
   "locked_at": "2026-10-09T20:00:12+00:00"
+ },
+ "kimmy": {
+  "file": "kimmy_v2-000019.safetensors",
+  "epoch": 19,
+  "dataset": "kimmy_v2",
+  "output_name": "kimmy_v2",
+  "sha256": "353a08d414ed1d2856e1922d3b1eeb9cbb8f36c7097d729b45403bd334bee716",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\kimmy_v2\\kimmy_v2-000019.safetensors",
+  "basis": "dense_kimmy_v2_asset_natural 15/20 at epoch 19",
+  "locked_at": "2026-10-10T15:29:25+00:00"
  },
  "maddie": {
   "file": "maddie_v2-000022.safetensors",
