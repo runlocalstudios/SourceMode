@@ -729,19 +729,22 @@ OFF_CAM = "looking off camera"
 
 
 def gaze_fix(caption: str, uncertain: list | None) -> dict | None:
-    """The one gaze button a row gets, both ways. Jeremy, 2026-10-10: a row
-    captioned off camera gets "Looking at", which takes the clause out (looking
-    at the lens is the default and is never captioned); a row flagged `gaze?`
-    that does not say it gets "Off cam", which puts it in. Every row in the
-    list carries it, not just the fix bar - the bar alone left the button
-    missing on rows already captioned off camera and on every unfixed row.
+    """A row's gaze control: what the caption says NOW, and the caption a
+    Switch would write. Jeremy, 2026-10-10: the page shows "Currently: Looking
+    at" or "Currently: Looking off" and one Switch button - a button named for
+    what she is NOT doing was hard to review.
+
+    Rows captioned off camera get it (Switch takes the clause out; looking at
+    the lens is the default and is never captioned), and so do rows flagged
+    `gaze?` that are not (Switch puts it in where with_clause always has).
+    Every row in the list carries it, not just the fix bar.
     """
     parts = [x.strip() for x in (caption or "").split(",") if x.strip()]
     if OFF_CAM in parts:
-        return {"kind": "at_cam", "label": "Looking at",
+        return {"kind": "at_cam", "current": "Looking off",
                 "caption": ", ".join(x for x in parts if x != OFF_CAM)}
     if "gaze?" in (uncertain or []):
-        return {"kind": "off_cam", "label": "Off cam",
+        return {"kind": "off_cam", "current": "Looking at",
                 "caption": with_clause(caption or "", OFF_CAM)}
     return None
 
@@ -951,7 +954,8 @@ OWN_CSS = r"""
   background:var(--photo);cursor:zoom-in}
 .drow .cap{flex:1;min-width:0}
 .drow.out{opacity:.4}
-.drow .gz:not(:empty){margin-top:var(--s2)}
+.drow .gz:not(:empty){margin-top:var(--s2);display:flex;gap:var(--s2);align-items:center}
+.gznow{font:var(--t-small)}
 .drow.hide{display:none}
 .drow .rowtop{display:flex;gap:var(--s2);align-items:flex-start}
 .drow .rowtop .cap-box{flex:1}
@@ -1142,10 +1146,11 @@ function chipsFor(im){
     +(im.missing||[]).map(m=>'<span class=chip>no '+SM.esc(m)+'</span>').join('');
 }
 const looks=im=>!!(im.uncaptioned||(im.uncertain||[]).length);
-/* "Looking at" on a row captioned off camera, "Off cam" on a gaze? row that
-   is not - gaze_fix() on the server decides which, the page only draws it */
-const gazeBtn=im=>im.gaze_fix?'<button class="btn" data-act=gaze data-name="'
-  +SM.esc(im.name)+'">'+SM.esc(im.gaze_fix.label)+'</button>':'';
+/* "Currently: Looking at / Looking off" + Switch - gaze_fix() on the server
+   decides which rows get it and what Switch writes; the page only draws it */
+const gazeNow=g=>'<span class=gznow>Currently: <b>'+SM.esc(g.current)+'</b></span>';
+const gazeBtn=im=>im.gaze_fix?gazeNow(im.gaze_fix)+'<button class="btn" data-act=gaze data-name="'
+  +SM.esc(im.name)+'">Switch</button>':'';
 
 function rows(){
   const all=[...(set.images||[]).map(i=>({...i,_out:false})),
@@ -1268,8 +1273,8 @@ function fixBar(){
     +(fixAt===0?' disabled':'')+'>&#8249;</button>'
     +'<span class=lbl><b>Fix '+(fixAt+1)+' of '+fix.rows.length+'</b>'
     +'<span>'+SM.esc(row.reasons.join(' · '))+'</span></span>'
-    +(sug?'<button class="btn btn-primary" data-act=applysug data-name="'
-       +SM.esc(row.name)+'">'+SM.esc(sug.label)+'</button>':'')
+    +(sug?gazeNow(sug)+'<button class="btn btn-primary" data-act=applysug data-name="'
+       +SM.esc(row.name)+'">Switch</button>':'')
     +'<button class="btn" data-act=fixnext>'+(fixAt+1>=fix.rows.length?'Done':'Skip')
     +'</button>'
     +'<button class="btn btn-icon btn-ghost" data-act=endfix aria-label="leave fix mode">'
@@ -1388,11 +1393,10 @@ function applyCaption(name,r){
 async function applyGaze(name){
   const ent=[...(set.images||[]),...(set.excluded||[])].find(i=>i&&i.name===name);
   if(!ent||!ent.gaze_fix) return;
-  const label=ent.gaze_fix.label;
   const r=await SM.postJSON('/dataset/'+encodeURIComponent(set.id)+'/caption',
     {name:name,caption:ent.gaze_fix.caption});
   applyCaption(name,r);
-  SM.toast(label==='Off cam'?'captioned looking off camera':'off-camera clause removed');
+  SM.toast('now: '+(r.gaze_fix?r.gaze_fix.current:'Looking at'));
 }
 
 async function applySuggestion(name){
