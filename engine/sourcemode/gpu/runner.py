@@ -48,6 +48,22 @@ def still_running(job: dict, processes: list[tuple[int, str]]) -> bool:
     return any(p == pid and key in (cmd or "").lower() for p, cmd in processes)
 
 
+def produced(job: dict) -> tuple[int, int] | None:
+    """(written, expected) images for a job, counted the way the GPU page counts
+    them, or None when the job's output cannot be counted."""
+    try:
+        from ..config import load_config  # noqa: PLC0415
+        from ..monitor.queue_page import job_done, job_expect  # noqa: PLC0415
+
+        exp = job_expect(job)
+        if not exp:
+            return None
+        done = job_done(load_config(), job)
+        return None if done is None else (int(done), int(exp[0]))
+    except Exception:  # noqa: BLE001 - a count that cannot be made is "unknown"
+        return None
+
+
 def approval_ok(ds_id: str) -> tuple[bool, str]:
     """Reuses the engine's own approval record - the same check `sourcemode train
     approved` makes, called in-process rather than shelled out, so there is one
@@ -66,7 +82,7 @@ def approval_ok(ds_id: str) -> tuple[bool, str]:
 class Runner:
     def __init__(self, outputs_root: Path, *, log=print, poll: float = POLL_SECONDS,
                  sleeper=time.sleep, approval=approval_ok, busy=gpu_busy,
-                 procs=process_list):
+                 procs=process_list, produced=produced):
         self.outputs = outputs_root
         self.qpath = q.queue_path(outputs_root)
         self.logs = outputs_root / "logs"
@@ -76,6 +92,7 @@ class Runner:
         self.approval = approval
         self.busy = busy
         self.procs = procs
+        self.produced = produced
         self._said: str | None = None
 
     def _say_once(self, msg: str) -> None:
@@ -130,9 +147,20 @@ class Runner:
                                    f" left by an earlier runner - waiting for it to finish")
                     return "busy"
             for j in left:
+                # 2026-10-10: cat:club wrote all 8 shots and was recorded as
+                # failed because only the exit code was lost. Count its output.
+                got = self.produced(j)
+                if got and got[1] and got[0] >= got[1]:
+                    q.mark_finished(doc, j["id"], 0)
+                    q.find(doc, j["id"])["note"] = ((j.get("note") or "") + "; " if j.get("note") else "") + (
+                        f"runner died while it ran; closed as done - {got[0]} of {got[1]} images written")
+                    self.log(f"END {j['id']} {j['kind']}:{j['label']} done - its runner died while it ran,"
+                             f" but all {got[1]} images were written")
+                    continue
                 q.mark_lost(doc, j["id"])
                 self.log(f"LOST {j['id']} {j['kind']}:{j['label']} - its runner died while it ran;"
-                         f" the process has ended, exit code unknown")
+                         f" the process has ended, exit code unknown"
+                         + (f", {got[0]} of {got[1]} images written" if got else ""))
             q.save(self.qpath, doc)
 
         job = q.head(doc)

@@ -164,6 +164,7 @@ def test_busy_can_ignore_our_own_children():
 
 def _runner(tmp_path, **kw):
     kw.setdefault("busy", lambda: [])
+    kw.setdefault("produced", lambda job: None)
     kw.setdefault("approval", lambda ds: (True, ""))
     return Runner(tmp_path, log=lambda m: None, poll=0, sleeper=lambda s: None, **kw)
 
@@ -341,3 +342,21 @@ def test_the_runner_log_survives_an_emoji_shortcode_and_a_dumb_console(tmp_path,
     assert seen
     text = (tmp_path / "logs" / "gpu-runner.log").read_text(encoding="utf-8")
     assert "shoot:cat:club" in text and "\U0001f431" in text
+
+
+def test_an_orphan_that_wrote_everything_is_closed_as_done(tmp_path):
+    """cat:club, 2026-10-10: all 8 shots written, recorded as failed."""
+    path = _orphaned(tmp_path)
+    r = _runner(tmp_path, procs=lambda: [(4, "System")], produced=lambda job: (8, 8))
+    assert r.step(dry_run=True) == "dry-run"
+    j = q.load(path)["jobs"][0]
+    assert j["status"] == "done" and j["exit_code"] == 0
+    assert "8 of 8 images written" in j["note"]
+
+
+def test_an_orphan_that_fell_short_is_still_unknown(tmp_path):
+    path = _orphaned(tmp_path)
+    r = _runner(tmp_path, procs=lambda: [(4, "System")], produced=lambda job: (5, 8))
+    assert r.step(dry_run=True) == "dry-run"
+    j = q.load(path)["jobs"][0]
+    assert j["status"] == "failed" and j["exit_code"] is None
