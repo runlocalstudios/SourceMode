@@ -613,7 +613,7 @@ BODY = """
 
 OWN_JS = r"""
 const $=id=>document.getElementById(id);
-let cur=null, idx=0, sets=[], last=null, front='A', zoom=1, zx=0, zy=0, dimT=null;
+let cur=null, idx=0, sets=[], last=null, front='A', zoom=1, zx=0, zy=0, dimT=null, idle=false;
 let showRef=true, refCorner=0;
 try{ refCorner=+(localStorage.getItem('refCorner')||0);
      if(localStorage.getItem('showRef')==='0') showRef=false; }catch(e){}
@@ -642,7 +642,20 @@ async function loadSets(){
   try{ await openSet(want); }
   catch(e){ fail('Could not open '+want,e.message); }
 }
-function openPicker(){
+/* The list goes stale. Jeremy, 2026-10-11: "when new sets drop into the
+   judging tab, they aren't able to be judged unless i reload the page" - the
+   hub keeps this frame alive across tab switches, so `sets` was the list from
+   whenever the page first loaded. Refresh it before every use, on every show,
+   and on a slow poll; and if the page is parked on "nothing left", open the
+   first set that now has work. A set being judged is never interrupted. */
+async function refreshSets(){
+  try{ sets=await SM.getJSON('/judge/sets'); }catch(e){}
+  if(!idle) return;
+  const n=sets.find(x=>x.judged<x.n);
+  if(n) await openSet(n.id).catch(()=>{});
+}
+async function openPicker(){
+  await refreshSets();
   SM.sheet({title:'Judge set',current:cur&&cur.id,
     items:sets.map(s=>({id:s.id,title:s.title,sub:s.sub,status:s.status,
       group:s.group,progress:s.n?s.judged/s.n:null})),
@@ -654,6 +667,7 @@ async function openSet(id){
   const r=await fetch('/judge/set/'+encodeURIComponent(id),{cache:'no-store'});
   if(!r.ok) throw new Error('HTTP '+r.status);
   cur=await r.json();
+  idle=false;
   location.hash=id;
   $('results').classList.remove('on');
   $('setname').textContent=cur.title||cur.id;
@@ -1019,6 +1033,7 @@ $('results').addEventListener('click',async e=>{
   const a=b.dataset.act;
   if(a==='restart'){ idx=0; show(); return; }
   if(a==='nextset'){
+    await refreshSets();
     const n=sets.find(x=>x.judged<x.n&&x.id!==cur.id);
     if(n) openSet(n.id).catch(err=>SM.toast(err.message));
     else nothingLeft();
@@ -1043,6 +1058,7 @@ $('results').addEventListener('click',async e=>{
 
 /* --- the three dead ends, each of them deliberate ----------------------- */
 function nothingLeft(){
+  idle=true;
   hideStage();
   $('setname').textContent='nothing to judge';
   $('prog').textContent='';
@@ -1074,7 +1090,7 @@ function fail(what,why){
     +'</div></div></div></div>';
 }
 
-loadSets();
+loadSets().then(()=>SM.poll(20000,refreshSets));
 """
 
 PAGE = page("SourceMode judge", BODY, OWN_JS, OWN_CSS,
