@@ -28,7 +28,7 @@ from sourcemode.render.workflow import load_template, prune_placeholder_loras, s
 # slots and is parsed as an int. "--scenes favorable" put "--scenes" into argv[9],
 # the epoch offset, and killed a queued 60-render job the instant it started -
 # after it had waited seven hours for the card. Split flags out first.
-_FLAGS = {"--scenes", "--epochs", "--tag"}
+_FLAGS = {"--scenes", "--epochs", "--tag", "--seed"}
 # Bare flags take no value. They are skipped here for the same reason the valued
 # ones are split out: anything left in argv lands in a positional slot by index.
 _BARE = {"--allow-incomplete-appearance", "--no-description", "--natural-prompt", "--contract-prompt"}
@@ -129,7 +129,7 @@ if SCENE_SET not in ("asset", "tiebreaker"):
         f"age and no appearance. Use --scenes asset, which renders the asset generator's "
         f"own prompts verbatim, or --scenes tiebreaker.")
 sys.path.insert(0, str(Path("scripts/eval").resolve()))
-from asset_scenes import asset_prompts, tiebreaker_prompts  # noqa: E402
+from asset_scenes import asset_prompts, sweep_seed, tiebreaker_prompts  # noqa: E402
 # --no-description: Jeremy, 2026-10-08, on mei - "no character description at
 # all, just tag the photo caption with her Lora tag. I want to test if our
 # character descriptions are fucking it up". Her appearance sentence comes
@@ -161,7 +161,8 @@ SET_ID = f"dense_{SUB}_{SCENE_SET}{_TAG}"
 # second pass gets its own seeds (SEED + i, i = 10..19) - before this, asking for
 # 20 silently rendered 10.
 SCENES = (SCENES * -(-N_SCENES // len(SCENES)))[:N_SCENES]
-SEED = 8800
+# one random seed per sweep, shared by every epoch (asset_scenes.sweep_seed)
+SEED = sweep_seed(OUT, int(_FLAGVALS["--seed"]) if _FLAGVALS.get("--seed") else None)
 
 
 def _sex(p):
@@ -215,6 +216,7 @@ ref = embed_image(REF_PATH)
 if ref is None:
     raise SystemExit(f"reference {REF_PATH} did not embed - refusing to score against nothing")
 log(f"scoring reference: {REF_PATH.name}")
+log(f"sweep seed {SEED} (scene i renders on {SEED} + i at every epoch)")
 
 # PRE-FLIGHT. The sweep is the first time text alone has to carry her identity,
 # and a missing record means the prompt is the trigger and nothing else -
@@ -323,7 +325,7 @@ if True:
              reference=REF_PATH, seed=61, priority=1,
              meta={"character": CHAR, "dataset": _DATASET, "output_name": SUB,
                    "renders_dir": OUT, "epochs": ran_eps, "scenes": N_SCENES,
-                   "tag": _FLAGVALS.get("--tag") or "", "scene_set": SCENE_SET,
+                   "tag": _FLAGVALS.get("--tag") or "", "scene_set": SCENE_SET, "seed": SEED,
                    "no_description": "--no-description" in _BARESEEN})
     log(f"judge set dense_{SUB}: {len(items)} images")
 male_total = sum(1 for r in rows if r.get("sex") == "M")

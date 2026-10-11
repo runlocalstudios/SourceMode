@@ -151,6 +151,39 @@ def tiebreaker_prompts(trigger: str) -> list[str]:
     return [shot_prompt(trigger, tiebreaker_slot(s), backdrop=s["setting"]) for s in TIEBREAKER]
 
 
+# THE SWEEP SEED. Until 2026-10-11 every sweep used SEED = 8800 + scene, for every
+# character, forever. Sharing a seed across a sweep's epochs is right - the epochs
+# are then compared on identical noise - but one fixed draw per scene meant an
+# unlucky draw failed at every epoch for everyone: vivienne's kitchen and coffee
+# shop kept 1 of 20 in her 24-28 sweep and 5 of 8 on fresh seeds with the SAME
+# prompt and checkpoint. Jeremy: "randomize the seed at the beginning of a sweep,
+# but then keep the seed across each lora epoch". The seed is stored in the
+# sweep's folder, so a resumed or re-run sweep renders the same draws.
+LEGACY_SEED = 8800
+
+
+def sweep_seed(out_dir, given: int | None = None) -> int:
+    import json  # noqa: PLC0415
+    import random  # noqa: PLC0415
+    from pathlib import Path  # noqa: PLC0415
+
+    out_dir = Path(out_dir)
+    f = out_dir / "seed.json"
+    if f.is_file():
+        return int(json.loads(f.read_text(encoding="utf-8"))["seed"])
+    if given is not None:
+        seed = int(given)
+    elif any(out_dir.glob("ep*/scene_*.png")):
+        # renders from before this change are on disk: finishing them on new
+        # seeds would mix two sets of draws in one sweep
+        seed = LEGACY_SEED
+    else:
+        seed = random.SystemRandom().randrange(1, 2**31 - 10_000)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps({"seed": seed}), encoding="utf-8")
+    return seed
+
+
 if __name__ == "__main__":
     for p in asset_prompts("amanda"):
         print(p[:160], "...")

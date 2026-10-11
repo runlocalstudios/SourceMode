@@ -874,10 +874,19 @@ async function results(){
 
 function epochScreen(b,hist,left){
   const lead=b.arms[0];
+  /* A scene judged the same at EVERY epoch is one draw that went the same way
+     each time - it cannot say which epoch is better. 2026-10-11: vivienne's
+     kitchen failed 5 of 5 epochs on its sweep seed and kept 5 of 8 on fresh
+     seeds with the same prompt and checkpoint. */
+  const flat=b.scenes.filter(sc=>b.arms.every(a=>a.grid[sc])
+                                 &&b.arms.every(a=>a.grid[sc]===b.arms[0].grid[sc]));
+  const live=b.scenes.filter(sc=>!flat.includes(sc));
   let rows='';
   for(const a of b.arms){
     const note=[];
     if(a.judged) note.push(a.keep+' of '+a.judged+' kept');
+    if(flat.length&&live.length&&b.arms.length>1)
+      note.push(live.filter(sc=>a.grid[sc]==='keep').length+' of '+live.length+' on the scenes that differed');
     const tiedWith=b.arms.filter(x=>x.tied&&x.epoch!==a.epoch).map(x=>x.epoch);
     if(a.tied&&tiedWith.length) note.push('tied with '+tiedWith.join(', '));
     if(a.safer) note.push('the earlier checkpoint, so the safer pick (less overfit)');
@@ -904,8 +913,6 @@ function epochScreen(b,hist,left){
     }
     body+='</tr>';
   }
-  const dead=b.scenes.filter(sc=>b.arms.every(a=>a.grid[sc]!=='keep')
-                                 &&b.arms.some(a=>a.grid[sc]));
   const chosen=b.chosen;
   const pick=chosen?b.arms.find(a=>a.epoch===chosen.epoch):null;
   const decision=chosen
@@ -944,9 +951,9 @@ function epochScreen(b,hist,left){
     +'<caption class=sr-only>keep or reject per scene, per epoch</caption>'
     +'<thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'
     +'<div class=basis>Same seed down each column.'
-    +(dead.length?(' Scene'+(dead.length===1?' ':'s ')+dead.join(', ')
-        +' fail'+(dead.length===1?'s':'')+' at every epoch, so that is the scene,'
-        +' not the LoRA &mdash; which is the question a keep rate cannot answer.'):'')
+    +(flat.length&&b.arms.length>1?(' Scene'+(flat.length===1?' ':'s ')+flat.join(', ')
+        +' came out the same at every epoch. That is one draw going the same way'
+        +' each time, so it says nothing about which epoch is better.'):'')
     +'</div></div>'
     +'</div><div class=col-rail><h2>The decision</h2>'+decision
     +foot(hist,left)+'</div></div>';
