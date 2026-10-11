@@ -360,3 +360,11 @@ def test_an_orphan_that_fell_short_is_still_unknown(tmp_path):
     assert r.step(dry_run=True) == "dry-run"
     j = q.load(path)["jobs"][0]
     assert j["status"] == "failed" and j["exit_code"] is None
+
+
+def test_a_colon_in_the_label_does_not_make_an_alternate_data_stream():
+    """gpu-j107-gigi:influencer.log was written as the empty file gpu-j107-gigi."""
+    from sourcemode.gpu.runner import log_name
+    assert log_name({"id": "j107", "label": "gigi:influencer"}) == "gpu-j107-gigi_influencer.log"
+    assert log_name({"id": "j9", "label": 'a<b>c"d/e\\f|g?h*'}) == "gpu-j9-a_b_c_d_e_f_g_h_.log"
+    assert log_name({"id": "j110", "label": "mei:boudoir+club"}) == "gpu-j110-mei_boudoir+club.log"

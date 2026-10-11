@@ -25,6 +25,7 @@ Design rules, each of them a scar:
 
 from __future__ import annotations
 
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -35,6 +36,14 @@ from .lease import acquire, lease_path, release
 
 FAST_FAIL_SECONDS = 60
 POLL_SECONDS = 60
+
+
+def log_name(job: dict) -> str:
+    """The job's log file name. 2026-10-10: "shoot:gigi:influencer" made
+    "gpu-j107-gigi" - NTFS read the colon as an alternate data stream, so the
+    file was empty and the log hid inside it. Characters Windows forbids in a
+    file name become "_"."""
+    return f"gpu-{job['id']}-" + re.sub(r'[<>:"/\\|?*]', "_", str(job["label"])) + ".log"
 
 
 def still_running(job: dict, processes: list[tuple[int, str]]) -> bool:
@@ -103,7 +112,7 @@ class Runner:
 
     def _start(self, job: dict) -> subprocess.Popen:
         self.logs.mkdir(parents=True, exist_ok=True)
-        log_path = self.logs / f"gpu-{job['id']}-{job['label']}.log"
+        log_path = self.logs / log_name(job)
         handle = log_path.open("ab")
         proc = subprocess.Popen(job["cmd"], cwd=job["cwd"], stdout=handle,
                                 stderr=subprocess.STDOUT, close_fds=True)
