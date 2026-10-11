@@ -91,9 +91,16 @@ def _train_character(cmd: list[str], cwd: Path, outputs: Path, previews_root: Pa
     ds_dir = outputs / "lora-datasets" / ds
     if not (ds_dir / "image_src").is_dir():
         out.append(f"{ds_dir / 'image_src'} does not exist")
-    existing = list((ds_dir / "lora").glob("*.safetensors")) if (ds_dir / "lora").is_dir() else []
+    # the folder the SCRIPT will write: <ds>/lora, or <ds>/lora_<OutName> for a
+    # named run (a continuation) - checking <ds>/lora refused every continuation
+    name = _flag(cmd, "-OutName") or ds
+    sub = "lora" if name == ds else f"lora_{name}"
+    existing = list((ds_dir / sub).glob("*.safetensors")) if (ds_dir / sub).is_dir() else []
     if existing and "-Force" not in cmd:
-        out.append(f"{ds}/lora already holds {len(existing)} checkpoints - the script refuses without -Force")
+        out.append(f"{ds}/{sub} already holds {len(existing)} checkpoints - the script refuses without -Force")
+    resume = _flag(cmd, "-Resume")
+    if resume and not Path(resume).is_file():
+        out.append(f"-Resume {resume} does not exist")
     if previews_root is not None:
         from ..train.preview import approval_state  # noqa: PLC0415
 

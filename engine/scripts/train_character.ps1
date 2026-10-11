@@ -24,9 +24,16 @@ param(
   # few dozen steps. A continued run RESTARTS its epoch numbering at 1, so
   # pass -EvalOffset so the arms read as real epochs.
   [string]$Resume = "",
-  [int]$EvalOffset = 0
+  [int]$EvalOffset = 0,
+  # Scenes per epoch in the post-training sweep. 10 is the coarse sweep; 20 is
+  # the n the skill asks for before an epoch is picked.
+  [int]$EvalN = 10
 )
 if (-not $OutName) { $OutName = $Ds }
+# -EvalStart 0 is a real value for a continued run (its starting checkpoint is
+# kept as epoch 0), so "not passed" is read from the bound parameters, not from 0.
+$EvS = if ($PSBoundParameters.ContainsKey('EvalStart')) { $EvalStart } else { 16 }
+$EvE = if ($PSBoundParameters.ContainsKey('EvalEnd')) { $EvalEnd } else { $Epochs }
 # A production run keeps writing to <dataset>\lora; only a named experiment
 # gets its own folder, so every queued run is unaffected.
 $LoraSub = if ($OutName -eq $Ds) { "lora" } else { "lora_$OutName" }
@@ -131,6 +138,16 @@ $p = Start-Process -FilePath "$M\.venv\Scripts\accelerate.exe" -ArgumentList $ta
 Log "END train $OutName exit $($p.ExitCode)"
 
 if (Test-Path "$DsDir\$LoraSub\$($OutName).safetensors") {
+  # A continued run keeps its STARTING checkpoint beside its own, as epoch 0, so
+  # one blind sweep can judge the start against the new epochs (Jeremy,
+  # 2026-10-10: vivienne +4, "only test 24-28"). A hard link: no extra disk.
+  if ($Resume) {
+    $start0 = "$DsDir\$LoraSub\$($OutName)-000000.safetensors"
+    if (-not (Test-Path $start0)) {
+      New-Item -ItemType HardLink -Path $start0 -Target $Resume | Out-Null
+      Log "kept the starting point as $start0 (epoch $EvalOffset in the sweep)"
+    }
+  }
   for ($i = 0; $i -lt 60; $i++) {
     try { Invoke-RestMethod -Uri http://127.0.0.1:8188/system_stats -TimeoutSec 5 | Out-Null; break } catch { Start-Sleep 20 }
   }
@@ -140,14 +157,13 @@ if (Test-Path "$DsDir\$LoraSub\$($OutName).safetensors") {
   # Start at 16, not 14: Jeremy, 2026-09-23 - no character's best epoch has ever
   # landed below 16 (maya 16, jojo 16, priya 16; everything else 21-26), so the
   # first two arms were 20 renders a character spent confirming a known floor.
-  Log "START $Char eval, epochs $(if ($EvalStart) { $EvalStart } else { 16 })-$(if ($EvalEnd) { $EvalEnd } else { $Epochs }) x 10 scenes$(if ($EvalScenes) { ' (' + $EvalScenes + ')' })"
+  Log "START $Char eval, epochs $EvS-$EvE x $EvalN scenes$(if ($EvalScenes) { ' (' + $EvalScenes + ')' })"
   # Build the argument array FIRST. `-ArgumentList @(...) + $(...)` inline does not
   # bind - Start-Process ran with no usable arguments, returned an EMPTY exit code
   # and wrote zero-byte logs, and the failure was silent.
   $evArgs = @("$EV\dense_epoch_eval.py", $Char, $OutName, "$Epochs",
-              "$(if ($EvalStart) { $EvalStart } else { 16 })",
-              "$(if ($EvalEnd) { $EvalEnd } else { $Epochs })", $Char,
-              "outputs\lora-datasets\$Ds\$LoraSub", "10")
+              "$EvS", "$EvE", $Char,
+              "outputs\lora-datasets\$Ds\$LoraSub", "$EvalN")
   if ($EvalOffset) { $evArgs += @("$EvalOffset") }   # argv[9] = epoch offset
   if ($EvalScenes) { $evArgs += @("--scenes", $EvalScenes) }
   $ev = Start-Process -FilePath $PY -NoNewWindow -Wait -PassThru -ArgumentList $evArgs `

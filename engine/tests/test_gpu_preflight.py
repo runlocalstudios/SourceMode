@@ -107,3 +107,31 @@ def test_prompt_ab_needs_find_and_two_arms(tmp_path):
     assert "--find is required" in out
     assert any("--arms needs at least two" in p for p in out)
     assert not any("no checkpoint" in p for p in out)
+
+
+def test_a_continuation_checks_its_own_folder_and_its_start_point(tmp_path, monkeypatch):
+    """vivienne +4, 2026-10-10: a named run writes lora_<OutName>, so the
+    production folder's checkpoints must not refuse it - but its own must."""
+    s = tmp_path / "train_character.ps1"
+    s.write_text("", encoding="utf-8")
+    outputs = tmp_path / "outputs"
+    ds = outputs / "lora-datasets" / "nobody_v2"
+    (ds / "image_src").mkdir(parents=True)
+    (ds / "lora").mkdir()
+    start = ds / "lora" / "nobody_v2.safetensors"
+    start.write_bytes(b"0")
+    monkeypatch.setattr("sourcemode.gpu.preflight.TRAIN_DISK_GB", 0)
+    cmd = ["powershell.exe", "-File", str(s), "-Ds", "nobody_v2", "-Char", "nobody",
+           "-OutName", "nobody_v2b", "-Epochs", "4", "-Resume", str(start)]
+    out = preflight({"cmd": cmd, "cwd": str(tmp_path)}, outputs, None)
+    assert not any("already holds" in p for p in out)
+    assert not any("-Resume" in p for p in out)
+
+    (ds / "lora_nobody_v2b").mkdir()
+    (ds / "lora_nobody_v2b" / "nobody_v2b-000001.safetensors").write_bytes(b"0")
+    out = preflight({"cmd": cmd, "cwd": str(tmp_path)}, outputs, None)
+    assert any("lora_nobody_v2b already holds 1" in p for p in out)
+
+    cmd[-1] = str(ds / "lora" / "missing.safetensors")
+    out = preflight({"cmd": cmd, "cwd": str(tmp_path)}, outputs, None)
+    assert any("-Resume" in p and "does not exist" in p for p in out)
