@@ -305,6 +305,20 @@ def epoch_sweep_name(doc: dict) -> str | None:
     return names.pop() if len(names) == 1 else None
 
 
+def sweep_offset(doc: dict) -> int:
+    """How far the arms' epoch labels sit above the checkpoint file numbers.
+
+    A continued run's sweep labels its arms as real epochs (24..28) while its
+    files are numbered from 0. The eval writes meta.offset; older sets are
+    read from meta.epochs (the file numbers it rendered) against the arms."""
+    meta = doc.get("meta") or {}
+    if "offset" in meta:
+        return int(meta["offset"] or 0)
+    raw = [int(e) for e in (meta.get("epochs") or [])]
+    arms = [p[1] for p in (epoch_arm(it.get("arm", "")) for it in doc.get("items") or []) if p]
+    return (min(arms) - min(raw)) if raw and arms else 0
+
+
 def sweep_sets_for(root: Path, dataset: str) -> list[dict]:
     """Every epoch sweep for `dataset`, newest first.
 
@@ -425,6 +439,7 @@ def epoch_board(root: Path, set_id: str, *, outputs: Path | None = None) -> dict
     if any(pr is None for pr, _ in parsed):
         return None
     dataset = _dataset_of_set(doc, out_name)
+    offset = sweep_offset(doc)
     rows = []
     for pr, a in parsed:
         epoch = pr[1]
@@ -435,7 +450,7 @@ def epoch_board(root: Path, set_id: str, *, outputs: Path | None = None) -> dict
             # summary()["groups"] is {scene: {arm: verdict}} and is populated
             # only from JUDGED items, so a half-judged sweep has holes, not zeros
             "grid": {g: v[a["arm"]] for g, v in s["groups"].items() if a["arm"] in v},
-            "lora": (checkpoint_for(outputs, dataset, out_name, epoch)
+            "lora": (checkpoint_for(outputs, dataset, out_name, epoch, offset)
                      if outputs else None),
             "tied": False, "safer": False,
         })
@@ -453,7 +468,7 @@ def epoch_board(root: Path, set_id: str, *, outputs: Path | None = None) -> dict
     character = (doc.get("meta") or {}).get("character") or _character_of(dataset)
     choice = load_choice(outputs, character) if outputs else None
     return {"set": set_id, "title": s["title"], "output_name": out_name,
-            "dataset": dataset, "character": character,
+            "dataset": dataset, "character": character, "offset": offset,
             "judged": s["judged"], "n": s["n"], "tie_low": TIE_LOW,
             "scenes": sorted(s["groups"], key=lambda g: (len(g), g)),
             "chosen": ({"epoch": choice["epoch"], "at": choice["at"]}
@@ -1017,7 +1032,7 @@ $('results').addEventListener('click',async e=>{
       const board=await SM.getJSON('/judge/set/'+encodeURIComponent(cur.id)+'/epochs');
       const arm=board.arms.find(x=>String(x.epoch)===b.dataset.ep);
       await SM.postJSON('/epochs/'+encodeURIComponent(board.character),
-        {dataset:board.dataset,output_name:board.output_name,epoch:+b.dataset.ep,
+        {dataset:board.dataset,output_name:board.output_name,epoch:+b.dataset.ep,offset:board.offset||0,
          from_set:board.set,keep:arm?arm.keep:null,n:arm?arm.judged:null,
          low:arm?arm.low:null});
       SM.toast('epoch '+b.dataset.ep+' recorded');

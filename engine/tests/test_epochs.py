@@ -375,3 +375,34 @@ def test_the_board_reports_a_choice_only_for_the_set_it_came_from(tmp_path):
     # a choice made from a DIFFERENT set is not this board's answer
     record_choice(out, "demo", dataset="demo_v2", epoch=20, from_set="other_set")
     assert epoch_board(root, sid, outputs=out)["chosen"] is None
+
+
+def test_a_continued_run_resolves_its_own_files_by_offset(tmp_path):
+    """vivienne, 2026-10-11: "Use epoch 28" on the v2b sweep (offset 24) locked
+    the parent's bare vivienne_v2.safetensors - epoch 24 - as epoch 28."""
+    import os
+
+    _ckpt(tmp_path, "v_v2", ["v_v2.safetensors", "v_v2-000023.safetensors"])
+    _ckpt(tmp_path, "v_v2", ["v_v2b.safetensors", "v_v2b-000000.safetensors",
+                             "v_v2b-000001.safetensors", "v_v2b-000003.safetensors"],
+          sub="lora_v_v2b")
+    assert checkpoint_for(tmp_path, "v_v2", "v_v2b", 28, 24).endswith(
+        "lora_v_v2b" + os.sep + "v_v2b.safetensors")
+    assert checkpoint_for(tmp_path, "v_v2", "v_v2b", 25, 24).endswith("v_v2b-000001.safetensors")
+    assert checkpoint_for(tmp_path, "v_v2", "v_v2b", 24, 24).endswith("v_v2b-000000.safetensors")
+
+
+def test_another_runs_bare_file_is_never_the_answer(tmp_path):
+    _ckpt(tmp_path, "v_v2", ["v_v2.safetensors", "v_v2-000023.safetensors"])
+    _ckpt(tmp_path, "v_v2", ["v_v2b-000001.safetensors"], sub="lora_v_v2b")
+    assert checkpoint_for(tmp_path, "v_v2", "v_v2b", 28) is None
+
+
+def test_the_offset_is_read_from_an_older_sweep_without_it():
+    from sourcemode.assets.judge import sweep_offset
+    doc = {"meta": {"epochs": [0, 1, 2, 3, 4]},
+           "items": [{"arm": f"v_v2b epoch {e}"} for e in (24, 25, 26, 27, 28)]}
+    assert sweep_offset(doc) == 24
+    assert sweep_offset({"meta": {"offset": 7}, "items": []}) == 7
+    assert sweep_offset({"meta": {"epochs": [16, 17]},
+                         "items": [{"arm": "a_v2 epoch 16"}, {"arm": "a_v2 epoch 17"}]}) == 0

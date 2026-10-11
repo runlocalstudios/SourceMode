@@ -49,6 +49,17 @@
   "basis": "epoch-choices: dense_bri_v2_asset_nocaramel 12/20 at ep20",
   "locked_at": "2026-10-09T19:58:50+00:00"
  },
+ "casey": {
+  "file": "casey_v2-000021.safetensors",
+  "epoch": 21,
+  "dataset": "casey_v2",
+  "output_name": "casey_v2",
+  "sha256": "e7c1cbfc8ee1ab59355791567a815ec3bb07192ad2c4010e710104c4d1c5686c",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\casey_v2\\casey_v2-000021.safetensors",
+  "basis": "dense_casey_v2_asset 8/10 at epoch 21",
+  "locked_at": "2026-10-11T19:00:40+00:00"
+ },
  "cassie": {
   "file": "cassie_v2-000018.safetensors",
   "epoch": 18,
@@ -280,6 +291,17 @@
   "basis": "pruned to one; dense_raven_v2 12/20 at ep22",
   "locked_at": "2026-10-09T19:59:50+00:00"
  },
+ "rivera": {
+  "file": "rivera_v2-000020.safetensors",
+  "epoch": 20,
+  "dataset": "rivera_v2",
+  "output_name": "rivera_v2",
+  "sha256": "7d4a0fd6cd572ac728c91548f4daf2ee11a65eb944fee71f51f39e19dffe353e",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\rivera_v2\\rivera_v2-000020.safetensors",
+  "basis": "dense_rivera_v2_tiebreaker 15/20 at epoch 20",
+  "locked_at": "2026-10-11T04:37:37+00:00"
+ },
  "sandra": {
   "file": "sandra_v2-000021.safetensors",
   "epoch": 21,
@@ -312,6 +334,17 @@
   "comfy": "sourcemode\\trina_v2\\trina_v2-000023.safetensors",
   "basis": "pruned to one; dense_trina_v2 8/10 at ep23",
   "locked_at": "2026-10-09T20:00:33+00:00"
+ },
+ "vivienne": {
+  "file": "vivienne_v2b.safetensors",
+  "epoch": 28,
+  "dataset": "vivienne_v2",
+  "output_name": "vivienne_v2b",
+  "sha256": "65ad734c3d793f8fa34b9bdb9c830769ce10a20aab0504b824ac6ad8ba7a4fa4",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\vivienne_v2b\\vivienne_v2b.safetensors",
+  "basis": "dense_vivienne_v2b_asset 14/20 at epoch 28 (v2b file 4)",
+  "locked_at": "2026-10-11T20:26:09+00:00"
  },
  "zara": {
   "file": "zara_v2-000018.safetensors",

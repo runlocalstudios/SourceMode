@@ -69,7 +69,7 @@ def checkpoint_dirs(outputs_root: Path, dataset: str, output_name: str = "") -> 
 
 
 def checkpoint_for(outputs_root: Path, dataset: str, output_name: str,
-                   epoch: int) -> str | None:
+                   epoch: int, offset: int = 0) -> str | None:
     """Resolve the .safetensors for one epoch, or None.
 
     Globbed rather than formatted, because of one thing the obvious glob misses:
@@ -84,18 +84,31 @@ def checkpoint_for(outputs_root: Path, dataset: str, output_name: str,
     higher. That is the exact test and it needs no caller-supplied epoch count:
     on a 16-19 sweep, epoch 19 is the sweep's top arm but not the run's last
     epoch, and the bare file there belongs to a later epoch entirely.
+
+    `offset`: a continued run numbers its files from 1 again, so the sweep's
+    epoch 28 is vivienne_v2b's file 4 (its bare final). 2026-10-11: without it,
+    "Use epoch 28" found no -000028, fell through to the PARENT run's bare
+    vivienne_v2.safetensors (epoch 24) and locked that as 28.
+
+    A run's files carry its own output_name. Another run's files are never an
+    answer: the `*` glob and the dataset's bare file are only read when the
+    output_name IS the dataset.
     """
-    tail = f"-{int(epoch):06d}.safetensors"
+    n = int(epoch) - int(offset)
+    tail = f"-{n:06d}.safetensors"
+    own = not output_name or output_name == dataset
+    name = output_name or dataset
     subs = checkpoint_dirs(outputs_root, dataset, output_name)
     for sub in subs:
-        hit = sorted(sub.glob("*" + tail))
+        hit = sorted(sub.glob((("*" if own else name) + tail)))
         if hit:
             return str(hit[0])
     for sub in subs:
-        numbered = [int(q.stem.rsplit("-", 1)[-1]) for q in sub.glob("*-*.safetensors")
+        numbered = [int(q.stem.rsplit("-", 1)[-1]) for q in sub.glob(("*" if own else name) + "-*.safetensors")
                     if q.stem.rsplit("-", 1)[-1].isdigit()]
-        for bare in (sub / f"{output_name}.safetensors", sub / f"{dataset}.safetensors"):
-            if bare.is_file() and (not numbered or int(epoch) > max(numbered)):
+        bares = [sub / f"{name}.safetensors"] + ([sub / f"{dataset}.safetensors"] if own else [])
+        for bare in bares:
+            if bare.is_file() and (not numbered or n > max(numbered)):
                 return str(bare)
     return None
 
@@ -103,7 +116,7 @@ def checkpoint_for(outputs_root: Path, dataset: str, output_name: str,
 def record_choice(outputs_root: Path, character: str, *, dataset: str,
                   output_name: str = "", epoch: int, from_set: str = "",
                   keep: int | None = None, n: int | None = None,
-                  low: float | None = None) -> dict:
+                  low: float | None = None, offset: int = 0) -> dict:
     """Write the choice. Atomic, one file, and it saves even with no checkpoint.
 
     `"lora": null` when the file is not on disk: a choice is a judgement, and a
@@ -116,7 +129,7 @@ def record_choice(outputs_root: Path, character: str, *, dataset: str,
     out_name = output_name or dataset
     rec = {"character": character, "dataset": dataset, "output_name": out_name,
            "epoch": int(epoch),
-           "lora": checkpoint_for(outputs_root, dataset, out_name, int(epoch)),
+           "lora": checkpoint_for(outputs_root, dataset, out_name, int(epoch), int(offset or 0)),
            "keep": keep, "n": n,
            "rate": round(keep / n, 3) if (keep is not None and n) else None,
            "low": low, "from_set": from_set,
@@ -178,7 +191,8 @@ def epochs_router(cfg: dict):
                 out, character, dataset=str(body["dataset"]),
                 output_name=str(body.get("output_name") or ""),
                 epoch=int(body["epoch"]), from_set=str(body.get("from_set") or ""),
-                keep=body.get("keep"), n=body.get("n"), low=body.get("low"))
+                keep=body.get("keep"), n=body.get("n"), low=body.get("low"),
+                offset=int(body.get("offset") or 0))
         except (KeyError, TypeError, ValueError) as exc:
             raise HTTPException(400, str(exc)) from exc
         # The choice IS the lock. A record alone was how sunny's and bianca's

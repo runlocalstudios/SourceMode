@@ -326,6 +326,7 @@ if True:
              meta={"character": CHAR, "dataset": _DATASET, "output_name": SUB,
                    "renders_dir": OUT, "epochs": ran_eps, "scenes": N_SCENES,
                    "tag": _FLAGVALS.get("--tag") or "", "scene_set": SCENE_SET, "seed": SEED,
+                   "offset": OFFSET,
                    "no_description": "--no-description" in _BARESEEN})
     log(f"judge set dense_{SUB}: {len(items)} images")
 male_total = sum(1 for r in rows if r.get("sex") == "M")
