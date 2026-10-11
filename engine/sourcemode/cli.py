@@ -10,7 +10,12 @@ import json
 from pathlib import Path
 
 import typer
-from rich import print as rprint
+from rich.console import Console
+
+# emoji=False: rich turns ":cat:" in a job label like "shoot:cat:club" into an
+# emoji, and the cp1252 console then raises - it killed the GPU runner on
+# 2026-10-10 and broke `gpu list`. Markup ([red]...[/red]) still works.
+rprint = Console(emoji=False).print
 
 from .config import characters_dir, load_config, outputs_dir
 
