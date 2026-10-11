@@ -2,7 +2,7 @@
 
 Before this existed, order lived in whichever PowerShell script a session happened
 to write: on 2026-10-03 the order Jeremy set that day survived only as a COMMENT
-inside `engine/scripts/eval/train_zara.ps1`, in a temp folder. The file order here
+inside a one-off launcher script (since deleted), in a temp folder. The file order here
 IS the run order, nothing recomputes it, and `gpu list` is the answer to "what is
 running and what is next".
 

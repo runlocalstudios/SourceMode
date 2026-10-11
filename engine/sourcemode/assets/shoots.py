@@ -6,7 +6,7 @@ ticks as many small shot plans as he wants, and queues them as ONE GPU job.
 Three things make this different from what was here before:
 
 - **Data, not a script per character.** The six shoots this starts from lived in
-  `scripts/eval/amanda_shoots.py`, hardcoded to Amanda and built on the local
+  a one-off script (since deleted), hardcoded to Amanda and built on the local
   reference-seed recipe rather than her LoRA. They are now a catalog any
   character can be run through.
 - **One prompt builder.** Every shot goes through `assets.render.shot_prompt`,

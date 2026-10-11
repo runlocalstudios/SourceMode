@@ -1,6 +1,6 @@
 """Is the card already working, and whose work is it?
 
-Ported from the wait loop in `engine/scripts/eval/train_zara.ps1` rather than
+Ported from the wait loop in a one-off launcher script (since deleted) rather than
 re-derived: that list of patterns is what the pipeline has learned to watch for.
 The crucial change is in the CALLER - there is no timeout here and none above.
 On 2026-10-03 that script found a live training, waited, and then proceeded

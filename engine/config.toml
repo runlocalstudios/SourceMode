@@ -14,15 +14,6 @@ library = '../library'
 characters = '../characters'
 workflows = '../workflows'
 
-[gates]
-identity_enabled = true
-# "gate" = move sheet drifters to _rejected; "advisory" = flag only.
-# Advisory for gwen: buffalo_l is reliable frontal (intra mean 0.81) but pose-sensitive —
-# a verified same-person profile render scored 0.62 vs threshold 0.7365. Blocking would
-# strip profile poses from the training sheet. Human approves via the contact sheet.
-identity_mode = "advisory"
-frame_stride = 8          # video scoring: sample every Nth frame
-
 [training]
 musubi_tuner_path = 'C:\dev\e2egen\vendor\musubi-tuner'   # read-only vendored install, v0.3.4
 # musubi-tuner trains BOTH LoRAs (qwen_image_train_network.py ships in 0.3.4);
@@ -48,10 +39,6 @@ qwen_vae = 'qwen_image_vae.safetensors'
 qwen_image_bf16 = 'qwen_image_2512_bf16.safetensors'          # downloaded 2026-08-31
 qwen_text_encoder_bf16 = 'qwen_2.5_vl_7b.safetensors'         # downloaded 2026-08-31
 wan_t5_train = 'models_t5_umt5-xxl-enc-bf16.pth'              # official Wan-AI T5, downloaded 2026-08-31
-
-[decomposer]
-qwen3_url = 'http://127.0.0.1:11434/v1'   # OpenAI-compatible (Ollama / LM Studio)
-qwen3_model = 'qwen3'
 
 [render]
 qwen_shift = 3.1          # ModelSamplingAuraFlow shift, from the verified exports

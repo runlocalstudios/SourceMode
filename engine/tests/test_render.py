@@ -95,9 +95,9 @@ def test_snap_frames_4n_plus_1_capped():
     assert snap_frames(60.0, 24, max_frames=145) == 145
 
 
-def test_build_video_workflow_substitutes_fully(tmp_cfg, sample_source):
+def test_build_video_workflow_substitutes_fully(tmp_cfg):
     nodes, settings = build_video_workflow(
-        tmp_cfg, sample_source,
+        tmp_cfg, "testchar",
         positive="positive text", negative="negative text",
         image_name="kf.png", seed=7, render_pass="draft", duration_s=4.0,
     )
@@ -115,12 +115,12 @@ def test_build_video_workflow_substitutes_fully(tmp_cfg, sample_source):
     ]
 
 
-def test_video_generic_lora_fallback(tmp_cfg, sample_source):
+def test_video_generic_lora_fallback(tmp_cfg):
     # no character wan LoRA + generic [video] LoRA configured -> generic fills
     # the slot at the capped non-identity strength
     tmp_cfg["video"]["lora_low"] = "styles/moody.safetensors"
     nodes, settings = build_video_workflow(
-        tmp_cfg, sample_source, positive="p", negative="n",
+        tmp_cfg, "testchar", positive="p", negative="n",
         image_name="kf.png", seed=1, render_pass="final", duration_s=2.0,
     )
     assert settings["LORA_LOW"] == "styles/moody.safetensors"
@@ -131,37 +131,34 @@ def test_video_generic_lora_fallback(tmp_cfg, sample_source):
     assert loras == [("styles/moody.safetensors", 0.6)]
 
 
-def test_video_character_lora_beats_generic(tmp_cfg, sample_source):
+def test_video_character_lora_beats_generic(tmp_cfg):
     tmp_cfg["video"]["lora_low"] = "styles/moody.safetensors"
-    src = sample_source.model_copy(update={
-        "lora_paths": sample_source.lora_paths.model_copy(update={"wan_low_noise": "char/id.safetensors"})
-    })
     _, settings = build_video_workflow(
-        tmp_cfg, src, positive="p", negative="n",
+        tmp_cfg, "testchar", positive="p", negative="n", wan_low_lora="char/id.safetensors",
         image_name="kf.png", seed=1, render_pass="final", duration_s=2.0,
     )
     assert settings["LORA_LOW"] == "char/id.safetensors"
     assert settings["LORA_STRENGTH_LOW"] == 1.0
 
 
-def test_medium_pass_is_lightning_video_final_keyframes(tmp_cfg, sample_source):
+def test_medium_pass_is_lightning_video_final_keyframes(tmp_cfg):
     nodes, settings = build_video_workflow(
-        tmp_cfg, sample_source, positive="p", negative="n",
+        tmp_cfg, "testchar", positive="p", negative="n",
         image_name="kf.png", seed=1, render_pass="medium", duration_s=2.0,
     )
     assert settings["STEPS"] == 4 and settings["CFG_HIGH"] == 1.0
     lora_names = [n["inputs"]["lora_name"] for n in nodes.values() if n["class_type"] == "LoraLoaderModelOnly"]
     assert tmp_cfg["render"]["medium"]["wan_lightning_low"] in lora_names
     _, kf_settings = build_keyframe_workflow(
-        tmp_cfg, sample_source, positive="p", negative="n", seed=1, render_pass="medium",
+        tmp_cfg, "testchar", positive="p", negative="n", seed=1, render_pass="medium",
     )
     assert kf_settings["STEPS"] == 50 and kf_settings["CFG"] == 4.0
     assert kf_settings["LIGHTNING"] == ""  # keyframes at final quality in medium
 
 
-def test_build_video_workflow_final_has_no_loras(tmp_cfg, sample_source):
+def test_build_video_workflow_final_has_no_loras(tmp_cfg):
     nodes, settings = build_video_workflow(
-        tmp_cfg, sample_source, positive="p", negative="n",
+        tmp_cfg, "testchar", positive="p", negative="n",
         image_name="kf.png", seed=1, render_pass="final",
     )
     assert not [n for n in nodes.values() if n["class_type"] == "LoraLoaderModelOnly"]
@@ -176,17 +173,17 @@ def test_build_video_workflow_final_has_no_loras(tmp_cfg, sample_source):
     assert all(nodes[s["inputs"]["model"][0]]["class_type"] == "ModelSamplingSD3" for s in samplers)
 
 
-def test_build_keyframe_workflow_substitutes_fully(tmp_cfg, sample_source):
+def test_build_keyframe_workflow_substitutes_fully(tmp_cfg):
     nodes, settings = build_keyframe_workflow(
-        tmp_cfg, sample_source, positive="p", negative="n", seed=3, render_pass="final",
+        tmp_cfg, "testchar", positive="p", negative="n", seed=3, render_pass="final",
     )
     assert "{{" not in json.dumps(nodes)
     assert settings["STEPS"] == tmp_cfg["render"]["final"]["qwen_t2i_steps"]
 
 
-def test_build_edit_workflow_substitutes_and_prunes(tmp_cfg, sample_source):
+def test_build_edit_workflow_substitutes_and_prunes(tmp_cfg):
     nodes, settings = build_edit_workflow(
-        tmp_cfg, sample_source, instruction="same person, left profile",
+        tmp_cfg, "testchar", instruction="same person, left profile",
         negative="n", image_name="ref.png", seed=9, render_pass="draft",
     )
     assert "{{" not in json.dumps(nodes)
@@ -301,23 +298,3 @@ def test_client_submit_poll_fetch(tmp_path):
     assert files == [{"filename": "out.webp", "subfolder": "", "type": "output"}]
     dest = client.fetch(files[0], tmp_path / "out.webp")
     assert Path(dest).read_bytes() == b"artifact-bytes"
-
-
-def test_flux_t2i_template_resolves_and_prunes():
-    """The Flux comparison graph: every placeholder fills, no dangling node refs,
-    and with no LoRA the loader is pruned and the sampler re-links to the UNET.
-    Flux.1-dev is non-commercial; this template is for benchmarking only."""
-    from sourcemode.config import load_config, workflows_dir
-    from sourcemode.render.workflow import load_template, prune_placeholder_loras, substitute
-
-    cfg = load_config()
-    base = {"MODEL": "m", "CLIP_L": "c", "T5": "t", "VAE": "v", "POSITIVE": "p", "NEGATIVE": "",
-            "GUIDANCE": 3.5, "SEED": 1, "STEPS": 4, "WIDTH": 8, "HEIGHT": 8, "FILENAME_PREFIX": "x"}
-    g = prune_placeholder_loras(substitute(load_template(workflows_dir(cfg), "flux_t2i"),
-                                           {**base, "LORA_PATH": "l.safetensors", "LORA_STRENGTH": 1.0}))
-    ids = set(g)
-    assert all(str(i[0]) in ids for v in g.values() for i in v["inputs"].values() if isinstance(i, list))
-    assert g["9"]["inputs"]["cfg"] == 1.0 and g["9"]["inputs"]["model"] == ["2", 0]
-    g2 = prune_placeholder_loras(substitute(load_template(workflows_dir(cfg), "flux_t2i"),
-                                            {**base, "LORA_PATH": "", "LORA_STRENGTH": 0.0}))
-    assert "2" not in g2 and g2["9"]["inputs"]["model"] == ["1", 0]

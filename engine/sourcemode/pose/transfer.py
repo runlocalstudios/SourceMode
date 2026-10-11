@@ -518,19 +518,16 @@ def make_reference(cfg, client, pose_key: str, variant: str, library: Path,
                    model_path: str, seed: int, log=print) -> Path:
     """Render candidate references, measure each, keep the best that passes."""
     from ..render.passes import build_keyframe_workflow  # noqa: PLC0415
-    from ..source import CharacterSource  # noqa: PLC0415
 
     pose = POSES[pose_key]
     target, limits, weights = gates(pose)
-    blank = CharacterSource(character_id="poseref", name="Pose Ref", version="v001",
-                            trigger_token="poseref")
     work = library / "_candidates"
     work.mkdir(parents=True, exist_ok=True)
 
     ranked, measured = [], []
     for c in range(REF_CANDIDATES):
         nodes, _ = build_keyframe_workflow(
-            cfg, blank,
+            cfg, "poseref",
             positive=pose["ref_prompt"].format(arms=pose["variants"][variant]),
             negative=pose["ref_negative"],
             seed=seed + c * 137, render_pass="medium", width=896, height=1152,

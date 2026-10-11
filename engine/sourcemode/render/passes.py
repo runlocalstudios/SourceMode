@@ -15,7 +15,6 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-from ..source import CharacterSource
 from .workflow import (
     PLACEHOLDER_LORA,
     load_template,
@@ -39,11 +38,13 @@ def _lora_entry(path: str | None, strength: float, **flags) -> dict:
 
 def build_video_workflow(
     cfg: dict,
-    source: CharacterSource,
+    character_id: str,
     *,
     positive: str,
     negative: str,
     image_name: str,
+    wan_high_lora: str = "",
+    wan_low_lora: str = "",
     seed: int,
     render_pass: str,
     duration_s: float = 5.0,
@@ -65,8 +66,8 @@ def build_video_workflow(
             return _lora_entry(character_lora, 1.0, is_identity=True)
         return _lora_entry(video.get(generic_key, ""), generic_strength)
 
-    high = _stage_lora(source.lora_paths.wan_high_noise, "lora_high")
-    low = _stage_lora(source.lora_paths.wan_low_noise, "lora_low")
+    high = _stage_lora(wan_high_lora, "lora_high")
+    low = _stage_lora(wan_low_lora, "lora_low")
     lightning_high = preset.get("wan_lightning_high", "")
     lightning_low = preset.get("wan_lightning_low", "")
     lightning_strength = float(preset.get("lightning_strength", 1.0))
@@ -105,7 +106,7 @@ def build_video_workflow(
         "LENGTH": snap_frames(duration_s, int(video["fps"]), int(video.get("max_frames", 81))),
         "FPS": int(video["fps"]),
         "BOUNDARY_STEP": max(1, steps // 2),
-        "FILENAME_PREFIX": f"sourcemode/{source.character_id}",
+        "FILENAME_PREFIX": f"sourcemode/{character_id}",
     }
     from ..config import workflows_dir  # noqa: PLC0415
 
@@ -115,18 +116,18 @@ def build_video_workflow(
 
 def build_keyframe_workflow(
     cfg: dict,
-    source: CharacterSource,
+    character_id: str,
     *,
     positive: str,
     negative: str,
     seed: int,
+    image_lora: str = "",
     render_pass: str,
     width: int = 1024,
     height: int = 1536,
 ) -> tuple[dict, dict]:
     """Return (workflow_nodes, settings_used) for the Qwen-Image T2I template."""
     preset = cfg["render"][render_pass]
-    image_lora = source.lora_paths.image_lora or ""
     lightning = preset.get("qwen_t2i_lightning", "")
     lightning_strength = float(preset.get("lightning_strength", 1.0))
     validate_lora_stack(
@@ -156,7 +157,7 @@ def build_keyframe_workflow(
         "CFG": float(preset.get("qwen_t2i_cfg", preset["cfg"])),
         "WIDTH": width,
         "HEIGHT": height,
-        "FILENAME_PREFIX": f"sourcemode/{source.character_id}_kf",
+        "FILENAME_PREFIX": f"sourcemode/{character_id}_kf",
     }
     from ..config import workflows_dir  # noqa: PLC0415
 
@@ -166,9 +167,10 @@ def build_keyframe_workflow(
 
 def build_edit_workflow(
     cfg: dict,
-    source: CharacterSource,
+    character_id: str,
     *,
     instruction: str,
+    image_lora: str = "",
     negative: str,
     image_name: str,
     seed: int,
@@ -187,7 +189,6 @@ def build_edit_workflow(
     image does, and TextEncodeQwenImageEditPlus takes image1/image2/image3.
     """
     preset = cfg["render"][render_pass]
-    image_lora = source.lora_paths.image_lora or ""
     lightning = preset.get("qwen_edit_lightning", "")
     lightning_strength = float(preset.get("lightning_strength", 1.0))
     validate_lora_stack(
@@ -216,7 +217,7 @@ def build_edit_workflow(
         "SEED": int(seed),
         "STEPS": int(preset.get("qwen_edit_steps", preset["steps"])),
         "CFG": float(preset.get("qwen_edit_cfg", preset["cfg"])),
-        "FILENAME_PREFIX": filename_prefix or f"sourcemode/{source.character_id}_edit",
+        "FILENAME_PREFIX": filename_prefix or f"sourcemode/{character_id}_edit",
     }
     from ..config import workflows_dir  # noqa: PLC0415
 

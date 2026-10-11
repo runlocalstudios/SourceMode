@@ -9,7 +9,6 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $tasks = @(
   @{ Name = "SourceMode ComfyUI"; Script = "start-comfyui.ps1" },
   @{ Name = "SourceMode Monitor"; Script = "start-monitor.ps1" },
-  @{ Name = "SourceMode Web";     Script = "start-web.ps1" },
   # The GPU runner: the only thing that starts training, evals or asset renders,
   # one at a time, in the queue's order. Registered here so it comes back after a
   # reboot - a Windows Update restart silently killed a 5-hour run once already.

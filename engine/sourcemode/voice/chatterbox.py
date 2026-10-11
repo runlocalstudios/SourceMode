@@ -1,8 +1,7 @@
 """Chatterbox TTS wrapper (MIT-licensed; optional extra `voice`).
 
-Voice mirrors the face architecture: a character's canonical
-`source.voice.reference_clip` is the audio equivalent of `reference_images`,
-and Chatterbox clones from it zero-shot.
+A character's reference clip is the audio equivalent of her reference
+photos, and Chatterbox clones from it zero-shot.
 
 When a character has NO reference clip yet, Chatterbox's built-in voice is
 used instead (verified in the installed tts.py: `generate(audio_prompt_path=
@@ -19,8 +18,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..prompts.templates import voice_prompt
-from ..source import CharacterSource
 
 # Chatterbox knobs (names + defaults read from the installed chatterbox/tts.py).
 # exaggeration drives emotional intensity; cfg_weight trades pacing against
@@ -35,8 +32,11 @@ EXAGGERATION_BY_EMOTION = {
 CFG_BY_PACE = {"slow": 0.3, "normal": 0.5, "fast": 0.7}
 
 
-def build_request(source: CharacterSource, text: str, *, emotion: str = "neutral", pace: str = "normal") -> dict:
-    return voice_prompt(source, text, emotion=emotion, pace=pace)
+def build_request(character_id: str, text: str, *, reference_clip: Path | None = None,
+                  emotion: str = "neutral", pace: str = "normal") -> dict:
+    return {"text": text, "emotion": emotion, "pace": pace,
+            "reference_clip": str(reference_clip) if reference_clip else None,
+            "character_id": character_id}
 
 
 def chatterbox_available() -> bool:
@@ -61,11 +61,11 @@ def pick_device(preferred: str | None = None) -> str:
 
 
 def synthesize(
-    source: CharacterSource,
+    character_id: str,
     text: str,
     out_path: Path,
-    characters_root: Path,
     *,
+    reference_clip: Path | None = None,
     emotion: str = "neutral",
     pace: str = "normal",
     dry_run: bool = False,
@@ -75,14 +75,12 @@ def synthesize(
     seed: int | None = None,
     log=print,
 ) -> dict:
-    request = build_request(source, text, emotion=emotion, pace=pace)
+    reference = Path(reference_clip) if reference_clip else None
+    if reference is not None and not reference.exists():
+        raise FileNotFoundError(f"{character_id} reference clip not found: {reference}")
+    request = build_request(character_id, text, reference_clip=reference, emotion=emotion, pace=pace)
     exaggeration = EXAGGERATION_BY_EMOTION.get(emotion, DEFAULT_EXAGGERATION) if exaggeration is None else exaggeration
     cfg_weight = CFG_BY_PACE.get(pace, DEFAULT_CFG_WEIGHT) if cfg_weight is None else cfg_weight
-    reference = None
-    if source.voice.reference_clip is not None:
-        reference = characters_root / source.character_id / source.voice.reference_clip
-        if not reference.exists():
-            raise FileNotFoundError(f"{source.character_id} voice.reference_clip not found: {reference}")
 
     settings = {
         "exaggeration": exaggeration,
@@ -107,7 +105,7 @@ def synthesize(
     if seed is not None:
         torch.manual_seed(seed)
     if reference is None:
-        log(f"[voice] {source.character_id} has no reference_clip — using Chatterbox's built-in voice (bootstrap)")
+        log(f"[voice] {character_id} has no reference clip — using Chatterbox's built-in voice (bootstrap)")
     log(f"[voice] loading Chatterbox on {device}")
 
     model = ChatterboxTTS.from_pretrained(device=device)

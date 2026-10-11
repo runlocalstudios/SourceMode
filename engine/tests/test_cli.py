@@ -8,17 +8,8 @@ runner = CliRunner()
 def test_help_lists_all_command_groups():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for cmd in ("doctor", "source", "gates", "prompts", "render", "train", "bootstrap", "voice", "run"):
+    for cmd in ("doctor", "train", "voice", "pose", "monitor", "assets", "gpu", "lora", "library"):
         assert cmd in result.output, f"{cmd} missing from --help"
-
-
-def test_source_show_gwen():
-    result = runner.invoke(app, ["source", "show", "gwen"])
-    if result.exit_code != 0:
-        import pytest
-
-        pytest.skip("gwen assets not present")
-    assert "gwen_ch" in result.output
 
 
 def test_pose_transfer_default_pattern_matches_png_assets(tmp_path):

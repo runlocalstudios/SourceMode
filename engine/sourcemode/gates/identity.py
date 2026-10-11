@@ -1,25 +1,13 @@
-"""Face-identity gate via InsightFace (buffalo_l) + onnxruntime.
+"""Face embeddings via InsightFace (buffalo_l) + onnxruntime.
 
 InsightFace is an OPTIONAL extra (uv sync --extra gates) and its pretrained
 weights are non-commercial — internal QC tooling only, never shipped.
-Imported lazily; when unavailable every score returns
-GateResult(score=None, passed=None, details="insightface not installed").
-
-Calibration is per-character: pairwise cosine similarity across the approved
-sheet, threshold = mean - 2*std with a floor of 0.30. The mean embedding and
-threshold are stored back into the CharacterSource.
+Imported lazily; callers check `insightface_available()` or get None back.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-
-from ..source import CharacterSource
-from ..source.store import update_operational
-from .base import GateResult
-
-UNAVAILABLE_DETAILS = "insightface not installed"
-THRESHOLD_FLOOR = 0.30
 
 _app = None
 _import_failed = False
@@ -80,94 +68,3 @@ def cosine(a, b) -> float:
     if denom == 0.0:
         return 0.0
     return float(np.dot(a, b) / denom)
-
-
-class IdentityScorer:
-    """score(asset, source) -> cosine similarity vs the character's calibrated embedding."""
-
-    def __init__(self, characters_root: Path):
-        self.characters_root = characters_root
-
-    def score(self, asset_path: Path, source: CharacterSource) -> GateResult:
-        if not insightface_available():
-            return GateResult(score=None, passed=None, details=UNAVAILABLE_DETAILS)
-        if source.identity_embedding_path is None:
-            return GateResult(score=None, passed=None, details="not calibrated — run `sourcemode gates calibrate`")
-
-        import numpy as np  # noqa: PLC0415
-
-        char_dir = self.characters_root / source.character_id
-        reference = np.load(char_dir / source.identity_embedding_path)
-        embedding = embed_image(Path(asset_path))
-        if embedding is None:
-            return GateResult(score=0.0, passed=False, details="no face detected")
-
-        score = cosine(reference, embedding)
-        threshold = source.identity_threshold
-        passed = None if threshold is None else score >= threshold
-        return GateResult(score=score, passed=passed, details="", extras={"threshold": threshold})
-
-
-def calibrate_identity_full(characters_root: Path, source: CharacterSource) -> tuple[CharacterSource, dict]:
-    """Compute pairwise similarity over the approved sheet; store embedding + threshold.
-
-    threshold = mean(pairwise cosine) - 2*std, floored at 0.30.
-    Returns (updated_source, stats) where stats carries the full pairwise
-    matrix for reporting: {files, matrix, mean, std, threshold, skipped}.
-    """
-    if not insightface_available():
-        raise RuntimeError(UNAVAILABLE_DETAILS + " — install with: uv sync --extra gates")
-
-    import numpy as np  # noqa: PLC0415
-
-    char_dir = characters_root / source.character_id
-    embeddings = []
-    used = []
-    skipped = []
-    for rel in source.approved_sheet:
-        emb = embed_image(char_dir / rel)
-        if emb is None:
-            skipped.append(rel)
-        else:
-            used.append(rel)
-            embeddings.append(np.asarray(emb, dtype="float32"))
-    if len(embeddings) < 2:
-        raise RuntimeError(
-            f"need at least 2 face embeddings to calibrate, got {len(embeddings)} (no face found in: {skipped})"
-        )
-
-    n = len(embeddings)
-    matrix = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
-    sims = []
-    for i in range(n):
-        for j in range(i + 1, n):
-            s = cosine(embeddings[i], embeddings[j])
-            matrix[i][j] = matrix[j][i] = round(s, 4)
-            sims.append(s)
-    mean, std = float(np.mean(sims)), float(np.std(sims))
-    threshold = max(mean - 2.0 * std, THRESHOLD_FLOOR)
-
-    mean_embedding = np.mean(np.stack(embeddings), axis=0)
-    mean_embedding /= np.linalg.norm(mean_embedding)
-    embedding_rel = "identity_embedding.npy"
-    np.save(char_dir / embedding_rel, mean_embedding)
-
-    updated = update_operational(
-        characters_root,
-        source.character_id,
-        identity_embedding_path=embedding_rel,
-        identity_threshold=round(threshold, 4),
-    )
-    stats = {
-        "files": used,
-        "matrix": matrix,
-        "mean": round(mean, 4),
-        "std": round(std, 4),
-        "threshold": round(threshold, 4),
-        "skipped": skipped,
-    }
-    return updated, stats
-
-
-def calibrate_identity(characters_root: Path, source: CharacterSource) -> CharacterSource:
-    return calibrate_identity_full(characters_root, source)[0]

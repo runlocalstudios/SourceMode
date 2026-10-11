@@ -11,8 +11,8 @@ from sourcemode.voice.chatterbox import (
 )
 
 
-def test_build_request_carries_character_and_text(sample_source):
-    req = build_request(sample_source, "hello there", emotion="worried", pace="slow")
+def test_build_request_carries_character_and_text():
+    req = build_request("testchar", "hello there", emotion="worried", pace="slow")
     assert req["text"] == "hello there"
     assert req["character_id"] == "testchar"
     assert req["emotion"] == "worried"
@@ -20,9 +20,9 @@ def test_build_request_carries_character_and_text(sample_source):
     assert req["reference_clip"] is None
 
 
-def test_dry_run_reports_settings_without_synthesizing(sample_source, tmp_path, chars_root):
+def test_dry_run_reports_settings_without_synthesizing(tmp_path):
     result = synthesize(
-        sample_source, "a line", tmp_path / "out.wav", chars_root,
+        "testchar", "a line", tmp_path / "out.wav",
         emotion="excited", pace="slow", dry_run=True, log=lambda *_: None,
     )
     assert result["synthesized"] is False
@@ -35,41 +35,37 @@ def test_dry_run_reports_settings_without_synthesizing(sample_source, tmp_path, 
     assert s["reference_clip"] is None
 
 
-def test_unknown_emotion_and_pace_fall_back_to_defaults(sample_source, tmp_path, chars_root):
+def test_unknown_emotion_and_pace_fall_back_to_defaults(tmp_path):
     result = synthesize(
-        sample_source, "a line", tmp_path / "out.wav", chars_root,
+        "testchar", "a line", tmp_path / "out.wav",
         emotion="bewildered", pace="andante", dry_run=True, log=lambda *_: None,
     )
     assert result["settings"]["exaggeration"] == DEFAULT_EXAGGERATION
     assert result["settings"]["cfg_weight"] == DEFAULT_CFG_WEIGHT
 
 
-def test_explicit_overrides_win(sample_source, tmp_path, chars_root):
+def test_explicit_overrides_win(tmp_path):
     result = synthesize(
-        sample_source, "a line", tmp_path / "out.wav", chars_root,
+        "testchar", "a line", tmp_path / "out.wav",
         emotion="angry", dry_run=True, exaggeration=0.1, cfg_weight=0.9, log=lambda *_: None,
     )
     assert result["settings"]["exaggeration"] == 0.1
     assert result["settings"]["cfg_weight"] == 0.9
 
 
-def test_missing_reference_clip_file_fails_loudly(sample_source, tmp_path, chars_root):
-    src = sample_source.model_copy(
-        update={"voice": sample_source.voice.model_copy(update={"reference_clip": "voice/nope.wav"})}
-    )
+def test_missing_reference_clip_file_fails_loudly(tmp_path):
     with pytest.raises(FileNotFoundError) as err:
-        synthesize(src, "a line", tmp_path / "out.wav", chars_root, dry_run=True, log=lambda *_: None)
+        synthesize("testchar", "a line", tmp_path / "out.wav", reference_clip=tmp_path / "nope.wav",
+                   dry_run=True, log=lambda *_: None)
     assert "nope.wav" in str(err.value)
 
 
-def test_existing_reference_clip_is_used_over_builtin(sample_source, tmp_path, chars_root):
-    clip = chars_root / sample_source.character_id / "voice" / "ref.wav"
+def test_existing_reference_clip_is_used_over_builtin(tmp_path):
+    clip = tmp_path / "voice" / "ref.wav"
     clip.parent.mkdir(parents=True, exist_ok=True)
     clip.write_bytes(b"RIFF")
-    src = sample_source.model_copy(
-        update={"voice": sample_source.voice.model_copy(update={"reference_clip": "voice/ref.wav"})}
-    )
-    result = synthesize(src, "a line", tmp_path / "out.wav", chars_root, dry_run=True, log=lambda *_: None)
+    result = synthesize("testchar", "a line", tmp_path / "out.wav", reference_clip=clip,
+                        dry_run=True, log=lambda *_: None)
     assert result["settings"]["builtin_voice"] is False
     assert result["settings"]["reference_clip"].endswith("ref.wav")
 

@@ -23,8 +23,6 @@ _ALIASES = {
     "SOURCEMODE_LORAS_DIR": ("paths", "loras"),
     "SOURCEMODE_OUTPUTS_DIR": ("paths", "outputs"),
     "SOURCEMODE_MUSUBI_TUNER_PATH": ("training", "musubi_tuner_path"),
-    "SOURCEMODE_IDENTITY_GATE_ENABLED": ("gates", "identity_enabled"),
-    "SOURCEMODE_QWEN3_URL": ("decomposer", "qwen3_url"),
 }
 
 _TRUTHY = {"1", "true", "yes", "on"}
