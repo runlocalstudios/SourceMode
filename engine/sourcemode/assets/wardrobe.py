@@ -9,7 +9,8 @@ braids** - many individual plaits parted in a square grid at the scalp - in
 every single training frame. The shared hair vocabulary every shoot and every
 wardrobe pack rotates through is:
 
-    her hair worn loose / in a high ponytail / up in a messy bun / half pinned back
+    her hair worn loose / in a high ponytail / up in a messy bun / half-up /
+    worn down with high, tight pigtails
 
 "Worn loose" means unbraided hair. Asking a LoRA trained entirely on box braids
 for loose hair is the gabi failure in reverse: her set is ~90% loose hair and
@@ -37,7 +38,10 @@ DEFAULT_HAIR: tuple[str, ...] = (
     "her hair worn loose",
     "her hair pulled back in a high ponytail",
     "her hair up in a messy bun",
-    "her hair half pinned back",
+    # Jeremy, 2026-10-11: "half-up" reads better than "half pinned back", and
+    # pigtails over hair worn down are one of his favourites for long hair.
+    "her hair half-up",
+    "her hair worn down with high, tight pigtails",
 )
 
 _CACHE: dict[str, dict] = {}

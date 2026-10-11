@@ -217,7 +217,7 @@ def test_every_up_style_in_the_shared_rotation_is_detected():
     from sourcemode.assets.wardrobe import DEFAULT_HAIR
 
     flags = [is_up_style(h) for h in DEFAULT_HAIR]
-    assert flags == [False, True, True, True], DEFAULT_HAIR
+    assert flags == [False, True, True, True, False], DEFAULT_HAIR
     assert not is_up_style("a bunch of flowers behind her")
 
 

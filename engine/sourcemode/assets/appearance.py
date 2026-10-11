@@ -370,7 +370,9 @@ _FLOWING = re.compile(r",?\s*\b(?:hanging (?:free|loose|down)[^,.]*"
                       r"|down (?:her|the) back)", re.I)
 
 #: An up-style in a per-look hair clause. Whole words, so "bunch" cannot trip it.
-_UP = re.compile(r"\b(?:bun|ponytail|pinned back|pinned up|gathered|tied back"
+# "half-up" replaced "half pinned back" (2026-10-11) and is an up-style like it.
+# Pigtails over hair worn DOWN are not: the length is the point of them.
+_UP = re.compile(r"\b(?:bun|ponytail|pinned back|pinned up|half-up|gathered|tied back"
                  r"|updo|piled|chignon|topknot|twisted up)\b", re.I)
 
 

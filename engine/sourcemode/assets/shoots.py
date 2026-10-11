@@ -35,7 +35,8 @@ class Shoot:
     outfits: tuple[str, ...]
     poses: tuple[str, ...]
     hair: tuple[str, ...] = ("her hair worn loose", "her hair pulled back in a high ponytail",
-                             "her hair up in a messy bun", "her hair half pinned back")
+                             "her hair up in a messy bun", "her hair half-up",
+                             "her hair worn down with high, tight pigtails")
     framing: str = ""      # "" keeps shot_prompt's upper-thigh wardrobe crop
     shots: int = 12
     # "shoot" renders here, through shot_prompt and the t2i graph. "pack" means a

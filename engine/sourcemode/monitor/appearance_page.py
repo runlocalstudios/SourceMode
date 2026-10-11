@@ -149,7 +149,7 @@ html,body{overflow-x:hidden}
 .lk textarea{width:100%;box-sizing:border-box;min-height:120px;padding:var(--s3);
   background:var(--g1);border:1px solid var(--g4);border-radius:var(--r2);color:var(--g9);
   font-family:inherit;font-size:16px;line-height:1.45;resize:vertical;overflow:hidden}
-.lk textarea.short{min-height:64px}
+.lk textarea.short{min-height:0;padding:var(--s2) var(--s3);line-height:1.35}
 .lk .hl{padding:var(--s2) var(--s3);background:var(--g0);border:1px dashed var(--g4);
   border-radius:var(--r2);font:var(--t-meta);color:var(--g7);margin-top:var(--s2)}
 .lk .hl mark{background:var(--stop-bg);color:var(--stop-ink);border-radius:3px;padding:0 2px}
@@ -159,25 +159,23 @@ html,body{overflow-x:hidden}
   flex:1;min-width:0;width:100%;box-sizing:border-box}
 .lk .note{font:var(--t-small);color:var(--g6);margin-top:var(--s2)}
 .lk details summary{cursor:pointer}
-.sec{margin-top:var(--s4);padding-top:var(--s3);border-top:1px solid var(--g3)}
+.sec{margin-top:var(--s3);padding-top:var(--s2);border-top:1px solid var(--g3)}
 .sec h4{margin:0 0 var(--s1);font:var(--t-meta);font-weight:600;color:var(--g8);
   text-transform:uppercase;letter-spacing:.04em}
-.sec .sub{font:var(--t-small);color:var(--g6);margin-bottom:var(--s2)}
-.fld{margin-top:var(--s3)}
-.fld label{display:block;font:var(--t-meta);font-weight:600;color:var(--g8)}
-.fld .cov{display:block;font:var(--t-small);color:var(--g6);margin-bottom:var(--s1)}
+.sec .sub{font:var(--t-small);color:var(--g6);margin-bottom:var(--s1)}
+.fld{margin-top:var(--s2)}
+.fld label{display:block;font:var(--t-meta);font-weight:600;color:var(--g8);margin-bottom:2px}
+.fld .cov{font:var(--t-small);font-weight:400;color:var(--g6)}
+.sec h4 .draft{text-transform:none;letter-spacing:0;font-weight:400;margin-left:var(--s2)}
 .facts{display:grid;grid-template-columns:auto 1fr;gap:var(--s1) var(--s3);font:var(--t-meta);color:var(--g8)}
 .facts dt{color:var(--g6)}
 .facts dd{margin:0;min-width:0;overflow-wrap:anywhere}
-.job{padding:var(--s3);background:var(--g0);border:1px solid var(--g3);border-radius:var(--r2);margin-top:var(--s2)}
-.places{display:flex;flex-wrap:wrap;gap:var(--s1) var(--s3);margin:var(--s1) 0 var(--s2)}
-.places label{display:flex;align-items:center;gap:6px;font:var(--t-meta);color:var(--g8);
-  min-height:var(--tap);cursor:pointer}
-.places input{width:20px;height:20px}
-.places .w,.facts .w{color:var(--g6);font:var(--t-small)}
+.job{margin-top:var(--s2)}
+.job .row{margin-top:var(--s1)}
+.facts .w{color:var(--g6);font:var(--t-small)}
 .linkish{background:none;border:0;padding:0;color:var(--act);font:inherit;cursor:pointer;
   text-decoration:underline;text-underline-offset:3px}
-.draft{font:var(--t-small);color:var(--you-ink);margin-top:var(--s1)}
+.draft{font:var(--t-small);color:var(--you-ink)}
 #big{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);display:none;
   align-items:center;justify-content:center}
 #big.on{display:flex}
@@ -231,7 +229,7 @@ function shown(){
   const open=recs.filter(r=>!r.confirmed);
   return open.length?open:[];
 }
-const ta=(k,v,cls,ph)=>'<textarea data-k="'+k+'"'+(cls?' class='+cls:'')+' spellcheck=true'
+const ta=(k,v,cls,ph)=>'<textarea rows=1 data-k="'+k+'"'+(cls?' class='+cls:'')+' spellcheck=true'
   +(ph?' placeholder="'+SM.esc(ph)+'"':'')+'>'+SM.esc(v||'')+'</textarea>';
 
 function appearance(r){
@@ -242,16 +240,17 @@ function appearance(r){
     +'<textarea data-k=prompt spellcheck=false>'+SM.esc(r.prompt)+'</textarea>'
     +'<div class=hl data-hl>'+(r.race.length?marked(r.prompt):'No race words.')+'</div>'
     +'<div class=row><label>Negative</label><input data-k=negative placeholder="negative (optional)" value="'+SM.esc(r.negative||'')+'"></div>'
-    +'<div class=row><button class="btn btn-primary" data-act=confirm>'+(r.confirmed?'Save &amp; re-confirm':'Confirm')+'</button></div>'
-    +(r.note?'<details class=note><summary>notes</summary>'+SM.esc(r.note)+'</details>':'');
+    +'<div class=row><button class="btn btn-primary" data-act=confirm>'+(r.confirmed?'Save &amp; re-confirm':'Confirm')+'</button></div>';
 }
 
 function lockLine(r){
   const l=r.lock;
   if(!l) return '<dt>LoRA</dt><dd>not locked</dd>';
-  return '<dt>LoRA</dt><dd>epoch '+SM.esc(String(l.epoch))+' &middot; '+SM.esc(l.file)
-    +'<br><span class=w>'+SM.esc(l.basis)+(l.at?' &middot; locked '+SM.esc(SM.ago(l.at)):'')+'</span>'
-    +(l.sweep?' &middot; <button class=linkish data-act=sweep data-set="'+SM.esc(l.sweep)+'">open the sweep</button>':'')
+  const d=l.at?new Date(l.at):null;
+  const when=d?(d.getMonth()+1)+'/'+d.getDate()+'/'+String(d.getFullYear()).slice(2):'';
+  return '<dt>LoRA</dt><dd>'+SM.esc(l.file)+' (epoch '+SM.esc(String(l.epoch))+')'
+    +(when?' - locked '+when:'')
+    +(l.sweep?' &middot; <button class=linkish data-act=sweep data-set="'+SM.esc(l.sweep)+'">sweep</button>':'')
     +'</dd>';
 }
 function packLine(r){
@@ -266,35 +265,27 @@ function packLine(r){
 
 function profile(r){
   const w=r.wardrobe;
-  const job=(j,i)=>'<div class=job data-job="'+i+'">'
-    +'<div class=fld><label>Job '+(i+1)+'</label>'
-    +'<input data-j=job value="'+SM.esc(j.job)+'" placeholder="'+(i===0&&r.game_job?SM.esc(r.game_job):'e.g. bartender')+'"></div>'
-    +'<div class=fld><label>Where</label><span class=cov>The game places she works this job. A shot at one of them uses this job&rsquo;s outfit.</span>'
-    +(r.places.length
-      ? '<div class=places>'+r.places.map(p=>'<label><input type=checkbox data-place="'+SM.esc(p.id)+'"'
-          +(j.places.includes(p.id)?' checked':'')+'>'+SM.esc(p.name)
-          +(p.work?' <span class=w>(work shift)</span>':'')+'</label>').join('')+'</div>'
-      : '<div class=sub>The game has no schedule for her.</div>')
-    +'</div>'
-    +'<div class=fld><label>What she wears for it</label>'+ta('j_outfit',j.outfit,'short','her uniform, or how she dresses for this job')+'</div>'
+  const job=(j,i)=>'<div class="fld job" data-job="'+i+'">'
+    +'<label>Job '+(i+1)+'</label>'
+    +'<input data-j=job value="'+SM.esc(j.job)+'" placeholder="the job, e.g. server at The Sandbar">'
+    +'<div class=row>'+ta('j_outfit',j.outfit,'short','what she wears for it')+'</div>'
     +'</div>';
-  return '<div class=sec><h4>Context</h4><div class=sub>For the game&rsquo;s writing. Never put in a prompt &mdash; write it into the description above if a render needs it.</div>'
+  return '<div class=sec><h4>Context</h4><div class=sub>For the game&rsquo;s writing; never put in a prompt.</div>'
     +'<dl class=facts><dt>Age</dt><dd>'+(r.age?SM.esc(String(r.age))+' <span class=w>(the game&rsquo;s)</span>':'&mdash;')+'</dd>'
     +lockLine(r)+packLine(r)+'</dl>'
     +'<div class=fld><label>Ethnicity</label><input data-k=ethnicity value="'+SM.esc(r.ethnicity||'')+'"></div></div>'
     +'<div class=sec><h4>Jobs</h4>'
     +(r.game_job?'<div class=sub>The game says: '+SM.esc(r.game_job)+'</div>':'')
     +w.jobs.map(job).join('')+'</div>'
-    +'<div class=sec><h4>Style</h4><div class=sub>Free text, in your words &mdash; chic, trendy, shabby, overdressed, revealing, conservative, self-conscious&hellip;</div>'
-    +(w.draft?'<div class=draft>Drafted from her shipped outfits on '+SM.esc((w.note.match(/\d{4}-\d{2}-\d{2}/)||[''])[0]||'an earlier date')+' &mdash; not yet saved by you.</div>':'')
-    +'<div class=fld><label>Overall</label>'+ta('style',w.style,'short')+'</div>'
+    +'<div class=sec><h4>Style'+(w.draft?'<span class=draft>draft - not yet saved by you</span>':'')+'</h4>'
+    +'<div class=fld><label>Overall</label>'+ta('style',w.style,'short','chic, trendy, shabby, overdressed, revealing, conservative...')+'</div>'
     +'<div class=fld><label>Palette</label>'+ta('palette',w.palette,'short','the colours she actually wears')+'</div>'
     +'<div class=fld><label>Never wears</label>'+ta('avoid',w.avoid,'short','the line she does not cross, in any outfit')+'</div>'
-    +types.map(t=>'<div class=fld><label>'+SM.esc(t.label)+'</label><span class=cov>'+SM.esc(t.covers)+'</span>'
+    +types.map(t=>'<div class=fld><label>'+SM.esc(t.label)+' <span class=cov>- '+SM.esc(t.covers)+'</span></label>'
       +ta('o_'+t.key,w.outfits[t.key],'short')+'</div>').join('')
     +'</div>'
-    +'<div class=sec><h4>Hair options</h4><div class=sub>One per line &mdash; what a look may ask her hair to do. Blank uses the shared list shown greyed.</div>'
-    +ta('hair',w.hair.join('\n'),'short',r.hair_default.join('\n'))+'</div>'
+    +'<div class=sec><h4>Hair options</h4><div class=sub>One per line. Starts as the shared list; edit, add or delete lines.</div>'
+    +ta('hair',(w.hair.length?w.hair:r.hair_default).join('\n'),'short')+'</div>'
     +'<div class=row><button class="btn btn-primary" data-act=save>Save '+SM.esc(r.character)+'</button></div>';
 }
 
@@ -307,7 +298,7 @@ function draw(){
   SM.set($('list'),null,shown().map(r=>
     '<div class="card lk '+(r.confirmed?'e-done':'e-you')+'" data-c="'+SM.esc(r.character)+'">'
       +'<div class=card-head>'+SM.pill(r.confirmed?'done':'you')
-      +'<h3>'+SM.esc(r.character)+(r.age?' &middot; '+r.age:'')+'</h3>'
+      +'<h3>'+SM.esc(r.character)+'</h3>'
       +(r.confirmed?'<span class=age>confirmed '+SM.esc(SM.ago(r.confirmed_at))+'</span>':'')+'</div>'
       +appearance(r)+(one?profile(r):'')
     +'</div>').join(''));
@@ -324,13 +315,18 @@ document.addEventListener('input',e=>{
 function collect(card){
   const v=k=>{ const el=card.querySelector('[data-k="'+k+'"]'); return el?el.value:''; };
   const outfits={}; for(const t of types) outfits[t.key]=v('o_'+t.key);
-  const jobs=[...card.querySelectorAll('[data-job]')].map(j=>({
+  const rec=recs.find(r=>r.character===card.dataset.c)||{wardrobe:{jobs:[]},hair_default:[]};
+  const jobs=[...card.querySelectorAll('[data-job]')].map((j,i)=>({
     job:j.querySelector('[data-j=job]').value,
     outfit:j.querySelector('[data-k=j_outfit]').value,
-    places:[...j.querySelectorAll('[data-place]:checked')].map(x=>x.dataset.place)}));
+    places:((rec.wardrobe.jobs[i]||{}).places)||[]}));
+  /* unchanged from the shared list = no list of her own, so a later change
+     to the shared list still reaches her */
+  const hair=v('hair').split('\n').map(x=>x.trim()).filter(Boolean);
+  const same=hair.join('\n')===rec.hair_default.join('\n');
   return {ethnicity:v('ethnicity'),
           wardrobe:{style:v('style'),palette:v('palette'),avoid:v('avoid'),outfits,jobs,
-                    hair:v('hair').split('\n')}};
+                    hair:same?[]:hair}};
 }
 document.addEventListener('click',async e=>{
   const img=e.target.closest('.refs img');
