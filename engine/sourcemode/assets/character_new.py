@@ -42,8 +42,11 @@ FIELDS = (
     # key, label, need, hint
     ("character", "Id", "need", "lowercase, no spaces - the LoRA trigger and the game id"),
     ("name", "Display name", "need", "as the game shows it"),
-    ("age", "Age", "need", "the number the game will carry; prose must agree with it"),
-    ("ethnicity", "Ethnicity", "need", "Black, Latina, Indian, East Asian, White..."),
+    ("age", "Age", "need", "the number the game will carry - context for the game's "
+                           "writing, never put in a prompt"),
+    ("ethnicity", "Ethnicity", "need", "context for the game's writing - never put in a "
+                                       "prompt; write it into the description yourself if "
+                                       "a render needs it"),
     ("skin", "Skin", "need", "fair / light olive / medium brown / light caramel-brown"),
     ("hair", "Hair", "need", "length, texture, colour - and any dyed layer, which the "
                              "model will NOT volunteer"),
@@ -71,13 +74,12 @@ ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,31}$")
 def appearance_clause(d: dict) -> str:
     """Compose the one sentence every render prompt carries.
 
-    Built in the order the shipped records use - age, ethnicity, skin, figure,
-    hair, eyes, features - because that order is what `clause()` consumers
-    already read and what the measured prompts were written in.
+    Order: skin, figure, hair, eyes, features. NO age and NO ethnicity -
+    Jeremy, 2026-10-11: "drop the age and ethnicity from any description ...
+    they should not go into the prompts unless I include in the descriptions
+    intentionally." Both are still recorded, as context for the game's writing.
     """
-    bits = []
-    lead = f"a {d['age']}-year-old {d['ethnicity']}".strip()
-    bits.append(f"{lead} woman" if not lead.endswith("woman") else lead)
+    bits = ["a young woman"]
     if d.get("skin"):
         bits.append(f"{d['skin']} skin")
     fig = d.get("build", "")
@@ -120,10 +122,8 @@ def wardrobe_record(d: dict) -> dict:
         ("_note", f"Created on the new-character form, {d.get('created', '')}".strip()),
         ("style", d.get("style", "")),
         ("palette", d.get("palette", "")),
-        ("silhouettes", d.get("silhouettes", "")),
-        ("work", d.get("job", "")),
-        ("workout", d.get("workout", "")),
         ("avoid", d.get("avoid", "")),
+        ("jobs", [{"job": d["job"], "places": [], "outfit": ""}] if d.get("job") else []),
     ) if v}
 
 

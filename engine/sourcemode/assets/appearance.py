@@ -295,6 +295,25 @@ def confirm(character: str, fields: dict) -> dict:
     return rec
 
 
+def set_context(character: str, *, ethnicity: str) -> dict:
+    """Context for the game's writing - never read by a prompt, and outside the
+    confirm fingerprint, so changing it never un-confirms her description."""
+    import json as _json  # noqa: PLC0415
+
+    global _cache
+    c = (character or "").lower()
+    doc = _json.loads(APPEARANCE.read_text(encoding="utf-8")) if APPEARANCE.is_file() else {}
+    rec = doc.setdefault(c, {})
+    v = " ".join(str(ethnicity or "").split())
+    if v:
+        rec["ethnicity"] = v
+    else:
+        rec.pop("ethnicity", None)
+    APPEARANCE.write_text(_json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    _cache = None
+    return rec
+
+
 def reload() -> None:
     """Forget the cached records - the monitor is long-lived and reads them once."""
     global _cache

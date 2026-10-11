@@ -61,8 +61,6 @@ BODY = """
   <div class=col-main>
     <h2>Character</h2>
     <div class=who id=who></div>
-    <div class=btn-row style="margin:0 0 var(--s4)">
-      <button class="btn btn-sm" data-act=newchar>New character &rarr;</button></div>
     <div id=warn></div>
     <div id=list></div>
   </div>
@@ -159,7 +157,8 @@ document.addEventListener('click',async e=>{
     const id=s.dataset.shoot;
     picked.has(id)?picked.delete(id):picked.add(id); draw(); return; }
   const b=e.target.closest('[data-act]'); if(!b) return;
-  if(b.dataset.act==='newchar'){ location.href='/character'; return; }
+  /* New character lives on the Characters tab now (2026-10-11) */
+  if(b.dataset.act==='newchar'){ SM.nav('characters',who||''); return; }
   if(b.dataset.act==='clear'){ picked.clear(); draw(); return; }
   if(b.dataset.act==='queue'){
     b.disabled=true;

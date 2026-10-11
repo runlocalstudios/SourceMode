@@ -36,7 +36,17 @@ def test_the_composed_clause_carries_the_dyed_layer():
     # the pink, so the prompt asserted "long black hair". The hair field is
     # required and it reaches the clause.
     c = appearance_clause(FULL)
-    assert "27-year-old Latina woman" in c
+    assert "turquoise dyed underlayer" in c
+
+
+def test_the_clause_never_carries_age_or_ethnicity():
+    """Jeremy, 2026-10-11: recorded as context for the game's writing, never
+    put in a prompt unless he writes it into the description himself."""
+    c = appearance_clause(FULL)
+    assert "27" not in c and "Latina" not in c
+    rec = appearance_record(FULL)
+    assert rec["age"] == 27 and rec["ethnicity"] == "Latina"
+    assert "Latina" not in rec["prompt"]
     assert "turquoise dyed underlayer" in c
     assert "dark brown eyes" in c
     assert "olive-tan skin" in c
@@ -82,7 +92,7 @@ def test_create_writes_both_records(tmp_path):
     assert app["nova"]["age"] == 27
     assert "turquoise" in app["nova"]["prompt"]
     assert ward["nova"]["style"] == "edgy downtown"
-    assert ward["nova"]["work"] == "bartender"
+    assert ward["nova"]["jobs"] == [{"job": "bartender", "places": [], "outfit": ""}]
 
 
 def test_the_written_record_satisfies_the_render_preflight(tmp_path, monkeypatch):

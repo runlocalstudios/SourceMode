@@ -110,3 +110,100 @@ def avoid(character: str) -> str:
     """The line this character does not cross, in any category. Sandra wears no
     crop tops; a generated pack with no memory of that puts her in one."""
     return str(brief(character).get("avoid") or "").strip()
+
+
+# --- the Characters tab's wardrobe record ------------------------------------
+# Jeremy, 2026-10-11: free-form style per outfit type ("chic, trendy, shabby,
+# overdressed, underdressed, slutty, revealing, conservative, self-conscious"),
+# and two jobs with their own outfits - "Marisol and Zara are both strippers and
+# both work at the beach bar, I can't have them working at the beach bar in
+# stripper outfits." The game's schedule labels every shift "work", so a job is
+# tied to the game places where she does it.
+
+#: (key, label, what it covers). Free text; nothing here is a dropdown.
+OUTFIT_TYPES: tuple[tuple[str, str, str], ...] = (
+    ("everyday", "Everyday / casual", "asset pack casual, casual selfies, influencer"),
+    ("workout", "Workout / gym", "asset pack workout, gym shoot"),
+    ("dressy", "Dressy - dinner, gallery", "asset pack fancy dining / gallery"),
+    ("night_out", "Night out - town, club", "asset pack fancy town, club shoot"),
+    ("date", "Date", "asset pack casual date, date selfies, date-night shoot"),
+    ("home", "At home / loungewear", "loungewear shoot, at-home selfies"),
+    ("swim", "Swim", "pool and beach shoots"),
+    ("intimate", "Intimate", "boudoir, silk, sheer, intimate selfies"),
+)
+JOB_SLOTS = 2
+TEXT_KEYS = ("style", "palette", "avoid")
+
+
+def editable(character: str) -> dict:
+    """Her wardrobe record in the Characters tab's shape. A brief written before
+    the tab existed (`work`, `workout`, `silhouettes`) is carried into the new
+    fields as a starting draft; nothing is written until he saves."""
+    b = brief(character)
+    outfits = {k: str((b.get("outfits") or {}).get(k) or "") for k, _, _ in OUTFIT_TYPES}
+    if not outfits["workout"] and b.get("workout"):
+        outfits["workout"] = str(b["workout"])
+    style = str(b.get("style") or "")
+    if b.get("silhouettes") and "outfits" not in b:
+        style = (style + "; " if style else "") + "shapes: " + str(b["silhouettes"])
+    jobs = [dict(job=str(j.get("job") or ""), outfit=str(j.get("outfit") or ""),
+                 places=[str(p) for p in (j.get("places") or [])])
+            for j in (b.get("jobs") or [])][:JOB_SLOTS]
+    if not jobs and b.get("work"):
+        jobs = [{"job": "", "outfit": str(b["work"]), "places": []}]
+    while len(jobs) < JOB_SLOTS:
+        jobs.append({"job": "", "outfit": "", "places": []})
+    hair = b.get("hair") if isinstance(b.get("hair"), list) else []
+    return {"style": style, "palette": str(b.get("palette") or ""),
+            "avoid": str(b.get("avoid") or ""), "outfits": outfits, "jobs": jobs,
+            "hair": [str(h) for h in hair], "note": str(b.get("_note") or ""),
+            "draft": bool(b) and "outfits" not in b}
+
+
+def save(character: str, data: dict, path: Path | None = None) -> dict:
+    """Write her record from the tab. Every field is free text; blank fields
+    are dropped. The legacy keys go once their content has a new home."""
+    from ..config import ENGINE_ROOT  # noqa: PLC0415
+
+    c = (character or "").strip().lower()
+    if not re.match(r"^[a-z][a-z0-9_]{0,31}$", c):
+        raise ValueError("a character id is required")
+    p = path or (ENGINE_ROOT.parent / "characters" / "wardrobe.json")
+    doc = json.loads(p.read_text(encoding="utf-8")) if p.is_file() else {}
+    old = doc.get(c) or {}
+    rec: dict = {}
+    if old.get("_note"):
+        rec["_note"] = old["_note"]
+    for k in TEXT_KEYS:
+        v = str(data.get(k) or "").strip()
+        if v:
+            rec[k] = v
+    outs = data.get("outfits") or {}
+    rec["outfits"] = {k: str(outs.get(k) or "").strip() for k, _, _ in OUTFIT_TYPES
+                      if str(outs.get(k) or "").strip()}
+    jobs = []
+    for j in (data.get("jobs") or [])[:JOB_SLOTS]:
+        row = {"job": str(j.get("job") or "").strip(),
+               "places": [str(x).strip() for x in (j.get("places") or []) if str(x).strip()],
+               "outfit": str(j.get("outfit") or "").strip()}
+        if row["job"] or row["outfit"] or row["places"]:
+            jobs.append(row)
+    if jobs:
+        rec["jobs"] = jobs
+    hair = [str(h).strip() for h in (data.get("hair") or []) if str(h).strip()]
+    if hair:
+        rec["hair"] = hair
+    doc[c] = rec
+    tmp = p.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    tmp.replace(p)
+    _CACHE.clear()
+    return rec
+
+
+def job_for_place(character: str, place: str) -> dict | None:
+    """Which of her jobs she is doing at a game place, or None."""
+    for j in editable(character)["jobs"]:
+        if place and place in j["places"]:
+            return j
+    return None

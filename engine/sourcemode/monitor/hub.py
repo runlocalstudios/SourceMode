@@ -91,15 +91,15 @@ BODY = """
     Training sets<span class=n id=n_dataset></span></button>
   <button id=t_shoots role=tab aria-selected=false data-tab=shoots>
     Shoots<span class=n id=n_shoots></span></button>
-  <button id=t_looks role=tab aria-selected=false data-tab=looks>
-    Looks<span class=n id=n_looks></span></button>
+  <button id=t_characters role=tab aria-selected=false data-tab=characters>
+    Characters<span class=n id=n_characters></span></button>
 </div>
 
 <iframe id=p_gpu class="pane on" src="/queue" title="GPU"></iframe>
 <iframe id=p_judge class=pane title="Judging"></iframe>
 <iframe id=p_dataset class=pane title="Training sets"></iframe>
 <iframe id=p_shoots class=pane title="Shoots"></iframe>
-<iframe id=p_looks class=pane title="Looks"></iframe>
+<iframe id=p_characters class=pane title="Characters"></iframe>
 
 <div id=nowwrap>
   <button id=nowbar aria-label="what the card is doing">
@@ -113,12 +113,13 @@ BODY = """
 
 OWN_JS = r"""
 const $=id=>document.getElementById(id);
-const SRC={gpu:'/queue',judge:'/judge',dataset:'/dataset',shoots:'/shoots',looks:'/appearance'};
+const SRC={gpu:'/queue',judge:'/judge',dataset:'/dataset',shoots:'/shoots',characters:'/characters'};
 /* The phone's browser chrome carries the worst state in the house. The colours
    come from the stylesheet, so the hub holds no hex literal of its own. */
 const TINT={stop:'stop-bg',you:'you-bg',live:'live-bg',unknown:'unk-bg',idle:'g0'};
 
 function show(tab,ref){
+  if(tab==='looks') tab='characters';   /* the tab's old name, in old links */
   if(!(tab in SRC)) tab='gpu';
   for(const k of Object.keys(SRC)){
     const on=k===tab, f=$('p_'+k), b=$('t_'+k);

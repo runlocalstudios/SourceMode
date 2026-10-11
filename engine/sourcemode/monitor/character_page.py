@@ -105,7 +105,7 @@ document.addEventListener('click',async e=>{
   SM.set($('form'),null,
     '<div class=empty><b>'+SM.esc(d.character)+' is on record</b>'
     +'Written to '+SM.esc(d.written.join(' and '))+'.'
-    +' She appears on the shoots tab as soon as she has an approved LoRA.</div>'
+    +' Her jobs and style are on the Characters tab; she appears on the shoots tab once she has a locked LoRA.</div>'
     +'<h2>For chillafterdark</h2>'
     +'<div class=card-sub>Nothing is written into the game repo from here &mdash;'
     +' paste this yourself.</div>'
