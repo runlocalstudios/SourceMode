@@ -11,13 +11,16 @@ dense_epoch_eval's, reused rather than re-derived.
     python scripts/eval/prompt_ab.py <char> <sub> <epoch> <ckpt_dir> <trigger>
            --find "long black hair"
            --arms "A=long black hair|B=|C=long black hair with vivid pink underlights"
-           [--scenes 0,2,6]
+           [--scenes 0,2,6] [--seeds 1]
 
 Arms are rendered in the order given; `A=` with the text equal to --find is the
 control. An EMPTY arm deletes the phrase, which is how you ask "does the LoRA
 supply this on its own when the prompt says nothing".
 
-Writes outputs/ab_<char>_<tag>/<arm>/scene_NN.png, a labelled side-by-side
+--seeds N renders each scene N times (seed SEED + i + 1000*k), so a scene that
+fails every time can be judged on more than one draw.
+
+Writes outputs/ab_<char>_<tag>/<arm>/scene_NN[_sK].png, a labelled side-by-side
 sheet, and a blind judge set so the verdict comes from Jeremy's eye and not
 from my colour metric.
 """
@@ -42,7 +45,7 @@ from sourcemode.render.workflow import (  # noqa: E402
 # Flags are split out BEFORE any positional parsing: dense_epoch_eval read
 # argv by index, a trailing --scenes landed in the epoch-offset slot, int()
 # raised, and the job died four seconds after waiting seven hours for the card.
-_FLAGS = {"--find", "--arms", "--scenes", "--seed", "--tag", "--source"}
+_FLAGS = {"--find", "--arms", "--scenes", "--seed", "--seeds", "--tag", "--source"}
 POS, FLAG = [], {}
 _it = iter(sys.argv)
 for _a in _it:
@@ -63,6 +66,7 @@ if len(ARMS) < 2:
     raise SystemExit("--arms needs at least two, as 'A=text|B=text'")
 SCENES_IDX = [int(x) for x in FLAG.get("--scenes", "0,2,6").split(",") if x.strip()]
 SEED = int(FLAG.get("--seed", "90210"))
+NSEEDS = max(1, int(FLAG.get("--seeds", "1")))
 
 W, H = 1024, 1536
 TAG = FLAG.get("--tag", "hair")
@@ -152,7 +156,7 @@ items, rows = [], []
 for arm_name, arm_text in ARMS:
     d = OUT / arm_name
     d.mkdir(parents=True, exist_ok=True)
-    for i in SCENES_IDX:
+    for i, k in ((i, k) for i in SCENES_IDX for k in range(NSEEDS)):
         # the ONE substitution. An empty arm deletes the phrase and tidies the
         # comma it leaves behind, so the sentence still reads as English.
         if FIND == "@clause":
@@ -162,22 +166,24 @@ for arm_name, arm_text in ARMS:
         else:
             prompt = ALL[i].replace(FIND, arm_text) if arm_text else \
                 ALL[i].replace(FIND + ", ", "").replace(FIND, "")
-        dest = d / f"scene_{i:02d}.png"
+        # k == 0 keeps the old name and seed, so one-seed runs are unchanged
+        dest = d / (f"scene_{i:02d}.png" if k == 0 else f"scene_{i:02d}_s{k}.png")
+        sfx = "" if k == 0 else f"_s{k}"
         try:
             if not dest.exists():
                 files = client.outputs(client.wait(client.submit(
-                    t2i(prompt, SEED + i, f"ab/{CHAR}_{TAG}/{arm_name}")), timeout_s=3600))
+                    t2i(prompt, SEED + i + 1000 * k, f"ab/{CHAR}_{TAG}/{arm_name}")), timeout_s=3600))
                 if not files:
-                    log(f"  {arm_name} scene{i:02d}: no output"); continue
+                    log(f"  {arm_name} scene{i:02d}{sfx}: no output"); continue
                 client.fetch(files[0], dest)
             e = embed_image(dest)
             score = round(float(cosine(ref, e)), 4) if e is not None else 0.0
-            rows.append({"arm": arm_name, "scene": i, "file": str(dest), "score": score})
-            items.append({"id": f"{arm_name}__{i:02d}", "path": dest,
-                          "arm": arm_name, "group": str(i)})
-            log(f"  {arm_name} scene{i:02d}: identity {score}")
+            rows.append({"arm": arm_name, "scene": i, "seed": k, "file": str(dest), "score": score})
+            items.append({"id": f"{arm_name}__{i:02d}{sfx}", "path": dest,
+                          "arm": arm_name, "group": f"{i}{sfx}"})
+            log(f"  {arm_name} scene{i:02d}{sfx}: identity {score}")
         except Exception as ex:  # noqa: BLE001
-            log(f"  {arm_name} scene{i:02d}: ERROR {ex}")
+            log(f"  {arm_name} scene{i:02d}{sfx}: ERROR {ex}")
 
 if not items:
     raise SystemExit("rendered nothing - refusing to write a DONE marker")
@@ -198,11 +204,12 @@ log(f"judge set {SET_ID}: {len(items)} images")
 try:
     from PIL import Image, ImageDraw
     CW, CH = 300, 390
-    sheet = Image.new("RGB", (len(SCENES_IDX) * CW, len(ARMS) * (CH + 18)), (18, 18, 20))
+    COLS = [(i, k) for i in SCENES_IDX for k in range(NSEEDS)]
+    sheet = Image.new("RGB", (len(COLS) * CW, len(ARMS) * (CH + 18)), (18, 18, 20))
     dr = ImageDraw.Draw(sheet)
     for r, (arm_name, arm_text) in enumerate(ARMS):
-        for c, i in enumerate(SCENES_IDX):
-            p = OUT / arm_name / f"scene_{i:02d}.png"
+        for c, (i, k) in enumerate(COLS):
+            p = OUT / arm_name / (f"scene_{i:02d}.png" if k == 0 else f"scene_{i:02d}_s{k}.png")
             if not p.is_file():
                 continue
             im = Image.open(p).convert("RGB")
