@@ -1352,10 +1352,21 @@ def gpu_run(
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     def log(msg: str) -> None:
+        # 2026-10-10: rich's rprint turned ":cat:" in "shoot:cat:club" into an
+        # emoji, the cp1252 console could not encode it, and the runner died
+        # mid-START with the job's process already launched. The file is the
+        # record, so it is written first; the console copy is plain text and
+        # a failure to print it is never fatal.
         line = f"{q_now()}  {msg}"
-        rprint(line)
         with log_path.open("a", encoding="utf-8") as fh:
             fh.write(line + chr(10))
+        try:
+            print(line, flush=True)
+        except (UnicodeEncodeError, OSError):
+            try:
+                print(line.encode("ascii", "replace").decode("ascii"), flush=True)
+            except OSError:
+                pass
 
     try:
         Runner(out, log=log, poll=poll).serve(once=once, dry_run=dry_run)

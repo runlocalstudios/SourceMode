@@ -11,6 +11,12 @@ Design rules, each of them a scar:
 - **It knows its own children, so no completion markers are involved at all.**
   A marker that was already present once fired a job instantly, four minutes into
   a seven-hour run; waiting on `proc.wait()` cannot have that bug.
+- **A job a dead runner left behind is still a job on the card.** 2026-10-10:
+  the runner crashed printing its START line, and the cat shoot it had just
+  launched kept rendering as an orphan. A fresh runner saw no queued head in
+  the way and nothing in `busy` that matches a shoot, so it would have started
+  the next shoot on top of it. Any job still marked running whose process is
+  alive is waited on; once it is gone it is closed with its exit code unknown.
 - **A job that fails FAST pauses the queue.** `dense_epoch_eval.py` once died in
   four seconds on an argv bug after waiting seven hours for the card, and the next
   job took the slot 30 seconds later. A quick non-zero exit is a broken
@@ -24,11 +30,22 @@ import time
 from pathlib import Path
 
 from . import queue as q
-from .busy import gpu_busy
+from .busy import gpu_busy, process_list
 from .lease import acquire, lease_path, release
 
 FAST_FAIL_SECONDS = 60
 POLL_SECONDS = 60
+
+
+def still_running(job: dict, processes: list[tuple[int, str]]) -> bool:
+    """Is this job's own process alive? Same PID AND the job's script in its
+    command line, so a recycled PID is not mistaken for the job."""
+    pid = job.get("pid")
+    if not pid:
+        return False
+    key = next((c for c in job.get("cmd", []) if c.lower().endswith(".py")),
+               (job.get("cmd") or [""])[-1]).lower()
+    return any(p == pid and key in (cmd or "").lower() for p, cmd in processes)
 
 
 def approval_ok(ds_id: str) -> tuple[bool, str]:
@@ -48,7 +65,8 @@ def approval_ok(ds_id: str) -> tuple[bool, str]:
 
 class Runner:
     def __init__(self, outputs_root: Path, *, log=print, poll: float = POLL_SECONDS,
-                 sleeper=time.sleep, approval=approval_ok, busy=gpu_busy):
+                 sleeper=time.sleep, approval=approval_ok, busy=gpu_busy,
+                 procs=process_list):
         self.outputs = outputs_root
         self.qpath = q.queue_path(outputs_root)
         self.logs = outputs_root / "logs"
@@ -57,6 +75,7 @@ class Runner:
         self.sleep = sleeper
         self.approval = approval
         self.busy = busy
+        self.procs = procs
         self._said: str | None = None
 
     def _say_once(self, msg: str) -> None:
@@ -95,6 +114,26 @@ class Runner:
         if doc["paused"]:
             self._say_once(f"wait: queue PAUSED - {doc['pause_reason']}")
             return "paused"
+
+        # step() blocks in proc.wait() for its own children, so anything marked
+        # running here was started by a runner that is no longer alive
+        left = q.running(doc)
+        if left:
+            procs = self.procs()
+            if not procs:
+                self._say_once("wait: cannot read the process list, so cannot tell whether "
+                               + ", ".join(j["id"] for j in left) + " is still running")
+                return "busy"
+            for j in left:
+                if still_running(j, procs):
+                    self._say_once(f"wait: {j['id']} {j['label']} is still running as PID {j['pid']},"
+                                   f" left by an earlier runner - waiting for it to finish")
+                    return "busy"
+            for j in left:
+                q.mark_lost(doc, j["id"])
+                self.log(f"LOST {j['id']} {j['kind']}:{j['label']} - its runner died while it ran;"
+                         f" the process has ended, exit code unknown")
+            q.save(self.qpath, doc)
 
         job = q.head(doc)
         if job is None:

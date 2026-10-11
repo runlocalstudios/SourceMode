@@ -262,3 +262,82 @@ def test_it_actually_runs_a_job_end_to_end(tmp_path):
     log = (tmp_path / "logs") / f"gpu-{job['id']}-hello.log"
     assert "from the queue" in log.read_text(encoding="utf-8")
     assert q.head(doc) is None
+
+
+# --- a job left running by a dead runner -------------------------------------
+
+def _orphaned(tmp_path):
+    """j1 running as PID 68892 (a shoot), j2 queued behind it."""
+    path = q.queue_path(tmp_path)
+    doc = q.empty()
+    a = q.add(doc, kind="shoot", label="cat:club", cwd=".",
+              cmd=["python.exe", "C:/x/run_shoots.py", "cat", "club"])
+    _add(doc, "gigi:influencer", kind="shoot")
+    q.mark_running(doc, a["id"], 68892, "log")
+    q.save(path, doc)
+    return path
+
+
+def test_an_orphaned_job_that_is_still_alive_is_waited_on(tmp_path):
+    """2026-10-10: the runner died printing START; the cat shoot kept rendering,
+    and nothing in busy() matches a shoot."""
+    path = _orphaned(tmp_path)
+    procs = [(68892, "python.exe C:/x/run_shoots.py cat club"), (4, "System")]
+    r = _runner(tmp_path, procs=lambda: procs)
+    for _ in range(20):
+        assert r.step(dry_run=True) == "busy"
+    doc = q.load(path)
+    assert [j["status"] for j in doc["jobs"]] == ["running", "queued"]
+
+
+def test_a_recycled_pid_is_not_the_job(tmp_path):
+    path = _orphaned(tmp_path)
+    r = _runner(tmp_path, procs=lambda: [(68892, "notepad.exe"), (4, "System")])
+    assert r.step(dry_run=True) == "dry-run"
+    j = q.load(path)["jobs"][0]
+    assert j["status"] == "failed" and j["exit_code"] is None
+    assert "exit code unknown" in j["note"]
+
+
+def test_once_the_orphan_ends_it_is_closed_and_the_queue_moves_on(tmp_path):
+    path = _orphaned(tmp_path)
+    procs = [(68892, "python.exe C:/x/run_shoots.py cat club"), (4, "System")]
+    r = _runner(tmp_path, procs=lambda: procs)
+    assert r.step(dry_run=True) == "busy"
+    procs.pop(0)
+    assert r.step(dry_run=True) == "dry-run"
+    assert q.load(path)["jobs"][0]["status"] == "failed"
+
+
+def test_an_unreadable_process_list_waits_rather_than_guessing(tmp_path):
+    path = _orphaned(tmp_path)
+    r = _runner(tmp_path, procs=lambda: [])
+    assert r.step(dry_run=True) == "busy"
+    assert q.load(path)["jobs"][0]["status"] == "running"
+
+
+def test_the_runner_log_survives_an_emoji_shortcode_and_a_dumb_console(tmp_path, monkeypatch):
+    """"shoot:cat:club" became a cat emoji under rich, and cp1252 killed the runner."""
+    import io
+    import sys
+
+    from sourcemode import cli
+
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(io.BytesIO(), encoding="cp1252"))
+    monkeypatch.setattr(cli, "_gpu_paths", lambda: (tmp_path, None))
+    seen = []
+
+    class FakeRunner:
+        def __init__(self, out, log, poll):
+            self.log = log
+
+        def serve(self, once, dry_run):
+            self.log("START j106 shoot:cat:club pid=1 -> x")
+            self.log("caf\u00e9 \U0001f431")
+            seen.append(True)
+
+    monkeypatch.setattr("sourcemode.gpu.runner.Runner", FakeRunner)
+    cli.gpu_run(once=True, dry_run=True, poll=0)
+    assert seen
+    text = (tmp_path / "logs" / "gpu-runner.log").read_text(encoding="utf-8")
+    assert "shoot:cat:club" in text and "\U0001f431" in text

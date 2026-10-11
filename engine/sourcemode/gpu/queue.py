@@ -237,6 +237,17 @@ def mark_finished(doc: dict, job_id: str, exit_code: int) -> dict:
     return job
 
 
+def mark_lost(doc: dict, job_id: str) -> dict:
+    """Close a job whose runner died while it ran. Its process has since ended,
+    but the exit code went with the runner that was waiting on it, so it is
+    recorded as unknown - not as a success, and not as a numbered failure."""
+    job = find(doc, job_id)
+    note = (job.get("note") or "").strip()
+    job.update(status="failed", ended_at=now(), exit_code=None, pid=None,
+               note=(note + "; " if note else "") + "runner died while it ran - exit code unknown, check its log")
+    return job
+
+
 def pause(doc: dict, reason: str) -> dict:
     doc["paused"] = True
     doc["pause_reason"] = reason
