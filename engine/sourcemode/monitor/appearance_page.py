@@ -335,7 +335,7 @@ async function loadLooks(){
 function drawLooks(el,st){
   const c=st.character;
   let h='<h4>Wardrobe pack &mdash; 28 looks'
-    +(st.state==='approved'?'<span class=draft style="color:var(--done-ink)">approved '+SM.esc(SM.ago(st.approved_at))+'</span>'
+    +(st.state==='approved'?'<span class=draft style="color:var(--done-ink)">approved'+(st.approved_at?' '+SM.esc(SM.ago(st.approved_at)):' - an older plan, written before this tab')+'</span>'
      :st.state==='draft'?'<span class=draft>'+(st.approved_at?'new draft - replaces the approved plan once approved':'draft - edit, then approve')+'</span>':'')+'</h4>';
   if(st.state==='none'){
     const n=Object.values(st.shipped||{}).reduce((a,b)=>a+b,0);
