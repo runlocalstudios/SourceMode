@@ -2004,11 +2004,12 @@ def queue_router(cfg: dict, status=None):
     def shoots_catalog() -> dict:
         """Everything the shoots tab needs: who can be shot, and what of."""
         from ..assets.lora import approved_characters  # noqa: PLC0415
-        from ..assets.shoots import buckets  # noqa: PLC0415
+        from ..assets.shoots import buckets, mix  # noqa: PLC0415
 
         r = _rate(cfg)
         return {"characters": approved_characters(cfg),
                 "buckets": buckets(),
+                "mix": mix(),
                 # Two rates, because a sweep render and an asset-pack shot are
                 # not the same work - the rail totals each selection at its own.
                 "s_per_shot": r["s_per_render"],
@@ -2040,6 +2041,12 @@ def queue_router(cfg: dict, status=None):
         hit = [i for i in ids if i in blocked]
         if hit:
             raise HTTPException(409, f"{hit[0]}: {blocked[hit[0]]}")
+        from ..assets.shoots import combo_problem  # noqa: PLC0415
+
+        for i in ids:
+            why = combo_problem(i, char)
+            if why:
+                raise HTTPException(409, f"{i}: {why}")
 
         doc = q.load(path())
         label = f"{char}:{'+'.join(sorted(ids))}"

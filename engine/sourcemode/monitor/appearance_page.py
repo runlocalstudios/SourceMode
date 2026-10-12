@@ -176,6 +176,11 @@ html,body{overflow-x:hidden}
 .linkish{background:none;border:0;padding:0;color:var(--act);font:inherit;cursor:pointer;
   text-decoration:underline;text-underline-offset:3px}
 .draft{font:var(--t-small);color:var(--you-ink)}
+.sec h5{margin:var(--s3) 0 0;font:var(--t-meta);font-weight:600;color:var(--g8)}
+.look{display:grid;grid-template-columns:auto 1fr;gap:var(--s1) var(--s2);align-items:start;margin-top:var(--s2)}
+.look .lid{font:var(--t-small);color:var(--g6);padding-top:9px;font-variant-numeric:tabular-nums}
+.look input{grid-column:2}
+.lk .row .note{margin:0}
 #big{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.92);display:none;
   align-items:center;justify-content:center}
 #big.on{display:flex}
@@ -286,7 +291,73 @@ function profile(r){
     +'</div>'
     +'<div class=sec><h4>Hair options</h4><div class=sub>One per line. Starts as the shared list; edit, add or delete lines.</div>'
     +ta('hair',(w.hair.length?w.hair:r.hair_default).join('\n'),'short')+'</div>'
-    +'<div class=row><button class="btn btn-primary" data-act=save>Save '+SM.esc(r.character)+'</button></div>';
+    +'<div class=row><button class="btn btn-primary" data-act=save>Save '+SM.esc(r.character)+'</button></div>'
+    +'<div class="sec looks" data-looks="'+SM.esc(r.character)+'"><h4>Wardrobe pack &mdash; 28 looks</h4>'
+    +'<div class=sub>loading&hellip;</div></div>';
+}
+
+/* --- the 28-look plan ----------------------------------------------------
+   Jeremy, 2026-10-12: the pack box on Shoots said "decide the 28 outfits" and
+   gave him nowhere to do it. Draft from her record, edit every line, approve;
+   the approved plan is what the Shoots tab renders. */
+async function loadLooks(){
+  for(const el of document.querySelectorAll('[data-looks]')){
+    const c=el.dataset.looks;
+    try{ drawLooks(el, await SM.getJSON('/characters/'+encodeURIComponent(c)+'/looks')); }
+    catch(e){ el.querySelector('.sub').textContent='Could not load: '+e.message; }
+  }
+}
+function drawLooks(el,st){
+  const c=st.character;
+  let h='<h4>Wardrobe pack &mdash; 28 looks'
+    +(st.state==='approved'?'<span class=draft style="color:var(--done-ink)">approved '+SM.esc(SM.ago(st.approved_at))+'</span>'
+     :st.state==='draft'?'<span class=draft>draft - edit, then approve</span>':'')+'</h4>';
+  if(st.state==='none'){
+    const n=Object.values(st.shipped||{}).reduce((a,b)=>a+b,0);
+    h+='<div class=sub>Nothing drafted yet. The asset pack on the Shoots tab stays locked until 28 looks are approved.'
+      +(n?' She has '+n+' outfits in the game already, so the new looks number on from there.':'')+'</div>'
+      +'<div class=row><button class="btn btn-primary" data-act=lk_draft>Draft the 28 looks</button></div>';
+    el.innerHTML=h; return;
+  }
+  h+='<div class=sub>One outfit and one hair per look. The draft is garments in her palette plus her job outfit - edit anything. Hair words: colour, dye and length only.</div>';
+  for(const cat of st.categories){
+    h+='<h5>'+SM.esc(cat.label)+' <span class=cov>'+cat.looks.length+(cat.guide?' &middot; her record: '+SM.esc(cat.guide):'')+'</span></h5>';
+    for(const l of cat.looks){
+      h+='<div class=look><span class=lid>'+SM.esc(l.id)+'</span>'
+        +'<textarea rows=1 class=short data-lo="'+SM.esc(l.id)+'" placeholder="the outfit">'+SM.esc(l.outfit)+'</textarea>'
+        +'<input data-lh="'+SM.esc(l.id)+'" value="'+SM.esc(l.hair)+'" placeholder="her hair ...">'
+        +'</div>';
+    }
+  }
+  h+='<div class=row><button class="btn btn-primary" data-act=lk_save>Save</button>'
+    +(st.state==='draft'
+      ?'<button class="btn" data-act=lk_approve'+(st.blank?' disabled title="'+st.blank+' blank"':'')+'>Approve &mdash; unlocks the pack on Shoots</button>'
+       +'<button class="btn btn-ghost" data-act=lk_draft>Start over</button>'
+      :'')
+    +(st.blank?'<span class=note>'+st.blank+' blank</span>':'')+'</div>';
+  el.innerHTML=h;
+  for(const t of el.querySelectorAll('textarea')) fit(t);
+}
+function collectLooks(el){
+  return {all:[...el.querySelectorAll('[data-lo]')].map(t=>({id:t.dataset.lo,outfit:t.value,
+    hair:(el.querySelector('[data-lh="'+CSS.escape(t.dataset.lo)+'"]')||{}).value||''}))};
+}
+async function looksAct(b){
+  const el=b.closest('[data-looks]'), c=el.dataset.looks, a=b.dataset.act;
+  const u='/characters/'+encodeURIComponent(c)+'/looks';
+  if(a==='lk_draft' && el.querySelector('[data-lo]') && !confirm('Replace every line with a fresh draft?')) return;
+  b.disabled=true;
+  try{
+    let st;
+    if(a==='lk_draft') st=await SM.postJSON(u+'/draft',{});
+    else if(a==='lk_save'){ st=await SM.postJSON(u,{categories:collectLooks(el)}); SM.toast('looks saved'); }
+    else if(a==='lk_approve'){
+      st=await SM.postJSON(u,{categories:collectLooks(el)});   /* save what is on screen first */
+      st=await SM.postJSON(u+'/approve',{});
+      SM.toast(c+': 28 looks approved - the pack is open on Shoots',{label:'Shoots',run:()=>SM.nav('shoots',c)});
+    }
+    drawLooks(el,st);
+  }catch(err){ SM.toast(err.message); b.disabled=false; }
 }
 
 function draw(){
@@ -303,6 +374,7 @@ function draw(){
       +appearance(r)+(one?profile(r):'')
     +'</div>').join(''));
   for(const t of document.querySelectorAll('.lk textarea')) fit(t);
+  loadLooks();
 }
 /* the whole text visible at once - no inner scrolling to read what she is */
 function fit(t){ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
@@ -335,6 +407,7 @@ document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]'); if(!b) return;
   if(b.dataset.act==='newchar'){ location.href='/character'; return; }
   if(b.dataset.act==='sweep'){ SM.nav('judge',b.dataset.set); return; }
+  if(b.dataset.act.startsWith('lk_')) return looksAct(b);
   const card=b.closest('.lk'); if(!card) return;
   const c=card.dataset.c, val=k=>card.querySelector('[data-k='+k+']').value;
   b.disabled=true;
@@ -396,6 +469,46 @@ def appearance_router(cfg: dict):
         except ValueError as e:
             raise HTTPException(400, str(e)) from e
         return {"character": char.lower(), "confirmed": rec["confirmed"]}
+
+    # --- the 28-look wardrobe plan -------------------------------------------
+    # Jeremy, 2026-10-12: the asset pack was greyed out for Ash with nowhere on
+    # the monitor to do what it asked. Draft here, edit, approve; approving is
+    # what unlocks the pack on the Shoots tab.
+    def _char(char: str) -> str:
+        c = (char or "").strip().lower()
+        if not re.match(r"^[a-z][a-z0-9_]{0,31}$", c):
+            raise HTTPException(400, "a character id is required")
+        return c
+
+    @r.get("/characters/{char}/looks")
+    def _looks(char: str) -> dict:
+        from ..assets import looks as L  # noqa: PLC0415
+
+        return L.state(cfg, _char(char))
+
+    @r.post("/characters/{char}/looks/draft")
+    def _looks_draft(char: str) -> dict:
+        from ..assets import looks as L  # noqa: PLC0415
+
+        return L.draft(cfg, _char(char))
+
+    @r.post("/characters/{char}/looks")
+    def _looks_save(char: str, body: dict = Body(...)) -> dict:
+        from ..assets import looks as L  # noqa: PLC0415
+
+        try:
+            return L.save(cfg, _char(char), body.get("categories") or {})
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+
+    @r.post("/characters/{char}/looks/approve")
+    def _looks_approve(char: str) -> dict:
+        from ..assets import looks as L  # noqa: PLC0415
+
+        try:
+            return L.approve(cfg, _char(char))
+        except ValueError as e:
+            raise HTTPException(409, str(e)) from e
 
     @r.post("/characters/{char}/profile")
     def _profile(char: str, body: dict = Body(...)) -> dict:

@@ -249,6 +249,11 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     else:
         body = f"in a three-quarter view toward {her}"
         head = f"her face turned slightly toward {her}, looking into the camera"
+    # Jeremy, 2026-10-12, the submissive pose set: half of it is not facing the
+    # camera or looking into it, so a pose slot may say where her body and her
+    # face actually are. Nothing else about the prompt changes.
+    body = slot.get("facing") or body
+    head = slot.get("gaze") or head
     shot = slot.get("shot_type") or "standing portrait"
     # the pack's wording is what the A/B was judged on, byte for byte; a shoot's
     # own framing sentence follows the shot type as its own clause
@@ -257,8 +262,9 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     outfit = slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"])
     stance = f", {slot['stance']}" if slot.get("stance") else ""
     avoid = f" {slot['avoid']}" if slot.get("avoid") else ""
+    expression = slot.get("expression_natural") or _NATURAL_EXPRESSION[asked["expression"]]
     return (f"{trigger or character}, {app + ', ' if app else ''}{crop}, {body}, {head}{stance}, "
-            f"{_NATURAL_EXPRESSION[asked['expression']]}, {slot.get('makeup') or MAKEUP}, "
+            f"{expression}, {slot.get('makeup') or MAKEUP}, "
             f"{slot['hair']}, wearing {outfit}, "
             f"{backdrop or KEY_BACKDROP}. Photorealistic, natural skin texture, sharp focus.{avoid}")
 

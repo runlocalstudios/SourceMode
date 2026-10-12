@@ -1,0 +1,114 @@
+"""Mix-and-match shoots and the submissive pose set (Jeremy, 2026-10-12).
+
+A combo id `<scene>-<wardrobe>-<poses>` must behave exactly like a preset
+everywhere a shoot id flows - resolve, lookup, total_shots - and a combo that
+cannot render (a bed pose at the club, the work wardrobe for a character with
+no job outfit) must be refused with the same words the tab greys it with.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from sourcemode.assets import shoots as S
+from sourcemode.assets import wardrobe as W
+from sourcemode.assets.render import shot_prompt
+
+
+def test_combo_is_a_shoot_with_one_shot_per_pose():
+    sh = S.combo("bedroom-lingerie-submissive")
+    assert sh is not None
+    assert sh.shots == len(S.SUBMISSIVE) == 19
+    assert sh.setting == S.BEDROOM
+    assert sh.outfits == S.LINGERIE
+    assert S.lookup("bedroom-lingerie-submissive").id == sh.id
+    assert S.total_shots(["club", "bedroom-lingerie-submissive"]) == 8 + 19
+    # presets first in catalog order, then the combos as ticked
+    assert [s.id for s in S.resolve(["bedroom-lingerie-submissive", "club"])] == [
+        "club", "bedroom-lingerie-submissive"]
+
+
+def test_component_ids_carry_no_hyphen_because_the_hyphen_is_the_separator():
+    for x in S.SCENES + S.WARDROBES + S.POSE_PACKS:
+        assert "-" not in x.id, x.id
+
+
+@pytest.mark.parametrize("bad", ["club-lingerie", "mars-lingerie-submissive",
+                                 "club-lingerie-submissive-extra", "boudoir"])
+def test_a_non_combo_is_none_and_unknown_ids_still_raise(bad):
+    if bad == "boudoir":
+        assert S.combo(bad) is None and bad in S.BY_ID
+        return
+    assert S.combo(bad) is None
+    with pytest.raises(KeyError):
+        S.resolve([bad])
+
+
+def test_a_bed_pose_at_the_club_is_refused_with_the_reason():
+    why = S.combo_problem("club-lingerie-submissive", "ash")
+    assert why and "need a bed" in why and "Club" in why
+    assert S.combo_problem("bedroom-lingerie-submissive", "ash") is None
+    # the standing pack needs only a floor, so it goes anywhere
+    assert S.combo_problem("pool-swim-standing", "ash") is None
+
+
+def test_the_work_wardrobe_is_her_job_outfit_and_blocks_without_one(monkeypatch):
+    def fake(character):
+        jobs = {"ash": [{"job": "waitress", "outfit": "a black shirt-dress uniform", "places": []},
+                        {"job": "", "outfit": "", "places": []}]}
+        return {"jobs": jobs.get(character, [{"job": "", "outfit": "", "places": []}])}
+    monkeypatch.setattr(W, "editable", fake)
+    assert S.wardrobe_outfits("work", "ash") == ("a black shirt-dress uniform",)
+    assert S.wardrobe_outfits("work", "nobody") == ()
+    assert S.combo_problem("club-work-standing", "nobody") == (
+        "no job outfit in her record - add one under Jobs on the Characters tab")
+    assert S.combo_problem("club-work-standing", "ash") is None
+    slots = S.combo("club-work-standing").plan(character="ash")
+    assert {s["outfit"] for s in slots} == {"a black shirt-dress uniform"}
+    assert len(slots) == len(S.POSES_BY_ID["standing"].poses)
+
+
+def test_pose_slots_reach_the_prompt_and_keep_the_stockings():
+    sh = S.BY_ID["submissive"]
+    slots = sh.plan(character="nobody")
+    assert len(slots) == 19 and len({s["id"] for s in slots}) == 19
+    # pose 9: back to the camera, looking over her shoulder - the builder's
+    # default "facing the camera, looking straight into the camera" must go
+    p = shot_prompt("nobody", slots[8], backdrop=slots[8]["setting"])
+    assert "her back to the camera" in p
+    assert "looking back over her shoulder into the camera" in p
+    assert "facing the camera" not in p and "looking straight into the camera" not in p
+    assert slots[8]["stance"] in p
+    # lingerie ends in stockings; drop_footwear would have eaten them
+    assert "stockings" in p
+    # pose 3: mouth open replaces the smile table entry
+    p3 = shot_prompt("nobody", slots[2], backdrop=slots[2]["setting"])
+    assert "her mouth open wide" in p3 and "smile" not in p3
+    # a plain pose keeps the defaults
+    p6 = shot_prompt("nobody", slots[5], backdrop=slots[5]["setting"])
+    assert "facing the camera" in p6 or "toward her" in p6
+
+
+def test_every_submissive_pose_names_what_it_needs_and_the_bedroom_has_it():
+    bedroom = S.SCENE_BY_ID["bedroom"]
+    for p in S.SUBMISSIVE:
+        assert p["needs"], p["stance"]
+        assert set(p["needs"]) <= set(bedroom.has), p["stance"]
+
+
+def test_the_preset_is_in_the_intimate_bucket_and_the_tab_gets_the_three_lists():
+    intimate = next(b for b in S.buckets() if b["bucket"] == "intimate")
+    assert "submissive" in [s["id"] for s in intimate["shoots"]]
+    m = S.mix()
+    assert {x["id"] for x in m["poses"]} == {"standing", "bedroom", "submissive"}
+    sub = next(x for x in m["poses"] if x["id"] == "submissive")
+    assert sub["n"] == 19 and sub["needs"] == ["bed", "floor", "wall"]
+    assert next(w for w in m["wardrobes"] if w["id"] == "work")["record"] == "job"
+
+
+def test_a_pack_slot_is_untouched_by_the_new_overrides():
+    slot = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
+            "outfit": "a blue sundress", "hair": "her hair worn loose"}
+    p = shot_prompt("nobody", slot)
+    assert "a standing portrait framed from the upper thighs up" in p
+    assert "looking straight into the camera" in p

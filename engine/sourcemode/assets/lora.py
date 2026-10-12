@@ -97,11 +97,14 @@ def approved_characters(cfg: dict) -> list[dict]:
             continue
         seen.add(c)
         ap = check(c)
+        from ..assets.shoots import wardrobe_outfits  # noqa: PLC0415
         rows.append({"character": c, "who": c.replace("_", " ").title(),
                      "lora": lora["name"], "why": lora["why"],
                      "appearance_ok": ap["ok"],
                      "appearance_missing": [m.split(" - ")[0] for m in ap["missing"]],
-                     "blocked": blocked_shoots(cfg, c)})
+                     "blocked": blocked_shoots(cfg, c),
+                     # the mix picker greys the work wardrobe when she has no job outfit
+                     "job_outfits": len(wardrobe_outfits("work", c))})
     return sorted(rows, key=lambda r: r["character"])
 
 
@@ -122,6 +125,6 @@ def blocked_shoots(cfg: dict, character: str) -> dict[str, str]:
     for sh in CATALOG:
         pp = plan_path(sh, character, out)
         if pp is not None and not pp.is_file():
-            blocked[sh.id] = ("no wardrobe plan yet - the 28 outfits have to be "
-                              "decided before they can be rendered")
+            blocked[sh.id] = ("no wardrobe plan yet - draft and approve her 28 looks "
+                              "on the Characters tab")
     return blocked

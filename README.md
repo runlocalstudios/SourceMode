@@ -28,6 +28,9 @@ and **SourceMode GPU Runner** (`engine/scripts/register-autostart.ps1`).
 5. **Lock the winner** - `sourcemode lora lock <char> --file ... --epoch N`. The lock
    goes into `characters/loras.json` and the file is vaulted in `library/loras/`.
 6. **Shoots and packs** from the Shoots tab; judge them; keepers are linked into `kept/`.
+   The in-game asset pack needs her 28 looks first: draft, edit and approve them under
+   her card on the Characters tab. "Mix your own" on Shoots combines any scene, wardrobe
+   (including her job outfit) and pose pack into one shoot.
 
 ## Where things are
 

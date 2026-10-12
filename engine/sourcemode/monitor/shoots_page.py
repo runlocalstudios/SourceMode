@@ -50,6 +50,14 @@ OWN_CSS = r"""
 .sh.off{opacity:.55;cursor:default}
 .sh.off .box{border-style:dashed}
 .sh .blocked{display:block;font:var(--t-small);color:var(--you-ink);margin-top:2px}
+/* Mix your own: three pickers, one combo */
+.mix .mixrow{display:flex;gap:var(--s2);flex-wrap:wrap}
+.mixf{flex:1;min-width:150px;display:flex;flex-direction:column;gap:2px}
+.mixf span{font:var(--t-meta);font-weight:600;color:var(--g8)}
+.mix select{min-height:var(--tap);background:var(--g1);color:var(--g9);border:1px solid var(--g4);
+  border-radius:var(--r2);padding:0 var(--s2);font-size:16px;width:100%}
+.mix .row{display:flex;gap:var(--s2);margin-top:var(--s2)}
+.mix .blocked{color:var(--you-ink)}
 .picks{list-style:none;margin:var(--s3) 0 0;padding:0}
 .picks li{display:flex;justify-content:space-between;gap:var(--s3);
   padding:var(--s2) 0;border-top:1px solid var(--g3);font:var(--t-meta);color:var(--g7)}
@@ -97,7 +105,7 @@ function draw(){
     : '');
 
   const blocked=(c&&c.blocked)||{};
-  let h='';
+  let h=mixCard(c);
   for(const b of data.buckets){
     h+='<h2>'+SM.esc(b.label||b.bucket)+'</h2>';
     for(const s of b.shoots){
@@ -118,8 +126,58 @@ function draw(){
 
 function find(id){
   for(const b of data.buckets) for(const s of b.shoots) if(s.id===id) return s;
-  return null;
+  return comboOf(id);
 }
+
+/* --- mix your own --------------------------------------------------------
+   Jeremy, 2026-10-12: "the shot type (club, boudoir) as one option, clothing
+   as another option (club outfit, lingerie, casual)... a picture of her at
+   the club but wearing work outfit? No problem." Three pickers; the combo
+   id <scene>-<wardrobe>-<poses> is a shoot like any other once added. */
+let mixPick={scene:'bedroom',wardrobe:'lingerie',poses:'submissive'};
+const byId=(list,id)=>list.find(x=>x.id===id);
+function comboOf(id){
+  const p=(id||'').split('-'); if(p.length!==3||!data.mix) return null;
+  const sc=byId(data.mix.scenes,p[0]), w=byId(data.mix.wardrobes,p[1]), pp=byId(data.mix.poses,p[2]);
+  if(!sc||!w||!pp) return null;
+  return {id, label:sc.label+' / '+w.label+' / '+pp.label, shots:pp.n, kind:'shoot',
+          setting:'', note:pp.note};
+}
+/* same rule as the server's combo_problem, so the greyed option and the 409 agree */
+function mixWhy(c,sc,w,pp){
+  const miss=pp.needs.filter(n=>!sc.has.includes(n));
+  if(miss.length) return 'needs a '+miss.join(' and a ');
+  if(w.record==='job' && !(c&&c.job_outfits)) return 'no job outfit in her record';
+  return '';
+}
+function mixCard(c){
+  if(!data.mix) return '';
+  const m=data.mix;
+  if(!byId(m.scenes,mixPick.scene)) mixPick.scene=m.scenes[0].id;
+  if(!byId(m.wardrobes,mixPick.wardrobe)) mixPick.wardrobe=m.wardrobes[0].id;
+  if(!byId(m.poses,mixPick.poses)) mixPick.poses=m.poses[0].id;
+  const sc=byId(m.scenes,mixPick.scene), w=byId(m.wardrobes,mixPick.wardrobe), pp=byId(m.poses,mixPick.poses);
+  const opt=(o,sel,why)=>'<option value="'+SM.esc(o.id)+'"'+(o.id===sel?' selected':'')+(why?' disabled':'')+'>'
+    +SM.esc(o.label)+(why?' - '+SM.esc(why):'')+'</option>';
+  const sel=(k,label,opts)=>'<label class=mixf><span>'+label+'</span><select data-mix="'+k+'">'+opts+'</select></label>';
+  const why=mixWhy(c,sc,w,pp);
+  const id=sc.id+'-'+w.id+'-'+pp.id;
+  const s=comboOf(id);
+  return '<h2>Mix your own</h2><div class="card mix">'
+    +'<div class=mixrow>'
+    +sel('scene','Scene',m.scenes.map(o=>opt(o,mixPick.scene,pp.needs.some(n=>!o.has.includes(n))?'needs a '+pp.needs.filter(n=>!o.has.includes(n)).join(' and a '):'')).join(''))
+    +sel('wardrobe','Wardrobe',m.wardrobes.map(o=>opt(o,mixPick.wardrobe,o.record==='job'&&!(c&&c.job_outfits)?'no job outfit in her record':'')).join(''))
+    +sel('poses','Poses',m.poses.map(o=>opt(o,mixPick.poses,o.needs.some(n=>!sc.has.includes(n))?'needs a '+o.needs.filter(n=>!sc.has.includes(n)).join(' and a '):'')).join(''))
+    +'</div>'
+    +'<div class=card-sub>'+(why?'<span class=blocked>'+SM.esc(why)+'</span>'
+      :'<b>'+s.shots+'</b> shots &middot; '+SM.dur(cost(s))+(pp.note?' &middot; '+SM.esc(pp.note):''))+'</div>'
+    +'<div class=row><button class="btn btn-sm btn-primary" data-act=mixadd'+(why||picked.has(id)?' disabled':'')+'>'
+    +(picked.has(id)?'Added':'Add to the selection')+'</button></div></div>';
+}
+document.addEventListener('change',e=>{
+  const s=e.target.closest('[data-mix]'); if(!s) return;
+  mixPick[s.dataset.mix]=s.value; draw();
+});
 /* An asset-pack shot costs ~116s and a sweep render ~75s. One rate across a
    mixed selection understated the 112-shot pack by over an hour. */
 function cost(s){ return s.shots*(s.kind==='pack'?data.s_per_pack_shot:data.s_per_shot); }
@@ -160,6 +218,7 @@ document.addEventListener('click',async e=>{
   /* New character lives on the Characters tab now (2026-10-11) */
   if(b.dataset.act==='newchar'){ SM.nav('characters',who||''); return; }
   if(b.dataset.act==='clear'){ picked.clear(); draw(); return; }
+  if(b.dataset.act==='mixadd'){ picked.add(mixPick.scene+'-'+mixPick.wardrobe+'-'+mixPick.poses); draw(); return; }
   if(b.dataset.act==='queue'){
     b.disabled=true;
     try{

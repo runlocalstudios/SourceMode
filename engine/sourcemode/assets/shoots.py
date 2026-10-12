@@ -56,6 +56,13 @@ class Shoot:
     # job and hobbies off the game) builds them with make(character, batch).
     make: object = None
     batch: int = 0
+    # Jeremy, 2026-10-12: a shoot authored pose by pose. Each entry is a stance
+    # plus whatever composition it needs (framing, facing, gaze, shot_type);
+    # the outfits rotate under them. `()` keeps the outfit x pose rotation.
+    pose_slots: tuple[dict, ...] = ()
+    # A WARDROBES id. "work" is HER job outfit from characters/wardrobe.json,
+    # which no fixed outfit tuple can carry, so it is resolved at plan time.
+    wardrobe: str = ""
 
     def plan(self, seed: int = 0, character: str | None = None) -> list[dict]:
         """The shot list: outfit x pose walked in step, hair rotating under them.
@@ -76,12 +83,32 @@ class Shoot:
                 {**x, "hair": hair_options(character)[i % len(hair_options(character))]}
                 for i, x in enumerate(self.explicit)]
         hair = hair_options(character) if character else self.hair
+        outfits = self.outfits
+        if self.wardrobe:
+            outfits = wardrobe_outfits(self.wardrobe, character or "") or self.outfits
         out = []
+        if self.pose_slots:
+            for i, p in enumerate(self.pose_slots):
+                out.append({
+                    "id": f"{self.id}_{i:02d}", "look": i + 1, "category": self.bucket,
+                    "pose": "standing", "shoot": self.id,
+                    "outfit": outfits[i % len(outfits)],
+                    "hair": hair[i % len(hair)],
+                    "stance": p["stance"],
+                    "framing": p.get("framing", self.framing),
+                    "setting": self.setting,
+                    # full-length poses show her feet, and the lingerie sets
+                    # end in stockings, which drop_footwear would strip
+                    "shoes": True,
+                    **{k: p[k] for k in ("facing", "gaze", "shot_type", "expression_natural")
+                       if k in p},
+                })
+            return out
         for i in range(self.shots):
             out.append({
                 "id": f"{self.id}_{i:02d}", "look": i + 1, "category": self.bucket,
                 "pose": "standing", "shoot": self.id,
-                "outfit": self.outfits[i % len(self.outfits)],
+                "outfit": outfits[i % len(outfits)],
                 "hair": hair[i % len(hair)],
                 "stance": self.poses[i % len(self.poses)],
                 "framing": self.framing,
@@ -89,6 +116,92 @@ class Shoot:
             })
         return out
 
+
+BEDROOM = "warm soft lamplight, in a softly lit bedroom with white sheets"
+
+# Jeremy, 2026-10-12: "lingerie + garter + stockings". Every set names all three
+# so the stockings cannot drop out of a shot.
+LINGERIE: tuple[str, ...] = (
+    "a black lace bra and thong with a matching garter belt and sheer black stockings",
+    "a red satin and lace bra and panties with a garter belt holding up sheer black stockings",
+    "a white lace bralette and panties with a white garter belt and sheer white stockings",
+    "a black strappy lingerie set with a garter belt and black fishnet stockings",
+    "a burgundy lace bodysuit with garter straps clipped to sheer black stockings",
+    "a sheer black mesh bra and panties with a garter belt and back-seamed black stockings",
+)
+
+# The submissive pose set, in Jeremy's order (2026-10-12), then the five added
+# at his "any others you would add?". `needs` is what the scene must have for
+# the pose to make sense; `facing` and `gaze` replace the builder's default
+# "facing the camera, looking straight into the camera", which half of these
+# are not. Side and from-behind shots keep less often than frontal ones - that
+# is a known LoRA limit, not a prompt fault - so expect to re-roll them.
+_FULL = "her whole body in frame"
+_KNEEL = "from slightly above, her whole kneeling figure in frame"
+SUBMISSIVE: tuple[dict, ...] = (
+    {"stance": "kneeling on the floor, sitting back on her heels, hands resting on her thighs",
+     "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo",
+     "gaze": "her face tilted up toward the camera, looking up into the lens"},
+    {"stance": "kneeling on the floor, sitting back on her heels, hands resting on her thighs",
+     "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo",
+     "gaze": "her face turned to the side, looking away from the camera"},
+    {"stance": "kneeling on the floor, sitting back on her heels, hands resting on her thighs",
+     "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo",
+     "gaze": "her head tilted slightly back, eyes on the camera",
+     "expression_natural": "her mouth open wide"},
+    {"stance": "kneeling on the floor, sitting back on her heels, hands resting on her thighs",
+     "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo",
+     "facing": "her body in profile to the camera",
+     "gaze": "her face in profile, looking straight ahead"},
+    {"stance": "doing a full split on the bed, torso upright, hands on the mattress",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo"},
+    {"stance": "sitting on the edge of the bed with her legs spread wide, hands on her knees",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo"},
+    {"stance": "lying on her side on the bed, propped on one elbow, legs together",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo"},
+    {"stance": "lying on her side on the bed with her legs spread, one hand resting between her thighs",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo"},
+    {"stance": "standing against the wall with her back to the camera, hips pushed back toward the viewer",
+     "needs": ("wall",), "framing": "framed from the knees up", "shot_type": "photo",
+     "facing": "her back to the camera",
+     "gaze": "looking back over her shoulder into the camera"},
+    {"stance": "standing against the wall with her back to the camera, hips pushed back toward the viewer",
+     "needs": ("wall",), "framing": "framed from the knees up", "shot_type": "photo",
+     "facing": "her back to the camera",
+     "gaze": "her head turned to the side and tilted slightly down, her face seen in profile"},
+    {"stance": "bent forward over the bed, hands flat on the mattress",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
+     "facing": "her back to the camera",
+     "gaze": "looking back over her shoulder into the camera"},
+    {"stance": "bent forward over the bed, hands flat on the mattress",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
+     "facing": "her back to the camera",
+     "gaze": "her face turned to the side, seen in profile"},
+    {"stance": "bent over at the waist in front of the camera, hands holding her ankles",
+     "needs": ("floor",), "framing": _FULL, "shot_type": "full-length photo",
+     "facing": "her back to the camera",
+     "gaze": "looking back at the camera from between her legs"},
+    {"stance": "bent over at the waist in front of the camera, hands holding her ankles",
+     "needs": ("floor",), "framing": _FULL, "shot_type": "full-length photo",
+     "facing": "her back to the camera",
+     "gaze": "her face turned to the side"},
+    # added
+    {"stance": "on all fours on the bed, back arched",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
+     "facing": "her back to the camera",
+     "gaze": "looking back over her shoulder into the camera"},
+    {"stance": "crawling toward the camera on all fours across the bed",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
+     "gaze": "looking up into the camera from under her brows"},
+    {"stance": "kneeling on the floor, sitting back on her heels, wrists crossed behind her back",
+     "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo"},
+    {"stance": "lying on her back on the bed with her head nearest the camera, arms above her head",
+     "needs": ("bed",), "framing": "her face and upper body in frame",
+     "shot_type": "photo from above the head of the bed",
+     "gaze": "looking up into the camera, her face upside down to the viewer"},
+    {"stance": "kneeling on the floor, sitting back on her heels, hands clasped behind her head",
+     "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo"},
+)
 
 # Buckets group the tab's checkboxes. Keep each shoot small: the point is that
 # ticking five is an hour, not an afternoon.
@@ -128,6 +241,10 @@ CATALOG: tuple[Shoot, ...] = (
            "standing with one hip pushed out, hand on her waist",
            "sitting on a low stool, leaning forward",
            "standing turned away, looking back over her shoulder"), shots=8),
+    Shoot("submissive", "Submissive", "intimate", BEDROOM, LINGERIE, (),
+          pose_slots=SUBMISSIVE, shots=len(SUBMISSIVE),
+          note="Lingerie, garter and stockings. Kneeling, on the bed, against the wall, "
+               "bent over. Side and from-behind shots keep less often - re-roll the rejects."),
 
     # --- swim ---------------------------------------------------------------
     Shoot("pool", "Poolside", "swim",
@@ -248,9 +365,143 @@ BUCKET_LABEL = {"game": "Game assets", "social": "Social", "intimate": "Intimate
                 "swim": "Swim", "everyday": "Everyday", "night": "Night out"}
 
 
+# --- mix and match -----------------------------------------------------------
+# Jeremy, 2026-10-12: "I want the ability to mix and match shoots - the shot
+# type (club, boudoir) as one option, clothing as another option (club outfit,
+# lingerie, casual)... So I want a picture of her at the club but wearing work
+# outfit? No problem." A shoot above bundles setting + outfits + poses; here the
+# three are separate lists and a combo id `<scene>-<wardrobe>-<poses>` builds
+# the same Shoot on the fly. The presets above are untouched, and the lists
+# below REUSE their settings and outfits rather than copying them, so a change
+# to the club shoot's outfits is a change to the club wardrobe.
+#
+# Ids here carry no hyphen: the hyphen is the combo separator.
+
+@dataclass(frozen=True)
+class Scene:
+    id: str
+    label: str
+    setting: str
+    has: tuple[str, ...]      # what a pose may need: bed, wall, floor
+
+
+@dataclass(frozen=True)
+class Wardrobe:
+    id: str
+    label: str
+    outfits: tuple[str, ...] = ()
+    record: str = ""          # "job": her own job outfit(s) from characters/wardrobe.json
+
+
+@dataclass(frozen=True)
+class PosePack:
+    id: str
+    label: str
+    poses: tuple[dict, ...]
+    note: str = ""
+
+
+def _poses(*shoot_ids: str, needs: tuple[str, ...] = ("floor",)) -> tuple[dict, ...]:
+    """A preset's pose rotation as pose slots, so a pack can be mixed."""
+    return tuple({"stance": p, "needs": needs}
+                 for sid in shoot_ids for p in BY_ID[sid].poses)
+
+
+SCENES: tuple[Scene, ...] = (
+    Scene("bedroom", "Bedroom", BEDROOM, ("bed", "wall", "floor")),
+    Scene("hotel", "Hotel room", BY_ID["silk"].setting, ("bed", "wall", "floor")),
+    Scene("darkwall", "Dark wall", BY_ID["sheer"].setting, ("wall", "floor")),
+    Scene("club", "Club", BY_ID["club"].setting, ("wall", "floor")),
+    Scene("restaurant", "Restaurant", BY_ID["date_night"].setting, ("floor",)),
+    Scene("livingroom", "Living room", BY_ID["loungewear"].setting, ("wall", "floor")),
+    Scene("bathroom", "Bathroom mirror", BY_ID["mirror"].setting, ("wall", "floor")),
+    Scene("gym", "Gym", BY_ID["gym"].setting, ("wall", "floor")),
+    Scene("pool", "Poolside", BY_ID["pool"].setting, ("floor",)),
+    Scene("beach", "Beach", BY_ID["beach_sunset"].setting, ("floor",)),
+)
+
+WARDROBES: tuple[Wardrobe, ...] = (
+    Wardrobe("lingerie", "Lingerie, garter and stockings", LINGERIE),
+    Wardrobe("boudoir", "Boudoir", BY_ID["boudoir"].outfits),
+    Wardrobe("silk", "Silk and satin", BY_ID["silk"].outfits),
+    Wardrobe("sheer", "Sheer and lace", BY_ID["sheer"].outfits),
+    Wardrobe("club", "Club", BY_ID["club"].outfits),
+    Wardrobe("date", "Date night", BY_ID["date_night"].outfits),
+    Wardrobe("casual", "Casual", BY_ID["mirror"].outfits + BY_ID["loungewear"].outfits),
+    Wardrobe("gym", "Gym", BY_ID["gym"].outfits),
+    Wardrobe("swim", "Swim", BY_ID["pool"].outfits + BY_ID["beach_sunset"].outfits),
+    Wardrobe("work", "Work - her job outfit", record="job"),
+)
+
+POSE_PACKS: tuple[PosePack, ...] = (
+    PosePack("standing", "Standing", _poses("sheer", "club")[:6],
+             note="Square on, hip out, against the wall, looking back; drink in hand."),
+    PosePack("bedroom", "On the bed", _poses("boudoir", needs=("bed",)),
+             note="The boudoir poses: edge of the bed, kneeling, lying, leaning in."),
+    PosePack("submissive", "Submissive", SUBMISSIVE,
+             note="Kneeling, on the bed, against the wall, bent over. 19 poses."),
+)
+
+SCENE_BY_ID = {s.id: s for s in SCENES}
+WARDROBE_BY_ID = {w.id: w for w in WARDROBES}
+POSES_BY_ID = {p.id: p for p in POSE_PACKS}
+
+
+def wardrobe_outfits(wardrobe_id: str, character: str) -> tuple[str, ...]:
+    """The outfits a wardrobe puts her in. The job wardrobe is HERS, read from
+    her record; `()` when she has no job outfit written down."""
+    w = WARDROBE_BY_ID.get(wardrobe_id)
+    if w is None:
+        return ()
+    if w.record == "job":
+        from .wardrobe import editable  # noqa: PLC0415
+
+        return tuple(j["outfit"] for j in editable(character)["jobs"] if j["outfit"])
+    return w.outfits
+
+
+def combo(shoot_id: str) -> Shoot | None:
+    """`<scene>-<wardrobe>-<poses>` as a Shoot, or None if it is not one."""
+    parts = (shoot_id or "").split("-")
+    if len(parts) != 3:
+        return None
+    sc, wd, pp = (SCENE_BY_ID.get(parts[0]), WARDROBE_BY_ID.get(parts[1]),
+                  POSES_BY_ID.get(parts[2]))
+    if not (sc and wd and pp):
+        return None
+    return Shoot(shoot_id, f"{sc.label} / {wd.label} / {pp.label}", "mix", sc.setting,
+                 wd.outfits, (), pose_slots=pp.poses, shots=len(pp.poses),
+                 wardrobe=wd.id)
+
+
+def combo_problem(shoot_id: str, character: str) -> str | None:
+    """Why this combo cannot render for her, or None. The page greys the
+    option and the queue refuses it; the message is the same in both."""
+    sh = combo(shoot_id)
+    if sh is None:
+        return None
+    sc = SCENE_BY_ID[shoot_id.split("-")[0]]
+    missing = sorted({n for p in sh.pose_slots for n in p.get("needs", ()) if n not in sc.has})
+    if missing:
+        return f"these poses need a {' and a '.join(missing)} - {sc.label} has none"
+    if sh.wardrobe and not wardrobe_outfits(sh.wardrobe, character):
+        return "no job outfit in her record - add one under Jobs on the Characters tab"
+    return None
+
+
+def mix() -> dict:
+    """The three lists as the shoots tab wants them."""
+    return {"scenes": [{"id": s.id, "label": s.label, "has": list(s.has)} for s in SCENES],
+            "wardrobes": [{"id": w.id, "label": w.label, "record": w.record} for w in WARDROBES],
+            "poses": [{"id": p.id, "label": p.label, "n": len(p.poses), "note": p.note,
+                       "needs": sorted({n for x in p.poses for n in x.get("needs", ())})}
+                      for p in POSE_PACKS]}
+
+
 def lookup(source: str) -> Shoot | None:
     """A shoot by the id its renders were filed under - including one batch of
-    a batched pack ("influencer_b03"), which is what a redo has to rebuild."""
+    a batched pack ("influencer_b03"), which is what a redo has to rebuild, and
+    a mix-and-match combo."""
     from dataclasses import replace  # noqa: PLC0415
 
     from .influencer import batch_of  # noqa: PLC0415
@@ -258,7 +509,9 @@ def lookup(source: str) -> Shoot | None:
     if source in BY_ID:
         return BY_ID[source]
     b = batch_of(source)
-    return replace(BY_ID["influencer"], id=source, batch=b) if b else None
+    if b:
+        return replace(BY_ID["influencer"], id=source, batch=b)
+    return combo(source)
 
 
 def buckets() -> list[dict]:
@@ -295,11 +548,13 @@ def estimate_seconds(ids: list[str], s_per_render: float, s_per_shot: float) -> 
 def resolve(ids: list[str]) -> list[Shoot]:
     """Named shoots, in catalog order. An unknown id is an error, not a skip -
     a typo must not quietly render four shoots when five were asked for."""
-    unknown = [i for i in ids if i not in BY_ID]
+    unknown = [i for i in ids if i not in BY_ID and combo(i) is None]
     if unknown:
         raise KeyError(f"unknown shoot(s): {', '.join(unknown)}")
     want = set(ids)
-    return [s for s in CATALOG if s.id in want]
+    # presets in catalog order, then the combos in the order they were ticked
+    return ([s for s in CATALOG if s.id in want]
+            + [combo(i) for i in ids if i not in BY_ID])
 
 
 def total_shots(ids: list[str]) -> int:
