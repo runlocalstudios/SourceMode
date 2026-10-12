@@ -80,6 +80,41 @@ def set_dir(cfg: dict, character: str, kind: str, name: str, *, date: str | None
     return d
 
 
+def find_set(cfg: dict, character: str, kind: str, name: str, *, create: bool = False) -> Path:
+    """The one folder for this character's set, whatever day it was started.
+
+    Writers resume: a sweep skips the scenes already on disk, a redo writes back
+    into the shoot it came from. So an existing set is found by its undated tail
+    and reused; only a set that does not exist yet gets today's date. Without
+    `create` nothing is made, and the path returned is where it WOULD go - the
+    queue page asks before the job has written anything.
+    """
+    tail = "_" + set_folder("0000-00-00", kind, name).split("_", 1)[1]
+    home = library_dir(cfg) / character.lower()
+    hits = sorted(d for d in home.glob(f"*{tail}") if d.is_dir() and d.name[10:] == tail) \
+        if home.is_dir() else []
+    if hits:
+        return hits[-1]
+    if create:
+        return set_dir(cfg, character, kind, name)
+    return home / set_folder(time.strftime("%Y-%m-%d"), kind, name)
+
+
+def set_name(set_id: str, prefix: str, character: str, default: str) -> str:
+    """The set's name under her folder, from the id it has always had:
+    dense_daisy_tb_tiebreaker -> tb_tiebreaker. The same rule `plan` used to file
+    the folders it moved, so a resumed sweep finds the folder it started in."""
+    low = set_id.lower()
+    for p in (f"{prefix}{character.lower()}", prefix):
+        if low.startswith(p):
+            return re.sub(r"^[_\-]+", "", low[len(p):]) or default
+    return low or default
+
+
+def shoot_kind(shoot_id: str) -> str:
+    return "selfies" if shoot_id == "selfies" else "shoot"
+
+
 def write_set_json(d: Path, **meta) -> Path:
     out = d / "set.json"
     doc = json.loads(out.read_text(encoding="utf-8")) if out.is_file() else {}
@@ -395,6 +430,20 @@ def prune_plan(cfg: dict, outputs: Path, judge_root: Path, *, ab_days: int = PRU
         if age is not None and age > ab_days:
             row("folder", d, f"A/B set, {age:.0f} days old", _character_in(d.name, locked_chars) or "",
                 _judge_refs(judge_root, outputs, d))
+    # The same two rules for the sets in her library folder.
+    lib = library_dir(cfg)
+    for home in (sorted(p for p in lib.iterdir() if p.is_dir()) if lib.is_dir() else []):
+        char = home.name if home.name in locked_chars else None
+        for d in sorted(p for p in home.glob("*_sweep_*") if p.is_dir()):
+            if char:
+                row("folder", d, f"epoch sweep; {char} is locked to {reg[char]['file']}", char,
+                    _judge_refs(judge_root, outputs, d))
+        for d in sorted(p for p in home.glob("*_ab_*") if p.is_dir()):
+            newest = _newest_mtime(d)
+            age = (now - newest) / 86400 if newest else None
+            if age is not None and age > ab_days:
+                row("folder", d, f"A/B set, {age:.0f} days old", char or "",
+                    _judge_refs(judge_root, outputs, d))
     base = outputs / "lora-datasets"
     if base.is_dir():
         for ds in sorted(p for p in base.iterdir() if p.is_dir()):

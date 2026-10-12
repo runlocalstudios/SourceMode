@@ -5,6 +5,7 @@ card. The parse now happens once, at `gpu add`, and is stored on the job as
 `expect` - the page counts where the record says to count.
 """
 
+import time
 from pathlib import Path
 
 from sourcemode.gpu import queue as q
@@ -33,26 +34,34 @@ def test_done_is_counted_where_the_record_points(tmp_path):
     (d / "ep22" / "_web" / "scene_00.png").write_bytes(b"")      # a thumbnail, not a render
     job = {"cmd": ["x"], "expect": {"total": 40, "what": "", "dir": str(d), "glob": "scene_*.png"}}
     assert job_done({}, job) == 2
+    # a recorded folder that is not there (dated for another day, or an outputs/
+    # folder from before the library) is re-derived from the command; this
+    # command is no render, so there is nothing to count
     job["expect"]["dir"] = str(tmp_path / "not-yet")
-    assert job_done({}, job) == 0
+    assert job_done({"paths": {"outputs": str(tmp_path)}}, job) is None
 
 
 def test_a_tagged_sweep_is_counted_in_its_own_folder(tmp_path):
-    cfg = {"paths": {"outputs": str(tmp_path)}}
+    cfg = {"paths": {"outputs": str(tmp_path), "library": str(tmp_path / "library")}}
     cmd = ["python", "scripts/eval/dense_epoch_eval.py", "mei", "mei_v2", "24", "16", "24",
            "mei", "outputs/lora-datasets/mei_v2/lora", "20", "--epochs", "22,23", "--tag", "nodesc"]
-    assert render_target(cfg, cmd) == (tmp_path / "dense_mei_v2_asset_nodesc", "scene_*.png")
+    want = tmp_path / "library" / "mei" / f"{time.strftime('%Y-%m-%d')}_sweep_v2-asset-nodesc"
+    assert render_target(cfg, cmd) == (want, "scene_*.png")
     e = expect_for(cfg, cmd)
-    assert e == {"total": 40, "what": "2 epochs x 20 scenes",
-                 "dir": str(tmp_path / "dense_mei_v2_asset_nodesc"), "glob": "scene_*.png"}
+    assert e == {"total": 40, "what": "2 epochs x 20 scenes", "dir": str(want), "glob": "scene_*.png"}
+    # a sweep started on an earlier day is found where it is, not re-dated
+    old = tmp_path / "library" / "mei" / "2026-10-01_sweep_v2-asset-nodesc"
+    old.mkdir(parents=True)
+    assert render_target(cfg, cmd) == (old, "scene_*.png")
 
 
 def test_an_ab_counts_its_tag_folder_and_an_unknown_command_has_no_record(tmp_path):
-    cfg = {"paths": {"outputs": str(tmp_path)}}
+    cfg = {"paths": {"outputs": str(tmp_path), "library": str(tmp_path / "library")}}
     cmd = ["python", "scripts/eval/prompt_ab.py", "cat", "cat_v2", "23", "C:/l", "cat",
            "--tag", "desc", "--find", "@clause", "--arms", "A==|B=a woman", "--scenes", "0,1,2"]
+    want = tmp_path / "library" / "cat" / f"{time.strftime('%Y-%m-%d')}_ab_desc"
     assert expect_for(cfg, cmd) == {"total": 6, "what": "2 arms x 3 scenes",
-                                    "dir": str(tmp_path / "ab_cat_desc"), "glob": "scene_*.png"}
+                                    "dir": str(want), "glob": "scene_*.png"}
     assert expect_for(cfg, ["powershell.exe", "-File", "character_chain.ps1"]) is None
 
 

@@ -650,6 +650,11 @@ def _rate(cfg: dict, max_age_s: float = 600.0) -> dict:
             preps.append(work)
 
     renders = _per_file(out, "scene_*.png")
+    # sweeps and A/Bs write into her library folder now, one level deeper
+    from ..library import library_dir  # noqa: PLC0415
+    lib = library_dir(cfg)
+    for home in (sorted(p for p in lib.iterdir() if p.is_dir()) if lib.is_dir() else []):
+        renders += _per_file(home, "scene_*.png")
     shots = [r for d in [out / "game-assets"] if d.is_dir()
              for r in _per_file(d, "shot_*.png")]
 
@@ -888,7 +893,10 @@ def _sweep_progress(cfg: dict, run: dict | None) -> tuple[int, int] | None:
     if not m:
         return None
     a, b, scenes = (int(x) for x in m.groups())
-    root = out / f"dense_{ds}_asset"
+    from .. import library as L  # noqa: PLC0415
+
+    char = ds.split("_")[0]
+    root = L.find_set(cfg, char, "sweep", L.set_name(f"dense_{ds}_asset", "dense_", char, "v2"))
     done = sum(1 for e in range(a, b + 1)
                for _ in (root / f"ep{e:02d}").glob("scene_*.png")) if root.is_dir() else 0
     return done, (b - a + 1) * scenes
@@ -1144,28 +1152,33 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
             i = next(k for k, c in enumerate(pos) if c.endswith("run_shoots.py"))
             char = pos[i + 1].lower()
             ids = [x.strip() for x in pos[i + 2].split(",") if x.strip()]
-            # A pack in the selection renders into game-assets, not shoots, so
-            # counting only one tree stalls the bar at whatever the shoots wrote.
-            roots = [out / "shoots" / char]
+            # Each shoot writes its own folder in her library; a pack in the
+            # selection renders into game-assets instead, so counting only one
+            # tree stalls the bar at whatever the shoots wrote.
+            from .. import library as L  # noqa: PLC0415
             from ..assets.shoots import resolve as _resolve  # noqa: PLC0415
-            if any(x.kind == "pack" for x in _resolve(ids)):
-                roots.append(out / "game-assets" / char / "renders")
-            # Influencer batches pile up beside each other; only the newest is
-            # the one this job is writing, so the older ones must not count.
-            from ..assets.influencer import batch_of  # noqa: PLC0415
-            sd = out / "shoots" / char
-            batches = sorted((p for p in sd.glob("influencer_b*") if batch_of(p.name)),
-                             key=lambda p: batch_of(p.name)) if sd.is_dir() else []
-            stale = set(batches[:-1]) if "influencer" in ids else set(batches)
-            return sum(1 for r in roots if r.is_dir() for q in r.rglob("*.png")
-                       if not any(s in q.parents for s in stale))
+            roots = []
+            for sh in _resolve(ids):
+                if sh.kind == "pack":
+                    roots.append(out / "game-assets" / char / "renders")
+                elif sh.make is not None:
+                    # Batches pile up beside each other; only the newest is the
+                    # one this job is writing, so the older ones must not count.
+                    tail = f"_shoot_{L.slug(sh.id)}-b"
+                    home = L.library_dir(cfg) / char
+                    batches = sorted(d for d in home.glob(f"*{tail}*") if d.is_dir())                         if home.is_dir() else []
+                    roots += batches[-1:]
+                else:
+                    roots.append(L.find_set(cfg, char, L.shoot_kind(sh.id), sh.id))
+            return sum(1 for r in set(roots) if r.is_dir() for _ in r.rglob("*.png"))
 
         if "prompt_ab.py" in joined:
             pos = [c for c in cmd if not c.startswith("--")]
             i = next(k for k, c in enumerate(pos) if c.endswith("prompt_ab.py"))
             char = pos[i + 1]
             # --tag names the folder (ab_jojo_skin); "hair" was the only test once
-            root = out / f"ab_{char}_{flag('--tag', 'hair')}"
+            from .. import library as L  # noqa: PLC0415
+            root = L.find_set(cfg, char, "ab", flag("--tag", "hair"))
             return len(list(root.rglob("scene_*.png"))) if root.is_dir() else 0
 
         if "dense_epoch_eval.py" in joined:
@@ -1179,7 +1192,9 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
             if not scenes:
                 suffix = "_asset"
             tag = flag("--tag")
-            root = out / f"dense_{sub}{suffix}{'_' + tag if tag else ''}"
+            from .. import library as L  # noqa: PLC0415
+            sid = f"dense_{sub}{suffix}{'_' + tag if tag else ''}"
+            root = L.find_set(cfg, pos[i + 1], "sweep", L.set_name(sid, "dense_", pos[i + 1], "v2"))
             return len([q for q in root.rglob("scene_*.png") if "_web" not in q.parts]) \
                 if root.is_dir() else 0
     except (OSError, ValueError, KeyError, StopIteration, IndexError):
@@ -1199,9 +1214,13 @@ def job_expect(job: dict) -> tuple[int, str] | None:
 def job_done(cfg: dict, job: dict) -> int | None:
     """How many images the job has written, counted where its record says."""
     e = job.get("expect") or {}
-    if e.get("dir") and e.get("glob"):
+    # The recorded folder is where the job was EXPECTED to write. A library
+    # folder is dated the day it starts and a queued job may start tomorrow, and
+    # jobs queued before the library wrote to outputs/ - so a recorded folder that
+    # does not exist is re-derived from the command rather than read as zero.
+    if e.get("dir") and e.get("glob") and Path(e["dir"]).is_dir():
         root = Path(e["dir"])
-        return sum(1 for p in root.rglob(e["glob"]) if "_web" not in p.parts) if root.is_dir() else 0
+        return sum(1 for p in root.rglob(e["glob"]) if "_web" not in p.parts)
     return render_done(cfg, job.get("cmd") or [])
 
 
@@ -1224,14 +1243,16 @@ def render_target(cfg: dict, cmd: list[str]) -> tuple[Path, str] | None:
 
             doc = _json.loads(Path(flag("--plan")).read_text(encoding="utf-8"))
             return Path(flag("--out") or (out / "game-assets")) / doc["character"] / "renders", "shot_*.png"
+        from .. import library as L  # noqa: PLC0415
         if "prompt_ab.py" in joined:
             i = next(k for k, c in enumerate(pos) if c.endswith("prompt_ab.py"))
-            return out / f"ab_{pos[i + 1]}_{flag('--tag', 'hair')}", "scene_*.png"
+            return L.find_set(cfg, pos[i + 1], "ab", flag("--tag", "hair")), "scene_*.png"
         if "dense_epoch_eval.py" in joined:
             i = next(k for k, c in enumerate(pos) if c.endswith("dense_epoch_eval.py"))
             sub, tag = pos[i + 2], flag("--tag")
             scene_set = flag("--scenes") or "asset"       # asset or tiebreaker
-            return out / f"dense_{sub}_{scene_set}{'_' + tag if tag else ''}", "scene_*.png"
+            sid = f"dense_{sub}_{scene_set}{'_' + tag if tag else ''}"
+            return L.find_set(cfg, pos[i + 1], "sweep", L.set_name(sid, "dense_", pos[i + 1], "v2")),                 "scene_*.png"
     except (OSError, ValueError, KeyError, StopIteration, IndexError):
         return None
     return None

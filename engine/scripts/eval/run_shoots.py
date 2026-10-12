@@ -43,6 +43,7 @@ from sourcemode.assets.render import shot_prompt, t2i_workflow  # noqa: E402
 from sourcemode.assets.shoots import plan_path, resolve, total_shots  # noqa: E402
 from sourcemode.config import load_config, outputs_dir  # noqa: E402
 from sourcemode.gates.identity import cosine, embed_image  # noqa: E402
+from sourcemode.library import find_set, library_dir, shoot_kind, write_set_json  # noqa: E402
 from sourcemode.pose.native import NEGATIVE  # noqa: E402
 from sourcemode.render.client import ComfyUIClient  # noqa: E402
 
@@ -167,11 +168,12 @@ def run_shoot(sh) -> int:
 
         from sourcemode.assets.influencer import next_batch  # noqa: PLC0415
 
-        b = next_batch(OUT_ROOT / "shoots" / CHAR)
+        b = next_batch(library_dir(cfg) / CHAR)
         sh = replace(sh, id=f"{sh.id}_b{b:02d}", batch=b, label=f"{sh.label}, batch {b}")
         log(f"  {sh.id}: batch {b}")
-    d = OUT_ROOT / "shoots" / CHAR / sh.id
-    d.mkdir(parents=True, exist_ok=True)
+    d = find_set(cfg, CHAR, shoot_kind(sh.id), sh.id, create=True)
+    write_set_json(d, character=CHAR, kind=shoot_kind(sh.id), name=sh.id, date=d.name[:10],
+                   judge_sets=[f"shoot_{CHAR}_{sh.id}"])
     items, n = [], 0
     for k, slot in enumerate(sh.plan(character=CHAR)):
         dest = d / f"{slot['id']}.png"

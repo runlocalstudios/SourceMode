@@ -70,8 +70,11 @@ NSEEDS = max(1, int(FLAG.get("--seeds", "1")))
 
 W, H = 1024, 1536
 TAG = FLAG.get("--tag", "hair")
-OUT = Path(f"outputs/ab_{CHAR}_{TAG}")
-OUT.mkdir(parents=True, exist_ok=True)
+from sourcemode import library as _lib  # noqa: E402
+
+OUT = _lib.find_set(load_config(), CHAR, "ab", TAG, create=True)
+_lib.write_set_json(OUT, character=CHAR.lower(), kind="ab", name=TAG, date=OUT.name[:10],
+                    judge_sets=[f"ab_{CHAR}_{TAG}"])
 LOG = Path(f"outputs/logs/ab_{CHAR}_{TAG}.log")
 LOG.parent.mkdir(parents=True, exist_ok=True)
 REFS = Path("C:/Epic Games/Files/cnc info/codex/references")

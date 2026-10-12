@@ -128,6 +128,39 @@ def test_set_dir_for_new_work(tmp_path):
         L.set_folder("2026-10-09", "photo", "x")
 
 
+def test_a_writer_finds_the_set_it_started_on_an_earlier_day(tmp_path):
+    """A sweep resumes and a redo writes back into its shoot - so the writer must
+    land in the folder that already exists, not a fresh one dated today."""
+    cfg = {"paths": {"library": str(tmp_path / "lib")}}
+    old = tmp_path / "lib" / "daisy" / "2026-10-01_sweep_tb-tiebreaker"
+    old.mkdir(parents=True)
+    (tmp_path / "lib" / "daisy" / "2026-10-01_sweep_tb-tiebreaker-x").mkdir()  # a longer name is another set
+    name = L.set_name("dense_daisy_tb_tiebreaker", "dense_", "daisy", "v2")
+    assert name == "tb_tiebreaker"
+    assert L.find_set(cfg, "daisy", "sweep", name) == old
+    fresh = L.find_set(cfg, "daisy", "ab", "hair")
+    assert fresh.name == f"{time.strftime('%Y-%m-%d')}_ab_hair" and not fresh.exists()
+    assert L.find_set(cfg, "daisy", "ab", "hair", create=True).is_dir()
+
+
+def test_set_names_match_what_plan_filed_the_moved_folders_under():
+    for folder, char in (("dense_gabi_v2_asset_confirm", "gabi"), ("ab_cat_desc", "cat")):
+        prefix = folder.split("_")[0] + "_"
+        kind = "sweep" if prefix == "dense_" else "ab"
+        _c, k, n, _e = L._classify(folder, {char})
+        assert (k, n) == (kind, L.set_name(folder, prefix, char, "v2" if kind == "sweep" else "ab"))
+    assert L.shoot_kind("selfies") == "selfies" and L.shoot_kind("boudoir") == "shoot"
+
+
+def test_influencer_batches_count_in_the_library_and_the_old_tree(tmp_path):
+    from sourcemode.assets.influencer import next_batch
+
+    _png(tmp_path / "2026-10-01_shoot_influencer-b03" / "a.png")
+    _png(tmp_path / "influencer_b01" / "a.png")
+    (tmp_path / "2026-10-02_shoot_influencer-b07").mkdir()      # failed before rendering
+    assert next_batch(tmp_path) == 4
+
+
 def test_apply_leaves_a_folder_a_running_job_is_still_writing(tree, tmp_path, monkeypatch):
     engine, out, judge = tree
     monkeypatch.setattr(L, "SETTLE_S", 15 * 60)
@@ -208,3 +241,17 @@ def test_prune_refuses_while_a_lock_does_not_verify(locked_world):
     log = L.prune_apply(cfg, L.prune_plan(cfg, out, judge), judge)
     assert log and log[0].startswith("REFUSED: zara")
     assert (ck / "zara_v2-000019.safetensors").is_file() and (out / "dense_zara_v2_asset").is_dir()
+
+
+def test_prune_finds_the_same_sets_in_her_library_folder(locked_world, tmp_path):
+    cfg, out, judge, ck, stray = locked_world
+    lib = tmp_path / "library"
+    _png(lib / "zara" / "2026-10-01_sweep_v2-asset" / "ep18" / "scene_00.png")
+    _png(lib / "mei" / "2026-10-01_sweep_v2-asset" / "ep18" / "scene_00.png")      # no lock
+    _png(lib / "zara" / "2026-09-01_ab_hair" / "A" / "scene_00.png", time.time() - 30 * 86400)
+    _png(lib / "zara" / "2026-10-11_ab_skin" / "A" / "scene_00.png")                # fresh
+    _png(lib / "zara" / "2026-10-01_shoot_pool" / "a.png", time.time() - 30 * 86400)
+    names = {Path(r["path"]).name for r in L.prune_plan(cfg, out, judge)}
+    assert {"2026-10-01_sweep_v2-asset", "2026-09-01_ab_hair"} <= names
+    assert not {"2026-10-11_ab_skin", "2026-10-01_shoot_pool"} & names
+    assert sum(1 for r in L.prune_plan(cfg, out, judge) if "mei" in Path(r["path"]).parts) == 0

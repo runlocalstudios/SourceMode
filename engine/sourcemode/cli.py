@@ -653,9 +653,6 @@ def pose_transfer_cmd(
     raise typer.Exit(0 if ok == len(sources) else 1)
 
 
-if __name__ == "__main__":
-    app()
-
 
 # --- gpu queue -------------------------------------------------------------
 #
@@ -857,3 +854,7 @@ def q_now() -> str:
     from .gpu.queue import now  # noqa: PLC0415
 
     return now()
+
+
+if __name__ == "__main__":
+    app()

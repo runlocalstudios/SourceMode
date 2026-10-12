@@ -107,7 +107,9 @@ def redo_shoot(info: dict, seed: int) -> Path | None:
     if slot is None:
         log(f"  {info['slot_id']}: no longer in {sh.id} - the catalog changed")
         return None
-    dest = OUT_ROOT / "shoots" / CHAR / sh.id / f"{slot['id']}.png"
+    from sourcemode.library import find_set, shoot_kind
+
+    dest = find_set(cfg, CHAR, shoot_kind(sh.id), sh.id, create=True) / f"{slot['id']}.png"
     drop(dest)
     prompt = shot_prompt(CHAR, slot, CHAR, backdrop=slot["setting"])
     files = client.outputs(client.wait(client.submit(

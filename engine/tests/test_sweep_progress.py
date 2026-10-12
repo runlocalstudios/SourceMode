@@ -7,15 +7,17 @@ job, and the card kept reading "step 3600 of 3600" - the frozen tqdm.
 from __future__ import annotations
 
 import sourcemode.config as C
+import sourcemode.library as L
 from sourcemode.monitor.queue_page import _sweep_progress
 
 
 def _setup(tmp_path, monkeypatch, log_lines, renders):
     monkeypatch.setattr(C, "outputs_dir", lambda cfg: tmp_path)
+    monkeypatch.setattr(L, "library_dir", lambda cfg: tmp_path / "library")
     (tmp_path / "logs").mkdir()
     (tmp_path / "logs" / "x_v2.log").write_text("\n".join(log_lines), encoding="utf-8")
     for ep, n in renders.items():
-        d = tmp_path / "dense_x_v2_asset" / f"ep{ep:02d}"
+        d = tmp_path / "library" / "x" / "2026-10-01_sweep_v2-asset" / f"ep{ep:02d}"
         d.mkdir(parents=True)
         for i in range(n):
             (d / f"scene_{i:02d}.png").write_bytes(b"")

@@ -56,7 +56,6 @@ TRIGGER = POS[6]
 N_SCENES = int(POS[8]) if len(POS) > 8 else 20
 
 W, H = 1024, 1536
-OUT = Path(f"outputs/dense_{SUB}"); OUT.mkdir(parents=True, exist_ok=True)
 LOG = Path(f"outputs/logs/dense_{SUB}.log")
 REFS = Path("C:/Epic Games/Files/cnc info/codex/references")
 # Checkpoint dir: the old runs live under <char>_curated/lora_<suffix>; the v2
@@ -155,8 +154,16 @@ VERBATIM = True
 # changed prompt finds the old scene_NN.png on disk, skips rendering, and judges
 # the previous prompt's images under the new name.
 _TAG = f"_{_FLAGVALS['--tag']}" if _FLAGVALS.get("--tag") else ""
-OUT = Path(f"outputs/dense_{SUB}_{SCENE_SET}{_TAG}"); OUT.mkdir(parents=True, exist_ok=True)
 SET_ID = f"dense_{SUB}_{SCENE_SET}{_TAG}"
+# Her library folder, <library>/<char>/<date>_sweep_<name>; a re-run finds the
+# folder it started in and resumes there.
+from sourcemode import library as _lib  # noqa: E402
+from sourcemode.config import load_config as _load_config  # noqa: E402
+
+_NAME = _lib.set_name(SET_ID, "dense_", CHAR, "v2")
+OUT = _lib.find_set(_load_config(), CHAR, "sweep", _NAME, create=True)
+_lib.write_set_json(OUT, character=CHAR.lower(), kind="sweep", name=_NAME, date=OUT.name[:10],
+                    judge_sets=[SET_ID])
 # There are ten asset looks. An n=20 confirmation renders each look twice, and the
 # second pass gets its own seeds (SEED + i, i = 10..19) - before this, asking for
 # 20 silently rendered 10.

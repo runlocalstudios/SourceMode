@@ -408,6 +408,9 @@ def next_batch(char_dir: Path) -> int:
     again is always a fresh batch, never a re-render of the last one."""
     # A batch folder with no image in it is a run that failed before rendering;
     # it does not use up a number (priyanka's first two attempts made b01, b02).
-    seen = [batch_of(p.name) for p in Path(char_dir).glob("influencer_b*")
+    # Her library folder names a batch <date>_shoot_influencer-bNN; the old
+    # outputs/shoots/<char>/ named it influencer_bNN. Both read.
+    seen = [batch_of(re.sub(r"^\d{4}-\d\d-\d\d_shoot_", "", p.name).replace("-", "_"))
+            for p in Path(char_dir).glob("*influencer*b*")
             if p.is_dir() and any(p.glob("*.png"))]
     return max([b for b in seen if b] or [0]) + 1

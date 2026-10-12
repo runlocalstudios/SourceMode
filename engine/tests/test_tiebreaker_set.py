@@ -107,5 +107,5 @@ def test_the_contract_arm_names_the_slight_turn():
 def test_the_eval_accepts_the_set_and_keeps_its_own_folder():
     src = (ENGINE_ROOT / "scripts" / "eval" / "dense_epoch_eval.py").read_text(encoding="utf-8")
     assert 'SCENE_SET not in ("asset", "tiebreaker")' in src
-    assert 'OUT = Path(f"outputs/dense_{SUB}_{SCENE_SET}{_TAG}")' in src
+    assert 'OUT = _lib.find_set(_load_config(), CHAR, "sweep", _NAME, create=True)' in src
     assert 'SET_ID = f"dense_{SUB}_{SCENE_SET}{_TAG}"' in src
