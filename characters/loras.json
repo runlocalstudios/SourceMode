@@ -94,15 +94,15 @@
   "locked_at": "2026-10-09T20:00:38+00:00"
  },
  "daisy": {
-  "file": "daisy_ext-000006.safetensors",
-  "epoch": 30,
+  "file": "daisy_v2-000020.safetensors",
+  "epoch": 20,
   "dataset": "daisy_v2",
-  "output_name": "daisy_ext",
-  "sha256": "afe95d87bdb7d0c8aece16622dd6fd5432de3a16a2d0d6a3082f0304f522f89e",
+  "output_name": "daisy_v2",
+  "sha256": "555be84c8fa0e585f3f57d82f6b29049acfa0c77fc9c8ad8bc0f11428157f943",
   "bytes": 1179978912,
-  "comfy": "sourcemode\\daisy_ext\\daisy_ext-000006.safetensors",
-  "basis": "dense_daisy_ext_asset 8/10 at ep30; continued run numbers from 1 so the file is -000006",
-  "locked_at": "2026-10-09T20:02:25+00:00"
+  "comfy": "sourcemode\\daisy_v2\\daisy_v2-000020.safetensors",
+  "basis": "dense_daisy_tb_tiebreaker 15/20 at ep20 vs 13/20 ep24, 16/20 ep30; judged as good as 30 by eye",
+  "locked_at": "2026-10-12T01:12:56+00:00"
  },
  "gabi": {
   "file": "gabi_v2-000022.safetensors",
@@ -112,8 +112,8 @@
   "sha256": "9f1496a25b0cac8d7ec39334f735b47c291b139e3bce20305110013c22eb3466",
   "bytes": 1179978912,
   "comfy": "sourcemode\\gabi_v2\\gabi_v2-000022.safetensors",
-  "basis": "dense_gabi_v2_asset 10/10 at epoch 22",
-  "locked_at": "2026-10-10T13:41:37+00:00"
+  "basis": "dense_gabi_v2_asset_confirm 13/20 at epoch 22",
+  "locked_at": "2026-10-11T23:44:56+00:00"
  },
  "geena": {
   "file": "geena_v2-000021.safetensors",
