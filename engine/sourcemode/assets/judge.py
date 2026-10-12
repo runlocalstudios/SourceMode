@@ -579,7 +579,8 @@ body .toast .btn{min-height:24px;padding:0 10px}
 #results.on{display:block}
 @media (min-width:821px){
   .tap{display:none}
-  #stage{cursor:pointer}
+  #stage{cursor:zoom-in}
+  #stage[data-z="1"]{cursor:zoom-out}
   #ref{max-height:30vh;max-width:22vw}
   #ref.c0,#ref.c1{bottom:var(--s5)}
 }
@@ -608,7 +609,7 @@ BODY = """
   <span><kbd>K</kbd> keep</span><span><kbd>X</kbd> reject</span>
   <span><kbd>&larr;</kbd><kbd>&rarr;</kbd> move</span><span><kbd>U</kbd> undo</span>
   <span><kbd>R</kbd> reference</span><span><kbd>0</kbd> reset zoom</span>
-  <span><kbd>/</kbd> sets</span><span>click: left reject, right keep</span></div>
+  <span><kbd>/</kbd> sets</span><span>double-click: zoom</span></div>
 """
 
 OWN_JS = r"""
@@ -821,7 +822,8 @@ let lastTap=0, panFrom=null;
 $('stage').addEventListener('pointerdown',e=>{
   dim();
   const t=Date.now();
-  if(t-lastTap<300){ lastTap=0; return setZoom(zoom>1?1:Z,e.clientX,e.clientY); }
+  /* 500 = Windows' default double-click time; 300 missed his double-clicks */
+  if(t-lastTap<500){ lastTap=0; return setZoom(zoom>1?1:Z,e.clientX,e.clientY); }
   lastTap=t;
   if(zoom>1){ panFrom={x:e.clientX,y:e.clientY,zx:zx,zy:zy};
     $('stage').setPointerCapture(e.pointerId); }

@@ -959,6 +959,11 @@ OWN_CSS = r"""
 .drow>img{flex:none;width:min(42vw,320px);border-radius:var(--r1);
   background:var(--photo);cursor:zoom-in}
 .drow .cap{flex:1;min-width:0}
+/* The zoom-in cursor promised this and nothing answered the click (2026-10-12):
+   a click opens the photo at full size, a click or Esc closes it. */
+#bigimg{position:fixed;inset:0;z-index:50;background:var(--photo);display:flex;
+  align-items:center;justify-content:center;cursor:zoom-out}
+#bigimg img{max-width:100%;max-height:100%;object-fit:contain}
 .drow.out{opacity:.4}
 .drow .gz:not(:empty){margin-top:var(--s2);display:flex;gap:var(--s2);align-items:center}
 .gznow{font:var(--t-small)}
@@ -1286,6 +1291,17 @@ function fixBar(){
     +'<button class="btn btn-icon btn-ghost" data-act=endfix aria-label="leave fix mode">'
     +'&#10005;</button></div>');
 }
+
+/* --- full-size photo ---------------------------------------------------- */
+function closeBig(){ const o=$('bigimg'); if(o) o.remove(); }
+document.addEventListener('click',e=>{
+  if(e.target.closest('#bigimg')) return closeBig();
+  const im=e.target.closest('.drow>img'); if(!im||!set) return;
+  const o=document.createElement('div'); o.id='bigimg';
+  o.innerHTML='<img alt="" src="'+fileUrl(set.id,im.closest('.drow').dataset.name)+'&w=1600">';
+  document.body.appendChild(o);
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeBig(); });
 
 /* --- actions: one delegated listener ------------------------------------ */
 document.addEventListener('click',async e=>{
