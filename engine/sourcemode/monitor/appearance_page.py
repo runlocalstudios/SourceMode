@@ -319,7 +319,7 @@ function drawLooks(el,st){
       +'<div class=row><button class="btn btn-primary" data-act=lk_draft>Draft the 28 looks</button></div>';
     el.innerHTML=h; return;
   }
-  h+='<div class=sub>One outfit and one hair per look. The draft is garments in her palette plus her job outfit - edit anything. Hair words: colour, dye and length only.</div>';
+  h+='<div class=sub>One outfit and one hair per look. The draft is garments in her palette, and five days at her job built from her job line - edit anything. Hair words: colour, dye and length only.</div>';
   for(const cat of st.categories){
     h+='<h5>'+SM.esc(cat.label)+' <span class=cov>'+cat.looks.length+(cat.guide?' &middot; her record: '+SM.esc(cat.guide):'')+'</span></h5>';
     for(const l of cat.looks){

@@ -31,6 +31,8 @@ def ash(monkeypatch):
     monkeypatch.setattr(W, "hair_options", lambda c: ("her hair worn loose", "her hair in a bun"))
     monkeypatch.setattr(L, "shipped", lambda c: {"casual": 7, "work": 5} if c == "ash" else {})
     monkeypatch.setattr(L, "reference", lambda c: None)
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "persona_job", lambda c: "")
     return rec
 
 
@@ -52,8 +54,12 @@ def test_draft_is_28_looks_in_the_pack_categories_coloured_from_her_palette(ash)
         for lk in looks:
             assert any(c in lk["outfit"] for c in colours), lk
             assert lk["hair"] in ("her hair worn loose", "her hair in a bun")
-    # work is her uniform, verbatim, on every work look
-    assert {lk["outfit"] for lk in d["work"]} == {"a short black shirt-dress uniform"}
+    # a waitress wears her uniform every day, but not the same way: five
+    # different lines, all of them still her uniform, the first one plain
+    work = [lk["outfit"] for lk in d["work"]]
+    assert len(set(work)) == 5
+    assert work[0] == "a short black shirt-dress uniform"
+    assert all(w.startswith("a short black shirt-dress uniform") for w in work)
     # deterministic per character, different between characters
     assert L.draft_looks("ash") == d
     assert L.draft_looks("zoe")["casual"] != d["casual"]
@@ -61,6 +67,91 @@ def test_draft_is_28_looks_in_the_pack_categories_coloured_from_her_palette(ash)
 
 def test_no_job_outfit_leaves_the_work_looks_blank(ash):
     assert all(lk["outfit"] == "" for lk in L.draft_looks("zoe")["work"])
+    assert L.work_outfits("zoe") == ()
+
+
+def _with_job(monkeypatch, job: str, outfit: str, palette: str = "black and red", game_job: str = ""):
+    rec = {"style": "", "palette": palette, "avoid": "", "outfits": {},
+           "jobs": [{"job": job, "outfit": outfit, "places": []}, {"job": "", "outfit": "", "places": []}],
+           "hair": [], "note": "", "draft": False}
+    monkeypatch.setattr(W, "editable", lambda c: rec)
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "persona_job", lambda c: game_job)
+
+
+def test_the_label_before_the_colon_is_not_part_of_the_outfit():
+    assert L.job_base("Obsidian waitress: a short black shirt-dress uniform") == "a short black shirt-dress uniform"
+    assert L.job_base("The Chill Trap, evenings: black long-sleeve bodycon mini") == "black long-sleeve bodycon mini"
+    assert L.job_base("a black blazer and trousers") == "a black blazer and trousers"
+    # a colon deep in the line is prose, not a label
+    long = "a tailored blazer with a silk shirt and trousers, or over a black mini: never jeans"
+    assert L.job_base(long) == long
+
+
+@pytest.mark.parametrize("words, kind", [
+    ("Waitress at Obsidian night club", "uniform"),
+    ("Obsidian head bartender: a fitted black waistcoat", "uniform"),
+    ("Lumen Salon assistant: a chambray shirt with a canvas apron", "uniform"),
+    ("The Chill Trap, evenings: black long-sleeve bodycon mini", "dancer"),
+    ("works at Threads clothing boutique", "boutique"),
+    ("executive assistant: a tailored blazer", "office"),
+    ("drinks sales rep on evening calls: a black blazer", "office"),
+    ("contemporary art gallery: a tailored blazer", "gallery"),
+    ("university teaching assistant: a cardigan", "academic"),
+    ("church volunteer: a modest long-sleeve dress", "modest"),
+    ("club/stage wear: sequin and satin bralettes", "stage"),
+    ("a nurse at Chill General", "medical"),
+    ("teaches yoga at Ironline", "fitness"),
+])
+def test_the_kind_of_job_is_read_from_its_words(words, kind):
+    assert L.job_kind(words) == kind
+
+
+def test_a_dancer_gets_five_different_outfits_in_her_palette_her_own_line_first(monkeypatch):
+    _with_job(monkeypatch, "", "The Chill Trap, evenings: black long-sleeve bodycon mini, covered but close-fitting",
+              palette="black, hot pink and silver")
+    w = L.work_outfits("kimmy")
+    assert len(w) == 5 and len(set(w)) == 5
+    assert w[0] == "black long-sleeve bodycon mini, covered but close-fitting"
+    assert not any("bodycon mini" in x for x in w[1:])
+    assert all(any(c in x for c in ("black", "hot pink", "silver")) for x in w[1:])
+    assert L.work_outfits("kimmy") == w
+
+
+def test_the_game_job_line_decides_the_kind_when_her_record_has_only_the_outfit(monkeypatch):
+    _with_job(monkeypatch, "", "a fitted knit top and tailored trousers", game_job="She runs the floor at Threads")
+    w = L.work_outfits("bianca")
+    assert w[0] == "a fitted knit top and tailored trousers"
+    assert "turtleneck" in " ".join(w) and "blazer" in " ".join(w)      # boutique templates, not uniform suffixes
+    assert not any(x.startswith("a fitted knit top and tailored trousers,") for x in w)
+
+
+def test_her_record_places_the_job_before_the_game_line_does(monkeypatch):
+    # cassie: the record's work line is the drinks rep; the game adds that she
+    # teaches yoga. Work looks are the rep's, not gym kit.
+    _with_job(monkeypatch, "", "drinks sales rep on evening calls: a black blazer and tailored trousers over a satin cami",
+              game_job="She sells drink to every bar in the city and teaches yoga at the Studio")
+    w = L.work_outfits("cassie")
+    assert "sports bra" not in " ".join(w) and "blazer" in w[1] + w[4]
+
+
+def test_a_uniform_skips_the_variant_she_already_wears(monkeypatch):
+    _with_job(monkeypatch, "", "Lumen Salon assistant: a chambray shirt with a canvas apron over jeans")
+    w = L.work_outfits("keiko")
+    assert len(set(w)) == 5
+    assert sum("apron" in x for x in w) == 5 and not any("black apron" in x for x in w)
+
+
+def test_two_jobs_split_the_five_looks_three_and_two(monkeypatch):
+    rec = {"style": "", "palette": "black", "avoid": "", "outfits": {},
+           "jobs": [{"job": "drinks sales rep", "outfit": "a black blazer over a satin cami", "places": []},
+                    {"job": "yoga instructor", "outfit": "a supportive crop and leggings", "places": []}],
+           "hair": [], "note": "", "draft": False}
+    monkeypatch.setattr(W, "editable", lambda c: rec)
+    w = L.work_outfits("cassie")
+    assert len(w) == 5
+    assert w[0] == "a black blazer over a satin cami" and w[3] == "a supportive crop and leggings"
+    assert "sports bra" in w[4]
 
 
 def _cfg(tmp_path: Path) -> dict:

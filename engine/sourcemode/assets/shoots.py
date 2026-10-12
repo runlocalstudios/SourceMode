@@ -448,15 +448,17 @@ POSES_BY_ID = {p.id: p for p in POSE_PACKS}
 
 
 def wardrobe_outfits(wardrobe_id: str, character: str) -> tuple[str, ...]:
-    """The outfits a wardrobe puts her in. The job wardrobe is HERS, read from
-    her record; `()` when she has no job outfit written down."""
+    """The outfits a wardrobe puts her in. The job wardrobe is HERS: the same
+    five work looks the 28-look draft builds from her job line, so a shoot
+    rotates through her work week rather than one outfit; `()` when she has no
+    job outfit written down."""
     w = WARDROBE_BY_ID.get(wardrobe_id)
     if w is None:
         return ()
     if w.record == "job":
-        from .wardrobe import editable  # noqa: PLC0415
+        from .looks import work_outfits  # noqa: PLC0415
 
-        return tuple(j["outfit"] for j in editable(character)["jobs"] if j["outfit"])
+        return work_outfits(character)
     return w.outfits
 
 

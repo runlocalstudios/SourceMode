@@ -58,13 +58,18 @@ def test_the_work_wardrobe_is_her_job_outfit_and_blocks_without_one(monkeypatch)
                         {"job": "", "outfit": "", "places": []}]}
         return {"jobs": jobs.get(character, [{"job": "", "outfit": "", "places": []}])}
     monkeypatch.setattr(W, "editable", fake)
-    assert S.wardrobe_outfits("work", "ash") == ("a black shirt-dress uniform",)
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "persona_job", lambda c: "")
+    # her work week, not one outfit: five lines, all still the uniform
+    work = S.wardrobe_outfits("work", "ash")
+    assert len(work) == 5 and work[0] == "a black shirt-dress uniform"
+    assert all(w.startswith("a black shirt-dress uniform") for w in work)
     assert S.wardrobe_outfits("work", "nobody") == ()
     assert S.combo_problem("club-work-standing", "nobody") == (
         "no job outfit in her record - add one under Jobs on the Characters tab")
     assert S.combo_problem("club-work-standing", "ash") is None
     slots = S.combo("club-work-standing").plan(character="ash")
-    assert {s["outfit"] for s in slots} == {"a black shirt-dress uniform"}
+    assert {s["outfit"] for s in slots} == set(work)
     assert len(slots) == len(S.POSES_BY_ID["standing"].poses)
 
 

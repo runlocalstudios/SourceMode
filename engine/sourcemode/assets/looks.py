@@ -7,8 +7,9 @@ concrete outfit+hair pairs - and until now the only way to make one was a
 session writing the looks by hand and running `assets plan` from a terminal.
 Her wardrobe record is style guidance, not 28 outfits, so a draft is made
 from it here: each category takes garment templates coloured from her palette,
-the work looks take her job outfit verbatim, and the hair rotates through her
-own options. The draft is a starting point for him to edit, not a result.
+the work looks are built from her job line (see `work_outfits`), and the hair
+rotates through her own options. The draft is a starting point for him to
+edit, not a result.
 
     outputs/game-assets/<char>/plan_28.draft.json   his to edit
     outputs/game-assets/<char>/plan_28.json         approved; the pack renders this
@@ -102,6 +103,167 @@ def palette_colours(palette: str) -> tuple[str, ...]:
     return tuple(seen) or DEFAULT_COLOURS
 
 
+# --- work looks ------------------------------------------------------------------
+# Jeremy, 2026-10-12: "They're not going to wear the same fucking thing every
+# day." One job line in her record becomes five work looks, and the KIND of job
+# decides how. A uniform stays a uniform and varies in the small things - sleeves,
+# an apron, a cardigan. A job she dresses herself for - the Chill Trap, a
+# boutique, an office, a gallery - gets five different outfits in that job's
+# register, coloured from her palette. Look 1 is always her own line.
+#
+# `{base}` is her job line with its "Obsidian waitress:" label stripped; `{c}`
+# is a palette colour. First matching kind wins, so the specific ones go first.
+WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("medical", r"nurse|hospital|scrubs|medical|clinic|doctor|dentist|vet\b", (
+        "{base}",
+        "{c} scrubs with a white long-sleeve tee underneath",
+        "{c} scrubs with a fleece zip jacket over the top",
+        "scrubs with a {c} printed top and plain trousers",
+        "{c} scrubs with a stethoscope around her neck",
+    )),
+    ("dancer", r"dancer|stripper|chill trap|strip club|pole|burlesque|stage name|exotic", (
+        "{base}",
+        "a {c} satin bralette with matching micro shorts and a sheer wrap skirt",
+        "a {c} lace bodysuit cut high on the hip with sheer black thigh-highs",
+        "a {c} sequin two-piece - a tiny bra top and a thong-cut bottom",
+        "a {c} mesh mini dress worn over a black bra and thong set",
+    )),
+    ("stage", r"\bband\b|stage|singer|musician|perform|\bdj\b|venue|show night", (
+        "{base}",
+        "a {c} satin bralette with high-waisted black trousers",
+        "a {c} sequin crop top and a black micro skirt",
+        "a {c} corset top with leather trousers",
+        "a {c} mesh long-sleeve over a bralette and a mini skirt",
+    )),
+    ("boutique", r"boutique|clothing|fashion|threads|le chic|shop floor|stylist|retail", (
+        "{base}",
+        "a {c} satin blouse half-tucked into wide-leg trousers",
+        "a fitted {c} turtleneck with a leather midi skirt",
+        "a {c} blazer worn over a bralette with straight-leg jeans",
+        "a {c} knit midi dress with a slim belt",
+    )),
+    ("gallery", r"gallery|curator|museum|art dealer", (
+        "{base}",
+        "a {c} column dress with a square neckline",
+        "an oversized {c} blazer over a black turtleneck and slim trousers",
+        "a {c} silk shirt with a black mini skirt and sheer tights",
+        "a {c} asymmetric midi dress",
+    )),
+    ("fitness", r"yoga|trainer|\bgym\b|fitness|pilates|coach", (
+        "{base}",
+        "a {c} sports bra and matching high-waisted leggings",
+        "a {c} racerback tank over a black sports bra and bike shorts",
+        "a cropped {c} zip hoodie over a sports bra and leggings",
+        "a {c} longline sports bra and flared yoga pants",
+    )),
+    ("academic", r"teach|professor|lecturer|university|tutor|school", (
+        "{base}",
+        "a {c} cardigan over a blouse with a pleated midi skirt",
+        "a {c} tie-neck blouse with tailored trousers",
+        "a {c} knit dress with a slim belt",
+        "a {c} button-up shirt tucked into an A-line skirt",
+    )),
+    ("modest", r"church|volunteer|librar|charity|pastor|parish", (
+        "{base}",
+        "a {c} long-sleeve midi dress",
+        "a {c} jumper with straight-leg jeans",
+        "a {c} blouse with a knee-length skirt",
+        "a {c} cardigan over a shirt dress",
+    )),
+    ("office", r"office|assistant|executive|professional|corporate|manager|real[- ]estate|agent|"
+               r"\bsales\b|\brep\b|consultant|recruit|account|lawyer|paralegal|property", (
+        "{base}",
+        "a tailored {c} blazer over a silk cami with a pencil skirt",
+        "a {c} sheath dress with a thin belt",
+        "a {c} silk shirt tucked into high-waisted tailored trousers",
+        "a fitted {c} knit top with wide-leg trousers and a long blazer",
+    )),
+)
+
+# Everything else is a uniform - bar, cafe, counter, salon, grocery, or a job
+# line nobody can place. It stays as written and changes in the small things;
+# a variant whose key word is already in her line is skipped (keiko's record
+# already has the apron).
+UNIFORM_VARIANTS: tuple[tuple[str, str], ...] = (
+    ("sleeve", "{base}, sleeves pushed up to the elbow"),
+    ("apron", "{base}, a black apron tied at the waist"),
+    ("cardigan", "{base}, a cropped black cardigan worn over it"),
+    ("jacket", "{base}, a fitted black jacket worn open over it"),
+    ("badge", "{base}, a thin black belt and a name badge"),
+    ("necklace", "{base}, the top button undone and a thin pendant necklace"),
+)
+
+# Jobs that are a uniform whatever else their words say ("Lumen Salon assistant"
+# is not an office job). Checked before WORK_KINDS.
+UNIFORM_RE = re.compile(r"uniform|apron|salon|\bspa\b|waitress|server|bartender|barista|cafe|coffee|"
+                        r"grocery|\btill\b|counter|burger|fast food|bakery|market stall|diner|tavern")
+
+_LABEL_RE = re.compile(r"^[^:]{1,45}:\s+(?=\S)")
+
+
+def job_base(outfit: str) -> str:
+    """Her job line as prompt text: "Obsidian waitress: a short black
+    shirt-dress" -> "a short black shirt-dress". A colon deeper in the line is
+    left alone."""
+    return _LABEL_RE.sub("", (outfit or "").strip()).strip()
+
+
+def job_kind(text: str) -> str:
+    """Which WORK_KINDS entry a job's words point at; "uniform" when none."""
+    t = (text or "").lower()
+    if UNIFORM_RE.search(t):
+        return "uniform"
+    for kind, pat, _ in WORK_KINDS:
+        if re.search(pat, t):
+            return kind
+    return "uniform"
+
+
+def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_job: str) -> list[str]:
+    base = job_base(job["outfit"])
+    # her record's words place the job; the game's one-line job is consulted
+    # only when they do not (a legacy line like "a fitted knit top and
+    # trousers" names clothes, not a job)
+    words = " ".join((job.get("job", ""), job["outfit"]))
+    kind = job_kind(words)
+    if kind == "uniform" and game_job and not UNIFORM_RE.search(words.lower()):
+        kind = job_kind(game_job)
+    if kind == "uniform":
+        tpl = ["{base}"] + [v for key, v in UNIFORM_VARIANTS if key not in base.lower()]
+    else:
+        tpl = list(next(t for k, _, t in WORK_KINDS if k == kind))
+    cols = colours[:]
+    rng.shuffle(cols)
+    out = []
+    for i, t in enumerate(tpl[:n]):
+        out.append(t.format(base=base, c=cols[i % len(cols)]))
+    while len(out) < n:                       # more looks asked than variants
+        out.append(out[len(out) % len(tpl)])
+    return out
+
+
+def work_outfits(character: str, n: int = PACK_28["work"]) -> tuple[str, ...]:
+    """Her `n` work outfits from her job line(s). Two jobs split them, the
+    first job taking the larger share; no job outfit gives `()`.
+
+    Deterministic per character, like the rest of the draft."""
+    from .appearance import persona_job  # noqa: PLC0415
+    from .wardrobe import editable  # noqa: PLC0415
+
+    rec = editable(character)
+    jobs = [j for j in rec["jobs"] if j["outfit"]]
+    if not jobs:
+        return ()
+    colours = list(palette_colours(rec.get("palette", "")))
+    rng = random.Random(f"{character}:work")
+    game_job = persona_job(character) if len(jobs) == 1 else ""
+    out: list[str] = []
+    for i, job in enumerate(jobs):
+        share = -(-(n - len(out)) // (len(jobs) - i))   # ceil of what is left
+        out += _job_looks(job, share, colours, rng, game_job if i == 0 else "")
+    return tuple(out[:n])
+
+
 def draft_looks(character: str) -> dict[str, list[dict]]:
     """`{category: [{outfit, hair}, ...]}` for the standard 28, from her record.
 
@@ -114,15 +276,15 @@ def draft_looks(character: str) -> dict[str, list[dict]]:
     colours = list(palette_colours(rec.get("palette", "")))
     hair = list(hair_options(character))
     rng = random.Random(character)
-    jobs = [j["outfit"] for j in rec["jobs"] if j["outfit"]]
     out: dict[str, list[dict]] = {}
     for ci, (cat, n) in enumerate(PACK_28.items()):
         looks = []
         if cat == "work":
-            # her job outfit, verbatim: a uniform is a uniform. Two jobs split
-            # the five looks between them; none leaves the lines blank for him.
+            # five different days at her job; blank lines when she has no job
+            # outfit written down, for him to fill
+            work = work_outfits(character, n)
             for i in range(n):
-                looks.append({"outfit": jobs[i % len(jobs)] if jobs else "",
+                looks.append({"outfit": work[i] if work else "",
                               "hair": hair[(i + ci) % len(hair)]})
         else:
             tpl = list(TEMPLATES[cat])
