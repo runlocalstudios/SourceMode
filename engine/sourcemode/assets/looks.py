@@ -36,8 +36,12 @@ CATEGORY_TYPE = {"casual": "everyday", "workout": "workout", "fancy_dining_galle
 CATEGORY_LABEL = {"casual": "Casual", "workout": "Workout", "fancy_dining_gallery": "Fancy - dining, gallery",
                   "fancy_town": "Fancy - town, club", "casual_date": "Casual date", "work": "Work"}
 
-# {c} is a colour from her palette. Deliberately plain garments: the draft's job
-# is to give him 28 editable lines in the right categories, not to guess taste.
+# {c} is a colour from her palette. Each character SAMPLES her looks from these
+# pools, so two characters do not wear the same garments on the same days.
+# Jeremy, 2026-10-12, when the pools were eight deep and everyone drew all of
+# them: "every single character will look exactly the same on the same days ...
+# the same thing with just different colors." Keep every pool at least three
+# times the count the pack asks for.
 TEMPLATES: dict[str, tuple[str, ...]] = {
     "casual": (
         "a fitted {c} t-shirt tucked into high-waisted light-wash jeans",
@@ -48,6 +52,22 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} cropped hoodie and bike shorts",
         "a {c} and white striped long-sleeve tee and a denim mini skirt",
         "a {c} bodysuit tucked into straight-leg jeans",
+        "a {c} linen shirt knotted at the waist over cut-off denim shorts",
+        "an oversized {c} graphic tee worn as a dress with a thin belt",
+        "a {c} henley and distressed boyfriend jeans",
+        "{c} overalls over a white cropped tee",
+        "a {c} baby tee and low-rise cargo pants",
+        "a {c} off-the-shoulder knit top and a denim skirt",
+        "a {c} tube top under an open denim jacket with jeans",
+        "a {c} tennis skirt and a white cropped polo",
+        "a {c} romper with a drawstring waist",
+        "a {c} plaid flannel tied at the waist over a white tank top and shorts",
+        "a {c} crewneck sweatshirt and a pleated mini skirt",
+        "a {c} satin cami tucked into high-waisted jeans",
+        "a {c} corduroy mini skirt and a fitted white turtleneck",
+        "a {c} knit cardigan buttoned up with nothing under it, and faded jeans",
+        "a {c} racer-back jumpsuit",
+        "a {c} crop top and a flowing white maxi skirt",
     ),
     "workout": (
         "a {c} sports bra and matching high-waisted leggings",
@@ -55,6 +75,18 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} seamless crop top and leggings set",
         "a cropped {c} zip hoodie over a sports bra and running shorts",
         "a {c} longline sports bra and flared yoga pants",
+        "a {c} one-piece athletic unitard",
+        "a {c} tennis dress with built-in shorts",
+        "a {c} mesh-panel sports bra and matching cycling shorts",
+        "a {c} tank top and running shorts with a split hem",
+        "a {c} crop top and high-waisted joggers",
+        "a {c} sports bra under an open black mesh tank, with leggings",
+        "a {c} ribbed workout onesie unzipped to the sternum",
+        "a {c} halter sports bra and flared leggings",
+        "a {c} baggy sweatshirt pulled off one shoulder over a sports bra and bike shorts",
+        "a {c} scoop-neck bodysuit and wide-leg track pants",
+        "a {c} strappy-back sports bra and a wrap skirt over leggings",
+        "a {c} track jacket zipped halfway over a sports bra and leggings",
     ),
     "fancy_dining_gallery": (
         "a {c} satin midi dress with a cowl neckline",
@@ -62,6 +94,21 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} silk slip dress with a draped neckline",
         "a fitted {c} knee-length sheath dress",
         "a {c} off-the-shoulder cocktail dress",
+        "a {c} wrap midi dress with a slit",
+        "a {c} one-shoulder jersey dress",
+        "a {c} tailored jumpsuit with a plunging neckline",
+        "a {c} lace midi dress over a nude lining",
+        "a {c} velvet slip dress",
+        "a {c} halter-neck midi dress with an open back",
+        "a {c} pleated satin skirt and a fitted black bodysuit",
+        "a {c} tuxedo-style blazer with nothing under it and wide-leg trousers",
+        "a {c} square-neck fitted dress with puff sleeves",
+        "a {c} silk shirt dress cinched with a belt",
+        "a {c} strapless column dress",
+        "a {c} ruched mesh midi dress",
+        "a {c} high-neck sleeveless midi dress",
+        "a {c} draped satin wrap top and a long bias-cut skirt",
+        "a {c} fitted long-sleeve midi dress with a keyhole neckline",
     ),
     "fancy_town": (
         "a {c} sequined mini dress",
@@ -69,6 +116,21 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} corset top and a leather mini skirt",
         "a sheer {c} mesh top over a bralette and tailored black trousers",
         "a {c} cut-out halter mini dress",
+        "a {c} latex-look mini dress",
+        "a {c} chainmail halter top and black leather shorts",
+        "a {c} bandage dress with a thigh-high slit",
+        "a {c} bralette under a sheer black maxi dress",
+        "a {c} satin mini slip dress with a cowl neck",
+        "a {c} vinyl mini skirt and a black lace bodysuit",
+        "a {c} backless halter jumpsuit",
+        "a {c} rhinestone-strap mini dress",
+        "a {c} ruched one-shoulder mini dress",
+        "a {c} crop top and a high-slit satin maxi skirt",
+        "a {c} bustier top and leather trousers",
+        "a {c} micro mini dress with a lace-up front",
+        "a {c} satin bustier and wide-leg black trousers",
+        "a {c} fringe mini dress",
+        "a {c} sheer mesh long-sleeve dress over a black bra and thong",
     ),
     "casual_date": (
         "a {c} wrap dress",
@@ -76,6 +138,21 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a fitted {c} knit top and a high-waisted midi skirt",
         "a {c} slip dress under a cropped denim jacket",
         "a {c} floral sundress with a sweetheart neckline",
+        "a {c} smocked milkmaid top and a flowy midi skirt",
+        "a {c} knit halter dress",
+        "a {c} ruffled mini dress with flutter sleeves",
+        "a {c} satin cami and a leather mini skirt",
+        "a {c} tie-front crop top and wide-leg linen trousers",
+        "a {c} square-neck mini dress with a cardigan over her shoulders",
+        "a {c} fitted ribbed dress with a scoop neck",
+        "a {c} blouse with balloon sleeves tucked into a denim mini skirt",
+        "a {c} crochet top and a flowing skirt",
+        "a {c} corset-waist midi dress",
+        "a {c} bodysuit under high-waisted wide-leg trousers",
+        "a {c} tiered sundress with a square neckline",
+        "a {c} off-the-shoulder midi dress",
+        "a {c} fitted turtleneck mini dress",
+        "a {c} satin slip skirt and a cropped knit top",
     ),
 }
 
@@ -264,36 +341,39 @@ def work_outfits(character: str, n: int = PACK_28["work"]) -> tuple[str, ...]:
     return tuple(out[:n])
 
 
-def draft_looks(character: str) -> dict[str, list[dict]]:
+def draft_looks(character: str, seed: int = 0) -> dict[str, list[dict]]:
     """`{category: [{outfit, hair}, ...]}` for the standard 28, from her record.
 
-    Deterministic per character (seeded by her id), so two drafts of the same
-    character agree and two characters do not get the same 28 lines.
+    Deterministic per (character, seed): two drafts of the same character
+    agree, two characters do not get the same lines, and "Start over" on the
+    tab passes the next seed for a different roll.
     """
     from .wardrobe import editable, hair_options  # noqa: PLC0415
 
     rec = editable(character)
     colours = list(palette_colours(rec.get("palette", "")))
     hair = list(hair_options(character))
-    rng = random.Random(character)
+    rng = random.Random(f"{character}:{seed}" if seed else character)
     out: dict[str, list[dict]] = {}
     for ci, (cat, n) in enumerate(PACK_28.items()):
         looks = []
+        off = rng.randrange(len(hair))          # her own hair rotation, not everyone's
         if cat == "work":
             # five different days at her job; blank lines when she has no job
             # outfit written down, for him to fill
             work = work_outfits(character, n)
             for i in range(n):
                 looks.append({"outfit": work[i] if work else "",
-                              "hair": hair[(i + ci) % len(hair)]})
+                              "hair": hair[(i + ci + off) % len(hair)]})
         else:
-            tpl = list(TEMPLATES[cat])
-            rng.shuffle(tpl)
+            # a sample, not the whole pool: what she wears on day three is
+            # not what the next character wears on day three
+            tpl = rng.sample(TEMPLATES[cat], n)
             cols = colours[:]
             rng.shuffle(cols)
             for i in range(n):
-                looks.append({"outfit": tpl[i % len(tpl)].format(c=cols[i % len(cols)]),
-                              "hair": hair[(i + ci) % len(hair)]})
+                looks.append({"outfit": tpl[i].format(c=cols[i % len(cols)]),
+                              "hair": hair[(i + ci + off) % len(hair)]})
         out[cat] = looks
     return out
 
@@ -361,32 +441,37 @@ def shipped(character: str) -> dict[str, int]:
 
 
 def draft(cfg: dict, character: str) -> dict:
-    """Write a fresh draft from her record and return the state. Overwrites an
-    existing draft; never touches an approved plan."""
+    """Write a fresh draft from her record and return the state. Each draft
+    after the first is a different roll (the seed counts up from the draft it
+    replaces). Never touches an approved plan: a new draft sits beside it until
+    approved, when it takes over."""
     from ..config import outputs_dir  # noqa: PLC0415
     from .lora import resolve_lora  # noqa: PLC0415
 
     c = character.lower()
     out = outputs_dir(cfg)
+    prev = _read(draft_path(out, c)) or _read(approved_path(out, c)) or {}
+    seed = int(prev.get("seed", -1)) + 1
     lora = resolve_lora(cfg, c)
     src = source_asset(cfg, c, (lora or {}).get("epoch"))
     ref = reference(c)
     plan = make_plan(c, lora=(lora or {}).get("path"),
                      source_asset=str(src) if src else None,
                      reference=str(ref) if ref else None,
-                     looks=draft_looks(c), start_after=shipped(c))
+                     looks=draft_looks(c, seed), start_after=shipped(c))
+    plan["seed"] = seed
     _write(draft_path(out, c), plan)
     return state(cfg, c)
 
 
 def save(cfg: dict, character: str, categories: dict) -> dict:
-    """Write his edits into whichever file is current - the draft, or the
+    """Write his edits into whichever file is current - the open draft, or the
     approved plan if he is revising one. `categories` is {cat: [{id, outfit, hair}]}."""
     from ..config import outputs_dir  # noqa: PLC0415
 
     c = character.lower()
     out = outputs_dir(cfg)
-    p = approved_path(out, c) if approved_path(out, c).is_file() else draft_path(out, c)
+    p = draft_path(out, c) if draft_path(out, c).is_file() else approved_path(out, c)
     doc = _read(p)
     if not doc:
         raise ValueError("nothing to save into - draft her looks first")
@@ -443,8 +528,9 @@ def state(cfg: dict, character: str) -> dict:
     c = character.lower()
     out = outputs_dir(cfg)
     ap, dr = _read(approved_path(out, c)), _read(draft_path(out, c))
-    doc = ap or dr
-    st = "approved" if ap else ("draft" if dr else "none")
+    # an open draft is what he is working on, even when a plan is approved
+    doc = dr or ap
+    st = "draft" if dr else ("approved" if ap else "none")
     rec = editable(c)
     cats = []
     if doc:
@@ -457,5 +543,6 @@ def state(cfg: dict, character: str) -> dict:
                                     "hair": e["hair"]} for e in block["looks"]]})
     blank = sum(1 for s in plan_slots(doc) if not s["outfit"] or not s["hair"]) if doc else 0
     return {"character": c, "state": st, "approved_at": (ap or {}).get("approved"),
+            "seed": (doc or {}).get("seed", 0),
             "categories": cats, "blank": blank, "shipped": shipped(c),
             "source_asset": (doc or {}).get("source_asset"), "lora": (doc or {}).get("lora")}

@@ -10,6 +10,7 @@ work looks must be HER job outfit, and approving must produce exactly the file
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -63,6 +64,43 @@ def test_draft_is_28_looks_in_the_pack_categories_coloured_from_her_palette(ash)
     # deterministic per character, different between characters
     assert L.draft_looks("ash") == d
     assert L.draft_looks("zoe")["casual"] != d["casual"]
+
+
+def _garments(looks: list[dict]) -> list[str]:
+    """The template behind each line, colour removed, so two characters' lines
+    compare as garments and not as colours."""
+    out = []
+    for lk in looks:
+        g = lk["outfit"]
+        for c in L._COLOURS:
+            g = re.sub(rf"\b{re.escape(c)}\b", "{c}", g)
+        out.append(g)
+    return out
+
+
+def test_characters_do_not_wear_the_same_garments_on_the_same_days(ash):
+    # Jeremy, 2026-10-12: "the bodysuit tucked into jeans ... everyone so far
+    # that I've reviewed is wearing the same thing with just different colors"
+    names = ["ash", "zoe", "kim", "bea", "lou", "mia", "ivy", "una"]
+    for cat, n in PACK_28.items():
+        if cat == "work":
+            continue
+        assert len(L.TEMPLATES[cat]) >= 3 * n, cat
+        days = [_garments(L.draft_looks(c)[cat]) for c in names]
+        for day in range(n):
+            worn = [d[day] for d in days]
+            # eight characters, one day: never the same garment on most of them
+            assert max(worn.count(w) for w in worn) <= 3, (cat, day, worn)
+        # and no character repeats a garment inside a category
+        for d in days:
+            assert len(set(d)) == n
+
+
+def test_a_new_seed_is_a_different_roll(ash):
+    a, b = L.draft_looks("ash"), L.draft_looks("ash", seed=1)
+    assert a != b
+    assert L.draft_looks("ash", seed=1) == b
+    assert len(a["casual"]) == len(b["casual"]) == PACK_28["casual"]
 
 
 def test_no_job_outfit_leaves_the_work_looks_blank(ash):
@@ -205,6 +243,21 @@ def test_draft_extends_her_shipped_looks_and_approve_writes_the_pack_plan(tmp_pa
     # and that is the exact file the shoots tab's guard looks for
     from sourcemode.assets.lora import blocked_shoots
     assert "pack28" not in blocked_shoots(cfg, "ash")
+
+    # Start over on an approved plan: a NEW roll, open beside the approved
+    # plan, which keeps rendering until the draft is approved in its place
+    st2 = L.draft(cfg, "ash")
+    assert st2["state"] == "draft" and st2["seed"] == 1 and st2["approved_at"]
+    assert L.approved_path(Path(cfg["paths"]["outputs"]), "ash").is_file()
+    fresh = [lk["outfit"] for c in st2["categories"] for lk in c["looks"] if c["key"] == "casual"]
+    assert fresh != [lk["outfit"] for c in st["categories"] for lk in c["looks"] if c["key"] == "casual"]
+    # edits go into the draft, not the approved plan
+    L.save(cfg, "ash", {"all": [{"id": "casual_08", "outfit": "a second-roll edit", "hair": "her hair worn loose"}]})
+    kept = json.loads(plan_file.read_text(encoding="utf-8"))
+    assert all(e["outfit"] != "a second-roll edit" for e in kept["categories"]["casual"]["looks"])
+    st3 = L.approve(cfg, "ash")
+    assert st3["state"] == "approved" and st3["seed"] == 1
+    assert "a second-roll edit" in [e["outfit"] for e in json.loads(plan_file.read_text(encoding="utf-8"))["categories"]["casual"]["looks"]]
 
 
 def test_approve_refuses_without_a_render_to_condition_on(tmp_path, ash, monkeypatch):

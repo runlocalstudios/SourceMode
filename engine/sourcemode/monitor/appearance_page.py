@@ -226,9 +226,34 @@ function drawPicker(){
       .map(r=>opt(r.character,r.character+(r.confirmed?'  ✓':'  • needs review'))).join('');
 }
 $('who').addEventListener('change',e=>{
+  if(dirty() && !confirm('Unsaved changes on this page. Leave without saving?')){ e.target.value=pick; return; }
   pick=e.target.value; history.replaceState(null,'','#'+encodeURIComponent(pick)); draw();
   window.scrollTo(0,0);
 });
+
+/* Jeremy, 2026-10-12: a Save with nothing to save is grey, and leaving with
+   edits pending asks first. Each save button owns one form region; its
+   baseline is what that region held when it was drawn. */
+const SAVES='[data-act=confirm],[data-act=save],[data-act=lk_save]';
+function regionState(b){
+  const a=b.dataset.act;
+  if(a==='lk_save') return JSON.stringify(collectLooks(b.closest('[data-looks]')));
+  const card=b.closest('.lk'); if(!card) return '';
+  if(a==='save') return JSON.stringify(collect(card));
+  const val=k=>(card.querySelector('[data-k='+k+']')||{}).value||'';
+  return JSON.stringify({p:val('prompt'),n:val('negative')});
+}
+function baseline(root){ for(const b of root.querySelectorAll(SAVES)) b.dataset.base=regionState(b); dirty(); }
+function dirty(){
+  let any=false;
+  for(const b of document.querySelectorAll(SAVES)){
+    const d=regionState(b)!==b.dataset.base; any=any||d;
+    /* Confirm on a description nobody has confirmed yet is an action by itself */
+    b.disabled=!d && !(b.dataset.act==='confirm' && b.dataset.open==='1');
+  }
+  return any;
+}
+window.addEventListener('beforeunload',e=>{ if(dirty()){ e.preventDefault(); e.returnValue=''; } });
 function shown(){
   if(pick) return recs.filter(r=>r.character===pick);
   const open=recs.filter(r=>!r.confirmed);
@@ -245,7 +270,7 @@ function appearance(r){
     +'<textarea data-k=prompt spellcheck=false>'+SM.esc(r.prompt)+'</textarea>'
     +'<div class=hl data-hl>'+(r.race.length?marked(r.prompt):'No race words.')+'</div>'
     +'<div class=row><label>Negative</label><input data-k=negative placeholder="negative (optional)" value="'+SM.esc(r.negative||'')+'"></div>'
-    +'<div class=row><button class="btn btn-primary" data-act=confirm>'+(r.confirmed?'Save &amp; re-confirm':'Confirm')+'</button></div>';
+    +'<div class=row><button class="btn btn-primary" data-act=confirm'+(r.confirmed?'':' data-open=1')+'>'+(r.confirmed?'Save &amp; re-confirm':'Confirm')+'</button></div>';
 }
 
 function lockLine(r){
@@ -311,7 +336,7 @@ function drawLooks(el,st){
   const c=st.character;
   let h='<h4>Wardrobe pack &mdash; 28 looks'
     +(st.state==='approved'?'<span class=draft style="color:var(--done-ink)">approved '+SM.esc(SM.ago(st.approved_at))+'</span>'
-     :st.state==='draft'?'<span class=draft>draft - edit, then approve</span>':'')+'</h4>';
+     :st.state==='draft'?'<span class=draft>'+(st.approved_at?'new draft - replaces the approved plan once approved':'draft - edit, then approve')+'</span>':'')+'</h4>';
   if(st.state==='none'){
     const n=Object.values(st.shipped||{}).reduce((a,b)=>a+b,0);
     h+='<div class=sub>Nothing drafted yet. The asset pack on the Shoots tab stays locked until 28 looks are approved.'
@@ -319,7 +344,7 @@ function drawLooks(el,st){
       +'<div class=row><button class="btn btn-primary" data-act=lk_draft>Draft the 28 looks</button></div>';
     el.innerHTML=h; return;
   }
-  h+='<div class=sub>One outfit and one hair per look. The draft is garments in her palette, and five days at her job built from her job line - edit anything. Hair words: colour, dye and length only.</div>';
+  h+='<div class=sub>One outfit and one hair per look. The draft is her own roll of garments in her palette, and five days at her job built from her job line - edit anything, or Start over for a different roll. Hair words: colour, dye and length only.</div>';
   for(const cat of st.categories){
     h+='<h5>'+SM.esc(cat.label)+' <span class=cov>'+cat.looks.length+(cat.guide?' &middot; her record: '+SM.esc(cat.guide):'')+'</span></h5>';
     for(const l of cat.looks){
@@ -331,12 +356,13 @@ function drawLooks(el,st){
   }
   h+='<div class=row><button class="btn btn-primary" data-act=lk_save>Save</button>'
     +(st.state==='draft'
-      ?'<button class="btn" data-act=lk_approve'+(st.blank?' disabled title="'+st.blank+' blank"':'')+'>Approve &mdash; unlocks the pack on Shoots</button>'
-       +'<button class="btn btn-ghost" data-act=lk_draft>Start over</button>'
+      ?'<button class="btn" data-act=lk_approve'+(st.blank?' disabled title="'+st.blank+' blank"':'')+'>Approve &mdash; '+(st.approved_at?'replaces the approved plan':'unlocks the pack on Shoots')+'</button>'
       :'')
+    +'<button class="btn btn-ghost" data-act=lk_draft>Start over</button>'
     +(st.blank?'<span class=note>'+st.blank+' blank</span>':'')+'</div>';
   el.innerHTML=h;
   for(const t of el.querySelectorAll('textarea')) fit(t);
+  baseline(el);
 }
 function collectLooks(el){
   return {all:[...el.querySelectorAll('[data-lo]')].map(t=>({id:t.dataset.lo,outfit:t.value,
@@ -345,7 +371,7 @@ function collectLooks(el){
 async function looksAct(b){
   const el=b.closest('[data-looks]'), c=el.dataset.looks, a=b.dataset.act;
   const u='/characters/'+encodeURIComponent(c)+'/looks';
-  if(a==='lk_draft' && el.querySelector('[data-lo]') && !confirm('Replace every line with a fresh draft?')) return;
+  if(a==='lk_draft' && el.querySelector('[data-lo]') && !confirm('Start over with a different roll of 28? Every edit here is lost'+(el.querySelector('[data-act=lk_approve]')?'.':'; the approved plan stays until you approve the new draft.'))) return;
   b.disabled=true;
   try{
     let st;
@@ -357,7 +383,7 @@ async function looksAct(b){
       SM.toast(c+': 28 looks approved - the pack is open on Shoots',{label:'Shoots',run:()=>SM.nav('shoots',c)});
     }
     drawLooks(el,st);
-  }catch(err){ SM.toast(err.message); b.disabled=false; }
+  }catch(err){ SM.toast(err.message); b.disabled=false; dirty(); }
 }
 
 function draw(){
@@ -374,12 +400,14 @@ function draw(){
       +appearance(r)+(one?profile(r):'')
     +'</div>').join(''));
   for(const t of document.querySelectorAll('.lk textarea')) fit(t);
+  baseline($('list'));
   loadLooks();
 }
 /* the whole text visible at once - no inner scrolling to read what she is */
 function fit(t){ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
 document.addEventListener('input',e=>{
   if(e.target.tagName==='TEXTAREA') fit(e.target);
+  dirty();
   if(e.target.dataset.k!=='prompt') return;
   const card=e.target.closest('.lk'), t=e.target.value, hl=card.querySelector('[data-hl]');
   hl.innerHTML=RACE.test(t)?marked(t):'No race words.'; RACE.lastIndex=0;
@@ -421,7 +449,7 @@ document.addEventListener('click',async e=>{
       SM.toast(c+' saved');
     }
     const y=window.scrollY; await load(); window.scrollTo(0,y);
-  }catch(err){ SM.toast(err.message); b.disabled=false; }
+  }catch(err){ SM.toast(err.message); dirty(); }
 });
 load();
 """
