@@ -406,25 +406,49 @@ def _write(p: Path, doc: dict) -> None:
     tmp.replace(p)
 
 
-def source_asset(cfg: dict, character: str, epoch: int | None) -> Path | None:
+def _first_render(folder: Path) -> Path | None:
+    for name in ("scene_00.png", "scene_01.png"):
+        if (folder / name).is_file():
+            return folder / name
+    hits = sorted(folder.glob("*.png")) if folder.is_dir() else []
+    return hits[0] if hits else None
+
+
+def source_asset(cfg: dict, character: str, epoch: int | None, lora: dict | None = None) -> Path | None:
     """A 2:3 render of her at her locked epoch for the pack to condition on:
-    `scene_00.png` of her sweep in the library, else the old outputs/dense_* spot."""
+    `scene_00.png` of her sweep in the library, else the old outputs/dense_* spot.
+
+    A continued run numbers its epochs from 1 and sweeps into a folder tagged
+    with its name - priyanka's lock is `priyanka_v2b-000006` = epoch 26, rendered
+    in `*_sweep_v2b/ep06`. So after `ep<epoch>` anywhere, look in that run's own
+    sweep folders for its file number, or its last epoch when the file is the
+    unnumbered final one (vivienne: `vivienne_v2b.safetensors`, epoch 28, ep04)."""
     from ..library import library_dir  # noqa: PLC0415
     from ..config import outputs_dir  # noqa: PLC0415
 
     if epoch is None:
         return None
-    ep = f"ep{int(epoch)}"
     roots = sorted((library_dir(cfg) / character).glob("*_sweep_*"), reverse=True)
     roots += sorted(outputs_dir(cfg).glob(f"dense_{character}*"), reverse=True)
     for r in roots:
-        for name in ("scene_00.png", "scene_01.png"):
-            p = r / ep / name
-            if p.is_file():
-                return p
-        hits = sorted((r / ep).glob("*.png")) if (r / ep).is_dir() else []
-        if hits:
-            return hits[0]
+        hit = _first_render(r / f"ep{int(epoch)}")
+        if hit:
+            return hit
+    # the continued run's own folders
+    name = Path((lora or {}).get("name") or (lora or {}).get("path") or "").name
+    m = re.match(rf"{re.escape(character)}_(.+?)(?:-(\d+))?\.safetensors$", name)
+    if not m:
+        return None
+    tag, num = m.group(1), m.group(2)
+    own = [r for r in roots if re.search(rf"_sweep_{re.escape(tag)}(?:-|$)", r.name)]
+    for r in own:
+        if num:
+            hit = _first_render(r / f"ep{int(num):02d}") or _first_render(r / f"ep{int(num)}")
+        else:
+            eps = sorted((d for d in r.glob("ep*") if d.is_dir()), key=lambda d: int(d.name[2:] or 0))
+            hit = _first_render(eps[-1]) if eps else None
+        if hit:
+            return hit
     return None
 
 
@@ -453,7 +477,7 @@ def draft(cfg: dict, character: str) -> dict:
     prev = _read(draft_path(out, c)) or _read(approved_path(out, c)) or {}
     seed = int(prev.get("seed", -1)) + 1
     lora = resolve_lora(cfg, c)
-    src = source_asset(cfg, c, (lora or {}).get("epoch"))
+    src = source_asset(cfg, c, (lora or {}).get("epoch"), lora)
     ref = reference(c)
     plan = make_plan(c, lora=(lora or {}).get("path"),
                      source_asset=str(src) if src else None,
@@ -506,7 +530,7 @@ def approve(cfg: dict, character: str) -> dict:
     lora = resolve_lora(cfg, c)
     if not lora:
         raise ValueError("no locked LoRA for her - the pack renders from her lock")
-    src = source_asset(cfg, c, lora.get("epoch"))
+    src = source_asset(cfg, c, lora.get("epoch"), lora)
     if not src:
         raise ValueError(f"no render of her at epoch {lora.get('epoch')} to condition on - "
                          "her sweep folder has no ep{} images".format(lora.get("epoch")))

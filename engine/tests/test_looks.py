@@ -260,6 +260,29 @@ def test_draft_extends_her_shipped_looks_and_approve_writes_the_pack_plan(tmp_pa
     assert "a second-roll edit" in [e["outfit"] for e in json.loads(plan_file.read_text(encoding="utf-8"))["categories"]["casual"]["looks"]]
 
 
+def test_a_continued_run_finds_its_render_under_its_own_epoch_number(tmp_path):
+    # priyanka, 2026-10-12: lock priyanka_v2b-000006 = epoch 26; the approve
+    # button said "no render of her at epoch 26" while *_sweep_v2b/ep06 had ten
+    cfg = _cfg(tmp_path)
+    lib = tmp_path / "lib" / "priyanka"
+    for d in ("2026-09-20_sweep_v2/ep20", "2026-09-21_sweep_v2b/ep06"):
+        (lib / d).mkdir(parents=True)
+        (lib / d / "scene_00.png").write_bytes(b"png")
+    lora = {"name": "priyanka_v2b-000006.safetensors", "epoch": 26, "path": "x"}
+    assert L.source_asset(cfg, "priyanka", 26, lora) == lib / "2026-09-21_sweep_v2b" / "ep06" / "scene_00.png"
+    # the plain sweep still wins when the real epoch is there
+    assert L.source_asset(cfg, "priyanka", 20, lora) == lib / "2026-09-20_sweep_v2" / "ep20" / "scene_00.png"
+    # vivienne: the unnumbered final file of the continued run is its last epoch
+    lib = tmp_path / "lib" / "vivienne"
+    for d in ("2026-10-10_sweep_v2-asset/ep24", "2026-10-11_sweep_v2b-asset/ep00", "2026-10-11_sweep_v2b-asset/ep04"):
+        (lib / d).mkdir(parents=True)
+        (lib / d / "scene_00.png").write_bytes(b"png")
+    lora = {"name": "vivienne_v2b.safetensors", "epoch": 28, "path": "x"}
+    assert L.source_asset(cfg, "vivienne", 28, lora) == lib / "2026-10-11_sweep_v2b-asset" / "ep04" / "scene_00.png"
+    # and a v2 lock never borrows from the v2b folders
+    assert L.source_asset(cfg, "vivienne", 30, {"name": "vivienne_v2-000030.safetensors", "epoch": 30}) is None
+
+
 def test_approve_refuses_without_a_render_to_condition_on(tmp_path, ash, monkeypatch):
     cfg = _cfg(tmp_path)
     from sourcemode.assets import lora as LORA
