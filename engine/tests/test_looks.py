@@ -180,6 +180,101 @@ def test_a_uniform_skips_the_variant_she_already_wears(monkeypatch):
     assert sum("apron" in x for x in w) == 5 and not any("black apron" in x for x in w)
 
 
+def test_a_brief_is_never_a_look_and_its_words_shape_every_look(monkeypatch):
+    # priya, 2026-10-13: work look 1 drafted as "Chic professional outfits that
+    # are a little too revealing" verbatim. "I want the descriptions on the top
+    # to guide the design of the outfits"
+    brief = "Chic professional outfits that are a little too revealing"
+    assert L.is_brief(brief) and not L.is_brief("a tailored blazer with a pencil skirt")
+    _with_job(monkeypatch, "Data analyst", brief, palette="black, charcoal, taupe and camel")
+    w = L.work_outfits("priya")
+    assert len(w) == 5 and len(set(w)) == 5
+    assert not any(brief.lower() in x.lower() for x in w)
+    assert all(L.GARMENT_RE.search(x) for x in w)                      # office templates
+    assert sum(any(x.endswith(c) for c in _cues("revealing")) for x in w) >= 4, w   # the brief's register
+    for x in w:                                                        # a hem cue needs a hem
+        if re.search(r"hem|slit", x):
+            assert re.search(r"skirt|dress", x), x
+    assert L.work_outfits("priya") == w
+
+
+def _cues(reg: str) -> set[str]:
+    return {cue for name, _, pool in L.REGISTERS if name == reg for cue, _, _ in pool}
+
+
+def test_a_cue_only_lands_on_a_garment_that_can_carry_it():
+    rng = L.random.Random(0)
+    for _ in range(40):
+        assert "unbuttoned" not in L.steer("a black crop top and a flowing white maxi skirt", "revealing", rng)
+        assert "cropped" not in L.steer("a red sheath dress with a thin belt", "revealing", rng)
+        assert "hem" not in L.steer("a navy silk shirt with tailored trousers", "modest", rng)
+    assert L.steer("a fitted black knit top", "", rng) == "a fitted black knit top"
+    assert L.fill("a {c} blouse", c="olive") == "an olive blouse"
+    assert L.fill("a {c} one-piece", c="black") == "a black one-piece"
+
+
+def test_a_preppy_brief_with_a_sexy_flair_gets_preppy_looks_cut_revealing(monkeypatch):
+    # priyanka: the job title says teaching assistant; the brief says preppy.
+    # The brief wins - its words are the design direction
+    _with_job(monkeypatch, "Teaching assistant", "Preppy outfits with a sexy flair", palette="navy and cream",
+              game_job="She is a teaching assistant at Chill Coast University")
+    w = L.work_outfits("priyanka")
+    joined = " ".join(w)
+    assert len(set(w)) == 5
+    assert "pleated" in joined and ("collared" in joined or "argyle" in joined)   # preppy, not academic
+    assert "pinafore" not in joined and "tie-neck" not in joined
+    assert sum(any(x.endswith(c) for c in _cues("revealing")) for x in w) >= 4
+
+
+def test_business_casual_at_the_library_is_an_office_brief_not_a_modest_uniform(monkeypatch):
+    _with_job(monkeypatch, "", "Chic business casual",
+              game_job="She works the desk at Avery Central Library")
+    w = L.work_outfits("tess")
+    assert len(set(w)) == 5 and "blazer" in " ".join(w)
+    assert not any(x.startswith("Chic business casual") for x in w)
+    assert not any(x.endswith(c) for x in w for c in _cues("modest"))   # nothing in the brief says modest
+
+
+def test_her_own_garment_line_is_kept_verbatim_and_only_the_templates_are_steered(monkeypatch):
+    line = "church volunteer: a modest long-sleeve dress or a jumper with straight-leg jeans"
+    _with_job(monkeypatch, "", line, palette="navy, cream")
+    w = L.work_outfits("sandra")
+    assert w[0] == L.job_base(line)
+    assert sum(any(x.endswith(c) for c in _cues("modest")) for x in w[1:]) >= 3
+
+
+def test_a_written_out_uniform_ignores_the_mood_of_the_style_line(monkeypatch):
+    # ash: "a short black shirt-dress uniform" is the spec; a "teasing" style
+    # line must not make it sheer
+    rec = {"style": "edgy and teasing", "palette": "black", "avoid": "", "outfits": {},
+           "jobs": [{"job": "Waitress at Obsidian", "outfit": "a short black shirt-dress uniform", "places": []},
+                    {"job": "", "outfit": "", "places": []}],
+           "hair": [], "note": "", "draft": False}
+    monkeypatch.setattr(W, "editable", lambda c: rec)
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "persona_job", lambda c: "")
+    w = L.work_outfits("ash")
+    assert not any(any(x.endswith(c) for c in _cues("revealing")) for x in w)
+
+
+def test_the_category_lines_guide_the_other_categories(ash):
+    # colours named in the line replace the palette; a garment it names comes
+    # first; a register word in the style line reaches every category
+    ash["outfits"] = {"everyday": "bodysuits and tennis skirts", "workout": "plain white or charcoal set"}
+    ash["style"] = "office-polished with a slutty edge"
+    d = L.draft_looks("ash")
+    workout = [lk["outfit"] for lk in d["workout"]]
+    assert all(re.search(r"\b(white|charcoal)\b", x) for x in workout), workout
+    casual = [lk["outfit"] for lk in d["casual"]]
+    assert sum("bodysuit" in x or "skirt" in x for x in casual) >= 5, casual
+    cues = _cues("revealing")
+    assert sum(any(x.endswith(c) for c in cues) for x in casual + workout) >= len(casual + workout) - 2
+    # the same record without the brief words drafts plain lines
+    ash["style"] = "edgy"
+    plain = [lk["outfit"] for lk in L.draft_looks("ash")["casual"]]
+    assert not any(any(x.endswith(c) for c in cues) for x in plain)
+
+
 def test_two_jobs_split_the_five_looks_three_and_two(monkeypatch):
     rec = {"style": "", "palette": "black", "avoid": "", "outfits": {},
            "jobs": [{"job": "drinks sales rep", "outfit": "a black blazer over a satin cami", "places": []},

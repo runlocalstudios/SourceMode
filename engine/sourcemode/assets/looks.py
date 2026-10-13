@@ -197,6 +197,7 @@ WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "{c} scrubs with a fleece zip jacket over the top",
         "scrubs with a {c} printed top and plain trousers",
         "{c} scrubs with a stethoscope around her neck",
+        "a white lab coat open over {c} scrubs",
     )),
     ("dancer", r"dancer|stripper|chill trap|strip club|pole|burlesque|stage name|exotic", (
         "{base}",
@@ -204,6 +205,7 @@ WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "a {c} lace bodysuit cut high on the hip with sheer black thigh-highs",
         "a {c} sequin two-piece - a tiny bra top and a thong-cut bottom",
         "a {c} mesh mini dress worn over a black bra and thong set",
+        "a {c} halter bikini top with a black micro skirt and clear heels",
     )),
     ("stage", r"\bband\b|stage|singer|musician|perform|\bdj\b|venue|show night", (
         "{base}",
@@ -211,6 +213,7 @@ WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "a {c} sequin crop top and a black micro skirt",
         "a {c} corset top with leather trousers",
         "a {c} mesh long-sleeve over a bralette and a mini skirt",
+        "a {c} slip dress with a studded belt and ankle boots",
     )),
     ("boutique", r"boutique|clothing|fashion|threads|le chic|shop floor|stylist|retail", (
         "{base}",
@@ -218,6 +221,7 @@ WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "a fitted {c} turtleneck with a leather midi skirt",
         "a {c} blazer worn over a bralette with straight-leg jeans",
         "a {c} knit midi dress with a slim belt",
+        "a {c} silk cami with high-waisted tailored shorts",
     )),
     ("gallery", r"gallery|curator|museum|art dealer", (
         "{base}",
@@ -225,6 +229,7 @@ WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "an oversized {c} blazer over a black turtleneck and slim trousers",
         "a {c} silk shirt with a black mini skirt and sheer tights",
         "a {c} asymmetric midi dress",
+        "a {c} sleeveless turtleneck with wide-leg trousers",
     )),
     ("fitness", r"yoga|trainer|\bgym\b|fitness|pilates|coach", (
         "{base}",
@@ -232,6 +237,7 @@ WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "a {c} racerback tank over a black sports bra and bike shorts",
         "a cropped {c} zip hoodie over a sports bra and leggings",
         "a {c} longline sports bra and flared yoga pants",
+        "a {c} seamless crop top and matching bike shorts",
     )),
     ("academic", r"teach|professor|lecturer|university|tutor|school", (
         "{base}",
@@ -239,6 +245,7 @@ WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "a {c} tie-neck blouse with tailored trousers",
         "a {c} knit dress with a slim belt",
         "a {c} button-up shirt tucked into an A-line skirt",
+        "a {c} turtleneck under a pinafore dress",
     )),
     ("modest", r"church|volunteer|librar|charity|pastor|parish", (
         "{base}",
@@ -246,16 +253,110 @@ WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "a {c} jumper with straight-leg jeans",
         "a {c} blouse with a knee-length skirt",
         "a {c} cardigan over a shirt dress",
+        "a {c} blouse with wide-leg trousers",
     )),
-    ("office", r"office|assistant|executive|professional|corporate|manager|real[- ]estate|agent|"
-               r"\bsales\b|\brep\b|consultant|recruit|account|lawyer|paralegal|property", (
+    ("preppy", r"preppy|collegiate|\bivy\b|prep school|sorority", (
+        "{base}",
+        "a {c} pleated mini skirt with a white collared shirt and a sweater vest",
+        "a {c} cable-knit sweater over a collared shirt with a plaid mini skirt",
+        "a fitted {c} polo dress",
+        "a white button-up tied at the waist with a {c} pleated skirt",
+        "a {c} tennis skirt and a cropped argyle sweater",
+        "a {c} cardigan buttoned over a white tee with cropped chinos",
+    )),
+    ("office", r"office|assistant|executive|professional|business|corporate|manager|real[- ]estate|agent|"
+               r"\bsales\b|\brep\b|consultant|recruit|account|lawyer|paralegal|property|analyst|\bdesk\b", (
         "{base}",
         "a tailored {c} blazer over a silk cami with a pencil skirt",
         "a {c} sheath dress with a thin belt",
         "a {c} silk shirt tucked into high-waisted tailored trousers",
         "a fitted {c} knit top with wide-leg trousers and a long blazer",
+        "a {c} sleeveless blouse tucked into a high-waisted midi skirt",
+        "a {c} wrap top with tailored cigarette trousers",
     )),
 )
+
+# A job line that names no garment is a brief, not an outfit - priya's "Chic
+# professional outfits that are a little too revealing" drafted as work look 1
+# verbatim. Jeremy, 2026-10-13: "I want the descriptions on the top to guide
+# the design of the outfits, so if I say slutty professional up top that should
+# guide the outfit prompts." A brief places the job by its words and every look
+# is a template; its register words (below) shape each one.
+GARMENT_RE = re.compile(
+    r"blazer|skirt|dress|trouser|pants?\b|jeans?|shirt|blouse|\btops?\b|\btee\b|t-shirt|scrubs|uniform|cami|"
+    r"bodysuit|apron|waistcoat|jacket|legging|shorts?\b|sweater|cardigan|jumper|\bknit\b|polo|hoodie|"
+    r"bralette|\bbra\b|corset|\bsuit\b|romper|jumpsuit|overalls?|skort|\bvest\b|\bcoat\b|tunic|kimono|"
+    r"bikini|swimsuit|tights|stockings|turtleneck|tank\b|sports bra|\bset\b|\bmini\b|\bmidi\b|\bmaxi\b|"
+    r"bodycon|gown|lingerie|heels|boots|sneakers", re.I)
+
+# What a brief asks for, in the words he writes. A cue is chosen per look from
+# the ones that garment can carry: (cue, needs, never) - a hem cue wants a skirt
+# or dress, "unbuttoned" wants buttons, nothing is cropped twice.
+_HEM = r"skirt|dress"
+REGISTERS: tuple[tuple[str, str, tuple[tuple[str, str, str], ...]], ...] = (
+    ("revealing", r"reveal|slutty|sexy|skimpy|provocative|racy|daring|flirty|teas|risqu|scandal|\bsheer\b|"
+                  r"show(?:s|ing)? (?:off )?(?:skin|cleavage|leg)|cleavage|low[- ]cut|barely", (
+        ("the neckline cut low", "", r"turtleneck|high-neck|halter|strapless|tube|bandeau|hoodie|sweatshirt|"
+                                     r"jacket|track|off-the-shoulder|one-shoulder|sports bra|plunging|cowl|unzipped|bustier|corset|bikini"),
+        ("unbuttoned to the sternum", r"shirt|blouse|button|cardigan|blazer|polo|henley", r"unbuttoned|tied at|knotted"),
+        ("cut close to the body", "", r"fitted|bodycon|sheath|bandage|close-fitting|seamless|latex"),
+        ("the fabric sheer enough to show the bra beneath",
+         r"dress|blouse|shirt|\btee\b|knit|cami|bodysuit|\btop\b", r"sheer|mesh|lace|jacket|hoodie|sweatshirt|track|sports bra|bralette|leather|vinyl|latex|sequin"),
+        ("the top cropped to show her midriff",
+         r"\btop\b|\btee\b|shirt|sweater|blouse|knit|hoodie|sweatshirt|tank|polo|henley|cardigan",
+         r"crop|dress|jumpsuit|unitard|onesie|romper|bodysuit|overalls|tucked|corset|bustier|bralette|bikini|tube"),
+        ("the hem cut well above mid-thigh", _HEM, r"mini|micro|short|tennis"),
+        ("with a slit up the thigh", _HEM, r"slit|mini|micro|short|tennis"),
+    )),
+    ("modest", r"modest|conservative|demure|buttoned[- ]up|\bprim\b|\bproper\b", (
+        ("a high neckline", "", r"off-the-shoulder|one-shoulder|strapless|halter|cowl|plunging|slip|cami|sports bra|"
+                                r"turtleneck|high-neck|tube|bandeau|scoop|square-neck|sweetheart"),
+        ("sleeves to the wrist", "", r"sleeveless|tank|cami|strapless|halter|\btee\b|sports bra|short-sleeve|slip|tube|long-sleeve"),
+        ("loose through the body", "", r"fitted|bodycon|sheath|wrap|corset|bandage|close-fitting|seamless|slim|column"),
+        ("buttoned to the collar", r"shirt|blouse|cardigan|button", r"unbuttoned|tied at|knotted"),
+        ("the hem at the knee", _HEM, r"mini|micro|midi|maxi|knee|long"),
+        ("the hem below the knee", _HEM, r"mini|micro|knee|long|maxi"),
+    )),
+)
+
+
+def is_brief(outfit: str) -> bool:
+    """True when the line describes a style and names no garment."""
+    return bool(job_base(outfit)) and not GARMENT_RE.search(job_base(outfit))
+
+
+def register(*texts: str) -> str:
+    """"revealing" / "modest" / "" from the first text that says either."""
+    for t in texts:
+        for name, pat, _ in REGISTERS:
+            if re.search(pat, (t or "").lower()):
+                return name
+    return ""
+
+
+def steer(outfit: str, reg: str, rng: random.Random) -> str:
+    """One register cue appended to the outfit, chosen from the ones it can
+    carry; the outfit unchanged when none fits."""
+    if not reg or not outfit:
+        return outfit
+    pool = next(s for n, _, s in REGISTERS if n == reg)
+    fit = [cue for cue, needs, never in pool
+           if (not needs or re.search(needs, outfit, re.I)) and not (never and re.search(never, outfit, re.I))]
+    return f"{outfit}, {rng.choice(fit)}" if fit else outfit
+
+
+_VOWEL_COLOUR_RE = re.compile(r"\ba ((?:olive|orange|emerald|ivory|off-white)\b)")
+
+
+def fill(template: str, **kw: str) -> str:
+    """`template.format(**kw)` with "a olive" made "an olive"."""
+    return _VOWEL_COLOUR_RE.sub(r"an \1", template.format(**kw))
+
+
+def _placed(text: str) -> str:
+    """The kind the text itself names, "" when it names none."""
+    k = job_kind(text)
+    return k if k != "uniform" or UNIFORM_RE.search((text or "").lower()) else ""
 
 # Everything else is a uniform - bar, cafe, counter, salon, grocery, or a job
 # line nobody can place. It stays as written and changes in the small things;
@@ -296,24 +397,36 @@ def job_kind(text: str) -> str:
     return "uniform"
 
 
-def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_job: str) -> list[str]:
+def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_job: str,
+               style: str = "") -> list[str]:
     base = job_base(job["outfit"])
+    brief = is_brief(job["outfit"])
     # her record's words place the job; the game's one-line job is consulted
     # only when they do not (a legacy line like "a fitted knit top and
     # trousers" names clothes, not a job)
     words = " ".join((job.get("job", ""), job["outfit"]))
-    kind = job_kind(words)
-    if kind == "uniform" and game_job and not UNIFORM_RE.search(words.lower()):
-        kind = job_kind(game_job)
+    # a brief's own words outrank the job title ("Teaching assistant: Preppy
+    # outfits with a sexy flair" is preppy, not academic)
+    kind = (_placed(job["outfit"]) if brief else "") or _placed(words)
+    if not kind and game_job:
+        kind = _placed(game_job)
+    if not kind:
+        kind = "office" if brief else "uniform"   # a brief with no placeable job: she dresses herself
     if kind == "uniform":
         tpl = ["{base}"] + [v for key, v in UNIFORM_VARIANTS if key not in base.lower()]
     else:
         tpl = list(next(t for k, _, t in WORK_KINDS if k == kind))
+        if brief:
+            tpl = [t for t in tpl if t != "{base}"]   # the brief is never a look
+    # her job line sets the register; her style line only when the job line
+    # is a brief - a written-out uniform is the spec, not a mood
+    reg = register(words) or (register(style) if brief else "")
     cols = colours[:]
     rng.shuffle(cols)
     out = []
     for i, t in enumerate(tpl[:n]):
-        out.append(t.format(base=base, c=cols[i % len(cols)]))
+        look = fill(t, base=base, c=cols[i % len(cols)])
+        out.append(look if t == "{base}" else steer(look, reg, rng))   # her own line stays hers
     while len(out) < n:                       # more looks asked than variants
         out.append(out[len(out) % len(tpl)])
     return out
@@ -337,8 +450,24 @@ def work_outfits(character: str, n: int = PACK_28["work"]) -> tuple[str, ...]:
     out: list[str] = []
     for i, job in enumerate(jobs):
         share = -(-(n - len(out)) // (len(jobs) - i))   # ceil of what is left
-        out += _job_looks(job, share, colours, rng, game_job if i == 0 else "")
+        out += _job_looks(job, share, colours, rng, game_job if i == 0 else "", rec.get("style", ""))
     return tuple(out[:n])
+
+
+def guided_templates(cat: str, guide: str, n: int, rng: random.Random) -> list[str]:
+    """`n` templates for the category, the ones naming a garment her guide line
+    names first ("sleeveless blouses, bodysuits" puts the bodysuit looks in),
+    the rest sampled."""
+    pool = list(TEMPLATES[cat])
+    nouns = {m.group(0).lower().rstrip("s") for m in GARMENT_RE.finditer(guide or "")}
+    nouns -= {"set", "top"}                   # too common to mean anything
+    named = [t for t in pool if any(re.search(rf"\b{re.escape(w)}s?\b", t, re.I) for w in nouns)]
+    rng.shuffle(named)
+    rest = [t for t in pool if t not in named]
+    picked = named[:n]
+    picked += rng.sample(rest, n - len(picked))
+    rng.shuffle(picked)
+    return picked
 
 
 def draft_looks(character: str, seed: int = 0) -> dict[str, list[dict]]:
@@ -367,12 +496,19 @@ def draft_looks(character: str, seed: int = 0) -> dict[str, list[dict]]:
                               "hair": hair[(i + ci + off) % len(hair)]})
         else:
             # a sample, not the whole pool: what she wears on day three is
-            # not what the next character wears on day three
-            tpl = rng.sample(TEMPLATES[cat], n)
-            cols = colours[:]
+            # not what the next character wears on day three. Her line for the
+            # category guides it - its garments come first, its colours replace
+            # the palette, its register (revealing, modest) shapes every look -
+            # and her style line stands in where the category line is blank.
+            guide = (rec.get("outfits") or {}).get(CATEGORY_TYPE[cat], "") or ""
+            tpl = guided_templates(cat, guide or rec.get("style", ""), n, rng)
+            # "denim" alone in a guide line is the fabric, not a colour
+            named = [c for c in palette_colours(guide) if c != "denim"] if _COLOUR_RE.search(guide) else []
+            cols = named if len(named) > 1 else named + [c for c in colours if c not in named]
             rng.shuffle(cols)
+            reg = register(guide, rec.get("style", ""))
             for i in range(n):
-                looks.append({"outfit": tpl[i].format(c=cols[i % len(cols)]),
+                looks.append({"outfit": steer(fill(tpl[i], c=cols[i % len(cols)]), reg, rng),
                               "hair": hair[(i + ci + off) % len(hair)]})
         out[cat] = looks
     return out
