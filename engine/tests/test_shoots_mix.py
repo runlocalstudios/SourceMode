@@ -18,11 +18,11 @@ from sourcemode.assets.render import shot_prompt
 def test_combo_is_a_shoot_with_one_shot_per_pose():
     sh = S.combo("bedroom-lingerie-submissive")
     assert sh is not None
-    assert sh.shots == len(S.SUBMISSIVE) == 20
+    assert sh.shots == len(S.SUBMISSIVE) == 21
     assert sh.setting == S.BEDROOM
     assert sh.outfits == S.LINGERIE
     assert S.lookup("bedroom-lingerie-submissive").id == sh.id
-    assert S.total_shots(["club", "bedroom-lingerie-submissive"]) == 8 + 20
+    assert S.total_shots(["club", "bedroom-lingerie-submissive"]) == 8 + 21
     # presets first in catalog order, then the combos as ticked
     assert [s.id for s in S.resolve(["bedroom-lingerie-submissive", "club"])] == [
         "club", "bedroom-lingerie-submissive"]
@@ -76,7 +76,7 @@ def test_the_work_wardrobe_is_her_job_outfit_and_blocks_without_one(monkeypatch)
 def test_pose_slots_reach_the_prompt_and_keep_the_stockings():
     sh = S.BY_ID["submissive"]
     slots = sh.plan(character="nobody")
-    assert len(slots) == 20 and len({s["id"] for s in slots}) == 20
+    assert len(slots) == 21 and len({s["id"] for s in slots}) == 21
     # pose 9: back to the camera, looking over her shoulder - the builder's
     # default "facing the camera, looking straight into the camera" must go
     p = shot_prompt("nobody", slots[8], backdrop=slots[8]["setting"])
@@ -105,9 +105,9 @@ def test_the_preset_is_in_the_intimate_bucket_and_the_tab_gets_the_three_lists()
     intimate = next(b for b in S.buckets() if b["bucket"] == "intimate")
     assert "submissive" in [s["id"] for s in intimate["shoots"]]
     m = S.mix()
-    assert {x["id"] for x in m["poses"]} == {"standing", "bedroom", "submissive"}
+    assert {x["id"] for x in m["poses"]} == {"standing", "bedroom", "submissive", "toy"}
     sub = next(x for x in m["poses"] if x["id"] == "submissive")
-    assert sub["n"] == 20 and sub["needs"] == ["bed", "floor", "wall"]
+    assert sub["n"] == 21 and sub["needs"] == ["bed", "floor", "wall"]
     assert next(w for w in m["wardrobes"] if w["id"] == "work")["record"] == "job"
 
 
@@ -123,7 +123,7 @@ def test_the_ass_up_shot_gets_a_panties_set_whatever_the_rotation_says():
     # Jeremy, 2026-10-12: "her ass and crotch of her panties pointed towards
     # the viewer" - the slot must not land on the bodysuit
     slots = S.BY_ID["submissive"].plan(character="nobody")
-    last = slots[-1]
+    last = slots[-2]
     assert "panties" in last["outfit"] or "thong" in last["outfit"]
     assert "bodysuit" not in last["outfit"]
     p = shot_prompt("nobody", last, backdrop=last["setting"])
@@ -133,3 +133,30 @@ def test_the_ass_up_shot_gets_a_panties_set_whatever_the_rotation_says():
     sh = S.combo("bedroom-swim-submissive")
     assert sh is not None
     assert sh.plan(character="nobody")[-1]["outfit"] in S.WARDROBE_BY_ID["swim"].outfits
+
+
+def test_the_toy_shoot_is_in_bed_in_the_robe_with_the_toy_named_in_every_shot():
+    sh = S.BY_ID["toy"]
+    assert sh.bucket == "intimate" and sh.shots == len(S.TOY) == 7
+    slots = sh.plan(character="nobody")
+    for s in slots:
+        p = shot_prompt("nobody", s, backdrop=s["setting"])
+        assert "male torso sex toy" in p and "dildo" in p
+        assert "satin robe" in p and "her breasts bare" in p and "panties" in p
+    cow = shot_prompt("nobody", slots[5], backdrop=slots[5]["setting"])
+    assert "cowgirl" in cow and "panties pulled to the side" in cow and "looking into the camera" in cow
+    rev = shot_prompt("nobody", slots[6], backdrop=slots[6]["setting"])
+    assert "reverse cowgirl" in rev and "her back to the camera" in rev
+    # mixable: the robe and the toy pack, bed scenes only
+    assert S.combo("hotel-robe-toy") is not None
+    assert S.combo_problem("hotel-robe-toy", "ash") is None
+    assert "need a bed" in (S.combo_problem("club-robe-toy", "ash") or "")
+    assert S.total_shots(["toy"]) == 7
+
+
+def test_the_last_submissive_shot_is_the_ass_up_pose_looking_at_the_camera():
+    last = S.BY_ID["submissive"].plan(character="nobody")[-1]
+    p = shot_prompt("nobody", last, backdrop=last["setting"])
+    assert "the crotch of her panties pointed straight at the camera" in p
+    assert "looking back over her shoulder into the camera" in p
+    assert "panties" in last["outfit"] or "thong" in last["outfit"]

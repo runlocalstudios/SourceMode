@@ -215,6 +215,47 @@ SUBMISSIVE: tuple[dict, ...] = (
      "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind, low, level with the bed",
      "facing": "her back to the camera", "gaze": "her face turned to the side against the sheets",
      "wants": r"panties|thong"},
+    {"stance": "face down on the bed with her knees tucked under her and her hips raised high, "
+               "her ass and the crotch of her panties pointed straight at the camera",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind, low, level with the bed",
+     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera",
+     "wants": r"panties|thong"},
+)
+
+# Jeremy, 2026-10-12: the toy shoot. "Default an open satin robe and panties
+# but topless underneath"; she is in bed with a male-torso dildo. The toy is
+# named the same way in every shot so the model has one thing to draw.
+ROBE: tuple[str, ...] = (
+    "an open black satin robe hanging loose off her shoulders over black panties, nothing else, her breasts bare",
+    "an open champagne satin robe hanging loose off her shoulders over white lace panties, nothing else, her breasts bare",
+    "an open burgundy satin robe hanging loose off her shoulders over black lace panties, nothing else, her breasts bare",
+    "an open emerald satin robe hanging loose off her shoulders over black panties, nothing else, her breasts bare",
+    "an open white satin robe hanging loose off her shoulders over pink panties, nothing else, her breasts bare",
+)
+_TOY = "a large flesh-toned male torso sex toy with a big dildo"
+TOY: tuple[dict, ...] = (
+    {"stance": f"kneeling on the bed beside {_TOY} standing upright on the mattress, both hands wrapped around the dildo, gripping it",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
+     "gaze": "looking into the camera"},
+    {"stance": f"on all fours on the bed over {_TOY} lying on the mattress, her tongue out, licking the tip of the dildo",
+     "needs": ("bed",), "framing": "her face and the toy in frame, from the waist up", "shot_type": "photo",
+     "facing": "her body side-on to the camera", "gaze": "her eyes turned up to the camera",
+     "expression_natural": "her mouth open, tongue out"},
+    {"stance": f"straddling {_TOY} lying on the bed, the dildo pressed flat between her legs against the front of her panties, grinding on it, hands on its chest",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
+     "gaze": "looking down at the toy", "expression_natural": "lips parted, eyes heavy"},
+    {"stance": f"kneeling astride {_TOY} lying on the bed, the dildo pressed up between her ass cheeks, her hands on her thighs",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
+     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
+    {"stance": f"lying on her front on the bed over {_TOY}, the dildo squeezed between her breasts, her hands pressing them together around it",
+     "needs": ("bed",), "framing": "her face, chest and the toy in frame", "shot_type": "photo from the foot of the bed",
+     "gaze": "looking up into the camera"},
+    {"stance": f"riding {_TOY} lying on the bed, cowgirl, the dildo inside her with her panties pulled to the side, hands on its chest, hips lifted",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
+     "gaze": "looking into the camera", "expression_natural": "her mouth open, eyes heavy"},
+    {"stance": f"riding {_TOY} lying on the bed, reverse cowgirl, the dildo inside her with her panties pulled to the side, leaning forward with her hands on its thighs",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
+     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
 )
 
 # Buckets group the tab's checkboxes. Keep each shoot small: the point is that
@@ -259,6 +300,11 @@ CATALOG: tuple[Shoot, ...] = (
           pose_slots=SUBMISSIVE, shots=len(SUBMISSIVE),
           note="Lingerie, garter and stockings. Kneeling, on the bed, against the wall, "
                "bent over. Side and from-behind shots keep less often - re-roll the rejects."),
+    Shoot("toy", "Toy", "intimate", BEDROOM, ROBE, (),
+          pose_slots=TOY, shots=len(TOY),
+          note="Open satin robe, topless, panties. In bed with a male-torso dildo: gripping, "
+               "licking, grinding, between her cheeks, between her breasts, cowgirl, reverse. "
+               "The base model has never been measured on the toy - expect to re-roll."),
 
     # --- swim ---------------------------------------------------------------
     Shoot("pool", "Poolside", "swim",
@@ -436,6 +482,7 @@ SCENES: tuple[Scene, ...] = (
 
 WARDROBES: tuple[Wardrobe, ...] = (
     Wardrobe("lingerie", "Lingerie, garter and stockings", LINGERIE),
+    Wardrobe("robe", "Open satin robe, topless, panties", ROBE),
     Wardrobe("boudoir", "Boudoir", BY_ID["boudoir"].outfits),
     Wardrobe("silk", "Silk and satin", BY_ID["silk"].outfits),
     Wardrobe("sheer", "Sheer and lace", BY_ID["sheer"].outfits),
@@ -453,7 +500,9 @@ POSE_PACKS: tuple[PosePack, ...] = (
     PosePack("bedroom", "On the bed", _poses("boudoir", needs=("bed",)),
              note="The boudoir poses: edge of the bed, kneeling, lying, leaning in."),
     PosePack("submissive", "Submissive", SUBMISSIVE,
-             note="Kneeling, on the bed, against the wall, bent over. 19 poses."),
+             note=f"Kneeling, on the bed, against the wall, bent over. {len(SUBMISSIVE)} poses."),
+    PosePack("toy", "Toy", TOY,
+             note=f"In bed with a male-torso dildo. {len(TOY)} poses."),
 )
 
 SCENE_BY_ID = {s.id: s for s in SCENES}
