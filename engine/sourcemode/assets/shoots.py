@@ -23,6 +23,7 @@ part-way still leaves everything before it judgeable.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 
@@ -92,7 +93,10 @@ class Shoot:
                 out.append({
                     "id": f"{self.id}_{i:02d}", "look": i + 1, "category": self.bucket,
                     "pose": "standing", "shoot": self.id,
-                    "outfit": outfits[i % len(outfits)],
+                    # a pose may say what garment it needs ("panties|thong");
+                    # the first outfit in the wardrobe that has it, else the rotation
+                    "outfit": next((o for o in outfits if p.get("wants") and re.search(p["wants"], o)),
+                                   outfits[i % len(outfits)]),
                     "hair": hair[i % len(hair)],
                     "stance": p["stance"],
                     "framing": p.get("framing", self.framing),
@@ -204,6 +208,13 @@ SUBMISSIVE: tuple[dict, ...] = (
      "gaze": "looking up into the camera, her face upside down to the viewer"},
     {"stance": "kneeling on the floor, sitting back on her heels, hands clasped behind her head",
      "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo"},
+    # Jeremy, 2026-10-12: "her ass and crotch of her panties pointed towards
+    # the viewer". `wants` picks a panties set from the wardrobe for this slot.
+    {"stance": "face down on the bed with her knees tucked under her and her hips raised high, "
+               "her ass and the crotch of her panties pointed straight at the camera",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind, low, level with the bed",
+     "facing": "her back to the camera", "gaze": "her face turned to the side against the sheets",
+     "wants": r"panties|thong"},
 )
 
 # Buckets group the tab's checkboxes. Keep each shoot small: the point is that
