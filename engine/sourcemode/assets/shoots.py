@@ -153,8 +153,11 @@ SUBMISSIVE: tuple[dict, ...] = (
      "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo",
      "facing": "her body in profile to the camera",
      "gaze": "her face in profile, looking straight ahead"},
-    {"stance": "doing a full split on the bed, torso upright, hands on the mattress",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo"},
+    # Jeremy, 2026-10-12: viewed from the front - a straddle split, legs out to
+    # either side, square to the camera, not a front split seen side-on
+    {"stance": "doing a straddle split on the bed, legs stretched out to either side, torso upright, hands on the mattress between her thighs",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
+     "facing": "square to the camera, her whole body seen from the front"},
     {"stance": "sitting on the edge of the bed with her legs spread wide, hands on her knees",
      "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo"},
     {"stance": "lying on her side on the bed, propped on one elbow, legs together",
