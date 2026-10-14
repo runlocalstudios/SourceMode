@@ -187,6 +187,20 @@ html,body{overflow-x:hidden}
 #big img{max-width:96vw;max-height:94vh}
 """
 
+OWN_CSS += r"""
+.voice audio{width:100%;max-width:420px;height:32px;display:block}
+.voice .vrow{display:flex;align-items:center;gap:var(--s2);margin:2px 0}
+.voice .vrow span{flex:none;width:150px;font:var(--t-small);color:var(--g7)}
+.voice .vtake{padding:var(--s2) var(--s3);margin:var(--s2) 0;background:var(--g1);border:1px solid var(--g3);
+  border-left:3px solid var(--g3);border-radius:var(--r2)}
+.voice .vtake.on{border-left-color:var(--done-line)}
+.voice .vlab{font:var(--t-meta);font-weight:600;color:var(--g8)}
+.voice .vcur{padding:var(--s2) 0}
+.voice select,.voice input[data-vname]{min-height:36px;background:var(--g1);color:var(--g9);border:1px solid var(--g4);
+  border-radius:var(--r2);padding:0 var(--s2);font-size:15px}
+.voice input[data-vname]{flex:1;min-width:140px}
+"""
+
 BODY = """
 <div class=wrap id=app>
   <div class=col-main>
@@ -318,7 +332,76 @@ function profile(r){
     +ta('hair',(w.hair.length?w.hair:r.hair_default).join('\n'),'short')+'</div>'
     +'<div class=row><button class="btn btn-primary" data-act=save>Save '+SM.esc(r.character)+'</button></div>'
     +'<div class="sec looks" data-looks="'+SM.esc(r.character)+'"><h4>Wardrobe pack &mdash; 28 looks</h4>'
+    +'<div class=sub>loading&hellip;</div></div>'
+    +'<div class="sec voice" data-voice="'+SM.esc(r.character)+'"><h4>Voice</h4>'
     +'<div class=sub>loading&hellip;</div></div>';
+}
+
+/* --- her voice --------------------------------------------------------------
+   Jeremy, 2026-10-14: "There must be some way to actually create these from
+   scratch". Parler-TTS makes a voice from a description; each take is heard
+   twice - as Parler made it, and as Chatterbox will speak it - and the one he
+   picks becomes her record, the audio twin of her locked LoRA. */
+let voiceDesc={};
+async function loadVoice(){
+  for(const el of document.querySelectorAll('[data-voice]')){
+    const c=el.dataset.voice;
+    try{ drawVoice(el, await SM.getJSON('/voices/'+encodeURIComponent(c))); }
+    catch(e){ el.querySelector('.sub').textContent='Could not load: '+e.message; }
+  }
+}
+const audio=p=>'<audio controls preload=none src="/voices/file?path='+encodeURIComponent(p)+'"></audio>';
+function drawVoice(el,v){
+  const c=v.character, cur=v.voice;
+  if(voiceDesc[c]==null) voiceDesc[c]=v.template;
+  let h='<h4>Voice'+(cur?'<span class=draft style="color:var(--done-ink)">chosen '+SM.esc(SM.ago(cur.chosen_at))+'</span>':'')+'</h4>';
+  if(cur){
+    h+='<div class=vcur>'+audio(cur.reference)
+      +'<div class=sub>'+(cur.on_disk?'':'<b>The clip is not on disk.</b> ')
+      +SM.esc(cur.description||cur.reference.split(/[\\/]/).pop())+'</div>'
+      +'<div class=row><button class="btn btn-ghost btn-sm" data-act=vc_clear>Forget this voice</button></div></div>';
+  } else {
+    h+='<div class=sub>No voice yet. Describe one and make a few takes, or pick a take below.</div>';
+  }
+  h+='<div class=fld><label>Describe her voice</label>'
+    +'<textarea rows=1 class=short data-vdesc spellcheck=true>'+SM.esc(voiceDesc[c])+'</textarea>'
+    +'<div class=sub>In Parler&rsquo;s words: gender, age, pitch, pace, texture, mood. The description is the whole source - no sample of anyone.</div></div>'
+    +'<div class=row><label>Takes</label><select data-vtakes><option>2</option><option selected>3</option><option>4</option></select>'
+    +'<input data-vname placeholder="name this voice (optional)">'
+    +'<button class="btn btn-primary" data-act=vc_make>Make her voice</button></div>'
+    +'<div class=sub>Queued as one CPU job: each take is Parler reading fifteen seconds, then Chatterbox reading a check line from it. The first run installs the models.</div>';
+  for(const s of v.sets){
+    h+='<h5>'+SM.esc(s.name.slice(11).replace(/^voice_/,'').replace(/-/g,' '))+' <span class=cov>'+SM.esc(s.date)
+      +(s.done?'':' &middot; still rendering')+'</span></h5>';
+    for(const t of s.takes){
+      const chosen=cur&&cur.reference===t.file;
+      h+='<div class="vtake'+(chosen?' on':'')+'"><div class=vlab>'+SM.esc(t.take)+(t.seconds?' &middot; '+t.seconds+' s':'')+'</div>'
+        +'<div class=vrow><span>as made</span>'+audio(t.file)+'</div>'
+        +(t.clone?'<div class=vrow><span>as Chatterbox speaks it</span>'+audio(t.clone)+'</div>':'<div class=sub>Chatterbox read not rendered yet.</div>')
+        +'<div class=row><button class="btn btn-sm'+(chosen?'':' btn-primary')+'" data-act=vc_use data-ref="'+SM.esc(t.file)+'"'+(chosen?' disabled':'')+'>'+(chosen?'Her voice':'Use this voice')+'</button></div></div>';
+    }
+  }
+  el.innerHTML=h;
+  for(const t of el.querySelectorAll('textarea')) fit(t);
+}
+async function voiceAct(b){
+  const el=b.closest('[data-voice]'), c=el.dataset.voice, a=b.dataset.act;
+  const u='/voices/'+encodeURIComponent(c);
+  b.disabled=true;
+  try{
+    if(a==='vc_make'){
+      const desc=el.querySelector('[data-vdesc]').value; voiceDesc[c]=desc;
+      const r=await SM.postJSON(u+'/make',{description:desc,takes:+el.querySelector('[data-vtakes]').value,
+                                          name:el.querySelector('[data-vname]').value});
+      SM.toast('queued as '+r.queued,{label:'Open the queue',run:()=>SM.nav('gpu')}); SM.recount();
+    }else if(a==='vc_use'){
+      await SM.postJSON(u+'/use',{reference:b.dataset.ref}); SM.toast(c+': voice chosen');
+    }else if(a==='vc_clear'){
+      if(!confirm('Forget the voice of '+c+'? The clips stay on disk.')){ b.disabled=false; return; }
+      await SM.postJSON(u+'/clear',{}); SM.toast(c+': voice forgotten');
+    }
+    drawVoice(el, await SM.getJSON(u));
+  }catch(err){ SM.toast(err.message); b.disabled=false; }
 }
 
 /* --- the 28-look plan ----------------------------------------------------
@@ -402,6 +485,7 @@ function draw(){
   for(const t of document.querySelectorAll('.lk textarea')) fit(t);
   baseline($('list'));
   loadLooks();
+  loadVoice();
 }
 /* the whole text visible at once - no inner scrolling to read what she is */
 function fit(t){ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
@@ -436,6 +520,7 @@ document.addEventListener('click',async e=>{
   if(b.dataset.act==='newchar'){ location.href='/character'; return; }
   if(b.dataset.act==='sweep'){ SM.nav('judge',b.dataset.set); return; }
   if(b.dataset.act.startsWith('lk_')) return looksAct(b);
+  if(b.dataset.act.startsWith('vc_')) return voiceAct(b);
   const card=b.closest('.lk'); if(!card) return;
   const c=card.dataset.c, val=k=>card.querySelector('[data-k='+k+']').value;
   b.disabled=true;
