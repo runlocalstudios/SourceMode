@@ -1,6 +1,13 @@
 """Render a 28-look wardrobe pack through T2I + LoRA instead of the edit graph.
 
     python scripts/eval/pack_t2i.py zara
+    python scripts/eval/pack_t2i.py aya --sample 4 --studio
+
+`--sample N` renders N looks spread across the plan instead of all 28; `--studio`
+puts her on a plain light-grey seamless instead of the magenta key, for the
+learned matte (`assets cutout` without --chroma) rather than the chroma key.
+Jeremy, 2026-10-14: "instead of doing all 28, can you do like four and just see
+how it goes? And then also ... evaluate the actual background removal."
 
 Jeremy, 2026-10-04: "I thought the point of training the LoRA was that we would
 use T2I + LoRA to generate these. Why is it an edit? I thought only the fixed
@@ -47,10 +54,15 @@ if len(sys.argv) < 2:
     raise SystemExit(__doc__)
 
 CHAR = sys.argv[1].lower()
+ARGS = sys.argv[2:]
+SAMPLE = int(ARGS[ARGS.index("--sample") + 1]) if "--sample" in ARGS else 0
+STUDIO = "--studio" in ARGS
+STUDIO_BACKDROP = ("soft even studio lighting, a plain light grey seamless studio background "
+                   "with nothing else in frame")
 SEED_BASE = 7100            # same per-slot seed as the edit pack's shot_00
 cfg = load_config()
 OUT = outputs_dir(cfg)
-ROOT = OUT / "game-assets-t2i" / CHAR / "renders"
+ROOT = OUT / ("game-assets-t2i-studio" if STUDIO else "game-assets-t2i") / CHAR / "renders"
 ROOT.mkdir(parents=True, exist_ok=True)
 LOG = OUT / "logs" / f"pack_t2i_{CHAR}.log"
 LOG.parent.mkdir(parents=True, exist_ok=True)
@@ -63,16 +75,20 @@ def log(s: str) -> None:
         f.write(line + chr(10))
 
 
-plan_path = next(iter(sorted((OUT / "game-assets" / CHAR).glob("plan*.json"))), None)
-if plan_path is None:
-    raise SystemExit(f"no plan for {CHAR}")
+plan_path = OUT / "game-assets" / CHAR / "plan_28.json"       # the approved plan, never the draft
+if not plan_path.is_file():
+    raise SystemExit(f"no approved plan for {CHAR}")
 plan = json.loads(plan_path.read_text(encoding="utf-8"))
 slots = plan_slots(plan)
+if SAMPLE:
+    step = max(1, len(slots) // SAMPLE)
+    slots = slots[::step][:SAMPLE]                          # spread across the categories
 
 LORA = resolve_lora(cfg, CHAR)
 if not LORA:
     raise SystemExit(f"no approved LoRA for {CHAR}")
-log(f"{CHAR}: {len(slots)} looks through T2I, lora {LORA['name']}, seeds {SEED_BASE}+i*1000")
+log(f"{CHAR}: {len(slots)} looks through T2I{' on the grey studio' if STUDIO else ''}, "
+    f"lora {LORA['name']}, seeds {SEED_BASE}+i*1000")
 
 REFS = Path("C:/Epic Games/Files/cnc info/codex/references")
 ref = None
@@ -96,7 +112,7 @@ for i, slot in enumerate(slots):
     # No backdrop argument: shot_prompt falls back to KEY_BACKDROP, the flat
     # magenta a shipping asset needs. Whether T2I can hold a clean keyable
     # background is part of what this measures.
-    prompt = shot_prompt(CHAR, slot, plan.get("trigger"))
+    prompt = shot_prompt(CHAR, slot, plan.get("trigger"), backdrop=STUDIO_BACKDROP if STUDIO else None)
     try:
         if not dest.exists():
             files = client.outputs(client.wait(client.submit(
@@ -132,10 +148,11 @@ for i, slot in enumerate(slots):
 if not done:
     raise SystemExit("rendered nothing")
 
-make_set(OUT / "judge", f"pack_{CHAR}_t2i", f"{CHAR.title()} - wardrobe pack, T2I",
+make_set(OUT / "judge", f"pack_{CHAR}_t2i" + ("_studio" if STUDIO else ""),
+         f"{CHAR.title()} - wardrobe pack, T2I" + (" on grey, matted" if STUDIO else ""),
          items, question="Ship this one? K = yes, X = no.",
          reference=plan.get("reference"), priority=5,
-         meta={"character": CHAR, "renders_dir": OUT / "game-assets-t2i" / CHAR / "renders"})
+         meta={"character": CHAR, "renders_dir": ROOT})
 
 log("")
 log(f"PACKT2IDONE {CHAR} {done} looks -> judge set pack_{CHAR}_t2i")
