@@ -28,6 +28,10 @@ wan_i2v_high_fp16 = 'wan2.2_i2v_high_noise_14B_fp16.safetensors'
 wan_i2v_low_fp8 = 'wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors'
 wan_i2v_high_fp8 = 'wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors'
 wan_vae = 'wan_2.1_vae.safetensors'   # the 2.1 VAE is correct for 2.2 14B models
+# Speech-to-video (Apache 2.0): the still + a wav -> her talking. fp8 scaled is the
+# file that fits the card; the bf16 on disk is 32.6 GB and does not. Downloaded 2026-10-14.
+wan_s2v_fp8 = 'wan2.2_s2v_14B_fp8_scaled.safetensors'
+wan_audio_encoder = 'wav2vec2_large_english_fp16.safetensors'
 umt5 = 'umt5_xxl_fp8_e4m3fn_scaled.safetensors'
 # Qwen family (Comfy-Org repackaged, exact HF filenames — downloaded 2026-08-30).
 qwen_edit = 'qwen_image_edit_2511_fp8mixed.safetensors'       # 2511 has no fp8_e4m3fn; fp8mixed is its fp8 variant

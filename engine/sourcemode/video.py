@@ -296,6 +296,48 @@ def render_take(cfg: dict, client, spec: VideoSpec, source_png: Path, out_dir: P
     return record
 
 
+# --- speech: the still talks ---------------------------------------------------------
+
+#: Wan2.2-S2V's own recipe (the ComfyUI template, 2026-10-14): 16 fps, 77-frame
+#: chunks, 20 steps at cfg 6. One pass is allowed up to 121 frames here, the cap
+#: the September selfie plan settled on before RAM ran out; longer needs chained
+#: chunks through WanSoundImageToVideoExtend, not built yet. 720x1280 is the
+#: model's 720p portrait bucket, not the I2V 1024x1280.
+S2V = {"fps": 16, "chunk": 77, "max_frames": 121, "width": 720, "height": 1280,
+       "steps": 20, "cfg": 6.0, "shift": 8.0,
+       "pacing": ("she speaks at an unhurried, even pace, her head and shoulders moving gently "
+                  "and only a little, a steady camera")}
+
+
+def speech_frames(seconds: float, *, fps: int = S2V["fps"], max_frames: int = S2V["max_frames"]) -> int | None:
+    """Frames that COVER the line, snapped UP to 4n+1: the clip must run as long
+    as she talks (the first selfie pass asked for 6 s against 3.3 s of audio and
+    would have been half a clip of silent staring). None when one pass cannot."""
+    import math  # noqa: PLC0415
+
+    n = math.ceil(float(seconds) * fps) + 1          # frames, so (n-1)/fps >= seconds
+    n = max(5, n + ((4 - (n - 1) % 4) % 4))
+    return n if n <= max_frames else None
+
+
+def s2v_workflow(cfg: dict, *, positive: str, negative: str, image_name: str, audio_name: str,
+                 frames: int, seed: int, prefix: str, steps: int | None = None,
+                 cfg_scale: float | None = None) -> tuple[dict, dict]:
+    """The S2V graph: still + wav in, an mp4 WITH the voice out (the audio is
+    wired into CreateVideo). Returns (nodes, settings) like the I2V builder."""
+    from .config import workflows_dir  # noqa: PLC0415
+    from .render.workflow import load_template, substitute  # noqa: PLC0415
+
+    m = cfg["models"]
+    settings = {"UNET": m["wan_s2v_fp8"], "UMT5": m["umt5"], "VAE": m["wan_vae"],
+                "AUDIO_ENCODER": m["wan_audio_encoder"], "SHIFT": S2V["shift"],
+                "POSITIVE": positive, "NEGATIVE": negative, "IMAGE": image_name, "AUDIO": audio_name,
+                "WIDTH": S2V["width"], "HEIGHT": S2V["height"], "LENGTH": int(frames), "SEED": int(seed),
+                "STEPS": int(steps or S2V["steps"]), "CFG": float(cfg_scale or S2V["cfg"]),
+                "FPS": float(S2V["fps"]), "PREFIX": prefix}
+    return substitute(load_template(workflows_dir(cfg), "wan22_s2v"), settings), settings
+
+
 # --- what the tab shows ---------------------------------------------------------
 
 def keepers(judge_root: Path, character: str, *, limit: int = 60) -> list[dict]:

@@ -195,3 +195,23 @@ def test_the_queue_route_validates_and_writes_one_job(tmp_path: Path, monkeypatc
     assert r.status_code == 404
     assert c.get("/video/file", params={"path": str(outside)}).status_code == 404
     assert c.get("/video").status_code == 200 and "SourceMode video" in c.get("/video").text
+
+
+def test_speech_frames_cover_the_line_and_the_s2v_graph_carries_the_voice(tmp_path: Path):
+    # 3.3 s at 16 fps is 53.8 frames -> 57 (4n+1, rounded UP so she is never cut off)
+    assert V.speech_frames(3.3) == 57
+    assert V.speech_frames(4.75) == 77 and V.speech_frames(0.1) == 5
+    assert V.speech_frames(7.5) == 121 and V.speech_frames(7.6) is None
+    cfg = {"paths": {"workflows": str(Path(__file__).resolve().parents[2] / "workflows")},
+           "models": {"wan_s2v_fp8": "s2v.safetensors", "umt5": "umt5.safetensors", "wan_vae": "vae.safetensors",
+                      "wan_audio_encoder": "wav2vec.safetensors"}}
+    nodes, settings = V.s2v_workflow(cfg, positive="she talks", negative="blurry", image_name="still.png",
+                                     audio_name="line.wav", frames=97, seed=8100, prefix="video/amanda/s2v")
+    by = {n["class_type"]: n for n in nodes.values()}
+    assert by["UNETLoader"]["inputs"]["unet_name"] == "s2v.safetensors"
+    assert by["WanSoundImageToVideo"]["inputs"]["length"] == 97
+    assert by["WanSoundImageToVideo"]["inputs"]["width"] == 720 and by["WanSoundImageToVideo"]["inputs"]["height"] == 1280
+    assert by["LoadAudio"]["inputs"]["audio"] == "line.wav"
+    assert by["CreateVideo"]["inputs"]["audio"] == ["70", 0] and by["CreateVideo"]["inputs"]["fps"] == 16.0
+    assert by["KSampler"]["inputs"]["seed"] == 8100 and by["KSampler"]["inputs"]["steps"] == 20
+    assert settings["CFG"] == 6.0
