@@ -180,7 +180,8 @@ def test_pair_set_pairs_look_folders_by_name_and_reports_the_unpaired(tmp_path: 
         arms = {next(it["arm"] for it in s["items"] if it["id"] == r[k]) for k in ("left", "right")}
         assert arms == {"edit", "t2i"}
     assert pair_rows(load_set(tmp_path, "pair_x")) == rows
-    assert any(r["left"].endswith(":t2i") for r in rows) or len(rows) < 4   # the flip is random per group
+    # A is always the left side, B always the right - never randomised
+    assert all(r["left"].endswith(":edit") and r["right"].endswith(":t2i") for r in rows)
     p = set_payload(tmp_path, "pair_x")
     assert p["mode"] == "pair" and [x["group"] for x in p["pairs"]] == [r["group"] for r in rows]
     assert "arm" not in json.dumps(p["pairs"])

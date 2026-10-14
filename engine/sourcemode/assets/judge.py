@@ -157,10 +157,17 @@ def pair_set(root: Path, set_id: str, title: str, a: Path, b: Path, *, arm_a: st
 
 
 def pair_rows(doc: dict, *, strict: bool = False) -> list[dict]:
-    """The pairs of a pair set: `[{group, left, right}]` in blind order, each
-    side fixed per group so a revisit shows the same layout and the arm never
-    leaks through position. A group needs exactly two items of two arms;
-    `strict` raises on any other, otherwise such groups are skipped."""
+    """The pairs of a pair set: `[{group, left, right}]` in blind order, the
+    first arm always on the left and the second always on the right. Jeremy,
+    2026-10-14: "I would prefer that all of one set stay on the left and all
+    of the other sets stay on the right. You don't need to tell me which is
+    which." The page never names the arms; the finish screen does. A group
+    needs exactly two items of two arms; `strict` raises on any other,
+    otherwise such groups are skipped."""
+    arms: list[str] = []
+    for it in doc["items"]:                                   # arm order = first appearance
+        if it["arm"] not in arms:
+            arms.append(it["arm"])
     by_group: dict[str, list[dict]] = {}
     for it in doc["items"]:
         by_group.setdefault(str(it.get("group", "")), []).append(it)
@@ -177,8 +184,7 @@ def pair_rows(doc: dict, *, strict: bool = False) -> list[dict]:
                 raise ValueError(f"{doc['id']}: group {g!r} needs two items of two arms, has "
                                  f"{[it['arm'] for it in two]}")
             continue
-        flip = random.Random(f"{doc['id']}:{g}").random() < 0.5
-        left, right = (two[1], two[0]) if flip else (two[0], two[1])
+        left, right = sorted(two, key=lambda it: arms.index(it["arm"]))
         rows.append({"group": g, "left": left["id"], "right": right["id"]})
     return rows
 
@@ -1313,8 +1319,8 @@ function pairScreen(s,hist,left){
     +'<div class=card><div class=card-head>'+SM.pill(judged>=n?'done':'you')
     +'<h3>'+judged+' of '+n+' pairs judged</h3></div>'
     +'<div class=bars>'+bars+'</div>'
-    +'<div class=basis>Same look, same seed, side by side; which side each arm sat on'
-    +' was fixed at random per pair. A win is the one you checked.</div>'
+    +'<div class=basis>Same look, same seed, side by side: '+SM.esc(arms[0]||'')+' on the left,'
+    +' '+SM.esc(arms[1]||'')+' on the right, every pair. A win is the one you checked.</div>'
     +'</div></div><div class=col-rail>'+foot(hist,left)+'</div></div>';
 }
 
