@@ -188,6 +188,7 @@ html,body{overflow-x:hidden}
 """
 
 OWN_CSS += r"""
+.looks a.sheet img{display:block;width:100%;max-width:900px;border:1px solid var(--g3);border-radius:var(--r2);margin:var(--s2) 0}
 .voice audio{width:100%;max-width:420px;height:32px;display:block}
 .voice .vrow{display:flex;align-items:center;gap:var(--s2);margin:2px 0}
 .voice .vrow span{flex:none;width:150px;font:var(--t-small);color:var(--g7)}
@@ -437,6 +438,7 @@ function drawLooks(el,st){
         +'</div>';
     }
   }
+  h+=shipBlock(st);
   h+='<div class=row><button class="btn btn-primary" data-act=lk_save>Save</button>'
     +(st.state==='draft'
       ?'<button class="btn" data-act=lk_approve'+(st.blank?' disabled title="'+st.blank+' blank"':'')+'>Approve &mdash; '+(st.approved_at?'replaces the approved plan':'unlocks the pack on Shoots')+'</button>'
@@ -446,6 +448,30 @@ function drawLooks(el,st){
   el.innerHTML=h;
   for(const t of el.querySelectorAll('textarea')) fit(t);
   baseline(el);
+}
+/* The formal approval. Jeremy, 2026-10-14: "anything accepted goes into
+   queue for processing and placement into the game repo. I would like a
+   formal approval step of that final shift though, because I may want to
+   generate these and then compare them before just deciding to overwrite
+   whatever is in the game currently." */
+function shipBlock(st){
+  const s=st.staged; if(!s) return '';
+  const c=st.character;
+  const sheet=w=>'/characters/'+encodeURIComponent(c)+'/pack/sheet?which='+w;
+  let h='<h5>Ship to the game <span class=cov>'+(s.shipped?'shipped '+SM.esc(SM.ago(s.shipped.at)):'staged '+SM.esc(SM.ago(s.at))+' &middot; awaiting your approval')+'</span></h5>';
+  h+='<div class=sub>'+s.n+' cutouts staged from '+SM.esc(s.set||'the pack')
+    +(s.missing.length?' &middot; <b>'+s.missing.length+' missing</b>: '+SM.esc(s.missing.join(', ')):'')
+    +(s.flagged.length?' &middot; '+s.flagged.length+' flagged by the alpha report':'')
+    +' &middot; '+(s.would_overwrite?'<b>'+s.would_overwrite+'</b> would overwrite files in the game':'nothing in the game yet under these names')+'</div>';
+  if(s.sheets.includes('compare')) h+='<a class=sheet href="'+sheet('compare')+'" target=_blank><img loading=lazy src="'+sheet('compare')+'" alt="new beside the game, per look"></a>';
+  if(s.sheets.includes('mapping')) h+='<div class=sub><a href="'+sheet('mapping')+'" target=_blank>mapping sheet</a></div>';
+  if(s.shipped){
+    h+='<div class=sub>Copied '+s.shipped.files.length+' files into the game'+(s.shipped.overwrote?', '+s.shipped.overwrote+' overwritten':'')+'.</div>';
+  } else {
+    h+='<div class=row><button class="btn btn-primary" data-act=lk_ship>Approve &mdash; copy '+s.n+' files into the game'+(s.would_overwrite?' (overwrites '+s.would_overwrite+')':'')+'</button>'
+      +'<button class="btn btn-ghost" data-act=lk_discard>Discard this staging</button></div>';
+  }
+  return h;
 }
 function collectLooks(el){
   return {all:[...el.querySelectorAll('[data-lo]')].map(t=>({id:t.dataset.lo,outfit:t.value,
@@ -464,6 +490,18 @@ async function looksAct(b){
       st=await SM.postJSON(u,{categories:collectLooks(el)});   /* save what is on screen first */
       st=await SM.postJSON(u+'/approve',{});
       SM.toast(c+': 28 looks approved - the pack is open on Shoots',{label:'Shoots',run:()=>SM.nav('shoots',c)});
+    }
+    else if(a==='lk_ship'){
+      const n=el.querySelector('[data-act=lk_ship]').textContent;
+      if(!confirm('Copy the staged outfits into the game for '+c+'? '+n.replace(/^Approve\s*[-\u2014]\s*/,'')+'. This is the one step that writes into the game repo.')){ b.disabled=false; return; }
+      const r=await SM.postJSON('/characters/'+encodeURIComponent(c)+'/pack/ship',{});
+      SM.toast(c+': '+r.files.length+' files copied into the game'+(r.overwrote?', '+r.overwrote+' overwritten':''));
+      st=await SM.getJSON(u);
+    }
+    else if(a==='lk_discard'){
+      if(!confirm('Discard this staging for '+c+'? The cutouts stay on disk; nothing in the game changes.')){ b.disabled=false; return; }
+      await SM.postJSON('/characters/'+encodeURIComponent(c)+'/pack/discard',{});
+      st=await SM.getJSON(u);
     }
     drawLooks(el,st);
   }catch(err){ SM.toast(err.message); b.disabled=false; dirty(); }
@@ -622,6 +660,31 @@ def appearance_router(cfg: dict):
             return L.approve(cfg, _char(char))
         except ValueError as e:
             raise HTTPException(409, str(e)) from e
+
+    @r.get("/characters/{char}/pack/sheet")
+    def _pack_sheet(char: str, which: str = "compare"):
+        from ..assets import looks as L  # noqa: PLC0415
+        from ..train.preview import web_copy  # noqa: PLC0415
+
+        p = L.sheet_path(cfg, _char(char), which if which in ("compare", "mapping") else "compare")
+        if p is None:
+            raise HTTPException(404)
+        return FileResponse(web_copy(p, 1600))
+
+    @r.post("/characters/{char}/pack/ship")
+    def _pack_ship(char: str) -> dict:
+        from ..assets import looks as L  # noqa: PLC0415
+
+        try:
+            return L.ship(cfg, _char(char))
+        except ValueError as e:
+            raise HTTPException(409, str(e)) from e
+
+    @r.post("/characters/{char}/pack/discard")
+    def _pack_discard(char: str) -> dict:
+        from ..assets import looks as L  # noqa: PLC0415
+
+        return {"discarded": L.discard_staging(cfg, _char(char))}
 
     @r.post("/characters/{char}/profile")
     def _profile(char: str, body: dict = Body(...)) -> dict:

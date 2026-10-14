@@ -125,8 +125,8 @@ def redo_shoot(info: dict, seed: int) -> Path | None:
 
 
 def redo_pack(info: dict, seed: int) -> Path | None:
+    from sourcemode.assets import pack as P
     from sourcemode.assets.catalog import plan_slots, slot_dirname
-    from sourcemode.assets.render import render_plan
 
     pp = OUT_ROOT / "game-assets" / CHAR / info["source"]
     if not pp.is_file():
@@ -140,11 +140,9 @@ def redo_pack(info: dict, seed: int) -> Path | None:
     sdir = OUT_ROOT / "game-assets" / CHAR / "renders" / slot_dirname(slot)
     for old in list(sdir.glob("shot_*.png")):
         drop(old)
-    # `only` narrows to this one slot, so render_plan's per-slot seed offset is
-    # zero and the seed passed is the seed used - which is what makes a retry
-    # land on a filename this run chose rather than one it has to guess.
-    res = render_plan(cfg, client, plan, OUT_ROOT / "game-assets", shots=1,
-                      seed=seed, log=log, only={slot["id"]})
+    # the same T2I renderer the pack used, one look, the retry's seed
+    res = P.render_pack(cfg, client, CHAR, plan, OUT_ROOT, lora_path=LORA["path"], negative=NEG,
+                        ref=ref, only={slot["id"]}, seed=seed, log=log)
     return Path(res[0]["source"]) if res else None
 
 

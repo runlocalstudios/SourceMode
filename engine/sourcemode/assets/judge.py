@@ -1534,6 +1534,14 @@ def judge_router(cfg: dict):
             queue_redo_if_complete(cfg, set_id)
         except Exception:  # noqa: BLE001
             pass
+        # and the other half of the same decision: every look kept means the
+        # cutout and staging queue themselves (CPU lane), nothing more
+        try:
+            from ..monitor.queue_page import queue_process_if_ready  # noqa: PLC0415
+
+            queue_process_if_ready(cfg, set_id)
+        except Exception:  # noqa: BLE001
+            pass
         return out
 
     @r.post("/judge/set/{set_id}/pair")

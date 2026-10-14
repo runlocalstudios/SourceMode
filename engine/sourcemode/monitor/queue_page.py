@@ -1762,6 +1762,43 @@ def redo_command(cfg: dict, set_id: str) -> list[str]:
     return [str(py), str(ENGINE_ROOT / "scripts" / "eval" / "redo.py"), set_id]
 
 
+def process_command(cfg: dict, character: str, set_id: str) -> list[str]:
+    from ..config import ENGINE_ROOT  # noqa: PLC0415
+
+    py = ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"
+    return [str(py), str(ENGINE_ROOT / "scripts" / "eval" / "process_pack.py"), character, "--set", set_id]
+
+
+def queue_process_if_ready(cfg: dict, set_id: str) -> dict | None:
+    """Called after every verdict, beside the re-roll. Jeremy, 2026-10-14:
+    "anything rejected gets regenerated and anything accepted goes into queue
+    for processing and placement". When a pack set is complete with every look
+    kept, ONE CPU-lane job cuts the looks out and stages them; the approval
+    that writes into the game is his, on the Characters tab. Silent about
+    everything it declines: an unfinished set, a reject still open, a staging
+    already made from these verdicts, a job already queued."""
+    from ..assets import pack as P  # noqa: PLC0415
+    from ..assets.judge import judge_root, load_set  # noqa: PLC0415
+    from ..config import ENGINE_ROOT, outputs_dir  # noqa: PLC0415
+    from ..gpu import queue as q  # noqa: PLC0415
+
+    out = outputs_dir(cfg)
+    why = P.process_due(judge_root(cfg), out, set_id)
+    if not why:
+        return None
+    c = (load_set(judge_root(cfg), set_id) or {}).get("meta", {}).get("character")
+    if not c:
+        return None
+    qp = q.queue_path(out)
+    doc = q.load(qp)
+    if q.duplicate_of(doc, "process", c):
+        return None
+    job = q.add(doc, kind="process", label=c, cmd=process_command(cfg, c, set_id), cwd=str(ENGINE_ROOT),
+                lane="cpu", note=f"cutout + staging of {set_id}: {why}; approve on the Characters tab")
+    q.save(qp, doc)
+    return job
+
+
 def queue_redo_if_complete(cfg: dict, set_id: str) -> dict | None:
     """Called after every verdict. Queues ONE re-roll the moment the last item
     in a set is judged, and only then.

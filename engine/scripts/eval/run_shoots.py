@@ -117,26 +117,19 @@ def t2i(prompt: str, seed: int, prefix: str) -> dict:
 
 
 def run_pack(sh) -> int:
-    """Hand the wardrobe pack to its own renderer. Nothing about the shipped
-    pipeline is re-derived here - the plate crop, the chroma backdrop and the
-    adherence measurement all live in render_plan and stay there."""
+    """The wardrobe pack through T2I - her approved LoRA on a grey studio, one
+    shot per look. Jeremy, 2026-10-14: "We'll just move forward with T2I
+    because it performs better." The Edit graph stays in render_plan, unused
+    here; a renders folder it left is set aside by the renderer."""
     import json  # noqa: PLC0415
 
+    from sourcemode.assets import pack as P  # noqa: PLC0415
     from sourcemode.assets.catalog import look_id, plan_slots  # noqa: PLC0415
-    from sourcemode.assets.render import render_plan  # noqa: PLC0415
 
     pp = plan_path(sh, CHAR, OUT_ROOT)
     plan = json.loads(pp.read_text(encoding="utf-8"))
-    if plan.get("lora") and plan["lora"] != LORA["path"]:
-        # Not fatal: the plan's source_asset was rendered from the plan's own
-        # epoch, and swapping one without the other is how a pack ends up with
-        # a plate and a LoRA that disagree. Say so and use the plan.
-        log(f"  {sh.id}: NOTE plan uses {plan['lora']}, approved is {LORA['path']} "
-            f"- rendering the plan as written")
-    # ONE candidate per look, not four. Jeremy, 2026-10-04: judge them, re-roll
-    # the rejects. Rendering four and keeping one cost 112 shots to ship 28
-    # whether or not the first draw was fine.
-    res = render_plan(cfg, client, plan, OUT_ROOT / "game-assets", shots=1, log=log)
+    res = P.render_pack(cfg, client, CHAR, plan, OUT_ROOT, lora_path=LORA["path"], negative=NEG,
+                        ref=ref, log=log)
     by_id = {s["id"]: s for s in plan_slots(plan)}
     items = []
     for meta in res:
@@ -154,8 +147,8 @@ def run_pack(sh) -> int:
                  items, question="Ship this one? K = yes, X = re-roll it.", priority=5,
                  meta={"character": CHAR, "shoot": sh.id,
                        "renders_dir": OUT_ROOT / "game-assets" / CHAR / "renders"})
-    log(f"  {sh.id}: {len(res)} shots -> judge set pack_{CHAR}; keepers go to "
-        f"cutout and place")
+    log(f"  {sh.id}: {len(res)} shots -> judge set pack_{CHAR}; rejects re-roll, and once "
+        f"every look is kept the cutout and staging queue themselves")
     return len(res)
 
 

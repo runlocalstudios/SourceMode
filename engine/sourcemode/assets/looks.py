@@ -737,7 +737,44 @@ def state(cfg: dict, character: str) -> dict:
                          "looks": [{"id": e["id"], "look": e["look"], "outfit": e["outfit"],
                                     "hair": e["hair"]} for e in block["looks"]]})
     blank = sum(1 for s in plan_slots(doc) if not s["outfit"] or not s["hair"]) if doc else 0
+    from . import pack as P  # noqa: PLC0415
+
+    staged = P.read_staged(out, c)
+    if staged:
+        # the page needs the sheet by name, never a path; and whether it is
+        # already in the game or waiting on him
+        staged = {"at": staged.get("at"), "n": staged.get("n"), "missing": staged.get("missing") or [],
+                  "flagged": staged.get("flagged") or [], "would_overwrite": staged.get("would_overwrite", 0),
+                  "set": staged.get("set"), "shipped": staged.get("shipped"),
+                  "sheets": [k for k, v in (staged.get("sheets") or {}).items() if Path(v).is_file()]}
     return {"character": c, "state": st, "approved_at": (ap or {}).get("approved"),
             "seed": (doc or {}).get("seed", 0),
             "categories": cats, "blank": blank, "shipped": shipped(c),
+            "staged": staged, "shipped_at": ((ap or {}).get("shipped") or {}).get("at"),
             "source_asset": (doc or {}).get("source_asset"), "lora": (doc or {}).get("lora")}
+
+
+def sheet_path(cfg: dict, character: str, which: str) -> Path | None:
+    from ..config import outputs_dir  # noqa: PLC0415
+    from . import pack as P  # noqa: PLC0415
+
+    st = P.read_staged(outputs_dir(cfg), character.lower())
+    p = ((st or {}).get("sheets") or {}).get(which)
+    return Path(p) if p and Path(p).is_file() else None
+
+
+def ship(cfg: dict, character: str) -> dict:
+    """The formal approval. Jeremy, 2026-10-14: "I would like a formal approval
+    step of that final shift ... before just deciding to overwrite whatever is
+    in the game currently." The only write into the game repo."""
+    from ..config import outputs_dir  # noqa: PLC0415
+    from . import pack as P  # noqa: PLC0415
+
+    return P.ship(outputs_dir(cfg), character.lower(), GAME_ROOT)
+
+
+def discard_staging(cfg: dict, character: str) -> bool:
+    from ..config import outputs_dir  # noqa: PLC0415
+    from . import pack as P  # noqa: PLC0415
+
+    return P.discard(outputs_dir(cfg), character.lower())
