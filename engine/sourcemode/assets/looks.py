@@ -433,25 +433,21 @@ def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_j
 
 
 def work_outfits(character: str, n: int = PACK_28["work"]) -> tuple[str, ...]:
-    """Her `n` work outfits from her job line(s). Two jobs split them, the
-    first job taking the larger share; no job outfit gives `()`.
+    """Her `n` work outfits from her FIRST job line; `()` when it is blank.
 
+    Jeremy, 2026-10-14: "Work outfits must only come from job 1" - the second
+    job's line was seeping into the pack. Job 2 gets its own section later.
     Deterministic per character, like the rest of the draft."""
     from .appearance import persona_job  # noqa: PLC0415
     from .wardrobe import editable  # noqa: PLC0415
 
     rec = editable(character)
-    jobs = [j for j in rec["jobs"] if j["outfit"]]
-    if not jobs:
+    job = (rec["jobs"] or [{}])[0]
+    if not job.get("outfit"):
         return ()
     colours = list(palette_colours(rec.get("palette", "")))
     rng = random.Random(f"{character}:work")
-    game_job = persona_job(character) if len(jobs) == 1 else ""
-    out: list[str] = []
-    for i, job in enumerate(jobs):
-        share = -(-(n - len(out)) // (len(jobs) - i))   # ceil of what is left
-        out += _job_looks(job, share, colours, rng, game_job if i == 0 else "", rec.get("style", ""))
-    return tuple(out[:n])
+    return tuple(_job_looks(job, n, colours, rng, persona_job(character), rec.get("style", ""))[:n])
 
 
 def guided_templates(cat: str, guide: str, n: int, rng: random.Random) -> list[str]:

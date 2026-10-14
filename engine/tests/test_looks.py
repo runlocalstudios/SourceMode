@@ -275,16 +275,22 @@ def test_the_category_lines_guide_the_other_categories(ash):
     assert not any(any(x.endswith(c) for c in cues) for x in plain)
 
 
-def test_two_jobs_split_the_five_looks_three_and_two(monkeypatch):
+def test_only_the_first_job_dresses_the_work_looks(monkeypatch):
+    # Jeremy, 2026-10-14: "Work outfits must only come from job 1" - the yoga
+    # line was seeping into a drinks rep's pack. Job 2 gets its own section later.
     rec = {"style": "", "palette": "black", "avoid": "", "outfits": {},
            "jobs": [{"job": "drinks sales rep", "outfit": "a black blazer over a satin cami", "places": []},
                     {"job": "yoga instructor", "outfit": "a supportive crop and leggings", "places": []}],
            "hair": [], "note": "", "draft": False}
     monkeypatch.setattr(W, "editable", lambda c: rec)
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "persona_job", lambda c: "")
     w = L.work_outfits("cassie")
-    assert len(w) == 5
-    assert w[0] == "a black blazer over a satin cami" and w[3] == "a supportive crop and leggings"
-    assert "sports bra" in w[4]
+    assert len(w) == 5 and w[0] == "a black blazer over a satin cami"
+    assert "crop and leggings" not in " ".join(w) and "sports bra" not in " ".join(w)
+    # a blank first job leaves the work looks blank even with a second job filled in
+    rec["jobs"][0]["outfit"] = ""
+    assert L.work_outfits("cassie") == ()
 
 
 def _cfg(tmp_path: Path) -> dict:
