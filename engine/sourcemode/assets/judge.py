@@ -75,8 +75,11 @@ def judge_root(cfg: dict) -> Path:
 
 def make_set(root: Path, set_id: str, title: str, items: list[dict], *, question: str = "",
              reference: str | Path | None = None, seed: int = 0, priority: int = 50,
-             meta: dict | None = None) -> Path:
+             meta: dict | None = None, mode: str = "single") -> Path:
     """Write a manifest. items: [{id, path, arm, group}]; ids unique within the set.
+
+    `mode` is "single" (one image, keep or reject) or "pair" (two images of
+    the same `group` side by side, pick the better one - see `pair_rows`).
 
     The blind order is shuffled once here and stored, so revisits show the same
     sequence and the arm never leaks through position.
@@ -96,14 +99,115 @@ def make_set(root: Path, set_id: str, title: str, items: list[dict], *, question
     rows = [{**it, "path": str(it["path"]), "hash": content_hash(it["path"])} for it in items]
     d = root / "sets"; d.mkdir(parents=True, exist_ok=True)
     out = d / f"{set_id}.json"
+    if mode not in ("single", "pair"):
+        raise ValueError(f"{set_id}: mode must be single or pair, not {mode!r}")
+    if mode == "pair":
+        pair_rows({"id": set_id, "items": rows, "order": order}, strict=True)
     out.write_text(json.dumps({
         "id": set_id, "title": title, "question": question, "priority": priority,
+        "mode": mode,
         "reference": str(reference) if reference else None,
         "meta": {k: (str(v) if isinstance(v, Path) else v) for k, v in (meta or {}).items()},
         "items": rows, "order": order,
     }, indent=1), encoding="utf-8")
     drop_stale_verdicts(root, set_id, {r["id"]: r["hash"] for r in rows}, prior)
     return out
+
+
+def pair_set(root: Path, set_id: str, title: str, a: Path, b: Path, *, arm_a: str, arm_b: str,
+             question: str = "Which is better? Tap the check under it.", pattern: str = "*.png",
+             reference: str | Path | None = None, priority: int = 50, meta: dict | None = None,
+             seed: int = 0) -> tuple[Path, list[str]]:
+    """A pair set from two render roots laid out the same way: every subfolder
+    (or file) name present in both becomes one pair, `a`'s image against `b`'s.
+
+    Jeremy, 2026-10-14: "each presented side by side and a little check mark
+    under each to select which is better ... something we scaffold for future
+    use." Two packs, two prompt styles, two checkpoints on the same seeds -
+    anything that produced the same names twice. Names in only one root are
+    returned as `unpaired`, never silently dropped.
+    """
+    def first(d: Path) -> dict[str, Path]:
+        out: dict[str, Path] = {}
+        if not d.is_dir():
+            return out
+        for p in sorted(d.glob(pattern)):
+            if not p.name.startswith("_"):                    # _plate.png is the pipeline's, not a look
+                out[p.stem] = p                               # files side by side
+        for sub in sorted(x for x in d.iterdir() if x.is_dir() and not x.name.startswith("_")):
+            hit = sorted(sub.glob(pattern))
+            if hit:
+                out[sub.name] = hit[0]                        # one folder per look
+        return out
+
+    fa, fb = first(Path(a)), first(Path(b))
+    groups = [g for g in fa if g in fb]
+    unpaired = sorted((set(fa) | set(fb)) - set(groups))
+    if not groups:
+        raise ValueError(f"{set_id}: nothing in {a} matches anything in {b}")
+    items = []
+    for g in groups:
+        items.append({"id": f"{g}:{arm_a}", "path": fa[g], "arm": arm_a, "group": g})
+        items.append({"id": f"{g}:{arm_b}", "path": fb[g], "arm": arm_b, "group": g})
+    out = make_set(root, set_id, title, items, question=question, reference=reference, seed=seed,
+                   priority=priority, mode="pair",
+                   meta={**(meta or {}), "a": str(a), "b": str(b), "arms": [arm_a, arm_b],
+                         "unpaired": unpaired})
+    return out, unpaired
+
+
+def pair_rows(doc: dict, *, strict: bool = False) -> list[dict]:
+    """The pairs of a pair set: `[{group, left, right}]` in blind order, each
+    side fixed per group so a revisit shows the same layout and the arm never
+    leaks through position. A group needs exactly two items of two arms;
+    `strict` raises on any other, otherwise such groups are skipped."""
+    by_group: dict[str, list[dict]] = {}
+    for it in doc["items"]:
+        by_group.setdefault(str(it.get("group", "")), []).append(it)
+    seen: list[str] = []
+    for i in doc["order"]:                                    # first appearance = blind order
+        g = next((str(it.get("group", "")) for it in doc["items"] if it["id"] == i), "")
+        if g not in seen:
+            seen.append(g)
+    rows = []
+    for g in seen:
+        two = by_group.get(g, [])
+        if len(two) != 2 or two[0]["arm"] == two[1]["arm"]:
+            if strict:
+                raise ValueError(f"{doc['id']}: group {g!r} needs two items of two arms, has "
+                                 f"{[it['arm'] for it in two]}")
+            continue
+        flip = random.Random(f"{doc['id']}:{g}").random() < 0.5
+        left, right = (two[1], two[0]) if flip else (two[0], two[1])
+        rows.append({"group": g, "left": left["id"], "right": right["id"]})
+    return rows
+
+
+def record_pair(root: Path, set_id: str, group: str, winner: str | None, *, clear: bool = False) -> dict:
+    """One pick for a pair: the winner is kept and the other rejected; `winner`
+    None means neither (both rejected); `clear` undoes the pair. Both verdicts
+    land in one write, so a pick is never half-recorded. Returns the verdicts."""
+    s = load_set(root, set_id)
+    if s is None:
+        raise KeyError(set_id)
+    row = next((p for p in pair_rows(s) if p["group"] == str(group)), None)
+    if row is None:
+        raise KeyError(f"pair {group!r}")
+    ids = (row["left"], row["right"])
+    if not clear and winner is not None and winner not in ids:
+        raise ValueError(f"{winner!r} is not in pair {group!r}")
+    paths = {it["id"]: Path(it["path"]) for it in s["items"] if it["id"] in ids}
+    if not clear and any(not p.is_file() for p in paths.values()):
+        raise FileNotFoundError(f"pair {group!r}: an image is not on disk - it is probably mid re-render")
+    v = load_verdicts(root, set_id)
+    for i in ids:
+        if clear:
+            v.pop(i, None)
+        else:
+            v[i] = "keep" if i == winner else "reject"
+    d = root / "verdicts"; d.mkdir(parents=True, exist_ok=True)
+    (d / f"{set_id}.json").write_text(json.dumps(v, indent=1, sort_keys=True), encoding="utf-8")
+    return v
 
 
 def drop_stale_verdicts(root: Path, set_id: str, now: dict, prior: dict) -> list[str]:
@@ -153,20 +257,29 @@ def list_sets(root: Path) -> list[dict]:
     for p in sorted((root / "sets").glob("*.json")) if (root / "sets").exists() else []:
         s = json.loads(p.read_text(encoding="utf-8"))
         v = load_verdicts(root, s["id"])
-        n = len(s["items"])
-        judged = sum(1 for it in s["items"] if it["id"] in v)
+        if s.get("mode") == "pair":
+            # a pair set counts pairs, and a pair is judged when both sides are
+            pairs = pair_rows(s)
+            n = len(pairs)
+            judged = sum(1 for p in pairs if p["left"] in v and p["right"] in v)
+            unit = "pair"
+        else:
+            n = len(s["items"])
+            judged = sum(1 for it in s["items"] if it["id"] in v)
+            unit = ""
         # `sub`, `status` and `group` are what the picker shows instead of a bare
         # count, and they come from one place so both review pages read alike.
         left = n - judged
+        units = f" {unit}s" if unit else ""
         if judged >= n:
             status, group = "done", "done"
-            sub = f"{n} judged"
+            sub = f"{n}{units} judged"
         elif judged:
             status, group = "you", "progress"
-            sub = f"{judged} of {n} judged · {left} left"
+            sub = f"{judged} of {n}{units} judged · {left} left"
         else:
             status, group = "you", "needs"
-            sub = f"{n} to judge"
+            sub = f"{n}{units} to judge"
         out.append({"id": s["id"], "title": s["title"], "question": s.get("question", ""),
                     "priority": s.get("priority", 50), "n": n, "judged": judged,
                     "done": judged >= n,
@@ -199,11 +312,18 @@ def set_payload(root: Path, set_id: str) -> dict | None:
         return None
     here = {it["id"] for it in s["items"] if Path(it["path"]).is_file()}
     pending = [i for i in s["order"] if i not in here]
-    return {"id": s["id"], "title": s["title"], "question": s.get("question", ""),
-            "has_reference": bool(s.get("reference")),
-            "items": [{"id": i} for i in s["order"] if i in here],
-            "pending": len(pending),
-            "verdicts": {k: v for k, v in load_verdicts(root, set_id).items() if k in here}}
+    out = {"id": s["id"], "title": s["title"], "question": s.get("question", ""),
+           "mode": s.get("mode", "single"),
+           "has_reference": bool(s.get("reference")),
+           "items": [{"id": i} for i in s["order"] if i in here],
+           "pending": len(pending),
+           "verdicts": {k: v for k, v in load_verdicts(root, set_id).items() if k in here}}
+    if out["mode"] == "pair":
+        # a pair with a side missing is not judgeable, same rule as an item
+        rows = pair_rows(s)
+        out["pairs"] = [p for p in rows if p["left"] in here and p["right"] in here]
+        out["pending"] = len(rows) - len(out["pairs"])
+    return out
 
 
 def item_path(root: Path, set_id: str, item_id: str) -> Path | None:
@@ -577,8 +697,32 @@ body .toast .btn{min-height:24px;padding:0 10px}
 #results{position:fixed;inset:0;z-index:20;background:var(--g0);
   overflow:auto;display:none}
 #results.on{display:block}
+/* PAIR MODE: two images of the same look, a check under each. Jeremy,
+   2026-10-14: "each presented side by side and a little check mark under each
+   to select which is better". Double-click a side to see it alone. */
+#pair{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;gap:4px;
+  background:var(--photo);padding-bottom:calc(var(--thumb) + var(--s4) + var(--safe-b))}
+#pair[hidden],#stage[hidden],#hint[hidden],#hintp[hidden],#neither[hidden]{display:none}
+#pair .side{position:relative;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;min-height:0;min-width:0;gap:var(--s2)}
+#pair .side img{max-width:100%;max-height:calc(100% - 64px);object-fit:contain;cursor:zoom-in}
+#pair .side .pk{width:56px;height:56px;border-radius:50%;border:1px solid var(--done-line);
+  background:var(--done-bg);color:var(--done-ink);font-size:30px;line-height:1;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#pair .side .pk:active{transform:scale(.9)}
+#pair .side.won .pk{box-shadow:0 0 0 3px var(--done-ink)}
+#pair .side.lost{opacity:.45}
+#pair.big-l{grid-template-columns:1fr}
+#pair.big-l .side.r{display:none}
+#pair.big-r{grid-template-columns:1fr}
+#pair.big-r .side.l{display:none}
+#pair.big-l .side img,#pair.big-r .side img{cursor:zoom-out}
+#neither{left:50%;transform:translateX(-50%);width:auto;padding:0 18px;border-radius:var(--rp);
+  font-size:16px;font-weight:600;background:var(--stop-bg);border-color:var(--stop-line);color:var(--stop-ink)}
+#neither:active{transform:translateX(-50%) scale(.95)}
 @media (min-width:821px){
   .tap{display:none}
+  #neither:not([hidden]){display:flex}
   #stage{cursor:zoom-in}
   #stage[data-z="1"]{cursor:zoom-out}
   #ref{max-height:30vh;max-width:22vw}
@@ -600,16 +744,28 @@ BODY = """
   <img id=ref class=c0 draggable=false
        alt="reference photo" aria-label="reference photo: tap to move, hold to compare" hidden>
 </div>
+<div id=pair hidden>
+  <div class="side l"><img id=pL alt="left candidate" draggable=false>
+    <button class=pk data-side=left aria-label="the left one is better">&#10003;</button></div>
+  <div class="side r"><img id=pR alt="right candidate" draggable=false>
+    <button class=pk data-side=right aria-label="the right one is better">&#10003;</button></div>
+</div>
 <div id=results></div>
 
 <button class=tap id=no data-v=reject aria-label="reject">&#10007;</button>
 <button class=tap id=yes data-v=keep aria-label="keep">&#10003;</button>
+<button class=tap id=neither aria-label="neither is good" hidden>&#10007; neither</button>
 
 <div id=hint class=keys>
   <span><kbd>K</kbd> keep</span><span><kbd>X</kbd> reject</span>
   <span><kbd>&larr;</kbd><kbd>&rarr;</kbd> move</span><span><kbd>U</kbd> undo</span>
   <span><kbd>R</kbd> reference</span><span><kbd>0</kbd> reset zoom</span>
   <span><kbd>/</kbd> sets</span><span>double-click: zoom</span></div>
+<div id=hintp class=keys hidden>
+  <span><kbd>&larr;</kbd> left is better</span><span><kbd>&rarr;</kbd> right is better</span>
+  <span><kbd>X</kbd> neither</span><span><kbd>U</kbd> undo</span>
+  <span><kbd>[</kbd><kbd>]</kbd> move</span><span><kbd>/</kbd> sets</span>
+  <span>double-click: one side</span></div>
 """
 
 OWN_JS = r"""
@@ -677,14 +833,114 @@ async function openSet(id){
   const ref=$('ref');
   ref.hidden=true;
   if(cur.has_reference) ref.src='/judge/ref?set='+encodeURIComponent(id);
-  idx=cur.items.findIndex(it=>!(it.id in cur.verdicts));
-  if(idx<0) idx=cur.items.length;
+  if(isPair()){
+    idx=cur.pairs.findIndex(p=>!pairDone(p));
+    if(idx<0) idx=cur.pairs.length;
+  } else {
+    idx=cur.items.findIndex(it=>!(it.id in cur.verdicts));
+    if(idx<0) idx=cur.items.length;
+  }
   show();
 }
+
+/* --- pair mode: two of the same look, pick the better one ---------------
+   The verdicts stay per item (winner keep, loser reject, neither = both
+   reject), so the summary, the history and the set list need nothing new;
+   the page only draws two at once and writes both in one POST. */
+const isPair=()=>!!(cur&&cur.mode==='pair');
+const pairDone=p=>(p.left in cur.verdicts)&&(p.right in cur.verdicts);
+let bigSide='';
+function layout(){
+  const pair=isPair();
+  $('stage').hidden=pair; $('pair').hidden=!pair;
+  $('hint').hidden=pair; $('hintp').hidden=!pair;
+  $('neither').hidden=!pair;
+  for(const id of ['yes','no']) $(id).style.visibility=pair?'hidden':'';
+}
+async function showPair(){
+  $('results').classList.remove('on');
+  for(const id of ['pick','hair']) $(id).style.visibility='';
+  layout();
+  if(idx>=cur.pairs.length) return results();
+  const p=cur.pairs[idx];
+  bigSide=''; $('pair').className='';
+  const L=$('pL'), R=$('pR');
+  L.src=fileUrl(cur.id,p.left,900); R.src=fileUrl(cur.id,p.right,900);
+  try{ await Promise.all([L.decode(),R.decode()]); }catch(e){}
+  for(const [el,id] of [[L.parentElement,p.left],[R.parentElement,p.right]]){
+    el.classList.toggle('won',cur.verdicts[id]==='keep');
+    el.classList.toggle('lost',cur.verdicts[id]==='reject');
+  }
+  const open=cur.pairs.filter(x=>!pairDone(x)).length;
+  $('prog').textContent=(idx+1)+'/'+cur.pairs.length
+    +(open<cur.pairs.length?' · '+open+' to judge':'');
+  $('hair').firstElementChild.style.width=(idx/cur.pairs.length*100)+'%';
+  $('ref').hidden=true;
+  SM.ctx({title:cur.title,sub:(idx+1)+' of '+cur.pairs.length+' pairs',
+          status:'live',progress:idx/cur.pairs.length});
+  const nx=cur.pairs[idx+1];
+  if(nx){ for(const id of [nx.left,nx.right]){ const im=new Image(); im.src=fileUrl(cur.id,id,900); } }
+  dim();
+}
+function nextOpenPair(from){
+  const n=cur.pairs.length;
+  for(let k=0;k<n;k++){ const i=(from+k)%n; if(!pairDone(cur.pairs[i])) return i; }
+  return n;
+}
+async function pick(side){
+  if(!isPair()||idx>=cur.pairs.length) return;
+  const p=cur.pairs[idx];
+  const winner=side==='left'?p.left:side==='right'?p.right:null;
+  last={pair:idx,group:p.group,prev:{left:cur.verdicts[p.left]||null,right:cur.verdicts[p.right]||null}};
+  cur.verdicts[p.left]=winner===p.left?'keep':'reject';
+  cur.verdicts[p.right]=winner===p.right?'keep':'reject';
+  idx=nextOpenPair(idx+1);
+  const write=SM.postJSON('/judge/set/'+encodeURIComponent(cur.id)+'/pair',{group:p.group,winner:winner});
+  pending=write;
+  show();
+  if(navigator.vibrate) navigator.vibrate(8);
+  SM.toast(side==='neither'?'neither':side+' is better',{label:'Undo',run:undo});
+  try{ cur.verdicts=await write; }
+  catch(e){
+    for(const [id,v] of [[p.left,last.prev.left],[p.right,last.prev.right]]){
+      if(v) cur.verdicts[id]=v; else delete cur.verdicts[id]; }
+    idx=last.pair; last=null; show();
+    SM.toast('That pick did not save - '+e.message);
+  }
+}
+async function undoPair(){
+  if(!last||last.pair==null) return;
+  const at=last.pair, group=last.group, prev=last.prev; last=null;
+  SM.hideToast();
+  idx=at;
+  const p=cur.pairs[at];
+  const had=prev.left&&prev.right;
+  const winner=had?(prev.left==='keep'?p.left:prev.right==='keep'?p.right:null):null;
+  for(const [id,v] of [[p.left,prev.left],[p.right,prev.right]]){
+    if(v) cur.verdicts[id]=v; else delete cur.verdicts[id]; }
+  show();
+  try{
+    const write=SM.postJSON('/judge/set/'+encodeURIComponent(cur.id)+'/pair',
+      had?{group:group,winner:winner}:{group:group,clear:true});
+    pending=write; cur.verdicts=await write;
+  }catch(e){ SM.toast('Could not undo - '+e.message); }
+}
+$('pair').addEventListener('click',e=>{
+  const b=e.target.closest('.pk'); if(b){ e.preventDefault(); pick(b.dataset.side); return; }
+});
+$('pair').addEventListener('dblclick',e=>{
+  const side=e.target.closest('.side'); if(!side) return;
+  const s=side.classList.contains('l')?'l':'r';
+  bigSide=bigSide===s?'':s;
+  $('pair').className=bigSide?'big-'+bigSide:'';
+});
+$('neither').onclick=e=>{ e.preventDefault(); pick('neither'); };
 
 /* --- the stage ----------------------------------------------------------- */
 async function show(){
   if(!cur) return;
+  if(isPair()) return showPair();
+  layout();
   if(idx>=cur.items.length) return results();
   $('results').classList.remove('on');
   for(const id of ['yes','no','pick','hair']) $(id).style.visibility='';
@@ -738,6 +994,7 @@ function nextOpen(from){
    POST landed, so /summary still counted 89. */
 let pending=null;
 async function verdict(v){
+  if(isPair()) return;                                /* a pair is picked, not kept */
   if(!cur||idx>=cur.items.length||zoom>1) return;   /* zoomed = looking, not judging */
   const it=cur.items[idx];
   last={item:it.id,at:idx,prev:cur.verdicts[it.id]||null};
@@ -779,6 +1036,7 @@ async function checkRedo(){
 
 async function undo(){
   if(!last) return;
+  if(isPair()) return undoPair();
   const at=last.at, item=last.item, prev=last.prev; last=null;
   SM.hideToast();
   idx=at;
@@ -867,6 +1125,18 @@ function toggleRef(){
 addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT') return;
   const k=e.key.toLowerCase();
+  if(isPair()){
+    if(k==='arrowleft') pick('left');
+    else if(k==='arrowright') pick('right');
+    else if(k==='x'||k==='j') pick('neither');
+    else if(k==='u'||k==='z') undo();
+    else if(k==='['){ if(idx>0){ idx--; show(); } }
+    else if(k===']'){ if(idx<cur.pairs.length){ idx++; show(); } }
+    else if(k==='s'){ idx=cur.pairs.length; show(); }
+    else if(k==='/'){ openPicker(); }
+    else return;
+    e.preventDefault(); return;
+  }
   if(k==='k'||k==='enter') verdict('keep');
   else if(k==='x'||k==='j') verdict('reject');
   else if(k==='u'||k==='z') undo();
@@ -885,6 +1155,7 @@ $('yes').onclick=e=>{ e.preventDefault(); verdict('keep'); };
 /* --- the finish screen: the sweep as a decision ------------------------- */
 function hideStage(){
   for(const id of ['yes','no']) $(id).style.visibility='hidden';
+  $('neither').hidden=true; $('pair').hidden=true; $('hintp').hidden=true;
   $('ref').hidden=true;
 }
 async function results(){
@@ -900,7 +1171,9 @@ async function results(){
   sets=await SM.getJSON('/judge/sets').catch(()=>sets);
   const left=sets.filter(x=>x.judged<x.n&&x.id!==cur.id).length;
   box.innerHTML=board?epochScreen(board,hist,left):armScreen(s,hist,left);
-  SM.ctx({title:cur.title,sub:s.judged+' of '+s.n+' judged',status:'done',progress:1});
+  const sub=isPair()?cur.pairs.filter(pairDone).length+' of '+cur.pairs.length+' pairs judged'
+                    :s.judged+' of '+s.n+' judged';
+  SM.ctx({title:cur.title,sub:sub,status:'done',progress:1});
 }
 
 function epochScreen(b,hist,left){
@@ -991,6 +1264,7 @@ function epochScreen(b,hist,left){
 }
 
 function armScreen(s,hist,left){
+  if(isPair()) return pairScreen(s,hist,left);
   /* Not an epoch sweep: the generic per-arm bars, no board, no Use-epoch. */
   let bars='';
   const top=Math.max(...s.arms.map(a=>a.rate==null?0:a.rate));
@@ -1007,6 +1281,40 @@ function armScreen(s,hist,left){
     +'<div class=bars>'+bars+'</div>'
     +'<div class=basis>Keep rate per arm. This set&#39;s arms are not epochs, so'
     +' there is no epoch board and nothing to record as a checkpoint choice.</div>'
+    +'</div></div><div class=col-rail>'+foot(hist,left)+'</div></div>';
+}
+
+function pairScreen(s,hist,left){
+  /* Wins per arm from the per-group cross-tab: the arm kept in a group won
+     it; both rejected is "neither". */
+  const wins={}, arms=s.arms.map(a=>a.arm); let neither=0, judged=0;
+  for(const a of arms) wins[a]=0;
+  for(const g of Object.values(s.groups||{})){
+    if(Object.keys(g).length<2) continue;
+    judged++;
+    const w=arms.find(a=>g[a]==='keep');
+    if(w) wins[w]++; else neither++;
+  }
+  const top=Math.max(...arms.map(a=>wins[a]));
+  let bars='';
+  for(const a of arms)
+    bars+='<div class="bar'+(wins[a]===top&&top>0?' lead':'')+'">'
+      +'<span class=lab>'+SM.esc(a)+'</span>'
+      +'<span class=track><i style="width:'+(judged?Math.round(wins[a]/judged*100):0)+'%"></i></span>'
+      +'<span class=val>'+(judged?Math.round(wins[a]/judged*100)+'%':'&mdash;')
+      +' <span class=dim>'+wins[a]+'/'+judged+'</span></span></div>';
+  bars+='<div class=bar><span class=lab>neither</span><span class=track><i style="width:'
+      +(judged?Math.round(neither/judged*100):0)+'%"></i></span>'
+      +'<span class=val>'+(judged?Math.round(neither/judged*100)+'%':'&mdash;')
+      +' <span class=dim>'+neither+'/'+judged+'</span></span></div>';
+  const n=cur&&cur.pairs?cur.pairs.length:judged;
+  return '<div class=wrap><div class=col-main>'
+    +'<h2>'+SM.esc(s.title)+'</h2>'
+    +'<div class=card><div class=card-head>'+SM.pill(judged>=n?'done':'you')
+    +'<h3>'+judged+' of '+n+' pairs judged</h3></div>'
+    +'<div class=bars>'+bars+'</div>'
+    +'<div class=basis>Same look, same seed, side by side; which side each arm sat on'
+    +' was fixed at random per pair. A win is the one you checked.</div>'
     +'</div></div><div class=col-rail>'+foot(hist,left)+'</div></div>';
 }
 
@@ -1221,5 +1529,21 @@ def judge_router(cfg: dict):
         except Exception:  # noqa: BLE001
             pass
         return out
+
+    @r.post("/judge/set/{set_id}/pair")
+    def _pair(set_id: str, body: dict) -> dict:
+        """One pick for a pair: {group, winner: item id | null} - null is
+        "neither" - or {group, clear: true} to undo it. Both sides land in one
+        write. No re-roll is queued from a pair set: it compares, it does not
+        ship."""
+        try:
+            return record_pair(root, set_id, str(body.get("group")), body.get("winner"),
+                               clear=bool(body.get("clear")))
+        except KeyError as e:
+            raise HTTPException(404, str(e)) from e
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from e
+        except FileNotFoundError as e:
+            raise HTTPException(409, str(e)) from e
 
     return r

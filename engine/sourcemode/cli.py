@@ -27,7 +27,9 @@ assets_app = typer.Typer(no_args_is_help=True, help="In-game asset production: b
 gpu_app = typer.Typer(no_args_is_help=True, help="Serialised GPU work: one ordered queue, one runner, one job at a time.")
 library_app = typer.Typer(no_args_is_help=True, help="The library: every set by character, dated. plan writes the table; apply moves.")
 lora_app = typer.Typer(no_args_is_help=True, help="The locked LoRA per character: lock, status, verify, restage.")
+judge_app = typer.Typer(no_args_is_help=True, help="Blind judge sets: build one from renders for the Judging tab.")
 app.add_typer(train_app, name="train")
+app.add_typer(judge_app, name="judge")
 app.add_typer(voice_app, name="voice")
 app.add_typer(pose_app, name="pose")
 app.add_typer(monitor_app, name="monitor")
@@ -35,6 +37,33 @@ app.add_typer(assets_app, name="assets")
 app.add_typer(gpu_app, name="gpu")
 app.add_typer(lora_app, name="lora")
 app.add_typer(library_app, name="library")
+
+
+@judge_app.command("pair")
+def judge_pair(
+    set_id: str = typer.Argument(..., help="Judge set id, e.g. pair_amanda_pack."),
+    a: Path = typer.Option(..., "--a", help="First render root: files, or one folder per look."),
+    b: Path = typer.Option(..., "--b", help="Second render root, laid out the same way."),
+    arm_a: str = typer.Option(..., "--arm-a", help="What A is, e.g. 'edit on magenta'."),
+    arm_b: str = typer.Option(..., "--arm-b", help="What B is, e.g. 't2i on grey'."),
+    title: str = typer.Option(None, "--title", help="Title on the Judging tab (default: the set id)."),
+    question: str = typer.Option("Which is better? Tap the check under it.", "--question"),
+    pattern: str = typer.Option("*.png", "--pattern", help="Which files count inside each root or look folder."),
+    reference: Path = typer.Option(None, "--reference", help="Her reference photo, shown on the page."),
+):
+    """A side-by-side judge set: every name present in both roots is one pair,
+    A's image against B's, which side is which fixed at random per pair.
+    Picking the check under one keeps it and rejects the other; neither rejects both."""
+    from .assets.judge import judge_root, pair_set  # noqa: PLC0415
+
+    cfg, _ = _ctx()
+    out, unpaired = pair_set(judge_root(cfg), set_id, title or set_id, a, b, arm_a=arm_a, arm_b=arm_b,
+                             question=question, pattern=pattern, reference=reference)
+    n = len(json.loads(out.read_text(encoding="utf-8"))["items"]) // 2
+    rprint(f"{n} pairs -> {out}   ({arm_a} vs {arm_b})")
+    if unpaired:
+        rprint(f"[yellow]{len(unpaired)} in one root only, not paired:[/yellow] {', '.join(unpaired[:12])}"
+               + (" …" if len(unpaired) > 12 else ""))
 
 
 @library_app.command("plan")

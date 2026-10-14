@@ -148,3 +148,101 @@ def test_router_serves_page_files_and_verdicts(tmp_path: Path):
     assert c.post("/judge/set/exp/verdict", json={"item": "A_0", "verdict": "keep"}).json() == {"A_0": "keep"}
     assert c.post("/judge/set/exp/verdict", json={"item": "A_0", "verdict": "meh"}).status_code == 400
     assert c.get("/judge/set/exp/summary").json()["arms"][0]["keep"] == 1
+
+
+# --- pair mode: two of the same look, pick the better one (2026-10-14) ------
+# Jeremy: "each presented side by side and a little check mark under each to
+# select which is better ... something we scaffold for future use".
+
+def make_roots(tmp_path: Path, names=("casual_01_standing", "workout_01_standing", "fancy_01_standing")):
+    a, b = tmp_path / "A", tmp_path / "B"
+    for root, col in ((a, (200, 0, 0)), (b, (0, 0, 200))):
+        for n in names:
+            d = root / n; d.mkdir(parents=True)
+            Image.new("RGB", (8, 8), col).save(d / "shot_00_s7100.png")
+    (a / "_plate.png").write_bytes(b"")                     # an underscore folder-mate is ignored
+    (b / "only_in_b" ).mkdir(); Image.new("RGB", (8, 8)).save(b / "only_in_b" / "x.png")
+    return a, b
+
+
+def test_pair_set_pairs_look_folders_by_name_and_reports_the_unpaired(tmp_path: Path):
+    from sourcemode.assets.judge import pair_rows, pair_set
+    a, b = make_roots(tmp_path)
+    out, unpaired = pair_set(tmp_path, "pair_x", "x", a, b, arm_a="edit", arm_b="t2i")
+    assert unpaired == ["only_in_b"]
+    s = load_set(tmp_path, "pair_x")
+    assert s["mode"] == "pair" and len(s["items"]) == 6
+    rows = pair_rows(s)
+    assert [r["group"] for r in rows] and len(rows) == 3
+    # each pair is one item per arm, sides fixed by the set id and group, and the
+    # payload hands the page pairs with no arm on them
+    for r in rows:
+        arms = {next(it["arm"] for it in s["items"] if it["id"] == r[k]) for k in ("left", "right")}
+        assert arms == {"edit", "t2i"}
+    assert pair_rows(load_set(tmp_path, "pair_x")) == rows
+    assert any(r["left"].endswith(":t2i") for r in rows) or len(rows) < 4   # the flip is random per group
+    p = set_payload(tmp_path, "pair_x")
+    assert p["mode"] == "pair" and [x["group"] for x in p["pairs"]] == [r["group"] for r in rows]
+    assert "arm" not in json.dumps(p["pairs"])
+    with pytest.raises(ValueError):
+        pair_set(tmp_path, "pair_none", "x", a, tmp_path / "empty_nothing", arm_a="a", arm_b="b")
+
+
+def test_a_pair_set_refuses_a_group_without_two_arms(tmp_path: Path):
+    items = make_items(tmp_path, arms=("A", "B"), n=2)
+    items.append({**items[0], "id": "A_extra", "group": "0"})             # three in group 0
+    with pytest.raises(ValueError):
+        make_set(tmp_path, "bad", "x", items, mode="pair")
+    with pytest.raises(ValueError):
+        make_set(tmp_path, "bad", "x", items[:4], mode="triple")
+
+
+def test_a_pick_keeps_the_winner_rejects_the_loser_in_one_write_and_undoes_both(tmp_path: Path):
+    from sourcemode.assets.judge import pair_rows, pair_set, record_pair
+    a, b = make_roots(tmp_path)
+    pair_set(tmp_path, "pair_x", "x", a, b, arm_a="edit", arm_b="t2i")
+    rows = pair_rows(load_set(tmp_path, "pair_x"))
+    r0, r1 = rows[0], rows[1]
+    v = record_pair(tmp_path, "pair_x", r0["group"], r0["right"])
+    assert v == {r0["right"]: "keep", r0["left"]: "reject"}
+    v = record_pair(tmp_path, "pair_x", r1["group"], None)                 # neither
+    assert v[r1["left"]] == "reject" and v[r1["right"]] == "reject"
+    # the set list counts pairs, not images
+    row = next(s for s in list_sets(tmp_path) if s["id"] == "pair_x")
+    assert row["n"] == 3 and row["judged"] == 2 and "pairs" in row["sub"]
+    # the summary's cross-tab reads as wins: t2i or edit kept per group
+    g = summary(tmp_path, "pair_x")["groups"]
+    assert sorted(g[r0["group"]].values()) == ["keep", "reject"]
+    assert set(g[r1["group"]].values()) == {"reject"}
+    v = record_pair(tmp_path, "pair_x", r0["group"], None, clear=True)
+    assert r0["left"] not in v and r0["right"] not in v
+    with pytest.raises(ValueError):
+        record_pair(tmp_path, "pair_x", r0["group"], "nobody:edit")
+    with pytest.raises(KeyError):
+        record_pair(tmp_path, "pair_x", "no_such_group", None)
+    # a side that is not on disk cannot be picked, same rule as a single item
+    gone = next(it for it in load_set(tmp_path, "pair_x")["items"] if it["id"] == r0["left"])
+    Path(gone["path"]).unlink()
+    assert set_payload(tmp_path, "pair_x")["pending"] == 1
+    with pytest.raises(FileNotFoundError):
+        record_pair(tmp_path, "pair_x", r0["group"], r0["left"])
+
+
+def test_router_takes_a_pair_pick(tmp_path: Path):
+    pytest.importorskip("httpx")
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from sourcemode.assets.judge import judge_router, pair_rows, pair_set
+
+    a, b = make_roots(tmp_path)
+    pair_set(tmp_path, "pair_x", "x", a, b, arm_a="edit", arm_b="t2i")
+    r0 = pair_rows(load_set(tmp_path, "pair_x"))[0]
+    app = FastAPI(); app.include_router(judge_router({"assets": {"judge": str(tmp_path)}}))
+    c = TestClient(app)
+    assert c.get("/judge/set/pair_x").json()["mode"] == "pair"
+    assert c.post("/judge/set/pair_x/pair", json={"group": r0["group"], "winner": r0["left"]}).json() == {
+        r0["left"]: "keep", r0["right"]: "reject"}
+    assert c.post("/judge/set/pair_x/pair", json={"group": r0["group"], "winner": "x"}).status_code == 400
+    assert c.post("/judge/set/pair_x/pair", json={"group": "zz", "winner": None}).status_code == 404
+    assert c.post("/judge/set/pair_x/pair", json={"group": r0["group"], "clear": True}).json() == {}
