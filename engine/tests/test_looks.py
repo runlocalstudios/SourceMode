@@ -213,6 +213,34 @@ def test_a_cue_only_lands_on_a_garment_that_can_carry_it():
     assert L.fill("a {c} one-piece", c="black") == "a black one-piece"
 
 
+@pytest.mark.parametrize("line, brief", [
+    ("Flirty shorts and tight shirts", True),                                    # plural garments
+    ("a modest long-sleeve dress or a jumper with straight-leg jeans", True),    # a choice
+    ("Chic business casual", True),                                              # no garment
+    ("a short black shirt-dress uniform with white piping, black tights", False),
+    ("The Chill Trap, evenings: black long-sleeve bodycon mini, covered but close-fitting", False),
+    ("a chambray shirt with a canvas apron over jeans", False),                  # jeans are always plural
+    ("a cream wrap blouse with rust or brown high-waisted trousers", False),     # a choice of colour is one outfit
+])
+def test_a_brief_is_a_style_not_one_outfit(line, brief):
+    assert L.is_brief(line) is brief
+
+
+def test_a_brief_naming_garments_but_no_job_draws_looks_wearing_those_garments(monkeypatch):
+    # 2026-10-14 screenshot: "Flirty shorts and tight shirts" drafted as a
+    # uniform - "Flirty shorts and tight shirts, a black apron tied at the
+    # waist, the neckline cut low". "applying the work style in a dumb way"
+    # gigi's job title says server, which is a uniform job - the brief still
+    # draws from the pools, never the apron variants
+    _with_job(monkeypatch, "Server at the Sandbar", "Flirty shorts and tight shirts", palette="red and white")
+    w = L.work_outfits("gigi")
+    assert len(w) == 5 and len(set(w)) == 5
+    assert not any(x.lower().startswith("flirty") for x in w)
+    assert not any("apron" in x or "sleeves pushed up" in x for x in w)
+    assert all(re.search(r"shorts|shirt", x) for x in w), w
+    assert sum(any(x.endswith(c) for c in _cues("revealing")) for x in w) >= 4, w
+
+
 def test_a_preppy_brief_with_a_sexy_flair_gets_preppy_looks_cut_revealing(monkeypatch):
     # priyanka: the job title says teaching assistant; the brief says preppy.
     # The brief wins - its words are the design direction
@@ -236,7 +264,7 @@ def test_business_casual_at_the_library_is_an_office_brief_not_a_modest_uniform(
 
 
 def test_her_own_garment_line_is_kept_verbatim_and_only_the_templates_are_steered(monkeypatch):
-    line = "church volunteer: a modest long-sleeve dress or a jumper with straight-leg jeans"
+    line = "church volunteer: a modest long-sleeve navy dress with a cardigan over it"
     _with_job(monkeypatch, "", line, palette="navy, cream")
     w = L.work_outfits("sandra")
     assert w[0] == L.job_base(line)

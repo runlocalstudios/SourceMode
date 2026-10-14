@@ -304,7 +304,8 @@ REGISTERS: tuple[tuple[str, str, tuple[tuple[str, str, str], ...]], ...] = (
          r"dress|blouse|shirt|\btee\b|knit|cami|bodysuit|\btop\b", r"sheer|mesh|lace|jacket|hoodie|sweatshirt|track|sports bra|bralette|leather|vinyl|latex|sequin"),
         ("the top cropped to show her midriff",
          r"\btop\b|\btee\b|shirt|sweater|blouse|knit|hoodie|sweatshirt|tank|polo|henley|cardigan",
-         r"crop|dress|jumpsuit|unitard|onesie|romper|bodysuit|overalls|tucked|corset|bustier|bralette|bikini|tube"),
+         r"crop|dress|jumpsuit|unitard|onesie|romper|bodysuit|overalls|tucked|corset|bustier|bralette|bikini|tube|"
+         r"worn open|knotted|tied at"),
         ("the hem cut well above mid-thigh", _HEM, r"mini|micro|short|tennis"),
         ("with a slit up the thigh", _HEM, r"slit|mini|micro|short|tennis"),
     )),
@@ -320,9 +321,26 @@ REGISTERS: tuple[tuple[str, str, tuple[tuple[str, str, str], ...]], ...] = (
 )
 
 
+# A line is still a brief when it names garments in the plural or as options:
+# "Flirty shorts and tight shirts" drafted as a uniform with an apron over it.
+# Inherently plural garments (shorts, jeans, trousers, scrubs) do not count.
+_PLURAL_RE = re.compile(
+    r"\b(?:shirts|blouses|tops|tees|t-shirts|dresses|skirts|blazers|jackets|sweaters|cardigans|bodysuits|"
+    r"camis|bralettes|corsets|rompers|jumpsuits|polos|hoodies|tunics|uniforms|minis|gowns|suits|sets|"
+    r"bikinis|swimsuits|turtlenecks|tanks|knits|vests|coats|aprons|waistcoats|jumpers|kimonos|outfits?|"
+    r"wear|looks)\b", re.I)
+_OR_RE = re.compile(r"\bor\s+(\w[\w-]*)", re.I)
+
+
 def is_brief(outfit: str) -> bool:
-    """True when the line describes a style and names no garment."""
-    return bool(job_base(outfit)) and not GARMENT_RE.search(job_base(outfit))
+    """True when the line describes a style rather than one outfit: it names
+    no garment, or names them in the plural, or offers a choice of garments
+    ("a dress or a jumper"; "rust or brown trousers" is one outfit)."""
+    base = job_base(outfit)
+    if not base:
+        return False
+    choice = any(not _COLOUR_RE.fullmatch(m.group(1)) for m in _OR_RE.finditer(base))
+    return not GARMENT_RE.search(base) or bool(_PLURAL_RE.search(base)) or choice
 
 
 def register(*texts: str) -> str:
@@ -410,14 +428,18 @@ def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_j
     kind = (_placed(job["outfit"]) if brief else "") or _placed(words)
     if not kind and game_job:
         kind = _placed(game_job)
-    if not kind:
-        kind = "office" if brief else "uniform"   # a brief with no placeable job: she dresses herself
-    if kind == "uniform":
+    if brief:
+        # the brief is never a look: its kind's templates, or - placed nowhere,
+        # or a server whose "uniform" is a brief - every pool, the looks
+        # wearing what it names first ("Flirty shorts and tight shirts" draws
+        # the shorts-and-shirt looks)
+        placed = kind not in ("", "uniform")
+        pool = [t for t in next(t for k, _, t in WORK_KINDS if k == kind) if t != "{base}"] if placed else "*"
+        tpl = guided_templates(pool, base, n, rng)
+    elif kind in ("", "uniform"):
         tpl = ["{base}"] + [v for key, v in UNIFORM_VARIANTS if key not in base.lower()]
     else:
         tpl = list(next(t for k, _, t in WORK_KINDS if k == kind))
-        if brief:
-            tpl = [t for t in tpl if t != "{base}"]   # the brief is never a look
     # her job line sets the register; her style line only when the job line
     # is a brief - a written-out uniform is the spec, not a mood
     reg = register(words) or (register(style) if brief else "")
@@ -450,18 +472,35 @@ def work_outfits(character: str, n: int = PACK_28["work"]) -> tuple[str, ...]:
     return tuple(_job_looks(job, n, colours, rng, persona_job(character), rec.get("style", ""))[:n])
 
 
-def guided_templates(cat: str, guide: str, n: int, rng: random.Random) -> list[str]:
-    """`n` templates for the category, the ones naming a garment her guide line
-    names first ("sleeveless blouses, bodysuits" puts the bodysuit looks in),
+_ALWAYS_PLURAL = {"shorts", "jeans", "trousers", "pants", "leggings", "tights", "scrubs", "overalls", "stockings"}
+
+
+def _singular(w: str) -> str:
+    w = w.lower()
+    return w if w in _ALWAYS_PLURAL else re.sub(r"(ss)es$|s$", lambda m: m.group(1) or "", w)
+
+
+def guided_templates(pool: str | list[str], guide: str, n: int, rng: random.Random) -> list[str]:
+    """`n` templates from the pool (a category name, "*" for every category, or
+    a list), the ones naming a garment her guide line names first - most of
+    them first ("sleeveless blouses, bodysuits" puts the bodysuit looks in) -
     the rest sampled."""
-    pool = list(TEMPLATES[cat])
-    nouns = {m.group(0).lower().rstrip("s") for m in GARMENT_RE.finditer(guide or "")}
+    if pool == "*":                           # the daytime pools; a job brief is not clubwear
+        pool = [t for c in ("casual", "casual_date") for t in TEMPLATES[c]]
+    elif isinstance(pool, str):
+        pool = list(TEMPLATES[pool])
+    nouns = {_singular(m.group(0)) for m in GARMENT_RE.finditer(guide or "")}
     nouns -= {"set", "top"}                   # too common to mean anything
-    named = [t for t in pool if any(re.search(rf"\b{re.escape(w)}s?\b", t, re.I) for w in nouns)]
+
+    def hits(t: str) -> int:
+        return sum(bool(re.search(rf"\b{re.escape(w)}(?:e?s)?\b", t, re.I)) for w in nouns)
+
+    named = [t for t in pool if hits(t)]
     rng.shuffle(named)
+    named.sort(key=hits, reverse=True)       # stable: shuffled within a score
     rest = [t for t in pool if t not in named]
     picked = named[:n]
-    picked += rng.sample(rest, n - len(picked))
+    picked += rng.sample(rest, min(len(rest), n - len(picked)))
     rng.shuffle(picked)
     return picked
 
