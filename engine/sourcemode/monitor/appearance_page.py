@@ -188,7 +188,9 @@ html,body{overflow-x:hidden}
 """
 
 OWN_CSS += r"""
-.looks a.sheet img{display:block;width:100%;max-width:900px;border:1px solid var(--g3);border-radius:var(--r2);margin:var(--s2) 0}
+.looks details.sheet{margin:var(--s2) 0}
+.looks details.sheet summary{cursor:pointer;font:var(--t-meta);font-weight:600;color:var(--g8);padding:var(--s2) 0}
+.looks details.sheet img{display:block;width:100%;max-width:900px;border:1px solid var(--g3);border-radius:var(--r2);margin:var(--s2) 0}
 .voice audio{width:100%;max-width:420px;height:32px;display:block}
 .voice .vrow{display:flex;align-items:center;gap:var(--s2);margin:2px 0}
 .voice .vrow span{flex:none;width:150px;font:var(--t-small);color:var(--g7)}
@@ -463,7 +465,11 @@ function shipBlock(st){
     +(s.missing.length?' &middot; <b>'+s.missing.length+' missing</b>: '+SM.esc(s.missing.join(', ')):'')
     +(s.flagged.length?' &middot; '+s.flagged.length+' flagged by the alpha report':'')
     +' &middot; '+(s.would_overwrite?'<b>'+s.would_overwrite+'</b> would overwrite files in the game':'nothing in the game yet under these names')+'</div>';
-  if(s.sheets.includes('compare')) h+='<a class=sheet href="'+sheet('compare')+'" target=_blank><img loading=lazy src="'+sheet('compare')+'" alt="new beside the game, per look"></a>';
+  /* Jeremy, 2026-10-14: the sheet "takes up the entire screen on my phone" - folded,
+     opens full size in its own tab */
+  if(s.sheets.includes('compare')) h+='<details class=sheet><summary>See each new look beside the game&rsquo;s current one</summary>'
+    +'<a href="'+sheet('compare')+'" target=_blank><img loading=lazy src="'+sheet('compare')+'" alt="new beside the game, per look"></a>'
+    +'<div class=sub>Tap the sheet to open it full size.</div></details>';
   if(s.sheets.includes('mapping')) h+='<div class=sub><a href="'+sheet('mapping')+'" target=_blank>mapping sheet</a></div>';
   if(s.shipped){
     h+='<div class=sub>Copied '+s.shipped.files.length+' files into the game'+(s.shipped.overwrote?', '+s.shipped.overwrote+' overwritten':'')+'.</div>';

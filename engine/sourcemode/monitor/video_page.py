@@ -40,6 +40,17 @@ OWN_CSS = r"""
 .seg button.on{background:var(--act);border-color:var(--act-hi);color:var(--act-ink)}
 .seg button .sub{display:block;font-weight:400;opacity:.8}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:var(--s2);margin-top:var(--s2)}
+.grid.s{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:4px}
+.grid.m{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+.grid.l{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.grid.s .tag{display:none}
+.chosen{display:flex;gap:var(--s3);align-items:center;margin-top:var(--s2)}
+.chosen img{width:72px;aspect-ratio:2/3;object-fit:cover;border-radius:var(--r2);border:1px solid var(--g4)}
+.chosen .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.chosen .t b{font:var(--t-lead);color:var(--g9)}
+.chosen .t span{font:var(--t-small);color:var(--g7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.row{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap;margin-top:var(--s2)}
+.row .lab{font:var(--t-meta);color:var(--g7)}
 .grid button{position:relative;padding:0;border:2px solid transparent;border-radius:var(--r2);
   background:var(--g1);aspect-ratio:2/3;overflow:hidden;cursor:pointer}
 .grid button img{width:100%;height:100%;object-fit:cover;display:block}
@@ -72,9 +83,9 @@ BODY = """
   <div class=col-main>
     <h2>Character</h2>
     <div class=who id=who></div>
-    <div id=form></div>
     <h2>Her clips</h2>
     <div id=clips></div>
+    <div id=form></div>
   </div>
   <div class=col-rail><div id=rail></div></div>
 </div>
@@ -86,6 +97,11 @@ const $=id=>document.getElementById(id);
 let cat=null, who=null, keepers=[], clipsList=[];
 let st={src:'keeper', keeper:null, outfit:'', hair:'', setting:'', framing:'waist',
         motion:'', seconds:5, quality:'medium', takes:1, name:''};
+/* Jeremy, 2026-10-14: "more of like a click here to select a picture that then
+   shows small tiles which can be made medium or large" - the picker is folded
+   behind the chosen still, and its tiles come in three sizes */
+let pickOpen=false, tileSize='s';
+try{ tileSize=localStorage.getItem('videoTile')||'s'; }catch(e){}
 
 async function load(){
   try{ cat=await SM.getJSON('/video/catalog'); }
@@ -111,7 +127,7 @@ async function refreshClips(){
 }
 
 const seg=(k,opts)=>'<div class=seg>'+opts.map(o=>'<button data-seg="'+k+'" data-v="'+SM.esc(o.v)+'"'
-  +' class="'+(String(st[k])===String(o.v)?'on':'')+'">'+SM.esc(o.l)
+  +' class="'+(String(k==='tile'?tileSize:st[k])===String(o.v)?'on':'')+'">'+SM.esc(o.l)
   +(o.sub?'<span class=sub>'+SM.esc(o.sub)+'</span>':'')+'</button>').join('')+'</div>';
 
 function legs(){ const cap=cat.leg_cap_s; const n=Math.max(1,Math.ceil(st.seconds/cap)); return n; }
@@ -131,14 +147,23 @@ function draw(){
     +seg('src',[{v:'keeper',l:'One of her keepers',sub:keepers.length+' judged keeps'},
                 {v:'still',l:'Render a new one',sub:'through her LoRA, about a minute'}]);
   if(st.src==='keeper'){
-    h+=keepers.length
-      ? '<div class=grid>'+keepers.map(k=>'<button data-keeper="'+SM.esc(k.path)+'" class="'
-          +(k.path===st.keeper?'on':'')+'"><img loading=lazy src="/video/thumb?w=300&path='
-          +encodeURIComponent(k.path)+'" alt=""><span class=tag>'+SM.esc(k.title.replace(/^[^-]*- /,''))
-          +'</span></button>').join('')+'</div>'
-        +'<div class=basis>Newest first, from every set you judged for her. Identity lives in'
-        +' this image - Wan takes no character LoRA.</div>'
-      : '<div class=empty><b>No keepers yet</b>Judge a shoot of hers, or render a new still.</div>';
+    if(!keepers.length){
+      h+='<div class=empty><b>No keepers yet</b>Judge a shoot of hers, or render a new still.</div>';
+    } else {
+      const k=keepers.find(x=>x.path===st.keeper);
+      h+='<div class=chosen>'+(k?'<img src="/video/thumb?w=300&path='+encodeURIComponent(k.path)+'" alt="">':'')
+        +'<div class=t>'+(k?'<b>'+SM.esc(k.title.replace(/^[^-]*- /,''))+'</b><span>'+SM.esc(k.path.split(/[\\/]/).pop())+'</span>':'<b>No still chosen</b>')
+        +'<button class="btn btn-sm'+(k?'':' btn-primary')+'" data-act=pickopen>'+(pickOpen?'Close':(k?'Change the still':'Choose a still'))+'</button></div></div>';
+      if(pickOpen){
+        h+='<div class=row><span class=lab>'+keepers.length+' keepers, newest first</span>'
+          +seg('tile',[{v:'s',l:'Small'},{v:'m',l:'Medium'},{v:'l',l:'Large'}])+'</div>'
+          +'<div class="grid '+tileSize+'">'+keepers.map(x=>'<button data-keeper="'+SM.esc(x.path)+'" class="'
+            +(x.path===st.keeper?'on':'')+'"><img loading=lazy src="/video/thumb?w='+(tileSize==='l'?600:300)+'&path='
+            +encodeURIComponent(x.path)+'" alt=""><span class=tag>'+SM.esc(x.title.replace(/^[^-]*- /,''))
+            +'</span></button>').join('')+'</div>'
+          +'<div class=basis>Identity lives in this image - Wan takes no character LoRA.</div>';
+      }
+    }
   } else {
     const hair=(c.hair||[]);
     h+='<label class=field><span>What she wears, and where</span>'
@@ -211,12 +236,16 @@ document.addEventListener('change',e=>{
 });
 document.addEventListener('click',async e=>{
   const w=e.target.closest('[data-who]'); if(w){ pick(w.dataset.who); return; }
-  const k=e.target.closest('[data-keeper]'); if(k){ st.keeper=k.dataset.keeper; draw(); return; }
+  const k=e.target.closest('[data-keeper]'); if(k){ st.keeper=k.dataset.keeper; pickOpen=false; draw(); return; }
   const s=e.target.closest('[data-seg]');
-  if(s){ const v=s.dataset.v; st[s.dataset.seg]=isNaN(+v)?v:+v; draw(); return; }
+  if(s){
+    const v=s.dataset.v;
+    if(s.dataset.seg==='tile'){ tileSize=v; try{ localStorage.setItem('videoTile',v); }catch(e){} draw(); return; }
+    st[s.dataset.seg]=isNaN(+v)?v:+v; draw(); return; }
   const m=e.target.closest('[data-motion]');
   if(m){ st.motion=m.dataset.motion; draw(); return; }
   const b=e.target.closest('[data-act]'); if(!b) return;
+  if(b.dataset.act==='pickopen'){ pickOpen=!pickOpen; draw(); return; }
   if(b.dataset.act==='queue'){
     b.disabled=true;
     const c=cat.characters.find(x=>x.character===who);
