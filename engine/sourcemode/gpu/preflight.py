@@ -193,8 +193,34 @@ def _run_shoots(cmd: list[str], cwd: Path, outputs: Path, previews_root: Path | 
     return out
 
 
+def _run_video(cmd: list[str], cwd: Path, outputs: Path, previews_root: Path | None) -> list[str]:
+    """Mirrors the guard at the top of run_video.py: the spec, its source and
+    ffmpeg for a chained clip."""
+    import json
+
+    from ..video import VideoSpec, ffmpeg_exe, legs_for, validate
+
+    pos = _positional(cmd)
+    spec_arg = next((a for a in pos if a.lower().endswith(".json")), None)
+    if not spec_arg:
+        return ["run_video.py needs a spec file"]
+    sp = Path(spec_arg) if Path(spec_arg).is_absolute() else cwd / spec_arg
+    if not sp.is_file():
+        return [f"spec {sp} does not exist"]
+    try:
+        spec = VideoSpec.from_dict(json.loads(sp.read_text(encoding="utf-8")))
+    except (ValueError, TypeError) as ex:
+        return [f"spec {sp.name} is not a video spec: {ex}"]
+    cap = 6.0
+    problems = validate(spec, leg_cap_s=cap)
+    if len(legs_for(spec.seconds, cap)) > 1 and not ffmpeg_exe():
+        problems.append("a chained clip needs ffmpeg and there is none on this machine")
+    return problems
+
+
 GUARDS = {
     "train_character.ps1": _train_character,
+    "run_video.py": _run_video,
     "dense_epoch_eval.py": _dense_epoch_eval,
     "prompt_ab.py": _prompt_ab,
     "run_shoots.py": _run_shoots,

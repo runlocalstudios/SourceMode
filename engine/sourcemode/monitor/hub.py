@@ -93,6 +93,8 @@ BODY = """
     Shoots<span class=n id=n_shoots></span></button>
   <button id=t_characters role=tab aria-selected=false data-tab=characters>
     Characters<span class=n id=n_characters></span></button>
+  <button id=t_video role=tab aria-selected=false data-tab=video>
+    Video<span class=n id=n_video></span></button>
 </div>
 
 <iframe id=p_gpu class="pane on" src="/queue" title="GPU"></iframe>
@@ -100,6 +102,7 @@ BODY = """
 <iframe id=p_dataset class=pane title="Training sets"></iframe>
 <iframe id=p_shoots class=pane title="Shoots"></iframe>
 <iframe id=p_characters class=pane title="Characters"></iframe>
+<iframe id=p_video class=pane title="Video"></iframe>
 
 <div id=nowwrap>
   <button id=nowbar aria-label="what the card is doing">
@@ -113,7 +116,7 @@ BODY = """
 
 OWN_JS = r"""
 const $=id=>document.getElementById(id);
-const SRC={gpu:'/queue',judge:'/judge',dataset:'/dataset',shoots:'/shoots',characters:'/characters'};
+const SRC={gpu:'/queue',judge:'/judge',dataset:'/dataset',shoots:'/shoots',characters:'/characters',video:'/video'};
 /* The phone's browser chrome carries the worst state in the house. The colours
    come from the stylesheet, so the hub holds no hex literal of its own. */
 const TINT={stop:'stop-bg',you:'you-bg',live:'live-bg',unknown:'unk-bg',idle:'g0'};
