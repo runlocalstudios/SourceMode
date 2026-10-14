@@ -329,7 +329,7 @@ def test_the_runner_log_survives_an_emoji_shortcode_and_a_dumb_console(tmp_path,
     seen = []
 
     class FakeRunner:
-        def __init__(self, out, log, poll):
+        def __init__(self, out, log, poll, **kw):
             self.log = log
 
         def serve(self, once, dry_run):

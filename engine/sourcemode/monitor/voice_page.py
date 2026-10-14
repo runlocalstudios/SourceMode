@@ -113,8 +113,8 @@ def voice_router(cfg: dict):
         dup = q.duplicate_of(doc, "voice", label)
         if dup:
             raise HTTPException(409, f"that voice is already {dup['status']} in the queue")
-        job = q.add(doc, kind="voice", label=label, cmd=cmd, cwd=str(ENGINE_ROOT),
-                    note=f"{takes} Parler take(s) + Chatterbox reads, CPU, from the Characters tab")
+        job = q.add(doc, kind="voice", label=label, cmd=cmd, cwd=str(ENGINE_ROOT), lane="cpu",
+                    note=f"{takes} Parler take(s) + Chatterbox reads, CPU lane, from the Characters tab")
         q.save(q.queue_path(out), doc)
         return {"queued": job["id"], "set": str(d)}
 

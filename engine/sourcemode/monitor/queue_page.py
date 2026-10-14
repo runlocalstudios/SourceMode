@@ -1357,7 +1357,8 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
 
     out = outputs_dir(cfg)
     doc = q.load(q.queue_path(out))
-    head = q.head(doc)
+    # one "next" per lane: the card's and the CPU lane's each have a head
+    heads = {h["id"] for h in (q.head(doc, "gpu"), q.head(doc, "cpu")) if h}
 
     jobs, removed, by_id = [], [], {j["id"]: j for j in doc["jobs"]}
     for j in doc["jobs"]:
@@ -1378,7 +1379,8 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
         row["what"] = KIND_LABEL.get(j["kind"], j["kind"])
         if j["kind"] == "train":
             row["what"] = "LoRA training, then the epoch sweep"
-        row["is_next"] = bool(head and j["id"] == head["id"])
+        row["is_next"] = j["id"] in heads
+        row["lane"] = q.lane_of(j)
         # Every kind, not just training: an eval or an asset pack is hours of the
         # card and used to be reported as nothing at all.
         row["estimate"] = job_estimate(cfg, j)

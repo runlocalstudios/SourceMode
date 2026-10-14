@@ -78,9 +78,18 @@ def replace_retrying(tmp: Path, path: Path, tries: int = 100) -> None:
             time.sleep(0.1)
 
 
+LANES = ("gpu", "cpu")
+
+
+def lane_of(job: dict) -> str:
+    """Which lane a job runs in. Jobs queued before lanes existed say nothing
+    and are the card's."""
+    return job.get("lane") or "gpu"
+
+
 def add(doc: dict, *, kind: str, label: str, cmd: list[str], cwd: str,
         requires_approval: str | None = None, note: str = "",
-        expect: dict | None = None) -> dict:
+        expect: dict | None = None, lane: str = "gpu") -> dict:
     """Append a job at the END of the queue. Appending is the only way work is
     requested: a session adds a job, it does not write its own launcher.
 
@@ -89,7 +98,15 @@ def add(doc: dict, *, kind: str, label: str, cmd: list[str], cwd: str,
     them. The page used to re-parse every job's command line on every poll to
     work that out, and every new job shape produced a wrong card ("28 looks"
     for a two-look re-roll; a tagged sweep counted in the untagged folder).
+
+    `lane` is "gpu" (the card, one at a time, the default) or "cpu": a job that
+    never touches the card - a voice, a cutout - and may run beside the card's
+    job, capped and at low priority. Jeremy, 2026-10-14: "it would be great to
+    be able to work on things concurrently". A job declares its lane; nothing
+    is inferred from the command.
     """
+    if lane not in LANES:
+        raise ValueError(f"lane must be one of {LANES}, not {lane!r}")
     job = {
         "id": f"j{doc['next_id']:03d}",
         "kind": kind,
@@ -99,6 +116,7 @@ def add(doc: dict, *, kind: str, label: str, cmd: list[str], cwd: str,
         "requires_approval": requires_approval,
         "note": note,
         "expect": dict(expect) if expect else None,
+        "lane": lane,
         "status": "queued",
         "hold": False,
         "added_at": now(),
@@ -211,17 +229,19 @@ def purge(doc: dict, job_id: str) -> dict:
     return job
 
 
-def head(doc: dict) -> dict | None:
-    """The first job that is queued and not held - the next one to run, and the
-    one the runner WAITS on. It never looks past it: order is the order Jeremy set."""
+def head(doc: dict, lane: str = "gpu") -> dict | None:
+    """The first job of the lane that is queued and not held - the next one to
+    run, and the one the lane's runner WAITS on. It never looks past it: order
+    is the order Jeremy set. Each lane keeps its own order; the card lane never
+    waits on a CPU job and the CPU lane never waits on the card."""
     for j in doc["jobs"]:
-        if j["status"] == "queued" and not j["hold"]:
+        if j["status"] == "queued" and not j["hold"] and lane_of(j) == lane:
             return j
     return None
 
 
-def running(doc: dict) -> list[dict]:
-    return [j for j in doc["jobs"] if j["status"] == "running"]
+def running(doc: dict, lane: str | None = None) -> list[dict]:
+    return [j for j in doc["jobs"] if j["status"] == "running" and (lane is None or lane_of(j) == lane)]
 
 
 def mark_running(doc: dict, job_id: str, pid: int, log: str) -> dict:

@@ -713,6 +713,9 @@ def gpu_add(
     no_check: bool = typer.Option(False, "--no-check",
                                   help="Skip the preflight (script exists and compiles, checkpoints and "
                                        "approval present, disk space) and queue it anyway."),
+    cpu: bool = typer.Option(False, "--cpu",
+                             help="The CPU lane: never touches the card, runs beside the card's job, "
+                                  "capped threads, low priority. Only for work that truly needs no GPU."),
 ):
     """Append a job to the END of the queue. Appending is how work is requested."""
     from .config import ENGINE_ROOT  # noqa: PLC0415
@@ -748,9 +751,11 @@ def gpu_add(
 
     expect = expect_for(load_config(), list(cmd))
     job = q.add(doc, kind=kind, label=label, cmd=list(cmd), cwd=cwd or str(ENGINE_ROOT),
-                requires_approval=requires_approval, note=note, expect=expect)
+                requires_approval=requires_approval, note=note, expect=expect,
+                lane="cpu" if cpu else "gpu")
     q.save(path, doc)
-    rprint(f"[green]queued[/green] {job['id']} {kind}:{label} at position {len(doc['jobs'])}")
+    rprint(f"[green]queued[/green] {job['id']} {kind}:{label}{' (cpu lane)' if cpu else ''} "
+           f"at position {len(doc['jobs'])}")
     if expect:
         rprint(f"  will produce {expect['total']} images ({expect['what']})"
                + (f" in {expect['dir']}" if expect.get("dir") else ""))
@@ -777,6 +782,8 @@ def gpu_list(all_jobs: bool = typer.Option(False, "--all", help="Include finishe
         if not all_jobs and j["status"] in ("done", "cancelled"):
             continue
         marks = []
+        if q.lane_of(j) == "cpu":
+            marks.append("cpu lane")
         if j["hold"]:
             marks.append("HELD")
         if nxt and j["id"] == nxt["id"]:
@@ -829,6 +836,21 @@ def gpu_cancel(job_id: str):
     rprint(f"cancelled {job['id']} {job['label']}")
 
 
+@gpu_app.command("restart")
+def gpu_restart():
+    """Ask the runner to exit once BOTH lanes are idle, so a new runner with new
+    code takes over between jobs and never under one. The logon task is started
+    again by whoever asked; nothing running is touched."""
+    from .gpu.runner import RESTART_FLAG  # noqa: PLC0415
+
+    out, _ = _gpu_paths()
+    flag = out / "gpu-queue" / RESTART_FLAG
+    flag.parent.mkdir(parents=True, exist_ok=True)
+    flag.write_text("restart requested\n", encoding="utf-8")
+    rprint(f"restart requested: {flag} - the runner exits when both lanes are idle; "
+           f"start the 'SourceMode GPU Runner' task again after it does")
+
+
 @gpu_app.command("resume")
 def gpu_resume():
     """Clear a pause (a fast failure pauses the queue so it is not burned through)."""
@@ -847,6 +869,8 @@ def gpu_run(
     once: bool = typer.Option(False, "--once", help="Take at most one job, then exit."),
     dry_run: bool = typer.Option(False, "--dry-run", help="Report what it would start; never exec."),
     poll: float = typer.Option(60.0, "--poll", help="Seconds between checks while waiting."),
+    cpu_threads: int = typer.Option(8, "--cpu-threads",
+                                    help="Cores the CPU lane may use; the card's job keeps the rest."),
 ):
     """The single runner. One logon task runs this; a second instance refuses to start."""
     from .gpu.runner import Runner  # noqa: PLC0415
@@ -873,7 +897,7 @@ def gpu_run(
                 pass
 
     try:
-        Runner(out, log=log, poll=poll).serve(once=once, dry_run=dry_run)
+        Runner(out, log=log, poll=poll, cpu_threads=cpu_threads).serve(once=once, dry_run=dry_run)
     except RuntimeError as exc:
         rprint(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc

@@ -25,8 +25,10 @@ Design rules, each of them a scar:
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -36,6 +38,11 @@ from .lease import acquire, lease_path, release
 
 FAST_FAIL_SECONDS = 60
 POLL_SECONDS = 60
+#: the CPU lane's share of the cores. 8 of 24: a TTS model gains little past
+#: eight threads, and the card's job keeps the rest for decoding, uploads and
+#: the InsightFace passes that saturate every core they are given.
+CPU_LANE_THREADS = 8
+RESTART_FLAG = "runner.restart"
 
 
 def log_name(job: dict) -> str:
@@ -91,7 +98,7 @@ def approval_ok(ds_id: str) -> tuple[bool, str]:
 class Runner:
     def __init__(self, outputs_root: Path, *, log=print, poll: float = POLL_SECONDS,
                  sleeper=time.sleep, approval=approval_ok, busy=gpu_busy,
-                 procs=process_list, produced=produced):
+                 procs=process_list, produced=produced, cpu_threads: int = CPU_LANE_THREADS):
         self.outputs = outputs_root
         self.qpath = q.queue_path(outputs_root)
         self.logs = outputs_root / "logs"
@@ -102,7 +109,13 @@ class Runner:
         self.busy = busy
         self.procs = procs
         self.produced = produced
+        self.cpu_threads = int(cpu_threads)
         self._said: str | None = None
+        self._said_cpu: str | None = None
+        # one file, two lanes in one process: every load-modify-save holds this
+        self._lock = threading.RLock()
+        self._cpu_busy = False
+        self._gpu_busy = False
 
     def _say_once(self, msg: str) -> None:
         """Waiting is normal; saying so once per change keeps the log readable."""
@@ -110,29 +123,115 @@ class Runner:
             self.log(msg)
             self._said = msg
 
+    def cpu_env(self) -> dict:
+        """The CPU lane's environment: every threading library capped to the
+        lane's share, so a TTS run cannot take all 24 cores from the card's job."""
+        n = str(self.cpu_threads)
+        env = dict(os.environ)
+        env.update({"OMP_NUM_THREADS": n, "MKL_NUM_THREADS": n, "OPENBLAS_NUM_THREADS": n,
+                    "NUMEXPR_NUM_THREADS": n, "TORCH_NUM_THREADS": n, "SOURCEMODE_LANE": "cpu"})
+        return env
+
     def _start(self, job: dict) -> subprocess.Popen:
         self.logs.mkdir(parents=True, exist_ok=True)
         log_path = self.logs / log_name(job)
         handle = log_path.open("ab")
+        cpu = q.lane_of(job) == "cpu"
+        extra: dict = {}
+        if cpu:
+            extra["env"] = self.cpu_env()
+            # below normal: when both lanes want a core, the card's job wins
+            flag = getattr(subprocess, "BELOW_NORMAL_PRIORITY_CLASS", 0)
+            if flag:
+                extra["creationflags"] = flag
         proc = subprocess.Popen(job["cmd"], cwd=job["cwd"], stdout=handle,
-                                stderr=subprocess.STDOUT, close_fds=True)
-        doc = q.load(self.qpath)
-        q.mark_running(doc, job["id"], proc.pid, str(log_path))
-        q.save(self.qpath, doc)
-        self.log(f"START {job['id']} {job['kind']}:{job['label']} pid={proc.pid} -> {log_path}")
+                                stderr=subprocess.STDOUT, close_fds=True, **extra)
+        with self._lock:
+            doc = q.load(self.qpath)
+            q.mark_running(doc, job["id"], proc.pid, str(log_path))
+            q.save(self.qpath, doc)
+        self.log(f"START {job['id']} {job['kind']}:{job['label']}{' [cpu lane]' if cpu else ''} "
+                 f"pid={proc.pid} -> {log_path}")
         return proc
 
     def _finish(self, job: dict, exit_code: int, seconds: float) -> None:
-        doc = q.load(self.qpath)
-        q.mark_finished(doc, job["id"], exit_code)
-        verdict = "done" if exit_code == 0 else "FAILED"
-        if exit_code != 0 and seconds < FAST_FAIL_SECONDS:
-            reason = (f"{job['id']} {job['label']} exited {exit_code} after {seconds:.0f}s - "
-                      f"too fast to be a result, so the queue is paused rather than fed to it")
-            q.pause(doc, reason)
-            self.log("PAUSED: " + reason)
-        q.save(self.qpath, doc)
+        with self._lock:
+            doc = q.load(self.qpath)
+            q.mark_finished(doc, job["id"], exit_code)
+            verdict = "done" if exit_code == 0 else "FAILED"
+            if exit_code != 0 and seconds < FAST_FAIL_SECONDS:
+                reason = (f"{job['id']} {job['label']} exited {exit_code} after {seconds:.0f}s - "
+                          f"too fast to be a result, so the queue is paused rather than fed to it")
+                q.pause(doc, reason)
+                self.log("PAUSED: " + reason)
+            q.save(self.qpath, doc)
         self.log(f"END {job['id']} {job['kind']}:{job['label']} {verdict} exit={exit_code} in {seconds:.0f}s")
+
+    # --- the CPU lane ----------------------------------------------------------
+    def _say_once_cpu(self, msg: str) -> None:
+        if msg != self._said_cpu:
+            self.log(msg)
+            self._said_cpu = msg
+
+    def cpu_step(self, *, dry_run: bool = False) -> str:
+        """One decision for the CPU lane. Same rules as the card's: it waits, it
+        never looks past a blocked head, it honours the pause - but it never
+        waits on the card, and the card never waits on it."""
+        with self._lock:
+            doc = q.load(self.qpath)
+        if doc["paused"]:
+            self._say_once_cpu(f"cpu lane: wait - queue PAUSED - {doc['pause_reason']}")
+            return "paused"
+        left = q.running(doc, "cpu")
+        if left:
+            # an orphan on this lane is waited on exactly as the card's are; the
+            # main loop closes it once it is gone
+            procs = self.procs()
+            if not procs or any(still_running(j, procs) for j in left):
+                self._say_once_cpu("cpu lane: wait - " + ", ".join(j["id"] for j in left)
+                                   + " still running from an earlier runner")
+                return "busy"
+            return "busy"
+        job = q.head(doc, "cpu")
+        if job is None:
+            self._say_once_cpu("cpu lane: nothing queued")
+            return "empty"
+        if job["requires_approval"]:
+            ok, why = self.approval(job["requires_approval"])
+            if not ok:
+                self._say_once_cpu(f"cpu lane: wait - {job['id']} {job['label']} blocked - {why}")
+                return "blocked"
+        if dry_run:
+            self.log(f"DRY RUN cpu lane would start {job['id']} {job['kind']}:{job['label']}: {' '.join(job['cmd'])}")
+            return "dry-run"
+        self._said_cpu = None
+        self._cpu_busy = True
+        try:
+            proc = self._start(job)
+            started = time.monotonic()
+            code = proc.wait()
+            self._finish(job, code, time.monotonic() - started)
+        finally:
+            self._cpu_busy = False
+        return "ran"
+
+    def _cpu_loop(self, stop: threading.Event) -> None:
+        while not stop.is_set():
+            if self.restart_requested():          # start nothing new; let both lanes drain
+                stop.wait(self.poll)
+                continue
+            try:
+                what = self.cpu_step()
+            except Exception as ex:  # noqa: BLE001 - the lane logs and keeps serving
+                self.log(f"cpu lane: ERROR {ex!r}")
+                what = "error"
+            if what != "ran":
+                stop.wait(self.poll)
+
+    def restart_requested(self) -> bool:
+        """`sourcemode gpu restart` drops a flag; the runner exits when BOTH
+        lanes are idle, so new code takes over between jobs and never under one."""
+        return (self.outputs / "gpu-queue" / RESTART_FLAG).is_file()
 
     def step(self, *, dry_run: bool = False) -> str:
         """One decision. Returns what it did, which is usually 'wait: <why>'."""
@@ -170,9 +269,10 @@ class Runner:
                 self.log(f"LOST {j['id']} {j['kind']}:{j['label']} - its runner died while it ran;"
                          f" the process has ended, exit code unknown"
                          + (f", {got[0]} of {got[1]} images written" if got else ""))
-            q.save(self.qpath, doc)
+            with self._lock:
+                q.save(self.qpath, doc)
 
-        job = q.head(doc)
+        job = q.head(doc, "gpu")
         if job is None:
             self._say_once("wait: nothing queued")
             return "empty"
@@ -195,23 +295,44 @@ class Runner:
             return "dry-run"
 
         self._said = None
-        proc = self._start(job)
-        started = time.monotonic()
-        code = proc.wait()
-        self._finish(job, code, time.monotonic() - started)
+        self._gpu_busy = True
+        try:
+            proc = self._start(job)
+            started = time.monotonic()
+            code = proc.wait()
+            self._finish(job, code, time.monotonic() - started)
+        finally:
+            self._gpu_busy = False
         return "ran"
 
     def serve(self, *, once: bool = False, dry_run: bool = False) -> None:
         lp = lease_path(self.outputs)
         rec = acquire(lp)
         self.log(f"gpu runner up, lease PID {rec['pid']}; queue {self.qpath}")
+        stop = threading.Event()
+        cpu_thread = None
+        if not once and not dry_run:
+            cpu_thread = threading.Thread(target=self._cpu_loop, args=(stop,), name="cpu-lane", daemon=True)
+            cpu_thread.start()
+            self.log(f"cpu lane up: {self.cpu_threads} threads, below-normal priority")
         try:
             while True:
+                # a restart is honoured BETWEEN jobs: nothing new starts on either
+                # lane, and the runner leaves once what is running has ended
+                if self.restart_requested() and not once:
+                    if not self._cpu_busy and not self._gpu_busy:
+                        (self.outputs / "gpu-queue" / RESTART_FLAG).unlink(missing_ok=True)
+                        self.log("restart requested and both lanes idle - exiting for the new runner")
+                        return
+                    self._say_once("wait: restart requested - finishing what is running, starting nothing new")
+                    self.sleep(self.poll)
+                    continue
                 what = self.step(dry_run=dry_run)
                 if once and what in ("ran", "dry-run", "empty"):
                     return
                 if what != "ran":
                     self.sleep(self.poll)
         finally:
+            stop.set()
             release(lp)
             self.log("gpu runner down, lease released")
