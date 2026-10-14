@@ -78,6 +78,28 @@ def test_the_cpu_lane_runs_while_the_card_is_busy_capped_and_the_card_lane_ignor
     assert r2.step(dry_run=True) == "dry-run"                   # the card lane still sees its own head
 
 
+def test_the_cpu_lane_waits_while_memory_is_short_and_never_proceeds(tmp_path):
+    # Jeremy, 2026-10-14, after the box ran critically low: "do not start a CPU
+    # job while free RAM is under, say, 12 GB"
+    path = q.queue_path(tmp_path)
+    doc = q.empty()
+    q.add(doc, kind="voice", label="v", cmd=_py("print(1)"), cwd=str(tmp_path), lane="cpu")
+    q.save(path, doc)
+    free = {"gb": 4.0}
+    r = _runner(tmp_path, free_ram=lambda: free["gb"], cpu_min_free_gb=12.0)
+    for _ in range(30):
+        assert r.cpu_step() == "memory"
+    assert q.load(path)["jobs"][0]["status"] == "queued"
+    free["gb"] = 20.0
+    assert r.cpu_step() == "ran"
+    # an unreadable figure is not a reason to block: None means "not told"
+    q.add(doc, kind="voice", label="w", cmd=_py("print(1)"), cwd=str(tmp_path), lane="cpu"); q.save(path, doc)
+    assert _runner(tmp_path, free_ram=lambda: None).cpu_step() == "ran"
+    from sourcemode.gpu.runner import free_ram_gb
+    got = free_ram_gb()
+    assert got is None or got > 0
+
+
 def test_a_paused_queue_stops_the_cpu_lane_too(tmp_path):
     path = q.queue_path(tmp_path)
     doc = q.empty()

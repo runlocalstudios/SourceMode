@@ -42,7 +42,30 @@ POLL_SECONDS = 60
 #: eight threads, and the card's job keeps the rest for decoding, uploads and
 #: the InsightFace passes that saturate every core they are given.
 CPU_LANE_THREADS = 8
+#: the CPU lane starts nothing while free RAM is under this. The card's job is
+#: what needs the memory - Wan loads two 14B models - and a TTS job starting
+#: into that squeeze is how the box ran critically low on 2026-10-14.
+CPU_LANE_MIN_FREE_GB = 12.0
 RESTART_FLAG = "runner.restart"
+
+
+def free_ram_gb() -> float | None:
+    """Free physical memory in GB, from the OS; None when it cannot be read."""
+    try:
+        import ctypes  # noqa: PLC0415
+
+        class _Stat(ctypes.Structure):
+            _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                        ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                        ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                        ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                        ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+        st = _Stat(); st.dwLength = ctypes.sizeof(_Stat)
+        if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(st)):
+            return None
+        return st.ullAvailPhys / 1024 ** 3
+    except Exception:  # noqa: BLE001 - not Windows, or no kernel32
+        return None
 
 
 def log_name(job: dict) -> str:
@@ -98,7 +121,8 @@ def approval_ok(ds_id: str) -> tuple[bool, str]:
 class Runner:
     def __init__(self, outputs_root: Path, *, log=print, poll: float = POLL_SECONDS,
                  sleeper=time.sleep, approval=approval_ok, busy=gpu_busy,
-                 procs=process_list, produced=produced, cpu_threads: int = CPU_LANE_THREADS):
+                 procs=process_list, produced=produced, cpu_threads: int = CPU_LANE_THREADS,
+                 free_ram=free_ram_gb, cpu_min_free_gb: float = CPU_LANE_MIN_FREE_GB):
         self.outputs = outputs_root
         self.qpath = q.queue_path(outputs_root)
         self.logs = outputs_root / "logs"
@@ -110,6 +134,8 @@ class Runner:
         self.procs = procs
         self.produced = produced
         self.cpu_threads = int(cpu_threads)
+        self.free_ram = free_ram
+        self.cpu_min_free_gb = float(cpu_min_free_gb)
         self._said: str | None = None
         self._said_cpu: str | None = None
         # one file, two lanes in one process: every load-modify-save holds this
@@ -201,6 +227,14 @@ class Runner:
             if not ok:
                 self._say_once_cpu(f"cpu lane: wait - {job['id']} {job['label']} blocked - {why}")
                 return "blocked"
+        # the memory guard: the card's job is what needs the RAM, and a CPU job
+        # starting into the squeeze is what ran the box critically low. It waits,
+        # like the card lane waits on the card; nothing times out and proceeds.
+        free = self.free_ram()
+        if free is not None and free < self.cpu_min_free_gb:
+            self._say_once_cpu(f"cpu lane: wait - {free:.1f} GB free, needs {self.cpu_min_free_gb:g} GB "
+                               f"before {job['id']} {job['label']} starts")
+            return "memory"
         if dry_run:
             self.log(f"DRY RUN cpu lane would start {job['id']} {job['kind']}:{job['label']}: {' '.join(job['cmd'])}")
             return "dry-run"

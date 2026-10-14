@@ -871,6 +871,8 @@ def gpu_run(
     poll: float = typer.Option(60.0, "--poll", help="Seconds between checks while waiting."),
     cpu_threads: int = typer.Option(8, "--cpu-threads",
                                     help="Cores the CPU lane may use; the card's job keeps the rest."),
+    cpu_min_free_gb: float = typer.Option(12.0, "--cpu-min-free-gb",
+                                          help="The CPU lane starts nothing while free RAM is under this."),
 ):
     """The single runner. One logon task runs this; a second instance refuses to start."""
     from .gpu.runner import Runner  # noqa: PLC0415
@@ -897,7 +899,8 @@ def gpu_run(
                 pass
 
     try:
-        Runner(out, log=log, poll=poll, cpu_threads=cpu_threads).serve(once=once, dry_run=dry_run)
+        Runner(out, log=log, poll=poll, cpu_threads=cpu_threads,
+               cpu_min_free_gb=cpu_min_free_gb).serve(once=once, dry_run=dry_run)
     except RuntimeError as exc:
         rprint(f"[red]{exc}[/red]")
         raise typer.Exit(1) from exc
