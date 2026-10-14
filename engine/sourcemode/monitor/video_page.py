@@ -28,10 +28,11 @@ from pathlib import Path
 from .ui import page
 
 OWN_CSS = r"""
-.who{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s4)}
-.who button{min-height:var(--tap);padding:0 var(--s4);border-radius:var(--rp);
+/* Jeremy, 2026-10-14: 36 names filled his whole phone screen - 10px chips, tight. */
+.who{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:var(--s3)}
+.who button{min-height:26px;padding:0 8px;border-radius:var(--rp);
   background:var(--g2);border:1px solid var(--g4);color:var(--g8);
-  font:var(--t-body);font-weight:600;cursor:pointer}
+  font:600 10px/1.2 var(--font);cursor:pointer}
 .who button.on{background:var(--act);border-color:var(--act-hi);color:var(--act-ink)}
 .seg{display:flex;gap:var(--s2);flex-wrap:wrap;margin:var(--s2) 0}
 .seg button{min-height:38px;padding:0 var(--s3);border-radius:var(--rp);background:var(--g1);

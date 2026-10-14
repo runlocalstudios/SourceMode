@@ -24,13 +24,14 @@ from __future__ import annotations
 from .ui import page
 
 OWN_CSS = r"""
-.who{display:flex;flex-wrap:wrap;gap:var(--s2);margin-bottom:var(--s4)}
-.who button{min-height:var(--tap);padding:0 var(--s4);border-radius:var(--rp);
+/* Jeremy, 2026-10-14: 36 names filled his whole phone screen - 10px chips, tight. */
+.who{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:var(--s3)}
+.who button{min-height:26px;padding:0 8px;border-radius:var(--rp);
   background:var(--g2);border:1px solid var(--g4);color:var(--g8);
-  font:var(--t-body);font-weight:600;cursor:pointer}
+  font:600 10px/1.2 var(--font);cursor:pointer}
 .who button.on{background:var(--act);border-color:var(--act-hi);color:var(--act-ink)}
 .who button[disabled]{opacity:.4;cursor:default}
-.who .sub{display:block;font:var(--t-small);font-weight:400;opacity:.8}
+.who .sub{display:block;font:400 9px/1.2 var(--font);opacity:.8}
 .sh{display:flex;align-items:flex-start;gap:var(--s3);width:100%;
   padding:var(--s3);margin-bottom:var(--s2);background:var(--g1);
   border:1px solid var(--g3);border-left:3px solid var(--g3);
