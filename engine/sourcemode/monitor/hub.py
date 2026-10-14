@@ -47,13 +47,16 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden}
 body{display:flex;flex-direction:column;background:var(--g0)}
 #tabs{display:flex;flex:none;background:var(--g1);border-bottom:1px solid var(--g3);
   padding-top:var(--safe-t);transition:transform var(--m-base) var(--ease)}
-#tabs button{flex:1;min-height:var(--tap);padding:var(--s2) var(--s1);background:none;
+/* Six tabs on a phone, no scrolling. Jeremy, 2026-10-14: "The nav bar buttons
+   need to be smaller to fit on a cell phone screen without scrolling." */
+#tabs button{flex:1;min-width:0;min-height:44px;padding:var(--s1) 2px;background:none;
   border:0;border-bottom:2px solid transparent;color:var(--g7);
-  font:var(--t-body);font-weight:600;cursor:pointer;display:flex;
-  align-items:center;justify-content:center;gap:var(--s2);
+  font:600 13px/1.2 var(--font);cursor:pointer;display:flex;
+  align-items:center;justify-content:center;gap:3px;white-space:nowrap;
   -webkit-tap-highlight-color:transparent}
+@media (max-width:420px){#tabs button{font-size:12px;letter-spacing:-.01em}}
 #tabs button.on{color:var(--g9);border-bottom-color:var(--act);background:var(--g2)}
-#tabs .n{min-width:22px;padding:1px 6px;border-radius:var(--rp);font:var(--t-small);
+#tabs .n{min-width:18px;padding:0 5px;border-radius:var(--rp);font:700 11px/1.5 var(--font);
   font-weight:700;background:var(--g4);color:var(--g8);visibility:hidden}
 #tabs .n.show{visibility:visible}
 #tabs .n.you{background:var(--you);color:var(--on-you)}
@@ -84,15 +87,15 @@ body[data-chrome=immersive] #tabs button.on{background:var(--g4)}
 BODY = """
 <div id=tabs role=tablist aria-label="sections">
   <button id=t_gpu class=on role=tab aria-selected=true data-tab=gpu>
-    GPU<span class=n id=n_gpu></span></button>
+    Queue<span class=n id=n_gpu></span></button>
   <button id=t_judge role=tab aria-selected=false data-tab=judge>
-    Judging<span class=n id=n_judge></span></button>
+    Judge<span class=n id=n_judge></span></button>
   <button id=t_dataset role=tab aria-selected=false data-tab=dataset>
-    Training sets<span class=n id=n_dataset></span></button>
-  <button id=t_shoots role=tab aria-selected=false data-tab=shoots>
-    Shoots<span class=n id=n_shoots></span></button>
+    Training<span class=n id=n_dataset></span></button>
   <button id=t_characters role=tab aria-selected=false data-tab=characters>
     Characters<span class=n id=n_characters></span></button>
+  <button id=t_shoots role=tab aria-selected=false data-tab=shoots>
+    Shoots<span class=n id=n_shoots></span></button>
   <button id=t_video role=tab aria-selected=false data-tab=video>
     Video<span class=n id=n_video></span></button>
 </div>
