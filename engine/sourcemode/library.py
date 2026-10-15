@@ -494,7 +494,7 @@ def _retire_sets(judge_root: Path, refs: list[str]) -> list[str]:
 def prune_apply(cfg: dict, rows: list[dict], judge_root: Path, *, dry_run: bool = False) -> list[str]:
     """Delete the rows. Refuses outright when any lock fails to verify - the losers
     are only redundant while the winner is safe."""
-    from .train.locked import locked_files, verify  # noqa: PLC0415
+    from .train.locked import comfy_loras_dir, locked_files, verify  # noqa: PLC0415
 
     bad = [r for r in verify(cfg) if not r["ok"]]
     if bad:
@@ -527,4 +527,19 @@ def prune_apply(cfg: dict, rows: list[dict], judge_root: Path, *, dry_run: bool 
         else:
             p.unlink()
         log.append(line)
+    if dry_run:
+        return log
+    # A sweep's staging folder in ComfyUI (sourcemode/<output name>/) is empty
+    # once its candidates are gone; the lock lives flat beside it, not in it.
+    # Forty-nine of these were left standing on 2026-10-15.
+    comfy = comfy_loras_dir(cfg) / "sourcemode"
+    for d in sorted(p for p in comfy.glob("*") if p.is_dir()) if comfy.is_dir() else []:
+        if not any(d.iterdir()):
+            d.rmdir()
+            log.append(f"removed empty {d}")
+    # And the locks must still verify when we are done - a prune that broke one
+    # has to say so here, not on the next render.
+    bad = [r for r in verify(cfg) if not r["ok"]]
+    log += [f"AFTER: {r['character']}: {'; '.join(r['problems'])}" for r in bad]
+    log.append("AFTER: every locked LoRA verifies" if not bad else f"AFTER: {len(bad)} lock(s) with a problem")
     return log

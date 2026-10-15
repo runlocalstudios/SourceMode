@@ -4,7 +4,7 @@
 [comfyui]
 host = "127.0.0.1"   # local install found at C:\ComfyUI (v0.25.1), default port
 port = 8188
-loras_dir = 'C:/ComfyUI/models/loras'   # locked LoRAs are staged under <loras_dir>/sourcemode/<output name>/
+loras_dir = 'C:/ComfyUI/models/loras'   # the lock is staged flat as <loras_dir>/sourcemode/<character>.safetensors; sweeps stage candidates under sourcemode/<output name>/
 
 [paths]
 models = 'C:\ComfyUI\models'
@@ -13,6 +13,10 @@ outputs = 'outputs'
 library = '../library'
 characters = '../characters'
 workflows = '../workflows'
+# A second copy of every locked LoRA, named <character>.safetensors, written as the
+# lock is made and checked by `sourcemode lora verify`. This is his Google Drive
+# folder (Drive for Desktop, G:), so the file leaves the machine. 2026-10-15.
+lora_backup = 'G:/My Drive/SourceMode/loras'
 
 [training]
 musubi_tuner_path = 'C:\dev\e2egen\vendor\musubi-tuner'   # read-only vendored install, v0.3.4

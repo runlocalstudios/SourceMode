@@ -47,10 +47,13 @@ def resolve_lora(cfg: dict, character: str) -> dict | None:
     # vault, so this answer survives a prune, a library move and a fresh
     # checkout - which is the point. A locked file that is not staged in
     # ComfyUI is still the answer; `sourcemode lora verify` is what says so.
+    # The lock has ONE name everywhere outside the training folder,
+    # `sourcemode/<character>.safetensors`; the registry row carries it. The
+    # trainer's file name stays in `file` as provenance.
     lk = locked(cfg, c)
     if lk:
-        return {"dataset": lk["dataset"], "name": lk["file"], "epoch": lk.get("epoch"),
-                "path": comfy_path(lk["file"]),
+        return {"dataset": lk["dataset"], "name": lk["name"], "file": lk["file"], "epoch": lk.get("epoch"),
+                "path": lk["comfy"],
                 "why": f"locked: {lk.get('basis') or 'epoch ' + str(lk.get('epoch'))}"}
 
     rec = load_choice(out, c)

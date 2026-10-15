@@ -59,7 +59,8 @@ def _lock(char: str, judge_root: Path | None) -> dict | None:
     # ("epoch-choices: dense_zara_v2_asset 9/10 at ep18")
     sweep = next((m for m in re.findall(r"((?:dense|shoot|ab)_[a-z0-9_]+)", row.get("basis") or "")
                   if judge_root and (judge_root / "sets" / f"{m}.json").is_file()), None)
-    return {"file": row.get("file"), "epoch": row.get("epoch"), "basis": row.get("basis", ""),
+    return {"name": row.get("name") or f"{char}.safetensors", "file": row.get("file"),
+            "epoch": row.get("epoch"), "basis": row.get("basis", ""),
             "at": row.get("locked_at"), "sweep": sweep}
 
 

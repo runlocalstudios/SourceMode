@@ -200,9 +200,52 @@ def lora_status():
         return
     for r in rows:
         mark = "[green]ok[/green]" if r["ok"] else "[red]" + "; ".join(r["problems"]) + "[/red]"
-        rprint(f"{r['character']:10s} {r['file']:36s} ep {str(r['epoch'] or '?'):>3s}  {mark}   {r['basis']}")
+        bk = "" if r["backup_ok"] is None else (" backup" if r["backup_ok"] else " [red]no backup[/red]")
+        rprint(f"{r['character']:10s} {r['name']:24s} <- {r['file']:34s} ep {str(r['epoch'] or '?'):>3s}  {mark}{bk}   {r['basis']}")
     bad = [r for r in rows if not r["ok"]]
     rprint(f"{len(rows)} locked, {len(bad)} with a problem")
+
+
+@lora_app.command("backup")
+def lora_backup():
+    """Mirror every locked LoRA into [paths] lora_backup (his Google Drive folder), hash-verified.
+    A lock mirrors itself as it is made; this is the catch-up for the ones made before, or while the drive was away."""
+    from .train.locked import LockError, backup_all  # noqa: PLC0415
+
+    try:
+        rows = backup_all(load_config(), log=rprint)
+    except LockError as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    bad = [r for r in rows if not r["ok"]]
+    for r in bad:
+        rprint(f"[red]{r['character']}: {r['problem']}[/red]")
+    rprint(f"{len(rows) - len(bad)} of {len(rows)} backed up")
+    if bad:
+        raise typer.Exit(1)
+
+
+@lora_app.command("rename")
+def lora_rename(apply: bool = typer.Option(False, "--apply", help="Do it. Without this, print the plan.")):
+    """One name per character: every copy outside the training folder becomes <character>.safetensors.
+    Jeremy, 2026-10-15. Copies verify by hash before any old-named copy is removed; strays are set aside in _previous/."""
+    from .train.locked import rename_apply, rename_plan  # noqa: PLC0415
+
+    cfg = load_config()
+    if not apply:
+        n = 0
+        for r in rename_plan(cfg):
+            if r["problem"]:
+                rprint(f"[red]{r['character']}: {r['problem']}[/red]")
+                continue
+            for what, src, dst in r["moves"]:
+                rprint(f"{r['character']:10s} {what:8s} {src} -> {dst}"); n += 1
+            for p in r["deletes"]:
+                rprint(f"{r['character']:10s} remove   {p}"); n += 1
+        rprint(f"{n} steps; run with --apply" if n else "nothing to rename")
+        return
+    for line in rename_apply(cfg, log=rprint):
+        rprint(line)
 
 
 @lora_app.command("verify")
@@ -210,7 +253,7 @@ def lora_verify():
     """Exit 1 if any locked LoRA is missing from the vault or ComfyUI, or differs from its hash."""
     from .train.locked import verify  # noqa: PLC0415
 
-    bad = [r for r in verify(load_config()) if not r["ok"]]
+    bad = [r for r in verify(load_config()) if r["problems"]]
     for r in bad:
         rprint(f"[red]{r['character']}: {'; '.join(r['problems'])}[/red]")
     if bad:

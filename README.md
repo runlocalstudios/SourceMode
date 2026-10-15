@@ -26,7 +26,11 @@ and **SourceMode GPU Runner** (`engine/scripts/register-autostart.ps1`).
    and sweeps the late epochs when it finishes.
 4. **Judge the sweep**, and run the tiebreaker set (`--scenes tiebreaker`) if it is close.
 5. **Lock the winner** - `sourcemode lora lock <char> --file ... --epoch N`. The lock
-   goes into `characters/loras.json` and the file is vaulted in `library/loras/`.
+   goes into `characters/loras.json` and the file is vaulted as
+   `library/loras/<char>/<char>.safetensors`, staged flat in ComfyUI as
+   `sourcemode/<char>.safetensors`, and mirrored to Google Drive (`[paths] lora_backup`).
+   One name per character everywhere outside the training folder; a relock sets the
+   old file aside in `_previous/`, never deletes it. `sourcemode lora verify` checks all three copies.
 6. **Shoots and packs** from the Shoots tab; judge them; keepers are linked into `kept/`.
    The in-game asset pack needs her 28 looks first: draft, edit and approve them under
    her card on the Characters tab. "Mix your own" on Shoots combines any scene, wardrobe
@@ -41,7 +45,7 @@ library/<character>/<date>_<kind>_<name>/
                      wardrobe, video, voice. kept/ holds your keepers; set.json says
                      what it is and which judge sets point at it.
 library/_experiments/   one-off probes, same naming
-library/loras/       the vault of locked LoRAs (prune never touches it)
+library/loras/       the vault of locked LoRAs, <char>/<char>.safetensors (+ _previous/); prune never touches it
 engine/              the Python engine (uv project, `sourcemode` CLI)
   sourcemode/        assets, gpu, monitor, train, render, pose, voice, gates, library.py
   scripts/eval/      sweeps, A/Bs, shoots, redo - run through the queue

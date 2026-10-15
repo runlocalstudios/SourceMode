@@ -194,7 +194,9 @@ def locked_world(tree, tmp_path, monkeypatch):
     (ck / "zara_v2-000018.safetensors").write_bytes(b"18")
     (ck / "zara_v2-000019.safetensors").write_bytes(b"19")
     LK.lock(cfg, "zara", ck / "zara_v2-000018.safetensors", epoch=18, dataset="zara_v2", registry=reg)
+    # a sweep candidate staged where sweeps stage them; the lock is flat beside that folder
     stray = Path(cfg["comfyui"]["loras_dir"]) / "sourcemode" / "zara_v2" / "zara_v2-000019.safetensors"
+    stray.parent.mkdir(parents=True)
     stray.write_bytes(b"19")
     _png(out / "dense_zara_v2_asset" / "ep18" / "scene_00.png")
     make_set(judge, "dense_zara_v2_asset", "zara sweep",
@@ -236,7 +238,7 @@ def test_prune_apply_deletes_retires_and_keeps_the_lock(locked_world, tmp_path):
 
 def test_prune_refuses_while_a_lock_does_not_verify(locked_world):
     cfg, out, judge, ck, stray = locked_world
-    vault = Path(cfg["paths"]["library"]) / "loras" / "zara" / "zara_v2-000018.safetensors"
+    vault = Path(cfg["paths"]["library"]) / "loras" / "zara" / "zara.safetensors"
     vault.write_bytes(b"tampered")
     log = L.prune_apply(cfg, L.prune_plan(cfg, out, judge), judge)
     assert log and log[0].startswith("REFUSED: zara")
@@ -255,3 +257,36 @@ def test_prune_finds_the_same_sets_in_her_library_folder(locked_world, tmp_path)
     assert {"2026-10-01_sweep_v2-asset", "2026-09-01_ab_hair"} <= names
     assert not {"2026-10-11_ab_skin", "2026-10-01_shoot_pool"} & names
     assert sum(1 for r in L.prune_plan(cfg, out, judge) if "mei" in Path(r["path"]).parts) == 0
+
+
+def test_a_prune_leaves_every_page_and_render_answer_unchanged(locked_world, tmp_path, monkeypatch):
+    """2026-10-15: the prune ran clean and the queue page then said vivienne was
+    never trained and thirteen locked characters were never swept. A prune may
+    delete only what no surface needs: afterwards the page's lists, the render's
+    LoRA answer and the lock verify must all read exactly as before."""
+    import json
+
+    from sourcemode.assets.lora import resolve_lora
+    from sourcemode.monitor.queue_page import candidates, sweepable
+    from sourcemode.train import locked as LK
+
+    cfg, out, judge, ck, stray = locked_world
+    cfg["assets"] = {"judge": str(judge)}
+    cfg["train"] = {"previews": str(tmp_path / "train-previews")}
+    # zara_v2 approved, the way the engine writes it; she is trained (locked), so not a candidate
+    root = tmp_path / "train-previews"
+    (root / "previews").mkdir(parents=True)
+    (root / "approvals").mkdir()
+    (root / "previews" / "zara_v2.json").write_text(json.dumps({"id": "zara_v2", "fingerprint": "fp", "n": 1, "images": [{"id": "a"}]}), encoding="utf-8")
+    (root / "approvals" / "zara_v2.json").write_text(json.dumps({"approved": True, "fingerprint": "fp", "at": "2026-10-01T00:00:00+00:00"}), encoding="utf-8")
+    monkeypatch.setattr("sourcemode.monitor.queue_page.character_of", lambda ds: ds.split("_")[0])
+
+    before = (candidates(cfg), sweepable(cfg), resolve_lora(cfg, "zara"), LK.verify(cfg))
+    assert before[0] == [] and before[1] == [] and before[2]["path"] == str(Path("sourcemode") / "zara.safetensors")
+    log = L.prune_apply(cfg, L.prune_plan(cfg, out, judge), judge)
+    after = (candidates(cfg), sweepable(cfg), resolve_lora(cfg, "zara"), LK.verify(cfg))
+    assert after == before
+    assert log[-1] == "AFTER: every locked LoRA verifies"
+    # the sweep's emptied staging folder is gone; the flat lock is not
+    assert not (Path(cfg["comfyui"]["loras_dir"]) / "sourcemode" / "zara_v2").exists()
+    assert (Path(cfg["comfyui"]["loras_dir"]) / "sourcemode" / "zara.safetensors").is_file()
