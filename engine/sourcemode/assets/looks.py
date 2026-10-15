@@ -626,8 +626,11 @@ def source_asset(cfg: dict, character: str, epoch: int | None, lora: dict | None
         hit = _first_render(r / f"ep{int(epoch)}")
         if hit:
             return hit
-    # the continued run's own folders
-    name = Path((lora or {}).get("name") or (lora or {}).get("path") or "").name
+    # the continued run's own folders. `file` is the trainer's name of the lock
+    # (vivienne_v2b.safetensors); since 2026-10-15 `name` and `path` are the
+    # character's own (vivienne.safetensors) and carry no run tag.
+    lk = lora or {}
+    name = Path(lk.get("file") or lk.get("name") or lk.get("path") or "").name
     m = re.match(rf"{re.escape(character)}_(.+?)(?:-(\d+))?\.safetensors$", name)
     if not m:
         return None
@@ -704,7 +707,15 @@ def save(cfg: dict, character: str, categories: dict) -> dict:
 
 def approve(cfg: dict, character: str) -> dict:
     """Promote the draft to the plan the pack renders. Refuses blanks and a
-    plan the renderer could not run (no LoRA, no source render)."""
+    plan with no LoRA behind it.
+
+    The source render is recorded when one exists and is not required: the
+    pack renders through T2I (`pack.render_pack`) and never reads it. Only the
+    Edit graph (`assets render --plan`) conditions on it, and that path raises
+    its own error when the plan has none. Nisha, 2026-10-15: the prune had
+    removed every judged sweep folder, so 38 of 39 locked characters had no
+    `ep<lock>/scene_00.png` left and every pack approval was refused for a
+    file the pack does not use."""
     from ..config import outputs_dir  # noqa: PLC0415
     from .lora import resolve_lora  # noqa: PLC0415
 
@@ -723,10 +734,7 @@ def approve(cfg: dict, character: str) -> dict:
     if not lora:
         raise ValueError("no locked LoRA for her - the pack renders from her lock")
     src = source_asset(cfg, c, lora.get("epoch"), lora)
-    if not src:
-        raise ValueError(f"no render of her at epoch {lora.get('epoch')} to condition on - "
-                         "her sweep folder has no ep{} images".format(lora.get("epoch")))
-    doc["lora"], doc["source_asset"] = lora["path"], str(src)
+    doc["lora"], doc["source_asset"] = lora["path"], (str(src) if src else None)
     if not doc.get("reference") and reference(c):
         doc["reference"] = str(reference(c))
     from datetime import datetime, timezone  # noqa: PLC0415

@@ -410,13 +410,34 @@ def test_a_continued_run_finds_its_render_under_its_own_epoch_number(tmp_path):
     assert L.source_asset(cfg, "vivienne", 28, lora) == lib / "2026-10-11_sweep_v2b-asset" / "ep04" / "scene_00.png"
     # and a v2 lock never borrows from the v2b folders
     assert L.source_asset(cfg, "vivienne", 30, {"name": "vivienne_v2-000030.safetensors", "epoch": 30}) is None
+    # the one-name lock (2026-10-15): the run tag is in `file`, not `name`
+    lora = {"name": "vivienne.safetensors", "file": "vivienne_v2b.safetensors", "epoch": 28,
+            "path": "sourcemode\\vivienne.safetensors"}
+    assert L.source_asset(cfg, "vivienne", 28, lora) == lib / "2026-10-11_sweep_v2b-asset" / "ep04" / "scene_00.png"
 
 
-def test_approve_refuses_without_a_render_to_condition_on(tmp_path, ash, monkeypatch):
+def test_approve_does_not_need_a_render_the_pack_never_reads(tmp_path, ash, monkeypatch):
+    # nisha, 2026-10-15: "she doesn't have ep 21" - the prune had removed her
+    # sweep folder, and the pack is T2I and never conditions on that render
     cfg = _cfg(tmp_path)
     from sourcemode.assets import lora as LORA
-    monkeypatch.setattr(LORA, "resolve_lora", lambda cfg, c: {"path": "x", "epoch": 17, "name": "x", "why": ""})
+    monkeypatch.setattr(LORA, "resolve_lora", lambda cfg, c: {
+        "path": "sourcemode\\ash.safetensors", "epoch": 17, "name": "ash.safetensors",
+        "file": "ash_v2-000017.safetensors", "why": ""})
     L.draft(cfg, "ash")
-    with pytest.raises(ValueError, match="epoch 17"):
+    st = L.approve(cfg, "ash")
+    assert st["state"] == "approved"
+    doc = json.loads(L.approved_path(Path(cfg["paths"]["outputs"]), "ash").read_text(encoding="utf-8"))
+    assert doc["lora"] == "sourcemode\\ash.safetensors" and doc["source_asset"] is None
+    from sourcemode.assets.lora import blocked_shoots
+    assert "pack28" not in blocked_shoots(cfg, "ash")
+
+
+def test_approve_still_refuses_without_a_lock(tmp_path, ash, monkeypatch):
+    cfg = _cfg(tmp_path)
+    from sourcemode.assets import lora as LORA
+    monkeypatch.setattr(LORA, "resolve_lora", lambda cfg, c: None)
+    L.draft(cfg, "ash")
+    with pytest.raises(ValueError, match="no locked LoRA"):
         L.approve(cfg, "ash")
     assert L.state(cfg, "ash")["state"] == "draft"
