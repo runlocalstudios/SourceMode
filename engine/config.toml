@@ -14,9 +14,11 @@ library = '../library'
 characters = '../characters'
 workflows = '../workflows'
 # A second copy of every locked LoRA, named <character>.safetensors, written as the
-# lock is made and checked by `sourcemode lora verify`. This is his Google Drive
-# folder (Drive for Desktop, G:), so the file leaves the machine. 2026-10-15.
-lora_backup = 'G:/My Drive/SourceMode/loras'
+# lock is made and checked by `sourcemode lora verify`. Any directory works - a USB
+# SSD included; an unplugged drive is reported, never blocking. Google Drive was
+# tried on 2026-10-15 and removed the same day: 37 x 1.2 GB does not fit a 15 GB
+# account. Unset until he picks the destination (USB SSD, Hugging Face, GitHub Releases).
+# lora_backup = 'E:/SourceMode/loras'
 
 [training]
 musubi_tuner_path = 'C:\dev\e2egen\vendor\musubi-tuner'   # read-only vendored install, v0.3.4
