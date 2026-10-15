@@ -210,6 +210,39 @@ def test_a_trained_dataset_is_not_offered_again(cfg_full, tmp_path):
     assert candidates(cfg_full) == []
 
 
+def test_a_lock_in_a_sibling_lora_folder_counts_as_trained(cfg_full, tmp_path):
+    """vivienne after the 2026-10-15 prune: lora/ is empty, the lock is in
+    lora_vivienne_v2b/. She has been trained."""
+    from sourcemode.monitor.queue_page import candidates
+
+    _approve(tmp_path, "vivienne_v2")
+    (tmp_path / "lora-datasets" / "vivienne_v2" / "lora").mkdir(parents=True)
+    sib = tmp_path / "lora-datasets" / "vivienne_v2" / "lora_vivienne_v2b"
+    sib.mkdir()
+    (sib / "vivienne_v2b.safetensors").write_bytes(b"x")
+    assert candidates(cfg_full) == []
+
+
+def test_a_sweep_whose_judge_set_was_retired_is_still_swept(cfg_full, tmp_path):
+    """`library prune` retires a locked character's sweep set to
+    retired/<id>.set.json. The sweep happened; the page must not offer it again."""
+    import json
+
+    from sourcemode.monitor.queue_page import sweepable
+
+    cfg_full["assets"] = {"judge": str(tmp_path / "judge")}
+    lora = tmp_path / "lora-datasets" / "aura_v2" / "lora"
+    lora.mkdir(parents=True)
+    (lora / "aura_v2-000021.safetensors").write_bytes(b"x")
+    (tmp_path / "judge" / "sets").mkdir(parents=True)
+    assert [r["dataset"] for r in sweepable(cfg_full)] == ["aura_v2"]
+    retired = tmp_path / "judge" / "retired"
+    retired.mkdir()
+    (retired / "dense_aura_v2_asset.set.json").write_text(json.dumps({"id": "dense_aura_v2_asset", "items": []}),
+                                                           encoding="utf-8")
+    assert sweepable(cfg_full) == []
+
+
 def test_a_queued_dataset_is_not_offered_twice(cfg_full, tmp_path):
     from sourcemode.monitor.queue_page import candidates
 

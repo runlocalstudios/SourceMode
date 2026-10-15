@@ -1465,8 +1465,14 @@ def candidates(cfg: dict) -> list[dict]:
         st = approval_state(root, ds)
         if not st["approved"]:
             continue
-        if list((out / "lora-datasets" / ds / "lora").glob("*.safetensors")):
-            continue   # any checkpoint at all means trained; a prune deletes the losers
+        # Any checkpoint in ANY of her lora folders means trained. A prune deletes
+        # the losers and keeps the lock, and the lock may live in a sibling:
+        # vivienne's is lora_vivienne_v2b/ and lora/ is empty after the
+        # 2026-10-15 prune, which read here as "approved, never trained".
+        from ..train.epochs import checkpoint_dirs  # noqa: PLC0415
+
+        if any(True for sub in checkpoint_dirs(out, ds) for _ in sub.glob("*.safetensors")):
+            continue
         if q.duplicate_of(doc, "train", ds):
             continue   # already queued or running
         doc_prev = load_preview(root, ds)
@@ -1513,7 +1519,12 @@ def sweepable(cfg: dict) -> list[dict]:
     jroot = judge_root(cfg)
     doc = q.load(q.queue_path(out))
     base = out / "lora-datasets"
+    # Live AND retired. `library prune` retires a judged sweep's set to
+    # retired/<id>.set.json once the character is locked; the sweep still
+    # happened, and on 2026-10-15 thirteen locked characters read as "trained,
+    # never swept" because only sets/ was consulted.
     set_ids = [f.stem for f in (jroot / "sets").glob("*.json")] if (jroot / "sets").is_dir() else []
+    set_ids += [f.name.split(".")[0] for f in (jroot / "retired").glob("*.json")] if (jroot / "retired").is_dir() else []
     rows = []
     for d in sorted(base.glob("*")) if base.is_dir() else []:
         if not d.is_dir():
