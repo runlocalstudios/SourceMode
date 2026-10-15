@@ -76,3 +76,16 @@ def test_the_clause_is_the_text_as_written_with_no_age_added(records):
     assert A.clause("x") == "a woman with red hair"
     A.confirm("x", {"prompt": "a 25-year-old woman with red hair"})
     assert A.clause("x") == "a 25-year-old woman with red hair"
+
+
+def test_a_record_written_by_another_hand_is_seen_without_a_reload(records):
+    """Vera, 2026-10-14: the new-character form wrote her record, the training
+    page's preflight read a cache from before she existed and refused her for
+    "age missing; prompt missing". Any write to the file is seen on the next read."""
+    assert A.check("vera")["has_record"] is False
+    doc = json.loads(records.read_text(encoding="utf-8"))
+    doc["vera"] = {"age": 18, "prompt": "a young woman, fair skin, blonde"}
+    records.write_text(json.dumps(doc), encoding="utf-8")
+    r = A.check("vera")
+    assert r["has_record"] is True and A.age_of("vera") == 18
+    assert [m.split(" - ")[0] for m in r["missing"]] == ["confirmed"]

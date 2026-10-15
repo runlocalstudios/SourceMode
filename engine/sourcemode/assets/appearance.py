@@ -23,11 +23,29 @@ APPEARANCE = ROOT / "characters" / "appearance.json"
 GAME_CHARACTERS = Path("C:/dev/chillafterdark/src/data/characters.js")
 
 _cache: dict | None = None
+_cache_stamp: tuple = ()
+
+
+def _stamp() -> tuple:
+    def mt(p: Path) -> int:
+        try:
+            return p.stat().st_mtime_ns
+        except OSError:
+            return 0
+    return (mt(AGES), mt(APPEARANCE))
 
 
 def _load() -> dict:
-    global _cache
-    if _cache is None:
+    """The records, re-read whenever either file changes on disk. The monitor
+    is long-lived and used to read them ONCE: Vera, created on the new-character
+    form, was refused for training with "age missing; prompt missing" because
+    the training page's preflight ran against a cache from before she existed
+    (2026-10-14). Nothing that writes these files should have to remember to
+    clear a cache."""
+    global _cache, _cache_stamp
+    stamp = _stamp()
+    if _cache is None or stamp != _cache_stamp:
+        _cache_stamp = stamp
         ages = {}
         if AGES.is_file():
             try:
