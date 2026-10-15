@@ -45,9 +45,30 @@ def test_natural_carries_the_same_turn_gaze_and_expression_as_the_contract(zara)
             assert "facing the camera" in p and "looking straight into the camera" in p
         else:
             her = "her right" if asked["body_side"] == "image-left" else "her left"
-            assert f"in a three-quarter view toward {her}" in p
-            assert f"her face turned slightly toward {her}, looking into the camera" in p
+            assert f"turned slightly toward {her}, looking into the camera" in p
         assert R._NATURAL_EXPRESSION[asked["expression"]] in p
+    # the three-quarter family is still there for a slot that asks for it by name
+    her_right = R.natural_prompt("zara", {**LOOKS[0], "turn": "left"})
+    assert "in a three-quarter view toward her right" in her_right
+
+
+def test_a_pack_never_asks_for_a_three_quarter_view(zara):
+    """Jeremy, 2026-10-15, nisha's pack: "they are all supposed to be either front
+    facing or NEARLY front facing with slight angles, from the mid-thigh up".
+    Measured over amanda, gabi, nisha and vera: 60 of 63 three-quarter asks came
+    back near-profile. The pack rotates front / slight-left / front / slight-right."""
+    fams = []
+    for look in range(1, 29):
+        asked = R.pose_fields("zara", {"id": f"casual_{look:02d}", "look": look, "category": "casual",
+                                       "pose": "standing", "outfit": "x", "hair": "y"})["asked"]
+        assert asked["crop"] == "mid-thigh-up"
+        assert abs(asked["body_deg"]) <= 15 and abs(asked["head_deg"]) <= 15
+        fams.append((asked["body_side"], asked["slight"]))
+    assert fams.count(("front", False)) == 14
+    assert fams.count(("image-left", True)) == 7 and fams.count(("image-right", True)) == 7
+    for look in LOOKS:
+        p = R.natural_prompt("zara", look)
+        assert "three-quarter" not in p and "a standing portrait framed from mid-thigh up, " in p
 
 
 def test_natural_keeps_the_hair_and_footwear_rules(zara):
@@ -77,8 +98,8 @@ def test_natural_honours_a_shoots_composition_overrides(zara):
             "framing": "her head and chest fill the frame", "avoid": "No studio lighting."}
     p = R.natural_prompt("zara", slot, backdrop="soft daylight, in her bedroom")
     assert "a phone selfie, her head and chest fill the frame, " in p
-    assert "standing portrait" not in p and "upper thighs" not in p
+    assert "standing portrait" not in p and "mid-thigh" not in p
     assert ", she is holding the phone above eye level, " in p
     assert p.endswith("sharp focus. No studio lighting.")
-    # a pack slot, which sets none of them, reads exactly as the A/B was judged
-    assert "a standing portrait framed from the upper thighs up, " in R.natural_prompt("zara", LOOKS[0])
+    # a pack slot, which sets none of them, gets the pack's own framing
+    assert "a standing portrait framed from mid-thigh up, " in R.natural_prompt("zara", LOOKS[0])

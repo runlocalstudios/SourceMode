@@ -88,7 +88,7 @@ def test_a_pack_slot_is_byte_for_byte_unchanged(zara):
             "outfit": "a white tee and jeans", "hair": "her hair worn loose"}
     p = R.shot_prompt("zara", slot)
     assert p.startswith("zara, a young woman")
-    assert "a standing portrait framed from the upper thighs up, facing the camera, looking straight into the camera, " in p
+    assert "a standing portrait framed from mid-thigh up, facing the camera, looking straight into the camera, " in p
     assert R.pose_fields("zara", slot)["asked"]["slight"] is False
 
 

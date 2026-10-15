@@ -43,7 +43,12 @@ FRAMING_MID_THIGH = ("standing mid-thigh-up portrait; bottom edge cuts through t
 FRAMING_UPPER_THIGH = ("standing upper-thigh portrait, close enough that her face is large in frame; bottom edge "
                        "cuts across the tops of her thighs just below the hips; knees, lower legs, and feet "
                        "outside the frame; never full-body, never a wide shot")
-FRAMING = FRAMING_UPPER_THIGH   # kept for callers that read the old name
+# Jeremy, 2026-10-15, on nisha's pack: "they are all supposed to be either front
+# facing or NEARLY front facing with slight angles, from the mid-thigh up". The
+# tiebreaker set (asset_scenes.TIEBREAKER, 2026-10-10) was written to that spec;
+# the pack now asks for the same thing.
+FRAMING = FRAMING_MID_THIGH
+NATURAL_FRAMING = "framed from mid-thigh up"   # his words, as the tiebreaker says it
 EXPRESSIONS = (
     "relaxed neutral: lips gently together, mouth corners level, cheeks soft, eyebrows resting, relaxed direct gaze; no smile",
     "warm closed-lip smile: both mouth corners lifted, cheeks slightly raised, lips gently together, brows relaxed, soft direct eye contact",
@@ -164,7 +169,13 @@ TURNS = ("front", "left", "right", "slight-left", "slight-right")
 def pose_fields(character: str, slot: dict) -> dict:
     """Screen-relative body geometry and an independent head pose, seeded per look."""
     look = int(slot.get("look", 1))
-    family = slot.get("turn") or ("front", "left", "right")[(look - 1) % 3]
+    # MEASURED 2026-10-15 over the four packs rendered through T2I (amanda, gabi,
+    # nisha, vera): a "three-quarter view" ask (35-45 deg) came back near-profile
+    # 60 times in 63 - the body past 0.8 of full side-on - while a front ask came
+    # back front 35 in 36. Qwen reads the phrase as a profile. So the pack never
+    # asks for it: the rotation is front, slight-left, front, slight-right, the
+    # tiebreaker's mix. `turn` on the slot still picks any family.
+    family = slot.get("turn") or ("front", "slight-left", "front", "slight-right")[(look - 1) % 4]
     if family not in TURNS:
         raise ValueError(f"turn must be one of {TURNS}, got {family!r}")
     slight = family.startswith("slight-")
@@ -189,7 +200,7 @@ def pose_fields(character: str, slot: dict) -> dict:
     return {"body": describe_yaw(body), "head": f"{head_turn}; chin {pitch}; no lateral head tilt",
             "expression": EXPRESSIONS[ex_i],
             # the structured ask, for adherence.check() against the measured render
-            "asked": {"crop": "upper-thigh-up", "body_side": side, "body_deg": body, "head_side": side,
+            "asked": {"crop": "mid-thigh-up", "body_side": side, "body_deg": body, "head_side": side,
                       "head_deg": head, "pitch": pitch, "expression": EXPRESSION_TYPES[ex_i],
                       "slight": slight}}
 
@@ -258,7 +269,7 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     # the pack's wording is what the A/B was judged on, byte for byte; a shoot's
     # own framing sentence follows the shot type as its own clause
     crop = f"a {shot}, {slot['framing']}" if slot.get("framing") else (
-        f"a {shot} {slot.get('framing_natural') or 'framed from the upper thighs up'}")
+        f"a {shot} {slot.get('framing_natural') or NATURAL_FRAMING}")
     outfit = slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"])
     stance = f", {slot['stance']}" if slot.get("stance") else ""
     avoid = f" {slot['avoid']}" if slot.get("avoid") else ""
