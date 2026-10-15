@@ -68,6 +68,15 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} knit cardigan buttoned up with nothing under it, and faded jeans",
         "a {c} racer-back jumpsuit",
         "a {c} crop top and a flowing white maxi skirt",
+        # Jeremy, 2026-10-15: "form-fitting pastel pink long-sleeve square-neckline
+        # romper, stretchy knit fabric, short mid-thigh shorts, one-piece outfit"
+        # - more like it, across the pools
+        "a form-fitting {c} long-sleeve square-neckline romper in stretchy knit fabric, with short mid-thigh shorts",
+        "a {c} ribbed knit romper with spaghetti straps and short shorts, one piece",
+        "a {c} stretchy knit romper with a scoop neck, short sleeves and short mid-thigh shorts",
+        "a {c} zip-front knit romper with short shorts, the zip pulled down a little",
+        "a fitted {c} long-sleeve knit unitard cut to mid-thigh, worn as the whole outfit",
+        "a {c} stretchy knit shorts-romper with a square neckline and thin straps",
     ),
     "workout": (
         "a {c} sports bra and matching high-waisted leggings",
@@ -87,6 +96,9 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} scoop-neck bodysuit and wide-leg track pants",
         "a {c} strappy-back sports bra and a wrap skirt over leggings",
         "a {c} track jacket zipped halfway over a sports bra and leggings",
+        "a {c} stretchy knit one-piece with a square neckline and short mid-thigh shorts",
+        "a {c} long-sleeve athletic romper with built-in bike shorts",
+        "a {c} ribbed knit shorts-unitard with thin straps, cut close to the body",
     ),
     "fancy_dining_gallery": (
         "a {c} satin midi dress with a cowl neckline",
@@ -109,6 +121,8 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} high-neck sleeveless midi dress",
         "a {c} draped satin wrap top and a long bias-cut skirt",
         "a {c} fitted long-sleeve midi dress with a keyhole neckline",
+        "a fitted {c} long-sleeve knit romper with a square neckline and tailored mid-thigh shorts",
+        "a {c} stretchy knit one-piece with a high neck, long sleeves and short shorts, a slim gold belt",
     ),
     "fancy_town": (
         "a {c} sequined mini dress",
@@ -131,6 +145,9 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} satin bustier and wide-leg black trousers",
         "a {c} fringe mini dress",
         "a {c} sheer mesh long-sleeve dress over a black bra and thong",
+        "a form-fitting {c} long-sleeve romper in stretchy knit fabric with a square neckline and micro shorts",
+        "a {c} bodycon knit romper with a deep square neckline and short shorts",
+        "a {c} off-the-shoulder stretchy knit romper with short mid-thigh shorts",
     ),
     "casual_date": (
         "a {c} wrap dress",
@@ -153,13 +170,17 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} off-the-shoulder midi dress",
         "a {c} fitted turtleneck mini dress",
         "a {c} satin slip skirt and a cropped knit top",
+        "a form-fitting {c} long-sleeve square-neckline romper in stretchy knit fabric, short mid-thigh shorts",
+        "a {c} ribbed knit romper with a sweetheart neckline and short shorts",
+        "a {c} stretchy knit halter romper with mid-thigh shorts, one piece",
+        "a {c} long-sleeve knit romper with a low scoop back and short shorts",
     ),
 }
 
 # Colour words a palette line may carry, longest first so "denim blue" wins
 # over "blue". Anything else in the line is prose and is ignored.
 _COLOURS = ("burnt orange", "denim blue", "navy blue", "baby blue", "sky blue", "royal blue",
-            "hot pink", "blush pink", "dusty pink", "pale pink", "forest green", "sage green",
+            "hot pink", "blush pink", "dusty pink", "pale pink", "pastel pink", "forest green", "sage green",
             "olive green", "emerald green", "deep red", "wine red", "cherry red", "off-white",
             "black", "white", "cream", "ivory", "beige", "tan", "camel", "brown", "chocolate",
             "grey", "gray", "charcoal", "silver", "gold", "navy", "cobalt", "blue", "teal",
@@ -299,7 +320,7 @@ REGISTERS: tuple[tuple[str, str, tuple[tuple[str, str, str], ...]], ...] = (
         ("the neckline cut low", "", r"turtleneck|high-neck|halter|strapless|tube|bandeau|hoodie|sweatshirt|"
                                      r"jacket|track|off-the-shoulder|one-shoulder|sports bra|plunging|cowl|unzipped|bustier|corset|bikini"),
         ("unbuttoned to the sternum", r"shirt|blouse|button|cardigan|blazer|polo|henley", r"unbuttoned|tied at|knotted"),
-        ("cut close to the body", "", r"fitted|bodycon|sheath|bandage|close-fitting|seamless|latex"),
+        ("cut close to the body", "", r"fitted|fitting|bodycon|sheath|bandage|close-fitting|close to the body|seamless|latex"),
         ("the fabric sheer enough to show the bra beneath",
          r"dress|blouse|shirt|\btee\b|knit|cami|bodysuit|\btop\b", r"sheer|mesh|lace|jacket|hoodie|sweatshirt|track|sports bra|bralette|leather|vinyl|latex|sequin"),
         ("the top cropped to show her midriff",
