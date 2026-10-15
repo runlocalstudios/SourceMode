@@ -616,8 +616,14 @@ def _rate(cfg: dict, max_age_s: float = 600.0) -> dict:
 
     from .training import read_tail as _tail  # noqa: PLC0415
 
-    _TS = _re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)\s+(.*)$")
-    preps = []
+    # ...but the chain also WAITS before its first step: up to StableMin minutes
+    # for the Lora-Gen count to hold steady, and that wait is on the clock the
+    # page shows. Gloria, 2026-10-15: 12.5 min of wait + 27 min of steps against
+    # an estimate of 26 min read "0s left" for the last quarter of an hour. So
+    # the estimate is the median wait plus the median of each step, and a
+    # running chain is read step by step (prep_progress) rather than as elapsed
+    # against a total.
+    preps, waits, by_step, order = [], [], {}, []
     for f in sorted((out / "logs").glob("chain_*.log")) if (out / "logs").is_dir() else []:
         if "_launch" in f.name:
             continue
@@ -625,29 +631,26 @@ def _rate(cfg: dict, max_age_s: float = 600.0) -> dict:
             text = _tail(f)
         except OSError:
             continue
-        seen, steps, cur = set(), {}, None
-        for raw in text.splitlines():
-            m = _TS.match(raw.strip().lstrip("\ufeff"))
-            if not m:
-                continue
-            key = (m.group(1), m.group(2))
-            if key in seen:         # the log is written twice over
-                continue
-            seen.add(key)
-            try:
-                t = _dt.fromisoformat(m.group(1))
-            except ValueError:
-                continue
-            msg = m.group(2)
-            if msg.startswith("START "):
-                cur = (msg[6:], t)
-            elif msg.startswith("END ") and cur:
-                steps[cur[0]] = (t - cur[1]).total_seconds()
-                cur = None
+        parsed = _parse_chain(text)
+        steps = parsed["steps"]
         work = sum(steps.values())
         # a chain that never gathered did not run the whole shape
-        if work > 300 and any("gather" in k for k in steps):
+        if work > 300 and any(k == "gather" for k in steps):
             preps.append(work)
+            if parsed["wait_s"] is not None:
+                waits.append(parsed["wait_s"])
+            for k, v in steps.items():
+                by_step.setdefault(k, []).append(v)
+                if k not in order:
+                    order.append(k)
+    # the steps a chain usually runs, in order, each at its median; a step seen
+    # in fewer than half the chains (hair confirm, cull hair up) is left out
+    # rather than charged to every character
+    # The one-second verify steps are left out too: they add nothing to the sum
+    # and would make the card say "step 9 of 12" for a chain with five real steps.
+    prep_steps = [(k, statistics.median(by_step[k])) for k in order
+                  if len(by_step[k]) * 2 >= len(preps) and statistics.median(by_step[k]) >= 30] if preps else []
+    prep_wait_s = statistics.median(waits) if waits else 0.0
 
     renders = _per_file(out, "scene_*.png")
     # sweeps and A/Bs write into her library folder now, one level deeper
@@ -661,7 +664,8 @@ def _rate(cfg: dict, max_age_s: float = 600.0) -> dict:
     value = {
         "s_per_step": statistics.median(steps_rates) if steps_rates else FALLBACK_S_PER_STEP,
         "sweep_s": statistics.median(sweeps) if sweeps else FALLBACK_SWEEP_S,
-        "prep_s": statistics.median(preps) if preps else FALLBACK_PREP_S,
+        "prep_s": (prep_wait_s + sum(s for _k, s in prep_steps)) if prep_steps else FALLBACK_PREP_S,
+        "prep_steps": prep_steps, "prep_wait_s": prep_wait_s,
         "n_prep_runs": len(preps), "prep_measured": bool(preps),
         "s_per_render": statistics.median(renders) if renders else FALLBACK_S_PER_RENDER,
         "s_per_shot": statistics.median(shots) if shots else FALLBACK_S_PER_SHOT,
@@ -721,6 +725,103 @@ QUIET_S = 4200.0   # 70 minutes
 # and he can read "running 11h against an estimate of 23m" and know why.
 OVERRUN_X = 3.0
 OVERRUN_FLOOR_S = 3600.0   # never flag a job that has not been running an hour
+
+
+_CHAIN_TS = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)\s+(.*)$")
+
+
+def _parse_chain(text: str) -> dict:
+    """A character_chain.ps1 log, read for timing.
+
+    {first: datetime of the first line, wait_s: seconds from the first line to
+    the first START (the hold-steady wait) or None, steps: {step: seconds} for
+    every START/END pair, running: (step, started) when a START has no END yet,
+    done: bool}. Step keys drop the character: "gloria hair recheck" -> "hair
+    recheck", so chains can be compared.
+    """
+    from datetime import datetime as _dt  # noqa: PLC0415
+
+    first = None
+    wait_s = None
+    steps: dict[str, float] = {}
+    cur = None
+    done = False
+    seen: set[tuple[str, str]] = set()
+    for raw in text.splitlines():
+        m = _CHAIN_TS.match(raw.strip().lstrip("\ufeff"))
+        if not m:
+            continue
+        key = (m.group(1), m.group(2))
+        if key in seen:         # the log is written twice over
+            continue
+        seen.add(key)
+        try:
+            t = _dt.fromisoformat(m.group(1))
+        except ValueError:
+            continue
+        msg = m.group(2)
+        first = first or t
+        if msg.startswith("START "):
+            name = msg[6:].split(" ", 1)
+            cur = (name[1] if len(name) == 2 else name[0], t)
+            if wait_s is None:
+                wait_s = (t - first).total_seconds()
+        elif msg.startswith("END ") and cur:
+            steps[cur[0]] = (t - cur[1]).total_seconds()
+            cur = None
+        elif msg.rstrip().endswith("DONE") or "DONE -" in msg:
+            done = True
+    return {"first": first, "wait_s": wait_s, "steps": steps, "running": cur, "done": done}
+
+
+def prep_progress(cfg: dict, job: dict, now_ts: float | None = None) -> dict | None:
+    """Where a running prep chain is and how long it has left, from its own log
+    against the measured medians. None when the chain log does not exist yet.
+
+    {done, total, step, eta_s}. `done` of `total` counts the usual steps;
+    `step` is the one running (or "waiting for her shots to hold steady").
+    `eta_s` is the medians of the steps not yet ended, the running step
+    charged for what it has left and never less than 30 s - so the number
+    moves while the job does and never reads 0 while it is running.
+    """
+    import time as _time  # noqa: PLC0415
+    from datetime import timezone  # noqa: PLC0415
+
+    from ..config import outputs_dir  # noqa: PLC0415
+    from .training import read_tail as _tail  # noqa: PLC0415
+
+    f = outputs_dir(cfg) / "logs" / f"chain_{job['label']}.log"
+    if not f.is_file():
+        return None
+    try:
+        p = _parse_chain(_tail(f))
+    except OSError:
+        return None
+    r = _rate(cfg)
+    usual = r["prep_steps"] or [("gather", 600.0), ("captions", 460.0), ("hair recheck", 500.0), ("preview", 180.0)]
+    med = dict(usual)
+    now_ts = now_ts or _time.time()
+    ended = set(p["steps"])
+    if p["done"]:
+        return {"done": len(usual), "total": len(usual), "step": "finishing", "eta_s": 30.0}
+    left = [k for k, _s in usual if k not in ended]
+    eta = 0.0
+    if p["running"]:
+        name, started = p["running"]
+        spent = max(0.0, now_ts - started.replace(tzinfo=timezone.utc).timestamp())
+        eta += max(30.0, med.get(name, 0.0) - spent)
+        left = [k for k in left if k != name]
+        step = name
+    elif not p["steps"] and p["first"]:
+        # before the first step: the hold-steady wait, whatever of it remains
+        spent = max(0.0, now_ts - p["first"].replace(tzinfo=timezone.utc).timestamp())
+        eta += max(30.0, r["prep_wait_s"] - spent)
+        step = "waiting for her shots to hold steady"
+    else:
+        step = "between steps"
+    eta += sum(med[k] for k in left)
+    done = sum(1 for k, _s in usual if k in ended)
+    return {"done": done, "total": len(usual), "step": step, "eta_s": eta}
 
 
 def _dur(s: float | None) -> str:
@@ -967,10 +1068,24 @@ def now_card(jobs: list[dict], status: dict | None,
             elapsed_s = max(0.0, datetime.now(timezone.utc).timestamp() - started.timestamp())
         except ValueError:
             elapsed_s = None
+    over_s = None
+    prep = None
+    if run and run.get("kind") == "prep" and cfg_for_now and r_eta is None:
+        # A prep chain IS countable: its log says which step it is on. Jeremy,
+        # 2026-10-15: "Why does the queue say 0s remaining if you're able to
+        # estimate the time remaining" - the old elapsed-against-total clamped
+        # at zero once the hold-steady wait had eaten the estimate.
+        prep = prep_progress(cfg_for_now, run)
+        if prep:
+            r_eta = prep["eta_s"]
     if run and not training_job and r_eta is None and elapsed_s is not None and cfg_for_now:
         est = job_estimate(cfg_for_now, run) or {}
         if est.get("total_s"):
-            r_eta = max(0.0, est["total_s"] - elapsed_s)
+            if elapsed_s < est["total_s"]:
+                r_eta = est["total_s"] - elapsed_s
+            else:
+                # never "0s left" on a job that is still running: say it ran over
+                over_s = elapsed_s - est["total_s"]
             r_total = r_total or None
     step, total = (pr.get("step"), pr.get("total")) if training_job else (None, None)
     line = ""
@@ -981,6 +1096,10 @@ def now_card(jobs: list[dict], status: dict | None,
     elif r_total:
         unit = "shot" if (run or {}).get("kind") == "assets" else "render"
         line = f"{r_done if r_done is not None else 0} of {r_total} {unit}s"
+    elif prep:
+        line = f"{prep['step']}, step {min(prep['done'] + 1, prep['total'])} of {prep['total']}"
+    elif over_s is not None and elapsed_s is not None and run:
+        line = f"running {_dur(elapsed_s)}, {_dur(over_s)} over the usual"
     elif elapsed_s is not None and run:
         line = f"running {_dur(elapsed_s)}"
     return {

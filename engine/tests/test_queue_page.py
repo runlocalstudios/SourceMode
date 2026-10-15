@@ -493,3 +493,88 @@ def test_a_restored_job_is_not_counted_as_waiting_work_until_released(cfg_full, 
     q.restore(doc, jid); q.save(q.queue_path(tmp_path), doc)
     assert queue_state(cfg_full)["queued_s"] is None, "held work is not waiting work"
     qp._rate_cache.clear()
+
+
+# --- a prep chain's time left is read from its own log ---------------------------
+
+_CHAIN = """﻿2026-10-15T14:08:50  waiting for {c} to reach 70 Lora-Gen shots and hold steady 12 minutes
+2026-10-15T14:21:24  START {c} gather
+2026-10-15T14:31:00  END {c} gather exit=0
+2026-10-15T14:31:00  START {c} verify gather
+2026-10-15T14:31:01  END {c} verify gather exit=0
+2026-10-15T14:31:01  START {c} captions
+2026-10-15T14:39:00  END {c} captions exit=0
+2026-10-15T14:39:00  START {c} hair recheck
+2026-10-15T14:46:00  END {c} hair recheck exit=0
+2026-10-15T14:46:00  START {c} preview
+2026-10-15T14:49:00  END {c} preview exit=0
+2026-10-15T14:49:00  {C}DONE - on the Training sets tab for review
+"""
+
+
+def _chains(tmp_path, *names):
+    logs = tmp_path / "logs"
+    logs.mkdir(exist_ok=True)
+    for c in names:
+        (logs / f"chain_{c}.log").write_text(_CHAIN.format(c=c, C=c.upper()), encoding="utf-8")
+    return logs
+
+
+def test_a_prep_estimate_includes_the_hold_steady_wait(cfg, tmp_path):
+    """Gloria, 2026-10-15: 12.5 min of waiting before the first step was not in
+    the estimate, so the page read "0s left" for the last quarter hour."""
+    from sourcemode.monitor import queue_page as QP
+
+    _chains(tmp_path, "aura", "bri", "cat")
+    QP._rate_cache.clear()
+    r = QP._rate(cfg)
+    assert r["prep_measured"] and r["n_prep_runs"] == 3
+    assert round(r["prep_wait_s"]) == 12 * 60 + 34
+    # the one-second verify steps are not steps the card counts
+    assert [k for k, _ in r["prep_steps"]] == ["gather", "captions", "hair recheck", "preview"]
+    assert round(r["prep_s"]) == round(r["prep_wait_s"] + (9 * 60 + 36) + (7 * 60 + 59) + 7 * 60 + 3 * 60)
+
+
+def test_a_running_prep_counts_its_steps_and_never_reads_zero(cfg, tmp_path):
+    from datetime import datetime, timezone
+
+    from sourcemode.monitor import queue_page as QP
+
+    _chains(tmp_path, "aura", "bri", "cat")
+    QP._rate_cache.clear()
+    live = _CHAIN.format(c="gloria", C="GLORIA").splitlines()
+    (tmp_path / "logs" / "chain_gloria.log").write_text("\n".join(live[:8]) + "\n", encoding="utf-8")   # hair recheck started 14:39, not ended
+    ts = datetime(2026, 10, 15, 14, 50, tzinfo=timezone.utc).timestamp()       # 11 min into a 7 min step: over
+    p = QP.prep_progress(cfg, {"label": "gloria"}, now_ts=ts)
+    assert p["step"] == "hair recheck" and p["done"] == 2 and p["total"] == 4
+    assert p["eta_s"] == 30.0 + 3 * 60            # the step's floor + the preview still to come
+    # before the first step: the wait, whatever is left of it, plus every step
+    (tmp_path / "logs" / "chain_gloria.log").write_text(live[0] + "\n", encoding="utf-8")
+    ts0 = datetime(2026, 10, 15, 14, 10, 50, tzinfo=timezone.utc).timestamp()
+    p0 = QP.prep_progress(cfg, {"label": "gloria"}, now_ts=ts0)
+    assert p0["done"] == 0 and p0["step"].startswith("waiting")
+    assert round(p0["eta_s"]) == round((12 * 60 + 34 - 120) + (9 * 60 + 36) + (7 * 60 + 59) + 7 * 60 + 3 * 60)
+    assert QP.prep_progress(cfg, {"label": "nobody"}) is None
+    # a finished chain is "finishing", never 0s, until the runner marks the job done
+    (tmp_path / "logs" / "chain_gloria.log").write_text("\n".join(live) + "\n", encoding="utf-8")
+    assert QP.prep_progress(cfg, {"label": "gloria"})["step"] == "finishing"
+
+
+def test_the_card_says_over_the_usual_instead_of_zero_left(cfg, tmp_path, monkeypatch):
+    """A render job past its estimate used to read "0s left" while still running."""
+    from datetime import datetime, timedelta, timezone
+
+    from sourcemode.monitor import queue_page as QP
+
+    path = q.queue_path(tmp_path)
+    doc = q.load(path)
+    q.add(doc, kind="eval", label="zara_v2", cmd=["x"], cwd=".")
+    q.mark_running(doc, doc["jobs"][0]["id"], 1, "log")
+    doc["jobs"][0]["started_at"] = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(timespec="seconds")
+    q.save(path, doc)
+    monkeypatch.setattr(QP, "job_estimate", lambda cfg, job: {"total_s": 3600.0})
+    monkeypatch.setattr(QP, "job_expect", lambda job: None)
+    jobs = QP.queue_state(cfg)["jobs"]
+    now = QP.now_card(jobs, {"sampled_at": 0, "training": {}}, cfg)
+    assert now["eta_s"] is None
+    assert now["progress_line"].startswith("running 2h 00m, 1h 00m over the usual")
