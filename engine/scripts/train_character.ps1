@@ -27,8 +27,16 @@ param(
   [int]$EvalOffset = 0,
   # Scenes per epoch in the post-training sweep. 10 is the coarse sweep; 20 is
   # the n the skill asks for before an epoch is picked.
-  [int]$EvalN = 10
+  [int]$EvalN = 10,
+  # An OBJECT LoRA (the torso toy, 2026-10-15) trains exactly like a character -
+  # the recipe reads captions and nothing else - but its sweep is not "is this
+  # her": object_epoch_eval.py renders the object scenes with no face scoring, no
+  # appearance record and a no-LoRA arm. -Char is then the library folder name.
+  [switch]$Object,
+  # The caption trigger when it is not -Char (torsotoy for the torso set).
+  [string]$Trigger = ""
 )
+if (-not $Trigger) { $Trigger = $Char }
 if (-not $OutName) { $OutName = $Ds }
 # -EvalStart 0 is a real value for a continued run (its starting checkpoint is
 # kept as epoch 0), so "not passed" is read from the bound parameters, not from 0.
@@ -157,15 +165,20 @@ if (Test-Path "$DsDir\$LoraSub\$($OutName).safetensors") {
   # Start at 16, not 14: Jeremy, 2026-09-23 - no character's best epoch has ever
   # landed below 16 (maya 16, jojo 16, priya 16; everything else 21-26), so the
   # first two arms were 20 renders a character spent confirming a known floor.
-  Log "START $Char eval, epochs $EvS-$EvE x $EvalN scenes$(if ($EvalScenes) { ' (' + $EvalScenes + ')' })"
+  Log "START $Char eval, epochs $EvS-$EvE x $EvalN scenes$(if ($Object) { ' (object)' } elseif ($EvalScenes) { ' (' + $EvalScenes + ')' })"
   # Build the argument array FIRST. `-ArgumentList @(...) + $(...)` inline does not
   # bind - Start-Process ran with no usable arguments, returned an EMPTY exit code
   # and wrote zero-byte logs, and the failure was silent.
-  $evArgs = @("$EV\dense_epoch_eval.py", $Char, $OutName, "$Epochs",
-              "$EvS", "$EvE", $Char,
+  $evScript = if ($Object) { "$EV\object_epoch_eval.py" } else { "$EV\dense_epoch_eval.py" }
+  $evArgs = @($evScript, $Char, $OutName, "$Epochs",
+              "$EvS", "$EvE", $Trigger,
               "outputs\lora-datasets\$Ds\$LoraSub", "$EvalN")
-  if ($EvalOffset) { $evArgs += @("$EvalOffset") }   # argv[9] = epoch offset
-  if ($EvalScenes) { $evArgs += @("--scenes", $EvalScenes) }
+  if ($Object) {
+    # the object sweep takes no offset and no scene set
+  } else {
+    if ($EvalOffset) { $evArgs += @("$EvalOffset") }   # argv[9] = epoch offset
+    if ($EvalScenes) { $evArgs += @("--scenes", $EvalScenes) }
+  }
   $ev = Start-Process -FilePath $PY -NoNewWindow -Wait -PassThru -ArgumentList $evArgs `
     -RedirectStandardOutput "$L\eval_$($OutName).stdout.log" -RedirectStandardError "$L\eval_$($OutName).stderr.log"
   Log "END $Char eval exit=$($ev.ExitCode)"

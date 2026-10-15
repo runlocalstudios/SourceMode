@@ -34,7 +34,8 @@ def _positional(cmd: list[str]) -> list[str]:
     out, it = [], iter(cmd)
     for a in it:
         if a.startswith("--") and a not in ("--apply", "--all", "--force", "--allow-incomplete-appearance",
-                                            "--no-description", "--fp8_vl", "--loragen-only", "--no-base"):
+                                            "--no-description", "--fp8_vl", "--loragen-only", "--no-base",
+                                            "--dry-run"):
             next(it, None)
         elif not a.startswith("--"):
             out.append(a)
@@ -120,10 +121,11 @@ def _train_character(cmd: list[str], cwd: Path, outputs: Path, previews_root: Pa
 
 def _dense_epoch_eval(cmd: list[str], cwd: Path, outputs: Path, previews_root: Path | None) -> list[str]:
     # positional: script char sub total start end trigger ckpt [scenes] [offset]
+    # The object sweep (object_epoch_eval.py) takes the same first eight.
     pos = _positional(cmd)
-    i = next((k for k, c in enumerate(pos) if c.endswith("dense_epoch_eval.py")), None)
+    i = next((k for k, c in enumerate(pos) if c.endswith(("dense_epoch_eval.py", "object_epoch_eval.py"))), None)
     if i is None or len(pos) < i + 8:
-        return ["dense_epoch_eval.py needs: <char> <sub> <total> <start> <end> <trigger> <ckpt_dir> [scenes]"]
+        return ["the epoch sweep needs: <char> <sub> <total> <start> <end> <trigger> <ckpt_dir> [scenes]"]
     out = []
     char, sub, total = pos[i + 1], pos[i + 2], pos[i + 3]
     for name, v in (("total", total), ("start", pos[i + 4]), ("end", pos[i + 5])):
@@ -230,6 +232,7 @@ GUARDS = {
     "train_character.ps1": _train_character,
     "run_video.py": _run_video,
     "dense_epoch_eval.py": _dense_epoch_eval,
+    "object_epoch_eval.py": _dense_epoch_eval,
     "prompt_ab.py": _prompt_ab,
     "run_shoots.py": _run_shoots,
 }
