@@ -52,7 +52,9 @@ if len(legs) > 1 and not ffmpeg_exe(cfg):
 if problems:
     raise SystemExit("; ".join(problems))
 
-name = spec.name or spec.motion.split(",")[0].split(".")[0]
+# capped: a whole motion line as the folder name put Amanda's chained-leg
+# paths within 20 characters of Windows' 260 limit
+name = (spec.name or spec.motion.split(",")[0].split(".")[0]).strip()[:60]
 d = find_set(cfg, CHAR, "video", name, create=True)
 write_set_json(d, character=CHAR, kind="video", name=name, date=d.name[:10], judge_sets=[])
 (d / "spec.json").write_text(SPEC_PATH.read_text(encoding="utf-8"), encoding="utf-8")

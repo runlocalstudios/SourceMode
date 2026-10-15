@@ -142,3 +142,38 @@ def test_gpu_add_takes_the_lane_and_list_shows_it(tmp_path, monkeypatch):
     assert "cpu lane" in res.output
     res = CliRunner().invoke(cli.app, ["gpu", "restart"])
     assert res.exit_code == 0 and (tmp_path / "gpu-queue" / RESTART_FLAG).is_file()
+
+
+def test_a_fast_failure_on_the_cpu_lane_never_pauses_the_card_lane(tmp_path):
+    """A voice job dying on a download in five seconds must not stop the
+    training queued behind nothing on the card (review, 2026-10-14)."""
+    path = q.queue_path(tmp_path)
+    doc = q.empty()
+    cpu = q.add(doc, kind="voice", label="dies", cmd=_py("raise SystemExit(3)"), cwd=str(tmp_path), lane="cpu")
+    gpu = q.add(doc, kind="train", label="card", cmd=["x"], cwd=str(tmp_path))
+    q.save(path, doc)
+    r = _runner(tmp_path)
+    assert r.cpu_step() == "ran"
+    doc = q.load(path)
+    assert q.find(doc, cpu["id"])["status"] == "failed" and doc["paused"] is False
+    assert r.step(dry_run=True) == "dry-run"                    # the card lane carries on
+    assert q.find(doc, gpu["id"])["status"] == "queued"
+
+
+def test_an_orphan_on_the_cpu_lane_is_closed_by_the_cpu_lane_itself(tmp_path):
+    """A runner restarted under a CPU job used to leave that lane 'busy' for
+    as long as the card lane was inside a job - a whole training."""
+    path = q.queue_path(tmp_path)
+    doc = q.empty()
+    orphan = q.add(doc, kind="voice", label="old", cmd=["python", "old.py"], cwd=str(tmp_path), lane="cpu")
+    q.mark_running(doc, orphan["id"], 424242, str(tmp_path / "old.log"))
+    nxt = q.add(doc, kind="voice", label="next", cmd=_py("print('hi')"), cwd=str(tmp_path), lane="cpu")
+    q.save(path, doc)
+    alive = _runner(tmp_path, procs=lambda: [(424242, "python old.py")])
+    assert alive.cpu_step() == "busy"                           # its process is still there: wait
+    gone = _runner(tmp_path, procs=lambda: [(1, "something else")])
+    assert gone.cpu_step() == "ran"                             # closed as lost, the next one ran
+    doc = q.load(path)
+    o = q.find(doc, orphan["id"])
+    assert o["status"] == "failed" and o["exit_code"] is None and "runner died" in o["note"]
+    assert q.find(doc, nxt["id"])["status"] == "done"

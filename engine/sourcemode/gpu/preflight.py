@@ -210,9 +210,18 @@ def _run_video(cmd: list[str], cwd: Path, outputs: Path, previews_root: Path | N
         spec = VideoSpec.from_dict(json.loads(sp.read_text(encoding="utf-8")))
     except (ValueError, TypeError) as ex:
         return [f"spec {sp.name} is not a video spec: {ex}"]
-    cap = 6.0
+    # the same cap and the same ffmpeg lookup the script itself uses - a
+    # hard-coded 6 s passed specs that run_video.py then chained
+    from ..config import load_config  # noqa: PLC0415
+    from ..video import leg_cap_seconds  # noqa: PLC0415
+
+    try:
+        cfg = load_config()
+        cap = leg_cap_seconds(cfg)
+    except Exception:  # noqa: BLE001 - no config here means the defaults
+        cfg, cap = None, 6.0
     problems = validate(spec, leg_cap_s=cap)
-    if len(legs_for(spec.seconds, cap)) > 1 and not ffmpeg_exe():
+    if len(legs_for(spec.seconds, cap)) > 1 and not ffmpeg_exe(cfg):
         problems.append("a chained clip needs ffmpeg and there is none on this machine")
     return problems
 

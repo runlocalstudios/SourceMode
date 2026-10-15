@@ -56,7 +56,7 @@ acfg = cfg.get("assets", {})
 model = acfg.get("cutout_model", "isnet-general-use")
 size = tuple(acfg.get("game_size", (1024, 1536)))
 cut_dir = home / "cutouts"
-if cut_dir.is_dir() and not any(cut_dir.rglob("*.json")) is False:
+if cut_dir.is_dir() and any(cut_dir.rglob("*.json")):
     # an older cutout tree from the Edit pack is set aside, never mixed in
     stale = [s for s in cut_dir.rglob("*.json")
              if "qwen_image_t2i" not in s.read_text(encoding="utf-8", errors="replace")]

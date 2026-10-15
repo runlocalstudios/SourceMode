@@ -187,9 +187,14 @@ class Runner:
             verdict = "done" if exit_code == 0 else "FAILED"
             if exit_code != 0 and seconds < FAST_FAIL_SECONDS:
                 reason = (f"{job['id']} {job['label']} exited {exit_code} after {seconds:.0f}s - "
-                          f"too fast to be a result, so the queue is paused rather than fed to it")
-                q.pause(doc, reason)
-                self.log("PAUSED: " + reason)
+                          f"too fast to be a result")
+                if q.lane_of(job) == "gpu":
+                    q.pause(doc, reason + ", so the queue is paused rather than fed to it")
+                    self.log("PAUSED: " + reason)
+                else:
+                    # the card never waits on this lane: a voice job dying on a
+                    # download must not stop the training queued behind it
+                    self.log("FAST FAIL on the cpu lane: " + reason + "; the card lane is not paused")
             q.save(self.qpath, doc)
         self.log(f"END {job['id']} {job['kind']}:{job['label']} {verdict} exit={exit_code} in {seconds:.0f}s")
 
@@ -210,14 +215,19 @@ class Runner:
             return "paused"
         left = q.running(doc, "cpu")
         if left:
-            # an orphan on this lane is waited on exactly as the card's are; the
-            # main loop closes it once it is gone
+            # an orphan on this lane is waited on exactly as the card's are, and
+            # closed HERE once it is gone: the card loop closes orphans only
+            # between its own jobs, which left this lane dead for the length of
+            # a training when a runner restarted under a voice job
             procs = self.procs()
             if not procs or any(still_running(j, procs) for j in left):
                 self._say_once_cpu("cpu lane: wait - " + ", ".join(j["id"] for j in left)
                                    + " still running from an earlier runner")
                 return "busy"
-            return "busy"
+            with self._lock:
+                doc = q.load(self.qpath)
+                self._close_orphans(doc, q.running(doc, "cpu"))
+                q.save(self.qpath, doc)
         job = q.head(doc, "cpu")
         if job is None:
             self._say_once_cpu("cpu lane: nothing queued")
@@ -262,6 +272,26 @@ class Runner:
             if what != "ran":
                 stop.wait(self.poll)
 
+    def _close_orphans(self, doc: dict, left: list[dict]) -> None:
+        """Jobs marked running by a runner that is gone, whose processes have
+        ended: closed as done when every image they promised is on disk, else
+        lost. Mutates `doc`; the caller saves it under the lock."""
+        for j in left:
+            # 2026-10-10: cat:club wrote all 8 shots and was recorded as
+            # failed because only the exit code was lost. Count its output.
+            got = self.produced(j)
+            if got and got[1] and got[0] >= got[1]:
+                q.mark_finished(doc, j["id"], 0)
+                q.find(doc, j["id"])["note"] = ((j.get("note") or "") + "; " if j.get("note") else "") + (
+                    f"runner died while it ran; closed as done - {got[0]} of {got[1]} images written")
+                self.log(f"END {j['id']} {j['kind']}:{j['label']} done - its runner died while it ran,"
+                         f" but all {got[1]} images were written")
+                continue
+            q.mark_lost(doc, j["id"])
+            self.log(f"LOST {j['id']} {j['kind']}:{j['label']} - its runner died while it ran;"
+                     f" the process has ended, exit code unknown"
+                     + (f", {got[0]} of {got[1]} images written" if got else ""))
+
     def restart_requested(self) -> bool:
         """`sourcemode gpu restart` drops a flag; the runner exits when BOTH
         lanes are idle, so new code takes over between jobs and never under one."""
@@ -288,21 +318,7 @@ class Runner:
                     self._say_once(f"wait: {j['id']} {j['label']} is still running as PID {j['pid']},"
                                    f" left by an earlier runner - waiting for it to finish")
                     return "busy"
-            for j in left:
-                # 2026-10-10: cat:club wrote all 8 shots and was recorded as
-                # failed because only the exit code was lost. Count its output.
-                got = self.produced(j)
-                if got and got[1] and got[0] >= got[1]:
-                    q.mark_finished(doc, j["id"], 0)
-                    q.find(doc, j["id"])["note"] = ((j.get("note") or "") + "; " if j.get("note") else "") + (
-                        f"runner died while it ran; closed as done - {got[0]} of {got[1]} images written")
-                    self.log(f"END {j['id']} {j['kind']}:{j['label']} done - its runner died while it ran,"
-                             f" but all {got[1]} images were written")
-                    continue
-                q.mark_lost(doc, j["id"])
-                self.log(f"LOST {j['id']} {j['kind']}:{j['label']} - its runner died while it ran;"
-                         f" the process has ended, exit code unknown"
-                         + (f", {got[0]} of {got[1]} images written" if got else ""))
+            self._close_orphans(doc, left)
             with self._lock:
                 q.save(self.qpath, doc)
 

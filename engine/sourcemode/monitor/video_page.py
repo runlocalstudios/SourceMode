@@ -352,6 +352,8 @@ def video_router(cfg: dict):
             spec.seconds = float(spec.seconds); spec.takes = int(spec.takes)
         except (TypeError, ValueError) as exc:
             raise HTTPException(400, "length and takes must be numbers") from exc
+        if not isinstance(spec.source, dict):
+            raise HTTPException(400, "source must be an object: a keeper or a new still")
         problems = V.validate(spec, leg_cap_s=V.leg_cap_seconds(cfg))
         if problems:
             raise HTTPException(400, "; ".join(problems))

@@ -1528,20 +1528,25 @@ def judge_router(cfg: dict):
         # the page assigns it straight to cur.verdicts. Nothing else may be put
         # in it - an extra key here would count as a judged item and throw the
         # completion test off by one. The page asks /redo separately.
+        # Never silent, though: a staging that failed to queue used to leave
+        # the Characters tab without its Approve button and no line saying why.
+        import logging  # noqa: PLC0415
+
+        _log = logging.getLogger("sourcemode.judge")
         try:
             from ..monitor.queue_page import queue_redo_if_complete  # noqa: PLC0415
 
             queue_redo_if_complete(cfg, set_id)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            _log.warning("%s: verdict saved, but the re-roll could not be queued: %s", set_id, exc)
         # and the other half of the same decision: every look kept means the
         # cutout and staging queue themselves (CPU lane), nothing more
         try:
             from ..monitor.queue_page import queue_process_if_ready  # noqa: PLC0415
 
             queue_process_if_ready(cfg, set_id)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            _log.warning("%s: verdict saved, but the staging job could not be queued: %s", set_id, exc)
         return out
 
     @r.post("/judge/set/{set_id}/pair")
