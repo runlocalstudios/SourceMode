@@ -610,38 +610,24 @@ def source_asset(cfg: dict, character: str, epoch: int | None, lora: dict | None
     """A 2:3 render of her at her locked epoch for the pack to condition on:
     `scene_00.png` of her sweep in the library, else the old outputs/dense_* spot.
 
-    A continued run numbers its epochs from 1 and sweeps into a folder tagged
-    with its name - priyanka's lock is `priyanka_v2b-000006` = epoch 26, rendered
-    in `*_sweep_v2b/ep06`. So after `ep<epoch>` anywhere, look in that run's own
-    sweep folders for its file number, or its last epoch when the file is the
-    unnumbered final one (vivienne: `vivienne_v2b.safetensors`, epoch 28, ep04)."""
-    from ..library import library_dir  # noqa: PLC0415
+    Which `ep*` folder is hers is `library.lock_render_dir`, the same rule the
+    prune uses to keep that folder when it clears the rest of her sweep."""
+    from ..library import library_dir, lock_render_dir  # noqa: PLC0415
     from ..config import outputs_dir  # noqa: PLC0415
 
     if epoch is None:
         return None
+    lock = dict(lora or {}, epoch=epoch)
     roots = sorted((library_dir(cfg) / character).glob("*_sweep_*"), reverse=True)
     roots += sorted(outputs_dir(cfg).glob(f"dense_{character}*"), reverse=True)
+    # the real epoch number anywhere first, then a continued run's own numbering
     for r in roots:
         hit = _first_render(r / f"ep{int(epoch)}")
         if hit:
             return hit
-    # the continued run's own folders. `file` is the trainer's name of the lock
-    # (vivienne_v2b.safetensors); since 2026-10-15 `name` and `path` are the
-    # character's own (vivienne.safetensors) and carry no run tag.
-    lk = lora or {}
-    name = Path(lk.get("file") or lk.get("name") or lk.get("path") or "").name
-    m = re.match(rf"{re.escape(character)}_(.+?)(?:-(\d+))?\.safetensors$", name)
-    if not m:
-        return None
-    tag, num = m.group(1), m.group(2)
-    own = [r for r in roots if re.search(rf"_sweep_{re.escape(tag)}(?:-|$)", r.name)]
-    for r in own:
-        if num:
-            hit = _first_render(r / f"ep{int(num):02d}") or _first_render(r / f"ep{int(num)}")
-        else:
-            eps = sorted((d for d in r.glob("ep*") if d.is_dir()), key=lambda d: int(d.name[2:] or 0))
-            hit = _first_render(eps[-1]) if eps else None
+    for r in roots:
+        d = lock_render_dir(r, character, lock)
+        hit = _first_render(d) if d else None
         if hit:
             return hit
     return None

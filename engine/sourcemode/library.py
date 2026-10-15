@@ -404,9 +404,52 @@ def _is_ab(name: str) -> bool:
     return low.startswith("ab_") or low.endswith("_ab") or "_ab_" in low
 
 
+def lock_render_dir(folder: Path, character: str, lock: dict) -> Path | None:
+    """The `ep*` folder inside one sweep that rendered her LOCKED epoch, or None.
+
+    The plain case is `ep<epoch>`. A continued run numbers its epochs from 1 and
+    sweeps into a folder tagged with its run name - priyanka's lock is
+    `priyanka_v2b-000006` = epoch 26, rendered in `*_sweep_v2b/ep06`; vivienne's
+    is the unnumbered final file `vivienne_v2b.safetensors`, epoch 28, the last
+    `ep*` of her v2b sweep. The run tag is read from `file`, the trainer's name
+    (`name` and `path` are the character's own since 2026-10-15). A sweep of a
+    different run never answers for the lock: a v2 sweep holds no render of a
+    v2b lock."""
+    epoch = lock.get("epoch")
+    if epoch is None:
+        return None
+    for d in (folder / f"ep{int(epoch)}", folder / f"ep{int(epoch):02d}"):
+        if d.is_dir():
+            return d
+    name = Path(lock.get("file") or lock.get("name") or lock.get("path") or "").name
+    m = re.match(rf"{re.escape(character)}_(.+?)(?:-(\d+))?\.safetensors$", name, re.I)
+    if not m:
+        return None
+    tag, num = m.group(1), m.group(2)
+    if not re.search(rf"(?:_sweep_|dense_{re.escape(character)}_){re.escape(tag)}(?:[-_]|$)",
+                     folder.name, re.I):
+        return None
+    if num:
+        for d in (folder / f"ep{int(num):02d}", folder / f"ep{int(num)}"):
+            if d.is_dir():
+                return d
+        return None
+    eps = sorted((d for d in folder.glob("ep*") if d.is_dir()), key=lambda d: int(d.name[2:] or 0))
+    return eps[-1] if eps else None
+
+
+#: Files a pruned sweep folder keeps beside the lock's renders: its own record.
+SWEEP_KEEP_FILES = {"set.json"}
+
+
 def prune_plan(cfg: dict, outputs: Path, judge_root: Path, *, ab_days: int = PRUNE_AB_DAYS,
                now: float | None = None) -> list[dict]:
-    """Rows of {action, kind, path, why, bytes, character, judge_sets}. Deletes nothing."""
+    """Rows of {action, kind, path, why, bytes, character, judge_sets, keep}. Deletes nothing.
+
+    `keep` names what stays inside a folder row: the lock's renders, so the
+    sweep that chose her epoch still shows what the lock looks like. Jeremy,
+    2026-10-15, after the first prune took every one of them: "I thought we
+    were keeping the locked epoch renders.\""""
     from .train.locked import comfy_loras_dir, load_registry, locked_files  # noqa: PLC0415
 
     now = now or time.time()
@@ -415,15 +458,26 @@ def prune_plan(cfg: dict, outputs: Path, judge_root: Path, *, ab_days: int = PRU
     keep = locked_files(cfg)
     rows: list[dict] = []
 
-    def row(kind, path, why, char="", refs=()):
-        rows.append({"action": "delete", "kind": kind, "path": str(path), "why": why,
-                     "bytes": _size(path), "character": char, "judge_sets": list(refs)})
+    def row(kind, path, why, char="", refs=(), keep_in=(), size=None):
+        kept = [str(k) for k in keep_in]
+        rows.append({"action": "delete", "kind": kind, "path": str(path),
+                     "why": why + (f"; keeps {', '.join(Path(k).name for k in kept)}" if kept else ""),
+                     "bytes": _size(path) if size is None else size,
+                     "character": char, "judge_sets": list(refs), "keep": kept})
+
+    def sweep_row(d, char):
+        held = lock_render_dir(d, char, reg[char])
+        going = [c for c in d.iterdir() if c != held and c.name not in SWEEP_KEEP_FILES]
+        if not going:
+            return   # already pruned down to her lock's renders
+        row("folder", d, f"epoch sweep; {char} is locked to {reg[char]['file']}", char,
+            _judge_refs(judge_root, outputs, d), [held] if held else [],
+            size=sum(_size(c) for c in going))
 
     for d in sorted(p for p in outputs.glob("dense_*") if p.is_dir()):
         char = _character_in(d.name, locked_chars)
         if char:
-            row("folder", d, f"epoch sweep; {char} is locked to {reg[char]['file']}", char,
-                _judge_refs(judge_root, outputs, d))
+            sweep_row(d, char)
     for d in sorted(p for p in outputs.iterdir() if p.is_dir() and _is_ab(p.name)):
         newest = _newest_mtime(d)
         age = (now - newest) / 86400 if newest else None
@@ -436,8 +490,7 @@ def prune_plan(cfg: dict, outputs: Path, judge_root: Path, *, ab_days: int = PRU
         char = home.name if home.name in locked_chars else None
         for d in sorted(p for p in home.glob("*_sweep_*") if p.is_dir()):
             if char:
-                row("folder", d, f"epoch sweep; {char} is locked to {reg[char]['file']}", char,
-                    _judge_refs(judge_root, outputs, d))
+                sweep_row(d, char)
         for d in sorted(p for p in home.glob("*_ab_*") if p.is_dir()):
             newest = _newest_mtime(d)
             age = (now - newest) / 86400 if newest else None
@@ -516,11 +569,25 @@ def prune_apply(cfg: dict, rows: list[dict], judge_root: Path, *, dry_run: bool 
             if age is not None and age < SETTLE_S:
                 log.append(f"SKIP {p}: written {age:.0f}s ago - still in use")
                 continue
+        kept = [Path(k) for k in r.get("keep") or []]
         line = f"delete {r['kind']} {p} ({r['bytes'] / 1e9:.2f} GB)"
+        if kept:
+            line += f", keeping {', '.join(k.name for k in kept)}"
         if dry_run:
             log.append(line)
             continue
-        if r["kind"] == "folder":
+        if r["kind"] == "folder" and kept:
+            # the lock's renders and the set's record stay; everything else goes
+            for child in sorted(p.iterdir()):
+                if child in kept or child.name in SWEEP_KEEP_FILES:
+                    continue
+                if child.is_dir():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+            retired = _retire_sets(judge_root, r.get("judge_sets") or [])
+            line += f"; retired {', '.join(retired)}" if retired else ""
+        elif r["kind"] == "folder":
             shutil.rmtree(p)
             retired = _retire_sets(judge_root, r.get("judge_sets") or [])
             line += f"; retired {', '.join(retired)}" if retired else ""

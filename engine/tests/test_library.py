@@ -199,6 +199,7 @@ def locked_world(tree, tmp_path, monkeypatch):
     stray.parent.mkdir(parents=True)
     stray.write_bytes(b"19")
     _png(out / "dense_zara_v2_asset" / "ep18" / "scene_00.png")
+    _png(out / "dense_zara_v2_asset" / "ep19" / "scene_00.png")
     make_set(judge, "dense_zara_v2_asset", "zara sweep",
              [{"id": "e18", "path": os.path.join("outputs", "dense_zara_v2_asset", "ep18", "scene_00.png"),
                "arm": "zara_v2 epoch 18", "group": "0"}])
@@ -225,7 +226,10 @@ def test_prune_apply_deletes_retires_and_keeps_the_lock(locked_world, tmp_path):
     dry = L.prune_apply(cfg, rows, judge, dry_run=True)
     assert all(l.startswith("delete") for l in dry) and (out / "dense_zara_v2_asset").is_dir()
     log = L.prune_apply(cfg, rows, judge)
-    assert not (out / "dense_zara_v2_asset").exists() and not (out / "selfie_ab").exists()
+    # the sweep keeps the lock's own renders (ep18) and loses the rest
+    assert (out / "dense_zara_v2_asset" / "ep18" / "scene_00.png").is_file()
+    assert sorted(p.name for p in (out / "dense_zara_v2_asset").iterdir()) == ["ep18"]
+    assert not (out / "selfie_ab").exists()
     assert not (ck / "zara_v2-000019.safetensors").exists() and not stray.exists()
     assert (ck / "zara_v2-000018.safetensors").is_file()
     assert (judge / "retired" / "dense_zara_v2_asset.set.json").is_file()
@@ -248,7 +252,8 @@ def test_prune_refuses_while_a_lock_does_not_verify(locked_world):
 def test_prune_finds_the_same_sets_in_her_library_folder(locked_world, tmp_path):
     cfg, out, judge, ck, stray = locked_world
     lib = tmp_path / "library"
-    _png(lib / "zara" / "2026-10-01_sweep_v2-asset" / "ep18" / "scene_00.png")
+    _png(lib / "zara" / "2026-10-01_sweep_v2-asset" / "ep18" / "scene_00.png")   # her lock: kept
+    _png(lib / "zara" / "2026-10-01_sweep_v2-asset" / "ep19" / "scene_00.png")   # a loser: listed
     _png(lib / "mei" / "2026-10-01_sweep_v2-asset" / "ep18" / "scene_00.png")      # no lock
     _png(lib / "zara" / "2026-09-01_ab_hair" / "A" / "scene_00.png", time.time() - 30 * 86400)
     _png(lib / "zara" / "2026-10-11_ab_skin" / "A" / "scene_00.png")                # fresh
@@ -257,6 +262,58 @@ def test_prune_finds_the_same_sets_in_her_library_folder(locked_world, tmp_path)
     assert {"2026-10-01_sweep_v2-asset", "2026-09-01_ab_hair"} <= names
     assert not {"2026-10-11_ab_skin", "2026-10-01_shoot_pool"} & names
     assert sum(1 for r in L.prune_plan(cfg, out, judge) if "mei" in Path(r["path"]).parts) == 0
+
+
+def test_a_prune_keeps_the_locked_epochs_renders_and_the_sets_record(locked_world, tmp_path):
+    """2026-10-15: the first prune deleted every sweep folder whole, and with them
+    the only renders of 38 locks. Jeremy: "I thought we were keeping the locked
+    epoch renders." A locked character's sweep keeps `ep<lock>/` and its
+    set.json; the losing epochs and the judge set go as before."""
+    cfg, out, judge, ck, stray = locked_world
+    lib = tmp_path / "library"
+    sweep = lib / "zara" / "2026-10-01_sweep_v2-asset"
+    for ep in ("ep17", "ep18", "ep19"):
+        _png(sweep / ep / "scene_00.png")
+        _png(sweep / ep / "scene_01.png")
+    (sweep / "set.json").write_text("{}", encoding="utf-8")
+    (sweep / "sheet.jpg").write_bytes(b"jpg")
+    _png(lib / "mei" / "2026-10-01_sweep_v2-asset" / "ep18" / "scene_00.png")      # no lock
+    rows = L.prune_plan(cfg, out, judge)
+    r = next(x for x in rows if Path(x["path"]) == sweep)
+    assert r["keep"] == [str(sweep / "ep18")] and r["why"].endswith("; keeps ep18")
+    assert r["bytes"] == L._size(sweep) - L._size(sweep / "ep18") - L._size(sweep / "set.json")
+    pj, pm = L.write_prune(rows, lib)
+    assert "keeps ep18" in pm.read_text(encoding="utf-8")
+
+    dry = L.prune_apply(cfg, rows, judge, dry_run=True)
+    assert any(l.endswith("keeping ep18") for l in dry) and (sweep / "ep17").is_dir()
+    L.prune_apply(cfg, rows, judge)
+    assert sorted(p.name for p in sweep.iterdir()) == ["ep18", "set.json"]
+    assert (sweep / "ep18" / "scene_01.png").is_file()
+    assert (lib / "mei" / "2026-10-01_sweep_v2-asset" / "ep18" / "scene_00.png").is_file()
+    # and approving her looks still finds the render the prune kept
+    from sourcemode.assets.looks import source_asset
+    lock = {"name": "zara.safetensors", "file": "zara_v2-000018.safetensors", "epoch": 18}
+    assert source_asset(cfg, "zara", 18, lock) == sweep / "ep18" / "scene_00.png"
+    # a second prune has nothing left to take from her sweep, so it is not listed
+    assert not [x for x in L.prune_plan(cfg, out, judge) if Path(x["path"]) == sweep]
+
+
+def test_lock_render_dir_follows_a_continued_runs_numbering(tmp_path):
+    lib = tmp_path / "priyanka"
+    for d in ("2026-09-20_sweep_v2/ep20", "2026-09-21_sweep_v2b/ep06"):
+        (lib / d).mkdir(parents=True)
+    lock = {"name": "priyanka.safetensors", "file": "priyanka_v2b-000006.safetensors", "epoch": 26}
+    assert L.lock_render_dir(lib / "2026-09-21_sweep_v2b", "priyanka", lock) == lib / "2026-09-21_sweep_v2b" / "ep06"
+    assert L.lock_render_dir(lib / "2026-09-20_sweep_v2", "priyanka", lock) is None   # a v2 sweep holds no v2b render
+    # the unnumbered final file is the continued run's last epoch
+    viv = tmp_path / "vivienne"
+    for d in ("2026-10-11_sweep_v2b-asset/ep00", "2026-10-11_sweep_v2b-asset/ep04", "dense_vivienne_v2b_asset/ep04"):
+        (viv / d).mkdir(parents=True)
+    lock = {"file": "vivienne_v2b.safetensors", "epoch": 28}
+    assert L.lock_render_dir(viv / "2026-10-11_sweep_v2b-asset", "vivienne", lock) == viv / "2026-10-11_sweep_v2b-asset" / "ep04"
+    assert L.lock_render_dir(viv / "dense_vivienne_v2b_asset", "vivienne", lock) == viv / "dense_vivienne_v2b_asset" / "ep04"
+    assert L.lock_render_dir(viv / "2026-10-11_sweep_v2b-asset", "vivienne", {"file": "vivienne_v2-000030.safetensors", "epoch": 30}) is None
 
 
 def test_a_prune_leaves_every_page_and_render_answer_unchanged(locked_world, tmp_path, monkeypatch):
