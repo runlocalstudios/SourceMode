@@ -19,7 +19,7 @@ import pytest
 from sourcemode.assets import influencer as I
 from sourcemode.assets.appearance import APPEARANCE, is_up_style
 from sourcemode.assets.render import shot_prompt
-from sourcemode.assets.wardrobe import DEFAULT_HAIR, SHORT_HAIR, hair_options, is_short_haired
+from sourcemode.assets.wardrobe import DEFAULT_HAIR, SHORT_HAIR, hair_options, is_own_hair, is_short_haired
 
 DOWN = re.compile(r"\b(long|chin-length|shoulder-length|jaw-length|bob|pixie|worn loose|"
                   r"falling|hanging|past her shoulders|down her back)\b", re.I)
@@ -44,16 +44,34 @@ def test_no_prompt_puts_hair_up_and_down_at_once(char):
     slots += I.slots(char, 1)
     for s in slots:
         ident, hair = _parts(shot_prompt(char, s, char, backdrop=s.get("setting")))
-        if is_up_style(hair):
+        # a line he wrote into her brief himself is his call, collision or not
+        if is_up_style(hair) and not is_own_hair(char, hair):
             assert not DOWN.search(ident), f"{char}: {hair!r} with {ident!r}"
 
 
 def test_priya_is_short_haired_and_never_asked_to_put_it_up():
+    """Canned up-styles are swapped for a short-haired character; her OWN
+    wardrobe lines are never touched. Jeremy, 2026-10-15: "If I put low
+    ponytail for a character, I want a low ponytail." """
     assert is_short_haired("priya")
-    assert hair_options("priya") == SHORT_HAIR
+    own = hair_options("priya")
+    assert own != SHORT_HAIR, "priya has her own hair list in wardrobe.json"
+    for h in own:
+        p = shot_prompt("priya", {"id": "x", "look": 1, "category": "casual", "pose": "standing",
+                                  "outfit": "a white tee", "hair": h}, "priya")
+        assert f", {h}, wearing" in p, f"his line {h!r} is not in the prompt: {p}"
     for l in LOOKS:
+        if is_own_hair("priya", l["hair"]):
+            continue
         _, hair = _parts(shot_prompt("priya", dict(l, pose="standing"), "priya"))
         assert not is_up_style(hair), hair
+
+
+def test_a_canned_up_style_is_still_swapped_for_short_hair():
+    p = shot_prompt("priya", {"id": "x", "look": 1, "category": "casual", "pose": "standing",
+                              "outfit": "a white tee", "hair": "her hair up in a messy bun"}, "priya")
+    assert "messy bun" not in p
+    assert any(f", {s}, wearing" in p for s in SHORT_HAIR), p
 
 
 def test_long_haired_characters_keep_the_shared_rotation():

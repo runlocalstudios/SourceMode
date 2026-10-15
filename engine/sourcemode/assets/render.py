@@ -289,11 +289,14 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     tiebreaker eval set (2026-10-10): `turn` and `expression` choose from the
     same tables rather than replacing them.
     """
-    # Hair too short to gather never gets an up-style, whoever wrote the slot -
-    # wardrobe plans and the eval looks set hair per look, outside hair_options.
-    # priya's chin-length bob was asked for buns and rendered down AND up.
-    from .wardrobe import SHORT_HAIR, is_short_haired  # noqa: PLC0415
-    if is_short_haired(character) and is_up_style(slot.get("hair", "")):
+    # Hair too short to gather never gets a CANNED up-style - wardrobe plans and
+    # the eval looks set hair per look, outside hair_options, and priya's
+    # chin-length bob was asked for buns and rendered down AND up. A line from
+    # her own wardrobe list is never touched: Jeremy, 2026-10-15, "If I put low
+    # ponytail for a character, I want a low ponytail."
+    from .wardrobe import SHORT_HAIR, is_own_hair, is_short_haired  # noqa: PLC0415
+    if (is_short_haired(character) and is_up_style(slot.get("hair", ""))
+            and not is_own_hair(character, slot.get("hair", ""))):
         slot = {**slot, "hair": SHORT_HAIR[int(slot.get("look", 1)) % len(SHORT_HAIR)]}
     if slot["pose"] == "sitting":
         look = f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. Natural realistic human proportions, correct anatomy."

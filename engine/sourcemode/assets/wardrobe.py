@@ -87,6 +87,14 @@ def hair_options(character: str) -> tuple[str, ...]:
     return DEFAULT_HAIR
 
 
+def is_own_hair(character: str, clause: str) -> bool:
+    """Is this hair clause one Jeremy wrote into her wardrobe brief himself?
+    His lines are final - no rule downstream may swap one for a canned style."""
+    h = brief(character).get("hair")
+    own = {str(x).strip().lower() for x in h} if isinstance(h, list) else set()
+    return (clause or "").strip().lower() in own
+
+
 #: What hair too short to gather can actually do. Jeremy, 2026-10-05, on priya's
 #: influencer pack: "a bunch where her hair is down, but also in a bun at the same
 #: time" - her record says "a chin-length dark brown bob" and the shared rotation
