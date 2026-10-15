@@ -111,10 +111,10 @@ def _train_character(cmd: list[str], cwd: Path, outputs: Path, previews_root: Pa
     free_gb = shutil.disk_usage(str(outputs if outputs.exists() else Path.cwd())).free / 2**30
     if free_gb < TRAIN_DISK_GB:
         out.append(f"{free_gb:.1f} GB free on the outputs drive; a training needs {TRAIN_DISK_GB} GB")
-    char = _flag(cmd, "-Char") or ds.rsplit("_", 1)[0]
-    p = _appearance_problem(char)
-    if p:
-        out.append(p + " (the post-training sweep refuses without it)")
+    # No appearance check here. Jeremy, 2026-10-14: "who gives a fuck about her
+    # description why is that needed to train the lora? it's not. I fucking
+    # approved the captions already." Training reads captions, never the record;
+    # the sweep after it renders with whatever record exists.
     return out
 
 
@@ -140,9 +140,8 @@ def _dense_epoch_eval(cmd: list[str], cwd: Path, outputs: Path, previews_root: P
             name = f"{sub}.safetensors" if ep == int(total) else f"{sub}-{ep:06d}.safetensors"
             if not (ck / name).is_file():
                 out.append(f"epoch {ep}: {name} is not in {ck}")
-    p = _appearance_problem(char, allow_incomplete="--allow-incomplete-appearance" in cmd)
-    if p:
-        out.append(p)
+    # the sweep logs an incomplete record and renders with what it holds (Jeremy,
+    # 2026-10-14) - nothing to refuse here
     return out
 
 

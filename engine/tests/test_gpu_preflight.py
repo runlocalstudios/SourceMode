@@ -67,14 +67,16 @@ def test_dense_epoch_eval_without_checkpoints(tmp_path):
     assert out == [f"checkpoint folder {tmp_path / 'none'} does not exist"]
 
 
-def test_unconfirmed_appearance_is_a_problem_for_a_sweep(tmp_path):
+def test_a_missing_appearance_record_never_blocks_a_sweep(tmp_path):
+    """Jeremy, 2026-10-14: "who gives a fuck about her description why is that
+    needed to train the lora? it's not." The sweep logs what is missing and
+    renders with what the record holds; the preflight has nothing to refuse."""
     s = tmp_path / "dense_epoch_eval.py"
     s.write_text("", encoding="utf-8")
     ck = tmp_path / "lora"; ck.mkdir()
     (ck / "x_v2.safetensors").write_bytes(b"0")
     cmd = [PY, str(s), "nobody_at_all", "x_v2", "24", "16", "24", "nobody_at_all", str(ck), "20"]
-    out = preflight(_job(cmd, tmp_path), tmp_path)
-    assert len(out) == 1 and "appearance record is not ready" in out[0]
+    assert preflight(_job(cmd, tmp_path), tmp_path) == []
 
 
 def test_training_refuses_existing_checkpoints_and_unapproved_set(tmp_path, monkeypatch):
@@ -94,7 +96,8 @@ def test_training_refuses_existing_checkpoints_and_unapproved_set(tmp_path, monk
     out = preflight({"cmd": cmd, "cwd": str(tmp_path), "requires_approval": "nobody_v2"}, outputs, previews)
     assert any("already holds 1 checkpoints" in p for p in out)
     assert any("not approved" in p for p in out)
-    assert any("appearance record" in p for p in out)
+    # and NOT her description: training reads captions (Jeremy, 2026-10-14)
+    assert not any("appearance" in p for p in out)
 
 
 def test_prompt_ab_needs_find_and_two_arms(tmp_path):

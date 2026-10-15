@@ -82,15 +82,22 @@ def appearance_clause(d: dict) -> str:
     bits = ["a young woman"]
     if d.get("skin"):
         bits.append(f"{d['skin']} skin")
+    # Vera's form wrote "a slim with a large bust, blonde, blue": a bare
+    # adjective needs its noun. "slim" -> "a slim figure"; "blonde" -> "blonde
+    # hair"; "blue" -> "blue eyes". Text that already carries the noun is kept.
     fig = d.get("build", "")
+    if fig and not re.search(r"\b(figure|build|frame|body)\b", fig, re.I):
+        fig = f"{fig} figure"
     if d.get("bust"):
         fig = f"{fig} with a {d['bust']} bust" if fig else f"a {d['bust']} bust"
     if fig:
         bits.append(f"a {fig}" if not fig.startswith(("a ", "an ")) else fig)
     if d.get("hair"):
-        bits.append(d["hair"])
+        h = d["hair"]
+        bits.append(h if re.search(r"\b(hair|bob|pixie|braids?|locs|curls|waves)\b", h, re.I) else f"{h} hair")
     if d.get("eyes"):
-        bits.append(d["eyes"])
+        e = d["eyes"]
+        bits.append(e if re.search(r"\beyes?\b", e, re.I) else f"{e} eyes")
     if d.get("features"):
         bits.append(d["features"])
     return ", ".join(b for b in bits if b)
@@ -113,6 +120,15 @@ def appearance_record(d: dict) -> dict:
         rec["bust"] = d["bust"]
     if d.get("negative"):
         rec["negative"] = d["negative"]
+    # He typed every field, so the record is his: confirmed at creation. The
+    # confirm gate exists for drafts read off photos by a session, not for this.
+    # Vera, 2026-10-14, was turned away from training over an unconfirmed form.
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    from .appearance import record_fingerprint  # noqa: PLC0415
+
+    rec["confirmed"] = {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                        "fingerprint": record_fingerprint(rec)}
     return rec
 
 

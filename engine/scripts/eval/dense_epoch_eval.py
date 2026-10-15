@@ -235,14 +235,14 @@ _pre = appearance_check(CHAR)
 for _w in _pre["warnings"]:
     log(f"appearance: WARNING {_w}")
 if not _pre["ok"]:
+    # Logged, never refused. Jeremy, 2026-10-14, when Vera's training was turned
+    # away over her description: "who gives a fuck about her description why is
+    # that needed to train the lora? it's not." The sweep renders with whatever
+    # the record holds - an unconfirmed sentence, or the trigger alone - and the
+    # log says which, so a bad sweep can be read back to its cause.
     for _m in _pre["missing"]:
         log(f"appearance: MISSING {_m}")
-    if "--allow-incomplete-appearance" not in _BARESEEN:
-        raise SystemExit(
-            f"{CHAR}'s appearance record is incomplete - " + "; ".join(_pre["missing"])
-            + ". Add it to characters/appearance.json, or pass --allow-incomplete-appearance "
-            "to render her from the trigger alone.")
-    log("appearance: incomplete, proceeding on --allow-incomplete-appearance")
+    log("appearance: incomplete, proceeding with what the record holds")
 _NEG = appearance_negative(CHAR)
 if _NEG:
     log(f"appearance: negative in effect ({len(_NEG)} chars)")
