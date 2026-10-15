@@ -427,6 +427,18 @@
   "locked_at": "2026-10-09T20:00:33+00:00",
   "name": "trina.safetensors"
  },
+ "vera": {
+  "file": "vera_v2-000020.safetensors",
+  "epoch": 20,
+  "dataset": "vera_v2",
+  "output_name": "vera_v2",
+  "sha256": "ef8080263e61d884d4580265f604444bec54d555ff77877ad8aa51313658416d",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\vera.safetensors",
+  "basis": "dense_vera_v2_asset 8/10 at epoch 20",
+  "locked_at": "2026-10-15T17:35:19+00:00",
+  "name": "vera.safetensors"
+ },
  "vivienne": {
   "file": "vivienne_v2b.safetensors",
   "epoch": 28,
