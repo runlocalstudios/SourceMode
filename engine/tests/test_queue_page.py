@@ -151,7 +151,7 @@ def test_an_unknown_job_is_a_404(client, tmp_path):
 
 # --- what is ready to train (the thing the first version could not show) ----
 
-def _approve(tmp_path, ds, images=2, at=None):
+def _approve(tmp_path, ds, images=2, at=None, trigger=None):
     """An approved preview, the way the engine writes one."""
     import json
     root = tmp_path / "train-previews"
@@ -162,7 +162,7 @@ def _approve(tmp_path, ds, images=2, at=None):
         # "images" + "n", the keys build_preview actually writes. The first version
         # of this fixture invented "items", so it agreed with a bug that reported
         # 0 images for every candidate on the live page.
-        json.dumps({"id": ds, "fingerprint": fp, "n": images,
+        json.dumps({"id": ds, "fingerprint": fp, "n": images, "trigger": trigger or ds.split("_")[0],
                     "images": [{"id": f"src_{i}"} for i in range(images)]}), encoding="utf-8")
     (root / "approvals" / f"{ds}.json").write_text(
         json.dumps({"approved": True, "fingerprint": fp,
@@ -312,6 +312,17 @@ def test_queueing_training_builds_the_command_so_he_never_types_a_path(client_fu
     assert "train_character.ps1" in " ".join(job["cmd"])
     assert "-Ds" in job["cmd"] and "marisol_v2" in job["cmd"]
     assert "-Char" in job["cmd"] and "marisol" in job["cmd"]
+    assert "-Object" not in job["cmd"] and "-Trigger" not in job["cmd"]
+
+
+def test_a_set_whose_trigger_is_not_her_name_is_queued_as_an_object_run(client_full, tmp_path):
+    """torso_v1, 2026-10-16: queued as a character run, its sweep died looking
+    for a face reference. The approved preview says the trigger is torsotoy."""
+    _approve(tmp_path, "torso_v1", trigger="torsotoy")
+    assert client_full.post("/queue/training", json={"dataset": "torso_v1"}).status_code == 200
+    cmd = q.load(q.queue_path(tmp_path))["jobs"][0]["cmd"]
+    assert cmd[cmd.index("-Char") + 1] == "torso"
+    assert "-Object" in cmd and cmd[cmd.index("-Trigger") + 1] == "torsotoy"
 
 
 def test_an_unapproved_dataset_cannot_be_queued_from_the_page(client_full, tmp_path):

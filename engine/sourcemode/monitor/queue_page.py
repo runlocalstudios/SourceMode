@@ -1860,12 +1860,25 @@ def job_log_tail(cfg: dict, job_id: str, lines: int = 60) -> dict:
 
 
 def training_command(cfg: dict, dataset: str) -> list[str]:
-    """The one place a training invocation is written. He never types a path."""
+    """The one place a training invocation is written. He never types a path.
+
+    An object set is told apart by its trigger. A character's trigger is her
+    bare name; the torso toy's is `torsotoy`, and the approved preview records
+    which. torso_v1 was queued from here on 2026-10-16 as a character run: it
+    trained fine, then its sweep died on "no reference photo for torso has a
+    detectable face" and nothing reached the judge. The switch is read, not typed.
+    """
     from ..config import ENGINE_ROOT  # noqa: PLC0415
+    from ..train.preview import load_preview, preview_root  # noqa: PLC0415
 
     script = ENGINE_ROOT / "scripts" / "train_character.ps1"
-    return ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script),
-            "-Ds", dataset, "-Char", character_of(dataset)]
+    char = character_of(dataset)
+    cmd = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script),
+           "-Ds", dataset, "-Char", char]
+    trigger = (load_preview(preview_root(cfg), dataset) or {}).get("trigger") or char
+    if trigger != char:
+        cmd += ["-Object", "-Trigger", trigger]
+    return cmd
 
 
 def shoot_command(cfg: dict, character: str, shoot_ids: list[str]) -> list[str]:
