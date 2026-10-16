@@ -29,14 +29,14 @@ import sys
 from pathlib import Path
 
 from sourcemode.assets.judge import make_set
-from sourcemode.assets.object_scenes import object_prompts, object_tiebreaker_prompts
+from sourcemode.assets.object_scenes import handjob_clarity_prompts, object_prompts, object_tiebreaker_prompts
 from sourcemode.config import load_config, workflows_dir
 from sourcemode.pose.native import NEGATIVE
 from sourcemode.render.workflow import load_template, prune_placeholder_loras, substitute, validate_lora_stack
 
 # Flags split out first: a flag left in argv lands in a positional slot by index
 # (dense_epoch_eval.py lost a 60-render job that way).
-_FLAGS = {"--epochs", "--seed", "--scenes", "--with", "--strength"}
+_FLAGS = {"--epochs", "--seed", "--scenes", "--with", "--strength", "--reps"}
 _BARE = {"--dry-run"}
 POS, _FLAGVALS, _BARESEEN = [], {}, set()
 _it = iter(sys.argv)
@@ -66,17 +66,19 @@ GRID = list(range(START, END + 1))
 if _FLAGVALS.get("--epochs"):
     GRID = [int(x) for x in _FLAGVALS["--epochs"].split(",") if x.strip()]
 SCENE_SET = _FLAGVALS.get("--scenes", "object")
-if SCENE_SET not in ("object", "tiebreaker"):
-    raise SystemExit(f"--scenes {SCENE_SET}: object or tiebreaker")
+if SCENE_SET not in ("object", "tiebreaker", "handjob"):
+    raise SystemExit(f"--scenes {SCENE_SET}: object, tiebreaker or handjob")
 WITH = _FLAGVALS.get("--with", "").strip().lower()
-TIEBREAK = SCENE_SET == "tiebreaker"
+TIEBREAK = SCENE_SET != "object"      # the sets that stack her LoRA and skip the base arm
 if TIEBREAK and not WITH:
-    raise SystemExit("--scenes tiebreaker needs --with <character>: half the shots stack her locked LoRA")
+    raise SystemExit(f"--scenes {SCENE_SET} needs --with <character>: it stacks her locked LoRA")
 STRENGTH = float(_FLAGVALS.get("--strength") or (0.6 if TIEBREAK else 1.0))
-SET_ID = f"dense_{SUB}_object" + ("_tiebreaker" if TIEBREAK else "")
+REPS = max(1, int(_FLAGVALS.get("--reps") or 1))   # seeds per scene; scene i, rep r renders on SEED + i + 1000 r
+SET_ID = f"dense_{SUB}_object" + ("" if SCENE_SET == "object" else f"_{SCENE_SET}")
 if TIEBREAK:
     from sourcemode.assets.render import appearance_clause  # noqa: E402
-    ROWS = object_tiebreaker_prompts(TRIGGER, WITH, appearance_clause(WITH))
+    build = object_tiebreaker_prompts if SCENE_SET == "tiebreaker" else handjob_clarity_prompts
+    ROWS = build(TRIGGER, WITH, appearance_clause(WITH))
     N_SCENES = len(ROWS)
 else:
     ROWS = [{"prompt": p, "tag": "", "character": False} for p in object_prompts(TRIGGER)]
@@ -177,34 +179,40 @@ for arm, ep, lora in ARMS:
     d = OUT / arm
     d.mkdir(parents=True, exist_ok=True)
     for i, r in enumerate(ROWS):
-        dest = d / f"scene_{i:02d}.png"
-        try:
-            if not dest.exists():
-                files = client.outputs(client.wait(client.submit(
-                    t2i(r["prompt"], SEED + i, lora, f"coarse/{SET_ID}/{arm}",
-                        CHAR_LORA if r["character"] else "")), timeout_s=3600))
-                if not files:
-                    log(f"  {arm} scene{i:02d}: no output"); continue
-                client.fetch(files[0], dest)
-            rows.append({"arm": arm, "epoch": ep, "scene": i, "file": str(dest)})
-        except Exception as ex:  # noqa: BLE001 - one scene never kills the sweep
-            log(f"  {arm} scene{i:02d}: ERROR {ex}")
+        for rep in range(REPS):
+            tail = f"_r{rep}" if REPS > 1 else ""
+            dest = d / f"scene_{i:02d}{tail}.png"
+            try:
+                if not dest.exists():
+                    files = client.outputs(client.wait(client.submit(
+                        t2i(r["prompt"], SEED + i + 1000 * rep, lora, f"coarse/{SET_ID}/{arm}",
+                            CHAR_LORA if r["character"] else "")), timeout_s=3600))
+                    if not files:
+                        log(f"  {arm} scene{i:02d}{tail}: no output"); continue
+                    client.fetch(files[0], dest)
+                rows.append({"arm": arm, "epoch": ep, "scene": i, "rep": rep, "file": str(dest)})
+            except Exception as ex:  # noqa: BLE001 - one scene never kills the sweep
+                log(f"  {arm} scene{i:02d}{tail}: ERROR {ex}")
     log(f"{arm}: n={sum(1 for r in rows if r['arm'] == arm)}")
 
 (OUT / "scores.json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
-items = [{"id": f"{r['arm']}__{r['scene']:02d}", "path": Path(r["file"]),
+items = [{"id": f"{r['arm']}__{r['scene']:02d}" + (f"_r{r['rep']}" if REPS > 1 else ""), "path": Path(r["file"]),
           "arm": "no LoRA" if r["epoch"] is None else f"{SUB} epoch {r['epoch']:02d}",
           "group": str(r["scene"])} for r in rows]
-expected = len(ARMS) * N_SCENES
+expected = len(ARMS) * N_SCENES * REPS
 if not items:
     log("FATAL: nothing rendered - no judge set built")
     raise SystemExit(2)
 if len(items) < expected:
     log(f"WARNING: judge set has {len(items)} of an expected {expected} - some scenes failed")
 dataset_dir = CKPT.parent if CKPT.parent.parent.name == "lora-datasets" else None
-title = (f"{NAME.title()} - object tiebreaker, epochs {','.join(str(e) for e in GRID)}, {N_SCENES} acts, "
-         f"half with {WITH.title()}, toy at {STRENGTH}" if TIEBREAK else
-         f"{NAME.title()} - object LoRA epoch eval, epochs {GRID[0]}-{GRID[-1]} + base ({N_SCENES} scenes)")
+reps = f" x {REPS} seeds" if REPS > 1 else ""
+title = {
+    "tiebreaker": f"{NAME.title()} - object tiebreaker, epochs {','.join(str(e) for e in GRID)}, {N_SCENES} acts{reps}, "
+                  f"half with {WITH.title()}, toy at {STRENGTH}",
+    "handjob": f"{NAME.title()} - six handjobs with the placement spelled out, {WITH.title()}, "
+               f"epoch {','.join(str(e) for e in GRID)}{reps}, toy at {STRENGTH}",
+}.get(SCENE_SET, f"{NAME.title()} - object LoRA epoch eval, epochs {GRID[0]}-{GRID[-1]} + base ({N_SCENES} scenes)")
 question = ("Is the toy right, and on her shots is she her? K = yes, X = no." if TIEBREAK
             else "Is this the toy? K = yes, X = no.")
 make_set(Path("outputs/judge"), SET_ID, title, items, question=question,

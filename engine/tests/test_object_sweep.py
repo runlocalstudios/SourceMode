@@ -68,3 +68,19 @@ def test_the_tiebreaker_is_his_twenty_acts_split_between_a_stranger_and_her():
     for r in rows:
         if r["tag"] in ("hovering above", "pressed against her ass"):
             assert "not inside her" in r["prompt"] or "not touching her" in r["prompt"]
+
+
+def test_the_six_handjobs_are_all_hers_and_each_places_the_toy_and_her_body():
+    """Jeremy, 2026-10-16: "clarify the location of the toy and her body
+    relative to it in the picture"."""
+    from sourcemode.assets.object_scenes import HANDJOB_CLARITY, handjob_clarity_prompts
+    rows = handjob_clarity_prompts("torsotoy", "amanda", "a young woman")
+    assert len(rows) == len(HANDJOB_CLARITY) == 6 and all(r["character"] for r in rows)
+    for r in rows:
+        p = r["prompt"]
+        assert p.startswith(f"amanda, a young woman, torsotoy, {r['tag']}, amanda ")
+        assert "handjob" in r["tag"] and "{t}" not in p
+        # where the toy is in the frame, and where she is relative to it
+        assert "frame" in p or "nearest the camera" in p or "pointing at the camera" in p, p
+        assert any(w in p for w in ("beside", "behind", "at the right side", "beyond", "in front of")), p
+        assert ("seen from the toy's own viewpoint" in p) == r["tag"].startswith("POV"), p

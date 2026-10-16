@@ -91,3 +91,25 @@ def object_tiebreaker_prompts(trigger: str, character: str, clause: str) -> list
             p = f"{trigger}, {s['tag']}, {next(women)} {body}"
         out.append({"prompt": p, "tag": s["tag"], "character": s["who"] == "character"})
     return out
+
+
+# Six handjobs with the placement spelled out - Jeremy, 2026-10-16, after her
+# tiebreaker slots read 13/40 against the stranger's 24/40 and her POV handjob
+# went 0/4: "clarify the location of the toy and her body relative to it in the
+# picture so that we can just see how it goes with a little more clarity in the
+# prompt". Every slot is hers; the eval renders them with her LoRA stacked.
+HANDJOB_CLARITY: tuple[dict, ...] = (
+    {"tag": "POV handjob", "body": "kneeling on a white bed at the right side of a tan {t} that lies on its back across the bottom of the frame, its penis standing upright in the centre, her right hand wrapped around the shaft, her body turned toward the toy, her face toward the camera, seen from the toy's own viewpoint, soft daylight"},
+    {"tag": "POV handjob", "body": "lying on her stomach on a white bed beyond a light-toned {t} that lies on its back nearest the camera, the penis of the toy upright in the middle of the frame between her and the camera, both hands wrapped around the shaft, her chin level with the tip, looking into the camera, seen from the toy's own viewpoint, warm lamp light"},
+    {"tag": "handjob", "body": "kneeling on the floor beside a grey couch, a tan {t} lying on its back along the couch in profile across the lower half of the frame, its penis upright, her right hand around the penis, her body side-on to the camera, her face turned to the camera, seen from the side at the height of the couch, a dim living room"},
+    {"tag": "handjob", "body": "sitting cross-legged on a bed behind a dark brown {t} that lies on its back in front of her knees, the penis of the toy standing upright between her two hands, the whole toy and her body from the waist up in frame, seen from the front at eye level, a grey headboard behind, soft light"},
+    {"tag": "handjob", "body": "kneeling at the right side of a tan {t} that stands upright on the edge of a bed with its penis pointing at the camera, her body side-on to the camera, one hand around the shaft near the tip, looking down at the toy, a bedside lamp behind, warm light"},
+    {"tag": "POV handjob", "body": "close in, the stomach of a light-toned {t} lying on its back filling the bottom of the frame, her hand gripping the base of its upright penis, her face just behind the tip and looking into the camera, seen from the toy's own viewpoint, a white bedroom, soft daylight"},
+)
+
+
+def handjob_clarity_prompts(trigger: str, character: str, clause: str) -> list[dict]:
+    """The six, in her caption opening then the toy's: `<name>, <clause>,
+    <trigger>, <tag>, <name> <body>`. Same shape as the tiebreaker rows."""
+    return [{"prompt": f"{character}, {clause}, {trigger}, {s['tag']}, {character} {s['body'].format(t=trigger)}",
+             "tag": s["tag"], "character": True} for s in HANDJOB_CLARITY]
