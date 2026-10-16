@@ -27,3 +27,67 @@ SCENES: tuple[str, ...] = (
 def object_prompts(trigger: str) -> list[str]:
     """The ten sweep prompts for `trigger`, trigger first like every caption."""
     return [f"{trigger}, {s.format(t=trigger)}" for s in SCENES]
+
+
+# The object tiebreaker - Jeremy, 2026-10-16, after the torso sweep read 7/7/8/7
+# at epochs 17/19/20/22: "20 photos each ... all photos must have a girl in them,
+# do 4 handjob, 4 blowjob, 2 footjob, 4 vaginal, 2 anal, 2 hovering above, 2 with
+# it against her ass cheeks but not inside her. for each of these, split half and
+# half between a random 20 year old woman description and ... the Amanda lora".
+# Written in the captions' register, act tag right after the trigger, so the
+# tiebreaker asks exactly what a game prompt will ask. `who` is "random" (the
+# description below, no identity LoRA) or "character" (her trigger, her
+# appearance sentence and her locked LoRA stacked on the toy's).
+TIEBREAKER: tuple[dict, ...] = (
+    {"tag": "POV handjob", "who": "random", "body": "lying on her side on a white bed, gripping the penis of a tan {t} in one hand and stroking it, looking up at the camera, seen from the toy's own viewpoint, soft daylight"},
+    {"tag": "POV handjob", "who": "character", "body": "kneeling on a grey couch with both hands around the penis of a light-toned {t}, stroking it, smiling at the camera, seen from the toy's own viewpoint, warm lamp light"},
+    {"tag": "handjob", "who": "random", "body": "in black lingerie kneeling beside a dark brown {t} lying on a bed, one hand wrapped around its penis, stroking it, seen from the side, a dim bedroom"},
+    {"tag": "handjob", "who": "character", "body": "in a white tank top sitting on the floor beside a tan {t}, her hand around the base of its penis, seen from the side, a bright bedroom, daylight"},
+    {"tag": "POV blowjob", "who": "random", "body": "in red lingerie kneeling on a bed with the tip of a tan {t} in her mouth, sucking it, one hand holding the base of its penis, seen from the toy's own viewpoint, warm light"},
+    {"tag": "POV blowjob", "who": "character", "body": "kneeling on a white bed with the tip of a light-toned {t} in her mouth, sucking it, looking up at the camera, seen from the toy's own viewpoint, soft daylight"},
+    {"tag": "blowjob", "who": "random", "body": "on all fours on a bed with the penis of a dark brown {t} in her mouth, sucking it, her hair pulled back, seen from the side, a hotel room, lamp light"},
+    {"tag": "blowjob", "who": "character", "body": "in a black bra kneeling on a rug licking the shaft of a tan {t}, her tongue on the penis of the toy, gripping it with one hand, seen from the side, a living room, soft light"},
+    {"tag": "POV footjob", "who": "random", "body": "in white knee socks lying back on a bed with her feet wrapped around the penis of a tan {t}, stroking it with her feet, seen from the toy's own viewpoint, framed prints behind, warm light"},
+    {"tag": "footjob", "who": "character", "body": "in black stockings lying on a grey couch, stroking the penis of a dark brown {t} with both feet, seen from the side, a dim living room"},
+    {"tag": "vaginal riding facing the viewer", "who": "random", "body": "facing the camera, riding a tan {t} on a white bed, the toy inside her vagina, her hands on her thighs, a cream headboard behind, soft daylight"},
+    {"tag": "vaginal riding facing the viewer", "who": "character", "body": "in red stockings facing the camera, squatting on a light-toned {t} on a bed, the toy inside her vagina, looking into the camera, a grey headboard behind, warm light"},
+    {"tag": "vaginal riding facing away", "who": "random", "body": "seen from behind, riding a tan {t} on a bed, the toy inside her vagina, looking back over her shoulder, a window with blinds behind, daylight"},
+    {"tag": "vaginal riding facing away", "who": "character", "body": "in white thigh-highs seen from behind, kneeling over a dark brown {t} on a bed, the toy inside her vagina, a wooden headboard behind, soft lamp light"},
+    {"tag": "anal riding facing the viewer", "who": "random", "body": "facing the camera, squatting on a tan {t}, the toy inside her anus, her vagina in view, seen from a low front angle, a plain white wall behind, flat indoor light"},
+    {"tag": "anal riding facing away", "who": "character", "body": "seen from behind, on all fours riding a light-toned {t} on a pink bed, the toy inside her anus, looking back over her shoulder, bright room light"},
+    {"tag": "hovering above", "who": "random", "body": "kneeling upright over a tan {t} on a grey bed, the tip of the toy just below her vagina, not inside her, her hands in her hair, seen from the front, warm room light"},
+    {"tag": "hovering above", "who": "character", "body": "in a black choker squatting above a dark brown {t} on the floor of a bright room, the tip of the toy an inch below her vagina, not touching her, seen from the front, daylight"},
+    {"tag": "pressed against her ass", "who": "random", "body": "seen from behind, kneeling with the penis of a tan {t} pressed between her ass cheeks, not inside her, looking back over her shoulder, a white bed, soft daylight"},
+    {"tag": "pressed against her ass", "who": "character", "body": "in black stockings seen from behind, bending forward on a bed with the penis of a light-toned {t} resting against her ass cheeks, not inside her, a grey headboard, warm light"},
+)
+
+# Ten women who are nobody in particular, one per random slot, in slot order.
+RANDOM_WOMEN: tuple[str, ...] = (
+    "a 20-year-old woman with long blonde hair and fair skin",
+    "a 20-year-old woman with a short black bob and tan skin",
+    "a 20-year-old woman with long red curls and pale skin",
+    "a 20-year-old woman with long straight black hair and brown skin",
+    "a 20-year-old woman with shoulder-length light brown hair and olive skin",
+    "a 20-year-old woman with a dark brown ponytail and freckled fair skin",
+    "a 20-year-old woman with wavy honey-blonde hair and golden skin",
+    "a 20-year-old woman with long dark hair in a braid and deep brown skin",
+    "a 20-year-old woman with a platinum pixie cut and fair skin",
+    "a 20-year-old woman with long auburn hair and light skin",
+)
+
+
+def object_tiebreaker_prompts(trigger: str, character: str, clause: str) -> list[dict]:
+    """The twenty tiebreaker prompts. Each row: `prompt`, `tag`, `character`
+    (True on the slots that stack her LoRA). A random slot reads
+    `<trigger>, <tag>, <woman> <body>`; her slot leads with her own caption
+    opening, `<name>, <clause>,` then the toy's `<trigger>, <tag>, <name> <body>`,
+    because identity is the fragile half and her captions put her first."""
+    out, women = [], iter(RANDOM_WOMEN)
+    for s in TIEBREAKER:
+        body = s["body"].format(t=trigger)
+        if s["who"] == "character":
+            p = f"{character}, {clause}, {trigger}, {s['tag']}, {character} {body}"
+        else:
+            p = f"{trigger}, {s['tag']}, {next(women)} {body}"
+        out.append({"prompt": p, "tag": s["tag"], "character": s["who"] == "character"})
+    return out
