@@ -137,26 +137,38 @@ def test_the_ass_up_shot_gets_a_panties_set_whatever_the_rotation_says():
 
 def test_the_toy_shoot_is_in_bed_in_the_robe_with_the_toy_named_in_every_shot():
     sh = S.BY_ID["toy"]
-    assert sh.bucket == "intimate" and sh.shots == len(S.TOY) == 7
+    assert sh.label == "Torso toy"
+    # Jeremy, 2026-10-17: fourteen, two of each act, in this order
+    assert sh.bucket == "intimate" and sh.shots == len(S.TOY) == 14
     slots = sh.plan(character="nobody")
-    for s in slots:
-        p = shot_prompt("nobody", s, backdrop=s["setting"])
+    prompts = [shot_prompt("nobody", s, backdrop=s["setting"]) for s in slots]
+    for p in prompts:
         assert "male torso sex toy" in p and "dildo" in p
         assert "satin robe" in p and "her breasts bare" in p and "panties" in p
-        # Jeremy, 2026-10-17: the toy is the trained object - its trigger is in
-        # the prompt and its locked LoRA is stacked under hers at 0.6
+        # the toy is the trained object - its trigger is in the prompt and its
+        # locked LoRA is stacked under hers at 0.6
         assert f"{S.TOY_TRIGGER}, a large flesh-toned" in p
     assert sh.loras == (("torso", 0.6),)
     assert all(not x.loras for x in S.CATALOG if x.id != "toy")
-    cow = shot_prompt("nobody", slots[5], backdrop=slots[5]["setting"])
-    assert "cowgirl" in cow and "panties pulled to the side" in cow and "looking into the camera" in cow
-    rev = shot_prompt("nobody", slots[6], backdrop=slots[6]["setting"])
-    assert "reverse cowgirl" in rev and "her back to the camera" in rev
+    acts = (
+        lambda p: "stroking it" in p and "hand" in p,                              # handjob
+        lambda p: "in her mouth" in p or "licking the tip" in p,                   # blowjob
+        lambda p: "stroking it with her feet" in p,                                # footjob
+        lambda p: "inside her vagina" in p and "facing the camera" in p,           # vaginal
+        lambda p: "inside her vagina" in p and "her back to the camera" in p,      # from behind
+        lambda p: "inside her anus" in p and "facing the camera" in p,             # anal, front
+        lambda p: "not inside her" in p or "not touching her" in p,                # hovering
+    )
+    for i, ok in enumerate(acts):
+        assert ok(prompts[2 * i]) and ok(prompts[2 * i + 1]), (i, prompts[2 * i])
+    # every shot says where the toy is in the frame and where she is relative to it
+    for p in prompts:
+        assert "lying on" in p and "the camera" in p
     # mixable: the robe and the toy pack, bed scenes only
     assert S.combo("hotel-robe-toy") is not None
     assert S.combo_problem("hotel-robe-toy", "ash") is None
     assert "need a bed" in (S.combo_problem("club-robe-toy", "ash") or "")
-    assert S.total_shots(["toy"]) == 7
+    assert S.total_shots(["toy"]) == 14
 
 
 def test_the_last_submissive_shot_is_the_ass_up_pose_looking_at_the_camera():

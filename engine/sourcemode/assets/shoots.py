@@ -247,32 +247,78 @@ ROBE: tuple[str, ...] = (
 # torso LoRA (torso_v1 epoch 20 - 8/10 on the object sweep; epochs 17-22 were
 # flat on the tiebreaker) at 0.6, the strength the tiebreaker and the handjob
 # set rendered at. Her LoRA stays at 1.0 above it.
+#
+# Then, the same day, after Winnie's seven kept 7/7 with the LoRA: "update the
+# images to 14 - 2 each of handjob, blowjob, foot job, vaginal, vaginal from
+# behind, anal from the front, hovering just above it". Written the way the
+# handjob clarity set's keepers were written (6/6 kept where the toy lies on
+# its back across the bottom of the frame with her behind or beside it and her
+# face to the camera; 0/4 for the side profile and the close-in POV): the toy's
+# place in the frame first, then her body relative to it.
 TOY_TRIGGER = "torsotoy"
 TOY_LORA: tuple[tuple[str, float], ...] = (("torso", 0.6),)
 _TOY = f"{TOY_TRIGGER}, a large flesh-toned male torso sex toy with a big dildo"
+_TOY_DOWN = f"{_TOY}, lying on its back on the bed nearest the camera with the dildo standing upright"
+_FOOT = "full-length photo from the foot of the bed"
+_FOOT_LOW = "full-length photo from the foot of the bed, low, level with the mattress"
+_BEHIND_LOW = "photo from behind, low, level with the bed"
+_PULLED = "her panties pulled to the side"
 TOY: tuple[dict, ...] = (
-    {"stance": f"kneeling on the bed beside {_TOY} standing upright on the mattress, both hands wrapped around the dildo, gripping it",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
+    # handjob
+    {"stance": f"kneeling on the bed at the right side of {_TOY_DOWN} in the centre of the frame, her right hand wrapped around the dildo, stroking it, her body turned toward the toy",
+     "needs": ("bed",), "framing": _FULL, "shot_type": _FOOT,
      "gaze": "looking into the camera"},
+    {"stance": f"sitting cross-legged on the bed behind {_TOY_DOWN} in front of her knees, the dildo between her two hands, stroking it",
+     "needs": ("bed",), "framing": "the whole toy and her body from the waist up in frame",
+     "shot_type": "photo from the foot of the bed at eye level", "facing": "facing the camera",
+     "gaze": "looking into the camera"},
+    # blowjob
+    {"stance": f"kneeling on the bed behind {_TOY_DOWN}, leaning down over it with the tip of the dildo in her mouth, sucking it, one hand holding the base of the dildo",
+     "needs": ("bed",), "framing": "her face and the toy in frame, from the waist up",
+     "shot_type": "photo from the foot of the bed", "facing": "facing the camera",
+     "gaze": "her eyes turned up to the camera", "expression_natural": "her lips closed around the tip of the dildo"},
     {"stance": f"on all fours on the bed over {_TOY} lying on the mattress, her tongue out, licking the tip of the dildo",
      "needs": ("bed",), "framing": "her face and the toy in frame, from the waist up", "shot_type": "photo",
      "facing": "her body side-on to the camera", "gaze": "her eyes turned up to the camera",
      "expression_natural": "her mouth open, tongue out"},
-    {"stance": f"straddling {_TOY} lying on the bed, the dildo pressed flat between her legs against the front of her panties, grinding on it, hands on its chest",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
-     "gaze": "looking down at the toy", "expression_natural": "lips parted, eyes heavy"},
-    {"stance": f"kneeling astride {_TOY} lying on the bed, the dildo pressed up between her ass cheeks, her hands on her thighs",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
-     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
-    {"stance": f"lying on her front on the bed over {_TOY}, the dildo squeezed between her breasts, her hands pressing them together around it",
-     "needs": ("bed",), "framing": "her face, chest and the toy in frame", "shot_type": "photo from the foot of the bed",
-     "gaze": "looking up into the camera"},
-    {"stance": f"riding {_TOY} lying on the bed, cowgirl, the dildo inside her with her panties pulled to the side, hands on its chest, hips lifted",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
+    # footjob
+    {"stance": f"sitting back on the bed leaning on her hands behind her, {_TOY_DOWN} between her and the camera, both her feet pressed around the dildo, stroking it with her feet",
+     "needs": ("bed",), "framing": _FULL, "shot_type": _FOOT, "facing": "facing the camera",
+     "gaze": "looking into the camera", "expression_natural": "a playful smile"},
+    {"stance": f"lying back against the pillows with her legs stretched down the bed toward {_TOY_DOWN}, the dildo gripped between the soles of her feet, stroking it with her feet",
+     "needs": ("bed",), "framing": _FULL, "shot_type": _FOOT_LOW, "facing": "facing the camera",
+     "gaze": "looking down the bed into the camera", "expression_natural": "lips parted, eyes heavy"},
+    # vaginal, facing the camera
+    {"stance": f"riding {_TOY} lying on its back on the bed with its hips nearest the camera, cowgirl, the dildo inside her vagina with {_PULLED}, her hands on its chest, hips lifted",
+     "needs": ("bed",), "framing": _FULL, "shot_type": _FOOT, "facing": "facing the camera",
      "gaze": "looking into the camera", "expression_natural": "her mouth open, eyes heavy"},
-    {"stance": f"riding {_TOY} lying on the bed, reverse cowgirl, the dildo inside her with her panties pulled to the side, leaning forward with her hands on its thighs",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
+    {"stance": f"squatting on {_TOY} lying on its back on the bed with its hips nearest the camera, her feet flat on the mattress and her knees wide, the dildo inside her vagina with {_PULLED}, one hand on its stomach",
+     "needs": ("bed",), "framing": _FULL, "shot_type": _FOOT_LOW, "facing": "facing the camera",
+     "gaze": "looking into the camera", "expression_natural": "lips parted, eyes heavy"},
+    # vaginal, from behind
+    {"stance": f"riding {_TOY} lying on the bed, reverse cowgirl, the dildo inside her vagina with {_PULLED}, leaning forward with her hands on its thighs",
+     "needs": ("bed",), "framing": _FULL, "shot_type": _BEHIND_LOW,
      "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
+    {"stance": f"kneeling astride {_TOY} lying on the bed, sitting upright on it with her back to the camera, the dildo inside her vagina with {_PULLED}, her hands on her hips",
+     "needs": ("bed",), "framing": _FULL, "shot_type": _BEHIND_LOW,
+     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera",
+     "expression_natural": "her mouth open, eyes heavy"},
+    # anal, facing the camera
+    {"stance": f"squatting on {_TOY} lying on its back on the bed with its hips nearest the camera, her feet flat on the mattress and her knees wide, the dildo inside her anus and her vagina in view above it, {_PULLED}, leaning back on her hands on its chest",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo from a low front angle, level with the bed",
+     "facing": "facing the camera", "gaze": "looking into the camera",
+     "expression_natural": "her mouth open, eyes heavy"},
+    {"stance": f"sitting back on {_TOY} lying on its back on the bed with its hips nearest the camera, her legs spread wide toward the camera, the dildo inside her anus and her vagina in view above it, {_PULLED}, her hands on her thighs",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo from a low front angle, level with the bed",
+     "facing": "facing the camera", "gaze": "looking into the camera",
+     "expression_natural": "lips parted, eyes heavy"},
+    # hovering just above it
+    {"stance": f"kneeling upright astride {_TOY} lying on its back on the bed with its hips nearest the camera, hovering just above it with the tip of the dildo an inch below her vagina, not inside her, {_PULLED}, one hand holding the dildo upright beneath her",
+     "needs": ("bed",), "framing": _FULL, "shot_type": _FOOT, "facing": "facing the camera",
+     "gaze": "looking down at the dildo", "expression_natural": "lips parted, eyes heavy"},
+    {"stance": f"squatting over {_TOY} lying on its back on the bed with its hips nearest the camera, her feet flat on the mattress and her knees wide, hovering with the tip of the dildo just below her vagina, not touching her, {_PULLED}, her hands on her knees",
+     "needs": ("bed",), "framing": _FULL, "shot_type": _FOOT_LOW, "facing": "facing the camera",
+     "gaze": "looking into the camera", "expression_natural": "biting her lower lip"},
 )
 
 # Buckets group the tab's checkboxes. Keep each shoot small: the point is that
@@ -317,11 +363,11 @@ CATALOG: tuple[Shoot, ...] = (
           pose_slots=SUBMISSIVE, shots=len(SUBMISSIVE),
           note="Lingerie, garter and stockings. Kneeling, on the bed, against the wall, "
                "bent over. Side and from-behind shots keep less often - re-roll the rejects."),
-    Shoot("toy", "Toy", "intimate", BEDROOM, ROBE, (),
+    Shoot("toy", "Torso toy", "intimate", BEDROOM, ROBE, (),
           pose_slots=TOY, shots=len(TOY), loras=TOY_LORA,
-          note="Open satin robe, topless, panties. In bed with the torso toy: gripping, "
-               "licking, grinding, between her cheeks, between her breasts, cowgirl, reverse. "
-               "Renders with the locked torso LoRA at 0.6 under hers."),
+          note="Open satin robe, topless, panties. In bed with the torso toy, two of each: "
+               "handjob, blowjob, footjob, vaginal, vaginal from behind, anal from the front, "
+               "hovering just above it. Renders with the locked torso LoRA at 0.6 under hers."),
 
     # --- swim ---------------------------------------------------------------
     Shoot("pool", "Poolside", "swim",
@@ -524,8 +570,8 @@ POSE_PACKS: tuple[PosePack, ...] = (
              note="The boudoir poses: edge of the bed, kneeling, lying, leaning in."),
     PosePack("submissive", "Submissive", SUBMISSIVE,
              note=f"Kneeling, on the bed, against the wall, bent over. {len(SUBMISSIVE)} poses."),
-    PosePack("toy", "Toy", TOY,
-             note=f"In bed with a male-torso dildo. {len(TOY)} poses."),
+    PosePack("toy", "Torso toy", TOY,
+             note=f"In bed with the torso toy, two of each act. {len(TOY)} poses."),
 )
 
 SCENE_BY_ID = {s.id: s for s in SCENES}
