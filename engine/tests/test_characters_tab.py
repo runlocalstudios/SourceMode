@@ -74,3 +74,32 @@ def test_ethnicity_is_context_and_never_unconfirms_her(tmp_path, monkeypatch):
     assert A.confirmed("zara")
     assert "Latina" not in A.clause("zara")
     A.reload()
+
+
+def test_an_age_typed_on_the_tab_satisfies_the_shoot_preflight(tmp_path, monkeypatch):
+    """Jeremy, 2026-10-17: "I cannot add the character's age anywhere, which
+    means that from your characters, I'm unable to generate a photo shoot".
+    Winnie is not in the game's characters.js, so the game lends her no age;
+    the tab showed age read-only and the pre-flight refused her."""
+    from sourcemode.assets import appearance as A
+    f = tmp_path / "appearance.json"
+    f.write_text(json.dumps({"winnie": {"prompt": "a young woman with long black hair"}}), encoding="utf-8")
+    monkeypatch.setattr(A, "APPEARANCE", f)
+    monkeypatch.setattr(A, "AGES", tmp_path / "ages.json")   # not in the game
+    A.reload()
+    A.confirm("winnie", {"prompt": "a young woman with long black hair", "negative": ""})
+    assert "age" in "; ".join(A.check("winnie")["missing"])
+
+    A.set_context("winnie", ethnicity="", age="22")
+    assert A.check("winnie")["ok"]
+    assert A.age_of("winnie") == 22
+    assert A.confirmed("winnie")            # age is outside the fingerprint
+
+    # blank clears her own; with no game age she is incomplete again
+    A.set_context("winnie", ethnicity="", age="")
+    assert A.age_of("winnie") is None
+    assert not A.check("winnie")["ok"]
+    import pytest
+    with pytest.raises(ValueError):
+        A.set_context("winnie", ethnicity="", age="twenty")
+    A.reload()

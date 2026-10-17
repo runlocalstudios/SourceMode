@@ -4,7 +4,7 @@
     GET  /appearance/list              every character, unconfirmed first
     GET  /appearance/ref?char=&name=   one reference photo (web-sized)
     POST /appearance/<char>/confirm    {prompt, negative} -> confirmed record
-    POST /characters/<char>/profile    {ethnicity, wardrobe} -> saved
+    POST /characters/<char>/profile    {ethnicity, age, wardrobe} -> saved
 
 Was the Looks tab. Jeremy, 2026-10-06, after Bri's invented "lighter caramel
 ends" and Jaina's freckles: "I need to now review all of these because they're
@@ -108,7 +108,10 @@ def records(outputs: Path | None = None, judge_root: Path | None = None) -> list
             places.append({"id": loc, "name": places_named.get(loc, loc),
                            "work": any(o == "work" for lc, o in sched if lc == loc)})
         out.append({
-            "character": c, "age": A.age_of(c),
+            "character": c,
+            # her own age (editable) and the game's (the fallback); Winnie was
+            # not in the game and had nowhere on the tab to be given one
+            "age": rec.get("age") or "", "game_age": A._load()["ages"].get(c) or "",
             "prompt": rec.get("prompt", ""),
             "negative": rec.get("negative", ""),
             "note": rec.get("_note", ""), "confirmed": A.confirmed(c),
@@ -319,8 +322,10 @@ function profile(r){
     +'<div class=row>'+ta('j_outfit',j.outfit,'short','what she wears for it')+'</div>'
     +'</div>';
   return '<div class=sec><h4>Context</h4><div class=sub>For the game&rsquo;s writing; never put in a prompt.</div>'
-    +'<dl class=facts><dt>Age</dt><dd>'+(r.age?SM.esc(String(r.age))+' <span class=w>(the game&rsquo;s)</span>':'&mdash;')+'</dd>'
-    +lockLine(r)+packLine(r)+'</dl>'
+    +'<dl class=facts>'+lockLine(r)+packLine(r)+'</dl>'
+    +'<div class=fld><label>Age <span class=cov>- a shoot will not queue without one'
+      +(r.game_age?'; the game says '+SM.esc(String(r.game_age))+', leave blank to use it':'')+'</span></label>'
+    +'<input data-k=age inputmode=numeric value="'+SM.esc(String(r.age||''))+'" placeholder="'+SM.esc(String(r.game_age||''))+'"></div>'
     +'<div class=fld><label>Ethnicity</label><input data-k=ethnicity value="'+SM.esc(r.ethnicity||'')+'"></div></div>'
     +'<div class=sec><h4>Jobs</h4>'
     +(r.game_job?'<div class=sub>The game says: '+SM.esc(r.game_job)+'</div>':'')
@@ -553,7 +558,7 @@ function collect(card){
      to the shared list still reaches her */
   const hair=v('hair').split('\n').map(x=>x.trim()).filter(Boolean);
   const same=hair.join('\n')===rec.hair_default.join('\n');
-  return {ethnicity:v('ethnicity'),
+  return {ethnicity:v('ethnicity'),age:v('age').trim(),
           wardrobe:{style:v('style'),palette:v('palette'),avoid:v('avoid'),outfits,jobs,
                     hair:same?[]:hair}};
 }
@@ -703,8 +708,12 @@ def appearance_router(cfg: dict):
             rec = W.save(c, body.get("wardrobe") or {})
         except ValueError as e:
             raise HTTPException(400, str(e)) from e
-        if "ethnicity" in body:
-            A.set_context(c, ethnicity=str(body.get("ethnicity") or ""))
-        return {"character": c, "wardrobe": rec}
+        if "ethnicity" in body or "age" in body:
+            try:
+                A.set_context(c, ethnicity=str(body.get("ethnicity") or ""),
+                              age=body.get("age"))
+            except ValueError as e:
+                raise HTTPException(400, str(e)) from e
+        return {"character": c, "wardrobe": rec, "age": A.age_of(c)}
 
     return r

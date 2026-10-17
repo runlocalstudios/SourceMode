@@ -313,9 +313,15 @@ def confirm(character: str, fields: dict) -> dict:
     return rec
 
 
-def set_context(character: str, *, ethnicity: str) -> dict:
+def set_context(character: str, *, ethnicity: str, age: int | str | None = None) -> dict:
     """Context for the game's writing - never read by a prompt, and outside the
-    confirm fingerprint, so changing it never un-confirms her description."""
+    confirm fingerprint, so changing it never un-confirms her description.
+
+    `age` is the one the pre-flight needs. Jeremy, 2026-10-17: Winnie had a
+    confirmed description and no age, the game does not list her yet, and the
+    tab showed age read-only - so no shoot of her could be queued. A blank age
+    clears the record's own and falls back to the game's, if it has one.
+    """
     import json as _json  # noqa: PLC0415
 
     global _cache
@@ -327,6 +333,13 @@ def set_context(character: str, *, ethnicity: str) -> dict:
         rec["ethnicity"] = v
     else:
         rec.pop("ethnicity", None)
+    a = str(age if age is not None else "").strip()
+    if a:
+        if not a.isdigit() or not 18 <= int(a) <= 99:
+            raise ValueError(f"age must be a whole number from 18 to 99, got {a!r}")
+        rec["age"] = int(a)
+    else:
+        rec.pop("age", None)
     APPEARANCE.write_text(_json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     _cache = None
     return rec
