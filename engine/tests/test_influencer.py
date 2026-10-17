@@ -73,7 +73,19 @@ def test_every_prompt_goes_through_the_one_builder_without_footwear():
         assert p.startswith("zara, ")
         assert not re.search(r"\b(sneakers|heels|boots|sandals)\b", p), s["id"]
         # the pack's composition rides along in the natural register too
-        assert "a casual iPhone snapshot, " in p and s["stance"] in p and s["avoid"] in p
+        assert "a casual snapshot, " in p and s["stance"] in p and s["avoid"] in p
+
+
+def test_no_camera_is_ever_named_so_none_is_drawn():
+    """Vera's first batch (2026-10-15): "a casual iPhone snapshot ... a friend
+    took of her on a phone" rendered a giant iPhone frame around 3 of 14 shots.
+    Jeremy, 2026-10-17: "almost every picture had a gigantic iPhone picture in
+    the photo around the edge." The slot's negative refuses the phone too."""
+    for b in range(1, 4):
+        for s in I.slots("zara", b):
+            p = shot_prompt("zara", s, "zara", backdrop=s["setting"])
+            assert "iphone" not in p.lower() and "phone" not in p.lower(), s["id"]
+            assert "phone" in s["negative"] and "selfie" in s["negative"]
 
 
 @pytest.mark.skipif(not GAME_CHARACTERS.is_file(), reason="game repo not checked out")

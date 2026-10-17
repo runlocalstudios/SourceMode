@@ -44,24 +44,33 @@ appearance, frame, expression and negative are shared and cannot drift.
 from __future__ import annotations
 
 # --- composition, held constant across the pack -------------------------------
-FRAMING = ("close arm's-length phone selfie; her head and chest fill the frame and her face is "
+# Jeremy, 2026-10-17: "You shouldn't see the phone in a selfie photo unless it's
+# a mirror selfie." Gabi's pack (2026-10-14) named the phone in every slot -
+# "on her own phone", "phone selfie", "on her phone" - and most of her twenty
+# non-mirror selfies rendered a phone held up in her hand, a mirror selfie with
+# no mirror. The phone IS the camera: outside the mirror slots it is never
+# named, and the slot's negative asks for none. The mirror slots keep it, and
+# they rendered right.
+FRAMING = ("close arm's-length selfie; her head and chest fill the frame and her face is "
            "large and sharp; the top of her head sits near the top edge; never a wide shot, "
            "never full-body")
 MIRROR_FRAMING = ("mirror selfie: her reflection from the thighs up, her phone held at chest "
                   "height and visible in her hand, her face still large in the frame; "
                   "never a wide shot")
 
-STANCE = ("she is taking the photo herself on her own phone, held a little above eye level and "
-          "angled slightly down toward her")
-STANCE_SEATED = ("she is sitting back comfortably and taking the photo herself on her own phone, "
-                 "held a little above eye level")
+STANCE = ("she is taking a selfie, the camera held a little above eye level and angled "
+          "slightly down toward her")
+STANCE_SEATED = ("she is sitting back comfortably and taking a selfie, the camera held a little "
+                 "above eye level")
 STANCE_MIRROR = ("she stands in front of a full-length mirror photographing her own reflection, "
                  "phone held at chest height, her other hand relaxed at her side")
 
 AVOID = ("No studio lighting, no professional photoshoot look, no third-person camera angle, "
-         "no plain backdrop: this is a casual photo she took herself on her phone, in a real room.")
+         "no plain backdrop: this is a casual selfie she took herself, in a real room.")
+#: Appended to the run's negative on every non-mirror slot.
+NEGATIVE = "phone, smartphone, phone in hand, phone screen, phone frame around the picture"
 
-SHOT_TYPE = "phone selfie"
+SHOT_TYPE = "selfie"
 
 # --- the twenty-four ----------------------------------------------------------
 # (outfit, hair, setting, stance). Settings are real places with their own light,
@@ -169,7 +178,9 @@ def slots() -> list[dict]:
                 "outfit": outfit, "hair": hair, "setting": setting,
                 "stance": stance,
                 "framing": MIRROR_FRAMING if stance is STANCE_MIRROR else FRAMING,
-                "shot_type": SHOT_TYPE, "avoid": AVOID,
+                "shot_type": "mirror selfie" if stance is STANCE_MIRROR else SHOT_TYPE,
+                "avoid": AVOID,
+                **({} if stance is STANCE_MIRROR else {"negative": NEGATIVE}),
             })
     return out
 

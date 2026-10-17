@@ -346,18 +346,29 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
 
 def t2i_workflow(cfg: dict, prompt: str, seed: int, prefix: str, *, lora_path: str,
                  negative: str, width: int = W, height: int = H,
-                 render_pass: str = "medium") -> dict:
+                 render_pass: str = "medium",
+                 extra_loras: tuple[tuple[str, float], ...] = ()) -> dict:
     """The plain Qwen-Image text-to-image graph a shoot renders through.
 
     Here rather than in a script because TWO things render shoots now - the
     first pass and the re-roll of whatever was rejected - and a second copy of
     the graph settings is exactly how one path quietly gets a different shift,
     a different step count or a different LoRA strength from the other.
+
+    `extra_loras` stacks one more LoRA under hers - the toy shoot's torso LoRA
+    (Jeremy, 2026-10-17). The template has one spare LoraLoader after hers, so
+    one is the limit; its strength is capped at 0.6 by `validate_lora_stack`
+    so it cannot fight her identity.
     """
     from ..render.workflow import (  # noqa: PLC0415
-        load_template, prune_placeholder_loras, substitute)
+        load_template, prune_placeholder_loras, substitute, validate_lora_stack)
     from ..config import workflows_dir  # noqa: PLC0415
 
+    if len(extra_loras) > 1:
+        raise ValueError(f"the t2i graph has one spare LoRA slot, {len(extra_loras)} asked for")
+    extra_path, extra_strength = extra_loras[0] if extra_loras else ("", 0.0)
+    validate_lora_stack([{"path": lora_path, "strength": 1.0, "is_identity": True}]
+                        + ([{"path": extra_path, "strength": extra_strength}] if extra_path else []))
     preset = cfg["render"][render_pass]
     return prune_placeholder_loras(substitute(
         load_template(workflows_dir(cfg), "qwen_image_t2i"), {
@@ -366,7 +377,7 @@ def t2i_workflow(cfg: dict, prompt: str, seed: int, prefix: str, *, lora_path: s
             "VAE": cfg["models"]["qwen_vae"],
             "POSITIVE": prompt, "NEGATIVE": negative,
             "LORA_PATH": lora_path, "LORA_STRENGTH": 1.0,
-            "LIGHTNING": "", "LIGHTNING_STRENGTH": 0.0,
+            "LIGHTNING": extra_path, "LIGHTNING_STRENGTH": float(extra_strength),
             "SHIFT": float(cfg["render"]["qwen_shift"]), "SEED": int(seed),
             "STEPS": int(preset["qwen_t2i_steps"]), "CFG": float(preset["qwen_t2i_cfg"]),
             "WIDTH": width, "HEIGHT": height, "FILENAME_PREFIX": prefix,

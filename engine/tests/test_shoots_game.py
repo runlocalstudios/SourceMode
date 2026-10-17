@@ -66,12 +66,41 @@ def test_a_selfie_is_not_described_as_a_standing_portrait_that_forbids_sitting()
     sitting = [x for x in selfies.slots() if "sitting" in x["stance"]]
     assert sitting, "the pack should carry seated selfies"
     p = shot_prompt("nobody", sitting[0], backdrop=sitting[0]["setting"])
-    assert "a phone selfie, " in p and "standing portrait" not in p
+    assert "a selfie, " in p and "standing portrait" not in p
     assert "seated poses" not in p
     assert sitting[0]["stance"] in p and sitting[0]["framing"] in p
-    assert "this is a casual photo she took herself on her phone" in p
+    assert "this is a casual selfie she took herself" in p
     # The backdrop is her real room - a selfie never gets the chroma plate.
     assert "#FF00FF" not in p
+
+
+def test_the_phone_is_in_the_picture_only_in_a_mirror_selfie():
+    """Jeremy, 2026-10-17: "She's holding a phone and then outstretching another
+    phone. You shouldn't see the phone in a selfie photo unless it's a mirror
+    selfie." Gabi's pack rendered a phone in hand on most of the non-mirror
+    slots because every slot named it."""
+    mirror = [x for x in selfies.slots() if x["stance"] is selfies.STANCE_MIRROR]
+    plain = [x for x in selfies.slots() if x["stance"] is not selfies.STANCE_MIRROR]
+    assert len(mirror) == 4 and len(plain) == 20
+    for slot in plain:
+        p = shot_prompt("nobody", slot, backdrop=slot["setting"])
+        assert "phone" not in p.lower(), slot["id"]
+        assert "a selfie, " in p
+        assert "phone" in slot["negative"] and "phone frame" in slot["negative"]
+    for slot in mirror:
+        p = shot_prompt("nobody", slot, backdrop=slot["setting"])
+        assert "a mirror selfie, " in p and "phone held at chest height" in p
+        assert "negative" not in slot
+
+
+def test_the_mirror_shoot_is_mirror_selfies_with_the_phone_in_every_shot():
+    # Sienna's mirror shoot (2026-10-13) rendered the two phoneless poses as
+    # plain bathroom portraits. Every pose holds the phone now and the shot
+    # type says what the picture is.
+    for slot in BY_ID["mirror"].plan(character="nobody"):
+        p = shot_prompt("nobody", slot, backdrop=slot["setting"])
+        assert "a mirror selfie, " in p and "phone" in slot["stance"]
+        assert selfies.MIRROR_FRAMING in p and "standing portrait" not in p
 
 
 def test_the_selfie_prompt_never_names_the_outstretched_arm():

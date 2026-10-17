@@ -111,9 +111,28 @@ client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
 NEG = NEGATIVE + (", " + appearance_negative(CHAR) if appearance_negative(CHAR) else "")
 
 
-def t2i(prompt: str, seed: int, prefix: str) -> dict:
+def t2i(prompt: str, seed: int, prefix: str, *, negative: str = "", extra=()) -> dict:
     return t2i_workflow(cfg, prompt, seed, prefix, lora_path=LORA["path"],
-                        negative=NEG, width=W, height=H)
+                        negative=negative or NEG, width=W, height=H, extra_loras=extra)
+
+
+def shoot_loras(sh) -> tuple[tuple[str, float], ...]:
+    """The shoot's extra LoRAs resolved from their lock ids to ComfyUI paths.
+    The toy shoot without its torso LoRA is a different shoot, so a missing
+    lock refuses rather than renders."""
+    out = []
+    for lock_id, strength in sh.loras:
+        lk = resolve_lora(cfg, lock_id)
+        if not lk:
+            raise SystemExit(f"{sh.id} needs the {lock_id!r} LoRA and it is not locked - "
+                             f"`sourcemode lora lock {lock_id} ...` first")
+        out.append((lk["path"], float(strength)))
+    return tuple(out)
+
+
+def slot_negative(slot: dict) -> str:
+    """The run's negative plus what the slot refuses - a selfie refuses the phone."""
+    return NEG + (f", {slot['negative']}" if slot.get("negative") else "")
 
 
 def run_pack(sh) -> int:
@@ -167,6 +186,9 @@ def run_shoot(sh) -> int:
     d = find_set(cfg, CHAR, shoot_kind(sh.id), sh.id, create=True)
     write_set_json(d, character=CHAR, kind=shoot_kind(sh.id), name=sh.id, date=d.name[:10],
                    judge_sets=[f"shoot_{CHAR}_{sh.id}"])
+    extra = shoot_loras(sh)
+    if extra:
+        log(f"  {sh.id}: stacked under hers: " + ", ".join(f"{p} x{s}" for p, s in extra))
     items, n = [], 0
     for k, slot in enumerate(sh.plan(character=CHAR)):
         dest = d / f"{slot['id']}.png"
@@ -174,7 +196,8 @@ def run_shoot(sh) -> int:
             if not dest.exists():
                 prompt = shot_prompt(CHAR, slot, CHAR, backdrop=slot["setting"])
                 files = client.outputs(client.wait(
-                    client.submit(t2i(prompt, SEED + k, f"shoots/{CHAR}/{sh.id}")),
+                    client.submit(t2i(prompt, SEED + k, f"shoots/{CHAR}/{sh.id}",
+                                      negative=slot_negative(slot), extra=extra)),
                     timeout_s=3600))
                 if not files:
                     log(f"  {sh.id} {slot['id']}: no output")

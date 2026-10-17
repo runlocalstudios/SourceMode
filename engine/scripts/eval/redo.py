@@ -112,9 +112,20 @@ def redo_shoot(info: dict, seed: int) -> Path | None:
     dest = find_set(cfg, CHAR, shoot_kind(sh.id), sh.id, create=True) / f"{slot['id']}.png"
     drop(dest)
     prompt = shot_prompt(CHAR, slot, CHAR, backdrop=slot["setting"])
+    # the same stack and the same negative the first pass used: a re-rolled
+    # toy shot keeps the torso LoRA, a re-rolled selfie keeps refusing the phone
+    extra = []
+    for lock_id, strength in sh.loras:
+        lk = resolve_lora(cfg, lock_id)
+        if not lk:
+            log(f"  {slot['id']}: {sh.id} needs the {lock_id!r} LoRA and it is not locked")
+            return None
+        extra.append((lk["path"], float(strength)))
+    neg = NEG + (f", {slot['negative']}" if slot.get("negative") else "")
     files = client.outputs(client.wait(client.submit(
         t2i_workflow(cfg, prompt, seed, f"shoots/{CHAR}/{sh.id}",
-                     lora_path=LORA["path"], negative=NEG, width=W, height=H)),
+                     lora_path=LORA["path"], negative=neg, width=W, height=H,
+                     extra_loras=tuple(extra))),
         timeout_s=3600))
     if not files:
         log(f"  {slot['id']}: no output")

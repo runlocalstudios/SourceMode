@@ -79,6 +79,18 @@ def resolve_lora(cfg: dict, character: str) -> dict | None:
     return None
 
 
+def is_object_set(cfg: dict, dataset: str, character: str) -> bool:
+    """An object set - the torso toy - is one whose preview trigger is not the
+    name in front of it, the same rule the GPU page uses to queue it as an
+    object run. Locked (2026-10-17) so the toy shoot can stack it, it is not
+    a character the shoots tab offers."""
+    from ..train.preview import load_preview, preview_root  # noqa: PLC0415
+
+    doc = load_preview(preview_root(cfg), dataset) or {}
+    trig = doc.get("trigger")
+    return bool(trig) and trig != character
+
+
 def approved_characters(cfg: dict) -> list[dict]:
     """Everyone the shoots tab may offer, with why she qualifies and whether her
     appearance record is ready. Sorted by name."""
@@ -93,7 +105,7 @@ def approved_characters(cfg: dict) -> list[dict]:
         if not ds.is_dir():
             continue
         c = character_of(ds.name).replace("_curated", "").replace("_internal", "")
-        if c in seen:
+        if c in seen or is_object_set(cfg, ds.name, c):
             continue
         lora = resolve_lora(cfg, c)
         if not lora:

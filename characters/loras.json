@@ -139,6 +139,18 @@
   "locked_at": "2026-10-12T01:12:56+00:00",
   "name": "daisy.safetensors"
  },
+ "eve": {
+  "name": "eve.safetensors",
+  "file": "eve_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "eve_v2",
+  "output_name": "eve_v2",
+  "sha256": "76a78ac0078551bfeb892fb79e222825f658d3715fd09d6b28e3f249bf64ec48",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\eve.safetensors",
+  "basis": "dense_eve_v2_asset 9/10 at epoch 22",
+  "locked_at": "2026-10-16T13:28:22+00:00"
+ },
  "gabi": {
   "file": "gabi_v2-000022.safetensors",
   "epoch": 22,
@@ -415,6 +427,18 @@
   "locked_at": "2026-10-09T19:58:59+00:00",
   "name": "tess.safetensors"
  },
+ "torso": {
+  "name": "torso.safetensors",
+  "file": "torso_v1-000020.safetensors",
+  "epoch": 20,
+  "dataset": "torso_v1",
+  "output_name": "torso_v1",
+  "sha256": "0a03a0ef4ed736e5d6997152f77f31a217e75fc98fbaf9ef0f68adfa8a89b5cf",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\torso.safetensors",
+  "basis": "dense_torso_v1_object 8/10 at ep20; tiebreaker 17/19/20/22 flat 10/9/9/9; handjob clarity 7/12 at ep20 x0.6",
+  "locked_at": "2026-10-17T12:55:48+00:00"
+ },
  "trina": {
   "file": "trina_v2-000023.safetensors",
   "epoch": 23,
@@ -450,6 +474,18 @@
   "basis": "dense_vivienne_v2b_asset 14/20 at epoch 28 (v2b file 4)",
   "locked_at": "2026-10-11T20:26:09+00:00",
   "name": "vivienne.safetensors"
+ },
+ "winnie": {
+  "name": "winnie.safetensors",
+  "file": "winnie_v2-000020.safetensors",
+  "epoch": 20,
+  "dataset": "winnie_v2",
+  "output_name": "winnie_v2",
+  "sha256": "fa1483156c51e25544c378d95e2e583c0de5a8fbb4d4ffaf1ec57debeda67345",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\winnie.safetensors",
+  "basis": "dense_winnie_v2_asset 9/10 at epoch 20",
+  "locked_at": "2026-10-17T12:32:28+00:00"
  },
  "zara": {
   "file": "zara_v2-000018.safetensors",

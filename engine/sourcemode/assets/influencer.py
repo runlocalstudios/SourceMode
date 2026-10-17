@@ -40,24 +40,29 @@ from pathlib import Path
 #: A schedule outfit that means she is at work rather than out.
 WORK_OUTFITS = frozenset({"work", "stripper", "server", "uniform"})
 
-# Wording from Qwen-Image-2512's own release material, which leads on reducing
-# the AI look and demos it with "a casual iPhone snapshot: unpretentious
-# composition" (qwen-image.net/blog/qwen-image-2512, researched 2026-10-05).
-# Untested on our LoRAs - his keep rate on the first batch is the measurement.
-SHOT_TYPE = "casual iPhone snapshot"
+# The wording came from Qwen-Image-2512's release material, "a casual iPhone
+# snapshot: unpretentious composition" (qwen-image.net/blog/qwen-image-2512,
+# researched 2026-10-05). MEASURED on Vera's first batch, 2026-10-15: 3 of 14
+# rendered a giant iPhone frame around the picture, and 6 of 14 came out as
+# outstretched-arm selfies although the prompt said a friend took them. Jeremy,
+# 2026-10-17: "almost every picture had a gigantic iPhone picture in the photo
+# around the edge." The camera is never named now; the negative refuses phones.
+SHOT_TYPE = "casual snapshot"
 REAL = ("unpretentious, slightly off-centre composition; the scene's own real light, no staged "
         "studio light; visible skin texture and fine pores, a few flyaway hairs, no retouching")
+#: Appended to the run's negative on every slot.
+NEGATIVE = "phone, smartphone, phone in hand, phone screen, phone frame around the picture, selfie"
 
 # --- composition ----------------------------------------------------------------
 # Head to mid-thigh with the face large: the measured rule for identity (a
 # 122px full-length face kept 12%), and what an Instagram feed crop wants.
-FRAMING = ("candid photo a friend took of her on a phone, framed from mid-thigh up; her face is "
+FRAMING = ("candid photo a friend took of her, framed from mid-thigh up; her face is "
            f"large, sharp and in focus; never a wide shot, never full-body; {REAL}")
-SIGHT_FRAMING = ("travel photo a friend took of her on a phone, framed from the waist up and set "
+SIGHT_FRAMING = ("travel photo a friend took of her, framed from the waist up and set "
                  "to one side of the frame so the landmark behind her is clearly visible and "
                  "recognizable; her face is still large, sharp and in focus; never full-body; "
                  f"{REAL}")
-BOUDOIR_FRAMING = ("intimate candid photo from her partner's phone, framed from her head to her "
+BOUDOIR_FRAMING = ("intimate candid photo her partner took of her, framed from her head to her "
                    f"hips; her face is large, sharp and in focus; never a wide shot; {REAL}")
 
 AVOID = ("No studio lighting, no plain backdrop, no catalogue posing, no legible text or "
@@ -391,6 +396,7 @@ def slots(character: str, batch: int) -> list[dict]:
             "place": loc, "setting": setting, "outfit": outfit, "stance": stance,
             "hair": hairs[i], "framing": framing,
             "shot_type": SHOT_TYPE, "avoid": AVOID + (f" {extra}" if extra else ""),
+            "negative": NEGATIVE,
         })
     return out
 

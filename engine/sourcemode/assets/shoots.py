@@ -26,6 +26,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from .selfies import MIRROR_FRAMING
+
 
 @dataclass(frozen=True)
 class Shoot:
@@ -64,6 +66,13 @@ class Shoot:
     # A WARDROBES id. "work" is HER job outfit from characters/wardrobe.json,
     # which no fixed outfit tuple can carry, so it is resolved at plan time.
     wardrobe: str = ""
+    # The shot type every rotation slot carries ("" keeps "standing portrait").
+    # The mirror shoot is a mirror selfie, not a portrait of her near a mirror.
+    shot_type: str = ""
+    # LoRAs stacked under hers, as (lock id, strength): the toy shoot renders
+    # with the torso toy's LoRA (Jeremy, 2026-10-17). A lock id, never a file
+    # path - the lock is what survives a prune of the staging folders.
+    loras: tuple[tuple[str, float], ...] = ()
 
     def plan(self, seed: int = 0, character: str | None = None) -> list[dict]:
         """The shot list: outfit x pose walked in step, hair rotating under them.
@@ -117,6 +126,7 @@ class Shoot:
                 "stance": self.poses[i % len(self.poses)],
                 "framing": self.framing,
                 "setting": self.setting,
+                **({"shot_type": self.shot_type} if self.shot_type else {}),
             })
         return out
 
@@ -232,7 +242,14 @@ ROBE: tuple[str, ...] = (
     "an open emerald satin robe hanging loose off her shoulders over black panties, nothing else, her breasts bare",
     "an open white satin robe hanging loose off her shoulders over pink panties, nothing else, her breasts bare",
 )
-_TOY = "a large flesh-toned male torso sex toy with a big dildo"
+# Jeremy, 2026-10-17: "add the torso toy LoRA to the instructions for the toy
+# photo shoot." The toy is named by its trigger and the shoot stacks the locked
+# torso LoRA (torso_v1 epoch 20 - 8/10 on the object sweep; epochs 17-22 were
+# flat on the tiebreaker) at 0.6, the strength the tiebreaker and the handjob
+# set rendered at. Her LoRA stays at 1.0 above it.
+TOY_TRIGGER = "torsotoy"
+TOY_LORA: tuple[tuple[str, float], ...] = (("torso", 0.6),)
+_TOY = f"{TOY_TRIGGER}, a large flesh-toned male torso sex toy with a big dildo"
 TOY: tuple[dict, ...] = (
     {"stance": f"kneeling on the bed beside {_TOY} standing upright on the mattress, both hands wrapped around the dildo, gripping it",
      "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
@@ -301,10 +318,10 @@ CATALOG: tuple[Shoot, ...] = (
           note="Lingerie, garter and stockings. Kneeling, on the bed, against the wall, "
                "bent over. Side and from-behind shots keep less often - re-roll the rejects."),
     Shoot("toy", "Toy", "intimate", BEDROOM, ROBE, (),
-          pose_slots=TOY, shots=len(TOY),
-          note="Open satin robe, topless, panties. In bed with a male-torso dildo: gripping, "
+          pose_slots=TOY, shots=len(TOY), loras=TOY_LORA,
+          note="Open satin robe, topless, panties. In bed with the torso toy: gripping, "
                "licking, grinding, between her cheeks, between her breasts, cowgirl, reverse. "
-               "The base model has never been measured on the toy - expect to re-roll."),
+               "Renders with the locked torso LoRA at 0.6 under hers."),
 
     # --- swim ---------------------------------------------------------------
     Shoot("pool", "Poolside", "swim",
@@ -325,16 +342,22 @@ CATALOG: tuple[Shoot, ...] = (
            "standing with the sarong lifting in the wind"), shots=8),
 
     # --- everyday -----------------------------------------------------------
+    # Jeremy, 2026-10-17: a mirror selfie is the ONE kind of selfie where the
+    # phone belongs in the picture. Sienna's set rendered the two phoneless
+    # poses as plain bathroom portraits, so every pose now holds the phone and
+    # the shot type and framing say "mirror selfie" the way the selfie pack's
+    # mirror slots do - those rendered right.
     Shoot("mirror", "Mirror selfies", "everyday",
           "soft even bathroom light, in a bright bathroom with a large mirror",
           ("a grey cropped hoodie and cotton shorts",
            "an oversized white tee and black briefs",
            "a matching ribbed bralette and leggings set",
            "a cropped tank and pyjama shorts"),
-          ("standing square to the mirror, phone at chest height",
-           "standing turned to show her side, phone raised",
-           "leaning toward the mirror, free hand on the counter",
-           "standing with her hip against the counter"), shots=8),
+          ("standing square to the mirror, phone held at chest height",
+           "standing turned to show her side, phone raised beside her face",
+           "leaning toward the mirror, phone up in one hand, free hand on the counter",
+           "standing with her hip against the counter, phone held at her chest"),
+          shots=8, shot_type="mirror selfie", framing=MIRROR_FRAMING),
     Shoot("gym", "Gym", "everyday",
           "cool even gym lighting, in a modern gym with mirrors behind her",
           ("a black sports bra and high-waisted leggings",

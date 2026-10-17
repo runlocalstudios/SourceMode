@@ -143,6 +143,11 @@ def test_the_toy_shoot_is_in_bed_in_the_robe_with_the_toy_named_in_every_shot():
         p = shot_prompt("nobody", s, backdrop=s["setting"])
         assert "male torso sex toy" in p and "dildo" in p
         assert "satin robe" in p and "her breasts bare" in p and "panties" in p
+        # Jeremy, 2026-10-17: the toy is the trained object - its trigger is in
+        # the prompt and its locked LoRA is stacked under hers at 0.6
+        assert f"{S.TOY_TRIGGER}, a large flesh-toned" in p
+    assert sh.loras == (("torso", 0.6),)
+    assert all(not x.loras for x in S.CATALOG if x.id != "toy")
     cow = shot_prompt("nobody", slots[5], backdrop=slots[5]["setting"])
     assert "cowgirl" in cow and "panties pulled to the side" in cow and "looking into the camera" in cow
     rev = shot_prompt("nobody", slots[6], backdrop=slots[6]["setting"])
