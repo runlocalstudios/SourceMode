@@ -18,7 +18,7 @@ FULL = {
     "character": "nova", "name": "Nova", "age": "27", "ethnicity": "Latina",
     "skin": "olive-tan", "build": "slim and athletic",
     "hair": "very long dark brown hair with a vivid turquoise dyed underlayer",
-    "eyes": "dark brown eyes", "bust": "medium",
+    "eyes": "dark brown eyes", "breasts": "medium natural breasts",
     "features": "freckles across her nose", "job": "bartender",
     "style": "edgy downtown", "palette": "black and rust",
     "avoid": "nothing pastel", "negative": "plain brown hair with no colour",
@@ -52,6 +52,21 @@ def test_the_clause_never_carries_age_or_ethnicity():
     assert "olive-tan skin" in c
 
 
+def test_the_chest_is_breasts_with_a_size_and_a_kind_never_a_bust():
+    """Jeremy, 2026-10-16: "busty can be perceived as chubby by these models,
+    and it's not the body type that's meant to be described by the bust"."""
+    c = appearance_clause(FULL)
+    assert "a slim and athletic figure with medium natural breasts" in c
+    assert "bust" not in c
+    rec = appearance_record(FULL)
+    assert rec["breasts"] == "medium natural breasts" and "bust" not in rec
+    assert rec["figure"] == "slim and athletic with medium natural breasts"
+    # a bare size gets its noun; implants keep theirs
+    assert "with large breasts" in appearance_clause({**FULL, "breasts": "large"})
+    assert "with massive breast implants" in appearance_clause({**FULL, "breasts": "massive breast implants"})
+    assert "bust" not in {k for k, *_ in FIELDS} and "breasts" in {k for k, *_ in FIELDS}
+
+
 def test_the_form_has_no_frame_field():
     # render.py hardcoded "fitted to her tiny frame" for everyone, then a Fit
     # field replaced it, then Jeremy dropped the clause (2026-10-10): the
@@ -68,7 +83,7 @@ def test_a_negative_is_carried_onto_the_record():
 
 def test_thin_warns_without_blocking():
     # Gates annotate; they do not block. A thin record still creates.
-    lean = {k: v for k, v in FULL.items() if k not in ("bust", "style", "job")}
+    lean = {k: v for k, v in FULL.items() if k not in ("breasts", "style", "job")}
     assert missing(lean) == []
     assert len(thin(lean)) == 3
 

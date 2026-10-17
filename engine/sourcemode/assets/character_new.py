@@ -53,7 +53,10 @@ FIELDS = (
     ("eyes", "Eyes", "need", "brown is the default the base model reaches for; anything "
                              "else has to be said"),
     ("build", "Build", "need", "petite / slim and athletic / curvy hourglass"),
-    ("bust", "Bust", "want", "small / medium / full - it changes how every outfit sits"),
+    ("breasts", "Breasts", "want", "size and kind - small perky breasts / medium natural breasts / "
+                                   "medium breast implants / large breasts / massive natural breasts / "
+                                   "massive breast implants. Never 'bust': the model reads busty as "
+                                   "chubby, and the bust is not the body type"),
     ("features", "Other features", "want", "freckles, glasses, strong brows, full lips - "
                                            "anything you would notice first"),
     ("negative", "Never render", "want", "what the base model reverts to without being "
@@ -88,10 +91,16 @@ def appearance_clause(d: dict) -> str:
     fig = d.get("build", "")
     if fig and not re.search(r"\b(figure|build|frame|body)\b", fig, re.I):
         fig = f"{fig} figure"
-    if d.get("bust"):
-        fig = f"{fig} with a {d['bust']} bust" if fig else f"a {d['bust']} bust"
     if fig:
-        bits.append(f"a {fig}" if not fig.startswith(("a ", "an ")) else fig)
+        fig = f"a {fig}" if not fig.startswith(("a ", "an ")) else fig
+    # Jeremy, 2026-10-16: breasts with a size and a kind, never "bust" -
+    # "busty can be perceived as chubby by these models, and it's not the body
+    # type that's meant to be described by the bust".
+    br = breasts_phrase(d)
+    if br:
+        fig = f"{fig} with {br}" if fig else br
+    if fig:
+        bits.append(fig)
     if d.get("hair"):
         h = d["hair"]
         bits.append(h if re.search(r"\b(hair|bob|pixie|braids?|locs|curls|waves)\b", h, re.I) else f"{h} hair")
@@ -103,21 +112,30 @@ def appearance_clause(d: dict) -> str:
     return ", ".join(b for b in bits if b)
 
 
+def breasts_phrase(d: dict) -> str:
+    """`large natural breasts` as typed; a bare size ("medium") gets its noun."""
+    b = str(d.get("breasts", "")).strip()
+    if not b:
+        return ""
+    return b if re.search(r"\b(breasts?|implants?|chest)\b", b, re.I) else f"{b} breasts"
+
+
 def appearance_record(d: dict) -> dict:
     """The appearance.json entry. `prompt` is composed unless one was typed."""
+    br = breasts_phrase(d)
     rec = {
         "_note": f"Created on the new-character form, {d.get('created', '')}".strip(),
         "ethnicity": d["ethnicity"],
         "build": d["build"],
-        "figure": d["build"] + (f" with a {d['bust']} bust" if d.get("bust") else ""),
+        "figure": d["build"] + (f" with {br}" if br else ""),
         "features": ", ".join(x for x in (d.get("hair"), d.get("eyes"),
                                           f"{d['skin']} skin" if d.get("skin") else "",
                                           d.get("features")) if x),
         "prompt": (d.get("prompt") or "").strip() or appearance_clause(d),
         "age": int(d["age"]),
     }
-    if d.get("bust"):
-        rec["bust"] = d["bust"]
+    if br:
+        rec["breasts"] = br
     if d.get("negative"):
         rec["negative"] = d["negative"]
     # He typed every field, so the record is his: confirmed at creation. The
@@ -158,8 +176,8 @@ def thin(d: dict) -> list[str]:
     """Fields that are not required but whose absence has cost real GPU time.
     Never blocking - this is a prompt to look, the way every gate here is."""
     out = []
-    if not str(d.get("bust", "")).strip():
-        out.append("Bust - it changes how every top and dress sits")
+    if not str(d.get("breasts", "")).strip():
+        out.append("Breasts - it changes how every top and dress sits")
     if not str(d.get("style", "")).strip():
         out.append("Wardrobe style - her 28-look plan has nothing to expand from")
     if not str(d.get("job", "")).strip():
