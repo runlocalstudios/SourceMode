@@ -1589,8 +1589,13 @@ def candidates(cfg: dict) -> list[dict]:
         # vivienne's is lora_vivienne_v2b/ and lora/ is empty after the
         # 2026-10-15 prune, which read here as "approved, never trained".
         from ..train.epochs import checkpoint_dirs  # noqa: PLC0415
+        from ..train.locked import load_registry  # noqa: PLC0415
 
         if any(True for sub in checkpoint_dirs(out, ds) for _ in sub.glob("*.safetensors")):
+            continue
+        # A lock is trained too. Since 2026-10-18 the prune takes the lock's
+        # training-folder copy as well, so a locked set's lora/ is empty.
+        if any(r.get("dataset") == ds for r in load_registry().values()):
             continue
         if q.duplicate_of(doc, "train", ds):
             continue   # already queued or running

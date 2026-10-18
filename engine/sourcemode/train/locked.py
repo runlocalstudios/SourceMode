@@ -337,12 +337,14 @@ def backup_all(cfg: dict, registry: Path | None = None, log=lambda m: None) -> l
 
 def locked_files(cfg: dict, registry: Path | None = None) -> set[Path]:
     """Every path a prune must leave alone: the vault copies and everything set
-    aside beside them, the ComfyUI copies, the backup copies, and any
-    training-folder file with a locked name."""
-    from ..config import outputs_dir  # noqa: PLC0415
+    aside beside them, the ComfyUI copies and the backup copies.
+
+    NOT the training-folder file. Jeremy, 2026-10-18: "We do not need 3 copies
+    of the epoch winner on hard drive. Let's keep 1 in comfy where is used, and
+    one in vault." The vault and ComfyUI copies are hash-verified before any
+    prune deletes, so the training copy is the redundant one."""
     keep: set[Path] = set()
-    out = outputs_dir(cfg)
-    for c, row in load_registry(registry).items():
+    for c in load_registry(registry):
         vt = vault_target(cfg, c)
         keep.add(vt.resolve())
         keep |= {p.resolve() for p in vt.parent.glob("*") if p.is_file()}
@@ -351,9 +353,6 @@ def locked_files(cfg: dict, registry: Path | None = None) -> set[Path]:
         bt = backup_target(cfg, c)
         if bt is not None:
             keep.add(bt.resolve())
-        base = out / "lora-datasets"
-        if base.is_dir():
-            keep |= {p.resolve() for p in base.glob(f"*/lora*/{row['file']}")}
     return keep
 
 

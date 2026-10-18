@@ -213,8 +213,13 @@ def test_prune_plan_lists_only_what_a_lock_makes_redundant(locked_world):
     all_rows = L.prune_plan(cfg, out, judge)
     rows = {Path(r["path"]).name: r for r in all_rows}
     assert rows["dense_zara_v2_asset"]["kind"] == "folder" and rows["dense_zara_v2_asset"]["judge_sets"] == ["sets/dense_zara_v2_asset.json"]
-    assert "zara_v2-000019.safetensors" in rows and "zara_v2-000018.safetensors" not in rows
+    assert "zara_v2-000019.safetensors" in rows
     assert sum(1 for r in all_rows if r["path"].endswith("zara_v2-000019.safetensors")) == 2   # training + ComfyUI
+    # the lock's training-folder copy is a third local copy and goes too;
+    # the vault and ComfyUI copies never appear (Jeremy, 2026-10-18)
+    assert [r["path"] for r in all_rows if r["path"].endswith("zara_v2-000018.safetensors")] == \
+        [str(ck / "zara_v2-000018.safetensors")]
+    assert not any(r["path"].endswith("zara.safetensors") for r in all_rows)
     assert "selfie_ab" in rows and "ab_cat_desc" not in rows          # 30 days vs fresh
     assert "dense_mei_v2_asset_nodesc" not in rows                    # mei is not locked
     assert all(r["action"] == "delete" for r in rows.values())
@@ -231,7 +236,9 @@ def test_prune_apply_deletes_retires_and_keeps_the_lock(locked_world, tmp_path):
     assert sorted(p.name for p in (out / "dense_zara_v2_asset").iterdir()) == ["ep18"]
     assert not (out / "selfie_ab").exists()
     assert not (ck / "zara_v2-000019.safetensors").exists() and not stray.exists()
-    assert (ck / "zara_v2-000018.safetensors").is_file()
+    assert not (ck / "zara_v2-000018.safetensors").exists()
+    assert (Path(cfg["paths"]["library"]) / "loras" / "zara" / "zara.safetensors").is_file()
+    assert (Path(cfg["comfyui"]["loras_dir"]) / "sourcemode" / "zara.safetensors").is_file()
     assert (judge / "retired" / "dense_zara_v2_asset.set.json").is_file()
     assert not (judge / "sets" / "dense_zara_v2_asset.json").exists()
     assert (out / "dense_mei_v2_asset_nodesc").is_dir()

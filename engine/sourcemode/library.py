@@ -504,7 +504,11 @@ def prune_plan(cfg: dict, outputs: Path, judge_root: Path, *, ab_days: int = PRU
             if not char:
                 continue
             for ck in sorted(ds.glob("lora*/*.safetensors")):
-                if ck.resolve() not in keep:
+                if ck.resolve() in keep:
+                    continue
+                if ck.name == reg[char]["file"]:
+                    row("file", ck, f"the lock's training-folder copy; {char}'s vault and ComfyUI copies hold it", char)
+                else:
                     row("file", ck, f"checkpoint that lost; {char} is locked to {reg[char]['file']}", char)
     comfy = comfy_loras_dir(cfg) / "sourcemode"
     if comfy.is_dir():

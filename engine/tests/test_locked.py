@@ -141,7 +141,8 @@ def test_locked_files_is_what_a_prune_must_keep(world):
     L.lock(cfg, "zara", ck / "zara_v2-000018.safetensors", epoch=18, dataset="zara_v2", registry=reg)
     keep = L.locked_files(cfg, registry=reg)
     vault, comfy, backup = _paths(cfg)
-    assert (ck / "zara_v2-000018.safetensors").resolve() in keep
+    # the training copy is not kept: vault + ComfyUI are the two (2026-10-18)
+    assert (ck / "zara_v2-000018.safetensors").resolve() not in keep
     assert (ck / "zara_v2-000019.safetensors").resolve() not in keep
     assert {vault.resolve(), comfy.resolve(), backup.resolve()} <= keep
 

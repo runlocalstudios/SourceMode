@@ -11,6 +11,13 @@ from sourcemode.gpu import queue as q
 from sourcemode.monitor.queue_page import queue_state
 
 
+@pytest.fixture(autouse=True)
+def _no_real_locks(tmp_path, monkeypatch):
+    """candidates() treats a locked dataset as trained, and these tests use real
+    dataset names - so the machine's own characters/loras.json must not leak in."""
+    monkeypatch.setattr("sourcemode.train.locked.REGISTRY", tmp_path / "no-locks.json")
+
+
 @pytest.fixture
 def cfg(tmp_path):
     return {"paths": {"outputs": str(tmp_path)}}
