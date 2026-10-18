@@ -248,6 +248,62 @@ def palette_colours(palette: str) -> tuple[str, ...]:
     tones", "pastels") expands to its colours at the place it appears, so
     "white with primary colors" reads white, red, blue, yellow - not white,
     white, white. A line that names neither gets the defaults."""
+    return _colours_in(palette) or DEFAULT_COLOURS
+
+
+# NEVER WEARS. Jeremy, 2026-10-18: "i told the app that hannah never wears
+# denim, yet it still put her in jeans a lot". The tab's "Never wears" line was
+# saved and shown and never read - four of her 28 approved looks were denim.
+# These are the words the generator acts on: a phrase as he would write it in
+# her line, and the forms it takes on a template, a steer cue or a colour. A
+# look, a cue or a colour that carries one is never offered to her. Colours and
+# colour families in the line ("pastels", "bright colour") come off her palette
+# the same way. Prose ("nothing prim or preppy") is for him; the code only acts
+# on words it can match.
+_AVOID_WORDS: tuple[tuple[str, str], ...] = (
+    (r"denim|jeans|chambray", r"denim|jeans|chambray"),
+    (r"leather|suede", r"leather|suede"),
+    (r"lace|lacy", r"\blace\b|lacy"),
+    (r"satin|silk|silky", r"satin|silk"),
+    (r"sequins?|sparkl\w*|glitter\w*", r"sequin|glitter|sparkl"),
+    (r"vinyl|latex|pvc", r"vinyl|latex|pvc"),
+    (r"sheer|mesh|see[- ]through", r"sheer|mesh|see-through"),
+    (r"velvet", r"velvet"),
+    (r"fur", r"\bfur\b|faux-fur"),
+    (r"crop(?:ped)?(?: tops?)?|midriff", r"crop|midriff"),
+    (r"mini ?skirts?|micro ?skirts?|micro ?minis?", r"mini skirt|micro"),
+    (r"shorts", r"\bshorts\b"),
+    (r"leggings", r"leggings"),
+    (r"hoodies?|sweatshirts?", r"hoodie|sweatshirt"),
+    (r"heels|stilettos?", r"heels|stiletto|pumps"),
+    (r"sneakers|trainers", r"sneakers|trainers"),
+    (r"plunging(?: necklines?)?|low[- ]cut|cleavage", r"plunging|neckline cut low|low-cut|deep v"),
+    (r"high (?:collars?|necks?)|turtlenecks?", r"turtleneck|high-neck|high collar"),
+    (r"bodysuits?", r"bodysuit"),
+    (r"rompers?|jumpsuits?|unitards?|onesies?|overalls", r"romper|jumpsuit|unitard|onesie|overalls"),
+    (r"blazers?|suits?", r"\bsuit\b|blazer|pantsuit"),
+    (r"prints?|patterns?|graphics?|logos?", r"print|floral|stripe|gingham|plaid|polka|graphic|leopard|animal"),
+    (r"strapless", r"strapless|tube|bandeau"),
+    (r"halters?", r"halter"),
+    (r"bikinis?|swimwear", r"bikini|swimsuit|one-piece"),
+)
+
+
+def banned(avoid: str) -> re.Pattern | None:
+    """A matcher for what her "Never wears" line rules out, None when the line
+    carries nothing the generator knows how to act on."""
+    pats = [rx for phrase, rx in _AVOID_WORDS if re.search(rf"\b(?:{phrase})\b", avoid or "", re.I)]
+    # whole words: "red" must not ban "tailored"
+    pats += [rf"\b{re.escape(c)}s?\b" for c in _colours_in(avoid)]
+    return re.compile(r"(?:" + "|".join(pats) + r")", re.I) if pats else None
+
+
+def avoids(text: str, ban: re.Pattern | None) -> bool:
+    return bool(ban and ban.search(text or ""))
+
+
+def _colours_in(palette: str) -> tuple[str, ...]:
+    """`palette_colours` without the fallback: () when the line names none."""
     found: list[tuple[int, tuple[str, ...]]] = []
     for m in _FAMILY_RE.finditer(palette or ""):
         i = next(k for k in range(len(_FAMILIES)) if m.group(f"f{k}"))
@@ -263,7 +319,7 @@ def palette_colours(palette: str) -> tuple[str, ...]:
         for c in cols:
             if c not in seen:
                 seen.append(c)
-    return tuple(seen) or DEFAULT_COLOURS
+    return tuple(seen)
 
 
 # --- work looks ------------------------------------------------------------------
@@ -438,14 +494,15 @@ def register(*texts: str) -> str:
     return ""
 
 
-def steer(outfit: str, reg: str, rng: random.Random) -> str:
+def steer(outfit: str, reg: str, rng: random.Random, ban: re.Pattern | None = None) -> str:
     """One register cue appended to the outfit, chosen from the ones it can
-    carry; the outfit unchanged when none fits."""
+    carry and her "Never wears" line allows; the outfit unchanged when none fits."""
     if not reg or not outfit:
         return outfit
     pool = next(s for n, _, s in REGISTERS if n == reg)
     fit = [cue for cue, needs, never in pool
-           if (not needs or re.search(needs, outfit, re.I)) and not (never and re.search(never, outfit, re.I))]
+           if (not needs or re.search(needs, outfit, re.I)) and not (never and re.search(never, outfit, re.I))
+           and not avoids(cue, ban)]
     return f"{outfit}, {rng.choice(fit)}" if fit else outfit
 
 
@@ -503,7 +560,7 @@ def job_kind(text: str) -> str:
 
 
 def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_job: str,
-               style: str = "") -> list[str]:
+               style: str = "", ban: re.Pattern | None = None) -> list[str]:
     base = job_base(job["outfit"])
     brief = is_brief(job["outfit"])
     # her record's words place the job; the game's one-line job is consulted
@@ -522,11 +579,12 @@ def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_j
         # the shorts-and-shirt looks)
         placed = kind not in ("", "uniform")
         pool = [t for t in next(t for k, _, t in WORK_KINDS if k == kind) if t != "{base}"] if placed else "*"
-        tpl = guided_templates(pool, base, n, rng)
+        tpl = guided_templates(pool, base, n, rng, ban)
     elif kind in ("", "uniform"):
-        tpl = ["{base}"] + [v for key, v in UNIFORM_VARIANTS if key not in base.lower()]
+        tpl = ["{base}"] + [v for key, v in UNIFORM_VARIANTS if key not in base.lower() and not avoids(v, ban)]
     else:
-        tpl = list(next(t for k, _, t in WORK_KINDS if k == kind))
+        # her own line stays hers even when it names what she "never wears"
+        tpl = [t for t in next(t for k, _, t in WORK_KINDS if k == kind) if t == "{base}" or not avoids(t, ban)]
     # her job line sets the register; her style line only when the job line
     # is a brief - a written-out uniform is the spec, not a mood
     reg = register(words) or (register(style) if brief else "")
@@ -535,7 +593,7 @@ def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_j
     out = []
     for i, t in enumerate(tpl[:n]):
         look = fill(t, base=base, c=cols[i % len(cols)])
-        out.append(look if t == "{base}" else steer(look, reg, rng))   # her own line stays hers
+        out.append(look if t == "{base}" else steer(look, reg, rng, ban))   # her own line stays hers
     while len(out) < n:                       # more looks asked than variants
         out.append(out[len(out) % len(tpl)])
     return out
@@ -554,9 +612,17 @@ def work_outfits(character: str, n: int = PACK_28["work"]) -> tuple[str, ...]:
     job = (rec["jobs"] or [{}])[0]
     if not job.get("outfit"):
         return ()
-    colours = list(palette_colours(rec.get("palette", "")))
+    ban = banned(rec.get("avoid", ""))
+    colours = _allowed(palette_colours(rec.get("palette", "")), ban)
     rng = random.Random(f"{character}:work")
-    return tuple(_job_looks(job, n, colours, rng, persona_job(character), rec.get("style", ""))[:n])
+    return tuple(_job_looks(job, n, colours, rng, persona_job(character), rec.get("style", ""), ban)[:n])
+
+
+def _allowed(colours, ban: re.Pattern | None) -> list[str]:
+    """Her palette less what she never wears; the whole palette when that
+    would leave nothing."""
+    kept = [c for c in colours if not avoids(c, ban)]
+    return kept or list(colours)
 
 
 _ALWAYS_PLURAL = {"shorts", "jeans", "trousers", "pants", "leggings", "tights", "scrubs", "overalls", "stockings"}
@@ -567,15 +633,18 @@ def _singular(w: str) -> str:
     return w if w in _ALWAYS_PLURAL else re.sub(r"(ss)es$|s$", lambda m: m.group(1) or "", w)
 
 
-def guided_templates(pool: str | list[str], guide: str, n: int, rng: random.Random) -> list[str]:
+def guided_templates(pool: str | list[str], guide: str, n: int, rng: random.Random,
+                     ban: re.Pattern | None = None) -> list[str]:
     """`n` templates from the pool (a category name, "*" for every category, or
     a list), the ones naming a garment her guide line names first - most of
     them first ("sleeveless blouses, bodysuits" puts the bodysuit looks in) -
-    the rest sampled."""
+    the rest sampled. A template her "Never wears" line rules out is not in
+    the pool at all."""
     if pool == "*":                           # the daytime pools; a job brief is not clubwear
         pool = [t for c in ("casual", "casual_date") for t in TEMPLATES[c]]
     elif isinstance(pool, str):
         pool = list(TEMPLATES[pool])
+    pool = [t for t in pool if not avoids(t, ban)]
     nouns = {_singular(m.group(0)) for m in GARMENT_RE.finditer(guide or "")}
     nouns -= {"set", "top"}                   # too common to mean anything
 
@@ -602,7 +671,8 @@ def draft_looks(character: str, seed: int = 0) -> dict[str, list[dict]]:
     from .wardrobe import editable, hair_options  # noqa: PLC0415
 
     rec = editable(character)
-    colours = list(palette_colours(rec.get("palette", "")))
+    ban = banned(rec.get("avoid", ""))
+    colours = _allowed(palette_colours(rec.get("palette", "")), ban)
     hair = list(hair_options(character))
     rng = random.Random(f"{character}:{seed}" if seed else character)
     out: dict[str, list[dict]] = {}
@@ -623,15 +693,16 @@ def draft_looks(character: str, seed: int = 0) -> dict[str, list[dict]]:
             # the palette, its register (revealing, modest) shapes every look -
             # and her style line stands in where the category line is blank.
             guide = (rec.get("outfits") or {}).get(CATEGORY_TYPE[cat], "") or ""
-            tpl = guided_templates(cat, guide or rec.get("style", ""), n, rng)
+            tpl = guided_templates(cat, guide or rec.get("style", ""), n, rng, ban)
             # "denim" alone in a guide line is the fabric, not a colour
             named = ([c for c in palette_colours(guide) if c != "denim"]
                      if (_COLOUR_RE.search(guide) or _FAMILY_RE.search(guide)) else [])
+            named = _allowed(named, ban) if named else []
             cols = named if len(named) > 1 else named + [c for c in colours if c not in named]
             rng.shuffle(cols)
             reg = register(guide, rec.get("style", ""))
             for i in range(n):
-                looks.append({"outfit": steer(fill(tpl[i], c=cols[i % len(cols)]), reg, rng),
+                looks.append({"outfit": steer(fill(tpl[i], c=cols[i % len(cols)]), reg, rng, ban),
                               "hair": hair[(i + ci + off) % len(hair)]})
         out[cat] = looks
     return out

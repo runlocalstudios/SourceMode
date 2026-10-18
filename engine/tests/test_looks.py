@@ -10,6 +10,7 @@ work looks must be HER job outfit, and approving must produce exactly the file
 from __future__ import annotations
 
 import json
+import random
 import re
 from pathlib import Path
 
@@ -67,6 +68,70 @@ def test_a_colour_family_expands_where_it_is_written():
     assert L.palette_colours("cream, bone, black and indigo denim") == ("cream", "bone", "black", "indigo", "denim")
     assert L.palette_families("White with primary colors, some pastels") == ["primary colors", "pastels"]
     assert L.fill("a {c} sundress", c="oatmeal") == "an oatmeal sundress"
+
+
+def _record(monkeypatch, **over):
+    rec = {"style": "playful but revealing, with a very upscale vibe",
+           "palette": "pastels and vivid colors, as well as white or gray t-shirts with vivid graphics",
+           "avoid": "", "outfits": {"dressy": "skirt and blouse combo, or trendy flowy slacks with a stunning top",
+                                    "night_out": "skirt and cutoff halter top with choker, or a glamorous minidress"},
+           "jobs": [{"job": "Owner of Gal Gaming", "places": [],
+                     "outfit": "unassuming colorful outfits that are a bit revealing and playful"},
+                    {"job": "", "outfit": "", "places": []}],
+           "hair": [], "note": "", "draft": False, **over}
+    monkeypatch.setattr(W, "editable", lambda c: rec)
+    monkeypatch.setattr(W, "hair_options", lambda c: ("her hair worn loose", "her hair in a bun"))
+    monkeypatch.setattr(L, "shipped", lambda c: {})
+    monkeypatch.setattr(L, "reference", lambda c: None)
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "persona_job", lambda c: "")
+    return rec
+
+
+def _all_outfits(d: dict) -> list[str]:
+    return [lk["outfit"] for looks in d.values() for lk in looks]
+
+
+def test_what_she_never_wears_is_never_drafted(monkeypatch):
+    """Jeremy, 2026-10-18: "i told the app that hannah never wears denim, yet
+    it still put her in jeans a lot and also this: a gray slip dress under a
+    cropped denim jacket". Her record is Hannah's; with no avoid line the
+    draft reaches for denim, with it the draft never does - in any category,
+    the work brief included - over several rolls."""
+    _record(monkeypatch)
+    assert any(re.search(r"denim|jeans", o) for s in range(3) for o in _all_outfits(L.draft_looks("hannah", s)))
+    _record(monkeypatch, avoid="denim")
+    for s in range(4):
+        for o in _all_outfits(L.draft_looks("hannah", s)):
+            assert not re.search(r"denim|jeans|chambray", o, re.I), o
+    # the full 28 are still there - the casual pool has 19 denim-free templates for 7 looks
+    assert {k: len(v) for k, v in L.draft_looks("hannah").items()} == PACK_28
+
+
+def test_the_avoid_line_reaches_cues_colours_and_the_job_looks(monkeypatch):
+    # sandra's line: the revealing cues it names are never appended
+    ban = L.banned("crop tops, micro skirts, plunging necklines, bare midriff - none of it is her")
+    assert L.avoids("the neckline cut low", ban) and L.avoids("the top cropped to show her midriff", ban)
+    assert L.avoids("a black micro mini skirt", ban) and not L.avoids("a black pencil skirt", ban)
+    rng = random.Random(1)
+    for _ in range(20):
+        out = L.steer("a fitted white shirt and a pencil skirt", "revealing", rng, ban)
+        assert "neckline cut low" not in out and "midriff" not in out
+    # colours and families come off the palette; the whole palette stays when nothing would be left
+    assert L._allowed(["pale pink", "black", "mint"], L.banned("pastels and anything girlish")) == ["black"]
+    assert L._allowed(["black"], L.banned("black")) == ["black"]
+    # prose the generator cannot act on bans nothing
+    assert L.banned("nothing prim or preppy - she is the opposite of wholesome") is None
+    assert L.banned("") is None
+    # the work brief draws from the daytime pools - minus the banned ones
+    _record(monkeypatch, avoid="denim and hoodies")
+    for o in L.work_outfits("hannah", 5):
+        assert not re.search(r"denim|jeans|hoodie", o, re.I), o
+    # a written-out uniform is his line and stays, denim or not
+    _record(monkeypatch, avoid="denim", jobs=[{"job": "Bartender", "places": [],
+                                              "outfit": "a denim shirt tied at the waist and black trousers"},
+                                             {"job": "", "outfit": "", "places": []}])
+    assert L.work_outfits("hannah", 5)[0].startswith("a denim shirt tied at the waist")
 
 
 def test_draft_is_28_looks_in_the_pack_categories_coloured_from_her_palette(ash):
