@@ -18,7 +18,8 @@ from pathlib import Path
 
 CHAR = sys.argv[1].lower()
 STEP = sys.argv[2]
-DS = Path(f"outputs/lora-datasets/{CHAR}_v2")
+DS_NAME = sys.argv[sys.argv.index("--ds") + 1] if "--ds" in sys.argv else f"{CHAR}_v2"
+DS = Path(f"outputs/lora-datasets/{DS_NAME}")
 IMG = DS / "image_src"
 
 
@@ -94,9 +95,9 @@ def preview() -> list[str]:
     from sourcemode.config import load_config  # noqa: PLC0415
     from sourcemode.train.preview import load_preview, preview_root  # noqa: PLC0415
 
-    doc = load_preview(preview_root(load_config()), f"{CHAR}_v2")
+    doc = load_preview(preview_root(load_config()), DS_NAME)
     if doc is None:
-        return [f"no preview document for {CHAR}_v2"]
+        return [f"no preview document for {DS_NAME}"]
     names = pngs()
     shown = {im.get("name") for im in doc.get("images", [])}
     missing = [n for n in names if n not in shown]

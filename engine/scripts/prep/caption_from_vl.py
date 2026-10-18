@@ -25,7 +25,8 @@ from PIL import Image
 # question, run separately by vl_gaze.py.
 
 CHAR = sys.argv[1]
-DS = Path(f"outputs/lora-datasets/{CHAR}_v2"); IMG = DS / "image_src"
+DS_NAME = sys.argv[sys.argv.index("--ds") + 1] if "--ds" in sys.argv else f"{CHAR}_v2"
+DS = Path(f"outputs/lora-datasets/{DS_NAME}"); IMG = DS / "image_src"
 M = Path("C:/dev/e2egen/vendor/musubi-tuner")
 VL = M / ".venv/Scripts/python.exe"
 CAPTIONER = M / "src/musubi_tuner/caption_images_by_qwen_vl.py"
@@ -505,7 +506,7 @@ for p in sorted(IMG.glob("*")):
     written += 1
 
 import collections as _c
-print(f"{CHAR}_v2: {written} captions; {teeth_n} say teeth showing; thin: {len(thin)} {thin[:4]}")
+print(f"{DS_NAME}: {written} captions; {teeth_n} say teeth showing; thin: {len(thin)} {thin[:4]}")
 print("  hair:", dict(_c.Counter(v for v in hair_fix.values() if v).most_common()))
 print(f"  gaze: {len(gaze)} looking off camera ({_plan_off} from the plan's own off/away shots); mouth open mid-speech: {len(talking)}")
 print(f"  from the shot plan: {sum(1 for n in PLAN if (IMG / n).is_file())} of "

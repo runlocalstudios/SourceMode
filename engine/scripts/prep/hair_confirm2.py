@@ -25,7 +25,8 @@ from pathlib import Path
 
 CHAR = sys.argv[1].lower()
 APPLY = "--apply" in sys.argv
-DS = Path(f"outputs/lora-datasets/{CHAR}_v2"); IMG = DS / "image_src"
+DS_NAME = sys.argv[sys.argv.index("--ds") + 1] if "--ds" in sys.argv else f"{CHAR}_v2"
+DS = Path(f"outputs/lora-datasets/{DS_NAME}"); IMG = DS / "image_src"
 M = Path("C:/dev/e2egen/vendor/musubi-tuner")
 VL, CAPTIONER = M / ".venv/Scripts/python.exe", M / "src/musubi_tuner/caption_images_by_qwen_vl.py"
 VL_MODEL = "C:/ComfyUI/models/text_encoders/qwen_2.5_vl_7b.safetensors"

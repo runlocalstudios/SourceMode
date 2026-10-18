@@ -90,7 +90,8 @@ if __name__ == "__main__":
     char = sys.argv[1].lower()
     apply_ = "--apply" in sys.argv
     sheet = "--sheet" in sys.argv
-    DS = Path(f"outputs/lora-datasets/{char}_v2")
+    ds_name = sys.argv[sys.argv.index("--ds") + 1] if "--ds" in sys.argv else f"{char}_v2"
+    DS = Path(f"outputs/lora-datasets/{ds_name}")
     IMG = DS / "image_src"
     geom = json.loads((DS / "geometry.json").read_text(encoding="utf-8"))
     vals, jaws = {}, {}

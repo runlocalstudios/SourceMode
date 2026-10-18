@@ -31,7 +31,13 @@ param(
   # staged images keep their numbers. Without it the gather exits at once with
   # "already staged; nothing to do", and -Cap is silently ignored: Casey,
   # 2026-10-08, was queued at cap 190 and stayed at her 83.
-  [switch]$Force
+  [switch]$Force,
+  # A dataset other than <char>_v2, e.g. priyanka_v3 beside the locked
+  # priyanka_v2 - every prep step reads and writes this folder instead.
+  [string]$Ds = "",
+  # Jeremy's hand-curated folder: the gather takes it and nothing else, and the
+  # wait for a Lora-Gen run is skipped because the set is already final.
+  [string]$Src = ""
 )
 $ErrorActionPreference = "Continue"
 # Repo paths, never a session scratchpad. $SP used to be one Claude session's
@@ -41,7 +47,10 @@ $ErrorActionPreference = "Continue"
 $PREP = "C:\dev\sourcemode\engine\scripts\prep"
 $PY  = "C:\dev\sourcemode\engine\.venv\Scripts\python.exe"
 $L   = "C:\dev\sourcemode\engine\outputs\logs"
-$log = "$L\chain_$Char.log"
+$Tag = if ($Ds) { $Ds } else { $Char }
+$log = "$L\chain_$Tag.log"
+$DsArgs = @()
+if ($Ds) { $DsArgs = @("--ds", $Ds) }
 function Log($s) { "$(Get-Date -Format s)  $s" | Out-File $log -Append -Encoding utf8 }
 function Free { try { Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8188/free -ContentType application/json -Body '{"unload_models":true,"free_memory":true}' | Out-Null } catch {} ; Start-Sleep 10 }
 function Step($label, $argList, $outLog) {
@@ -65,7 +74,7 @@ function Must($label, $argList, $outLog) {
 }
 function Verify($step) {
   $outLog = "verify_${step}_$Char"
-  $rc = Step "$Char verify $step" @("$PREP\verify_step.py", $Char, $step) $outLog
+  $rc = Step "$Char verify $step" (@("$PREP\verify_step.py", $Char, $step) + $DsArgs) $outLog
   foreach ($line in @(Get-Content "$L\$outLog.stdout.log" -ErrorAction SilentlyContinue)) { Log "  $line" }
   if ($rc -ne 0) {
     Log "ABORT: $step did not produce what it should; no DONE marker"
@@ -138,6 +147,9 @@ if ($WaitLog -and $WaitPattern) {
 # with a run record still claiming "shots 5-80 in progress". Stability alone would
 # have gathered an eighth of her set and captioned it. Require the shot count to
 # actually REACH a full set as well as stop moving.
+if ($Src) {
+  Log "$Char curated set: $Src - no Lora-Gen wait"
+} else {
 Log "waiting for $Char to reach $MinShots Lora-Gen shots and hold steady $StableMin minutes"
 $last = -1; $held = 0; $waited = 0
 while ($true) {
@@ -153,17 +165,22 @@ while ($true) {
 }
 $total = CountImages $Char
 Log "$Char ready: $last Lora-Gen shots, $total images across all sources"
+}
 
 Free
 $gatherArgs = @("$PREP\gather_character.py", $Char, "--cap", "$Cap", "--apply")
 if ($NoBase) { $gatherArgs += "--no-base" }
 if ($LoragenOnly) { $gatherArgs += "--loragen-only" }
 if ($Force) { $gatherArgs += "--force" }
+# Start-Process joins -ArgumentList with bare spaces, so a path with a space
+# must carry its own quotes.
+if ($Src) { $gatherArgs += @("--src", "`"$Src`"") }
+$gatherArgs += $DsArgs
 Must "$Char gather" $gatherArgs "gather_$Char"
 Verify gather
 # CPU (MediaPipe). Writes gaze_mp.json, without which caption_from_vl.py
 # drops the gaze clause and the mouth-open override with only a NOTE.
-Must "$Char gaze" @("$PREP\gaze_mp.py", $Char) "gaze_mp_$Char"
+Must "$Char gaze" (@("$PREP\gaze_mp.py", $Char) + $DsArgs) "gaze_mp_$Char"
 Verify gaze
 
 # gather and gaze are CPU and can run beside anything. The Qwen2.5-VL passes
@@ -183,9 +200,9 @@ while ($true) {
   if ($w -gt 43200) { Log "GPU busy 12h - captioning anyway"; break }
 }
 Free
-Must "$Char captions"     @("$PREP\caption_from_vl.py", $Char)          "captions_$Char"
+Must "$Char captions"     (@("$PREP\caption_from_vl.py", $Char) + $DsArgs) "captions_$Char"
 Verify captions
-Must "$Char hair confirm" @("$PREP\hair_confirm2.py", $Char, "--apply") "hair_confirm_$Char"
+Must "$Char hair confirm" (@("$PREP\hair_confirm2.py", $Char, "--apply") + $DsArgs) "hair_confirm_$Char"
 # Plan captions say what was ASKED. On a character whose hair cannot hold a braid
 # or a long ponytail the generator substituted something else, and only asking
 # the image catches it - rivera 2026-10-05, marisol 2026-10-03. Run for everyone:
@@ -195,10 +212,11 @@ Must "$Char hair confirm" @("$PREP\hair_confirm2.py", $Char, "--apply") "hair_co
 # ponytail, so the plan's "worn loose" would have been written on ponytails.
 $recheckArgs = @("C:\dev\sourcemode\engine\scripts\eval\hair_recheck.py", $Char, "--apply")
 if ($RecheckAll) { $recheckArgs += "--all" }
+$recheckArgs += $DsArgs
 Must "$Char hair recheck" $recheckArgs "hair_recheck_$Char"
-Must "$Char re-assemble"  @("$PREP\caption_from_vl.py", $Char)          "captions_${Char}2"
+Must "$Char re-assemble"  (@("$PREP\caption_from_vl.py", $Char) + $DsArgs) "captions_${Char}2"
 Verify hair
-Must "$Char preview"      @("$PREP\build_previews.py", $Char)           "preview_$Char"
+Must "$Char preview"      (@("$PREP\build_previews.py", $Char) + $DsArgs) "preview_$Char"
 Verify preview
 # -CullHairUp: after the preview, so every removal shows on the page and restores
 # with one tap. Casey, 2026-10-08: "remove any which clearly already have hair up".

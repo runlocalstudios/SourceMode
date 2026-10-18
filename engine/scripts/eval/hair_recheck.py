@@ -36,7 +36,8 @@ from pathlib import Path
 CHAR = sys.argv[1].lower()
 APPLY = "--apply" in sys.argv
 ALL = "--all" in sys.argv
-DS = Path(f"outputs/lora-datasets/{CHAR}_v2")
+DS_NAME = sys.argv[sys.argv.index("--ds") + 1] if "--ds" in sys.argv else f"{CHAR}_v2"
+DS = Path(f"outputs/lora-datasets/{DS_NAME}")
 IMG = DS / "image_src"
 M = Path("C:/dev/e2egen/vendor/musubi-tuner")
 VL, CAPTIONER = M / ".venv/Scripts/python.exe", M / "src/musubi_tuner/caption_images_by_qwen_vl.py"
@@ -158,6 +159,6 @@ print(f"\nrewrote {changed} of {len(result)} captions; verdicts in {OUT}")
 from sourcemode.config import load_config  # noqa: E402
 from sourcemode.train.preview import preview_root, sync_captions  # noqa: E402
 
-n = sync_captions(preview_root(load_config()), f"{CHAR}_v2")
+n = sync_captions(preview_root(load_config()), DS_NAME)
 if n:
-    print(f"preview {CHAR}_v2: {n} caption(s) refreshed - approval lapses until re-approved")
+    print(f"preview {DS_NAME}: {n} caption(s) refreshed - approval lapses until re-approved")
