@@ -77,3 +77,20 @@ def test_footwear_is_dropped_from_a_thigh_up_asset(outfit, want):
     assert "sneakers" not in p and "boots" not in p
     assert "sneakers" in shot_prompt("x", dict(SLOT, outfit=outfit, shoes=True), "x") \
         or "sneakers" not in outfit
+
+
+@pytest.mark.parametrize("outfit", [
+    "a vintage graphic tee and a denim jacket",
+    "an oversized pink graphic tee worn as a dress with a thin belt",
+    "a white t-shirt with vivid graphics and jeans",
+])
+def test_a_graphic_is_wordless_and_faceless(outfit):
+    """Jeremy, 2026-10-18: a cici graphic tee came back with gibberish words and
+    her own face on it - "graphic ts need to be without words or faces"."""
+    from sourcemode.assets.render import PLAIN_GRAPHIC, plain_graphics
+
+    p = shot_prompt("x", dict(SLOT, outfit=outfit), "x")
+    assert p.count(PLAIN_GRAPHIC) == 1
+    assert plain_graphics(plain_graphics(outfit)) == plain_graphics(outfit)
+    assert "denim jacket" in p or "denim" not in outfit
+    assert PLAIN_GRAPHIC not in shot_prompt("x", dict(SLOT, outfit="a plain white tee"), "x")

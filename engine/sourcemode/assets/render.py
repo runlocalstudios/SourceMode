@@ -141,6 +141,23 @@ def drop_footwear(outfit: str) -> str:
     return ",".join(keep).strip(" ,")
 
 
+#: A graphic tee left to the model comes back with gibberish lettering, or her
+#: own face printed on it. Jeremy, 2026-10-18, on a cici reject: "graphic ts
+#: need to be without words or faces".
+_GRAPHIC = re.compile(r"\bgraphics?\b(?:\s+(?:tee|t-shirt|shirt|top|sweatshirt|hoodie|crop top)s?\b)?", re.I)
+PLAIN_GRAPHIC = "with a simple abstract design and no words, letters or faces"
+
+
+def plain_graphics(outfit: str) -> str:
+    """Every graphic in an outfit is a wordless, faceless abstract design."""
+    s = outfit or ""
+    if PLAIN_GRAPHIC in s:
+        return s
+    # a comma closes the clause when another garment follows it
+    return _GRAPHIC.sub(lambda m: f"{m.group(0)} {PLAIN_GRAPHIC}"
+                        + ("," if s[m.end():].strip() else ""), s)
+
+
 
 def describe_yaw(degrees: int) -> str:
     if degrees == 0:
@@ -309,6 +326,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     if (is_short_haired(character) and is_up_style(slot.get("hair", ""))
             and not is_own_hair(character, slot.get("hair", ""))):
         slot = {**slot, "hair": SHORT_HAIR[int(slot.get("look", 1)) % len(SHORT_HAIR)]}
+    slot = {**slot, "outfit": plain_graphics(slot["outfit"])}
     if slot["pose"] == "sitting":
         look = f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. Natural realistic human proportions, correct anatomy."
         return (f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, "
