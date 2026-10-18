@@ -10,7 +10,7 @@ is prepended.
 """
 from sourcemode.assets.render import shot_prompt
 
-# ten looks: category coverage 2/2/2/1/1/2, hair loose x4 / up x6 the way the packs run
+# ten looks: category coverage 2/2/2/1/1/2, hair loose x5 / up x5
 # Jeremy, 2026-10-03: the epoch evals came back on the magenta key backdrop, because
 # they render the asset prompt verbatim and that is what a shipping asset needs. For
 # judging he wants a real setting - "it looks more real" - so every look carries one.
@@ -23,11 +23,22 @@ from sourcemode.assets.render import shot_prompt
 # "We don't need to do a resweep, just change it to fix it." Those four now carry
 # warm directional light; the places stay. Sweeps judged before this date used the
 # old strings, so their scene_02/03/04/08 rates are not comparable to new ones.
+#
+# 2026-10-17, across 43 judged sweeps (3,480 verdicts) the bottom four were the
+# gym with mirrors (36%), the coffee shop (37%), the sports bra against the sunlit
+# wall (39%) and the emerald dress with the broad smile (40%). Jeremy, same day:
+# "the gym photos are always pretty bad" - the gym is now her sitting on a workout
+# bench in yoga pants and a zip-up track top with a neutral expression, and the
+# sunlit wall is her standing upright, hands on her hips, in a running outfit on an
+# empty street, smiling. The green dress "looks horrible every time ... both the
+# expression and the hairstyle": the chignon and the toothy smile are gone, the
+# words are plain - "a closed-lip smile", "her hair worn loose". Again no resweep;
+# scene_02/03/04 rates before this date are not comparable to new ones.
 SETTINGS = [
     "soft window daylight, in a sunlit kitchen",
     "warm late-afternoon sun, on a quiet residential street",
-    "warm afternoon sunlight, against a plain painted wall",
-    "warm late-afternoon window light, in a modern gym with mirrors behind her",
+    "warm morning sunlight, on an empty street",
+    "warm window light, in a gym",
     "warm directional restaurant light, in an elegant dining room",
     "soft gallery lighting, in an art gallery with pale walls",
     "evening street light, outside a bar at night",
@@ -39,9 +50,18 @@ SETTINGS = [
 LOOKS = [
     {"id": "casual_01", "category": "casual", "look": 1, "outfit": "a soft oatmeal knit sweater and straight-leg jeans", "hair": "her hair worn loose"},
     {"id": "casual_02", "category": "casual", "look": 2, "outfit": "a white cotton blouse and dark jeans", "hair": "her hair in a high ponytail"},
-    {"id": "workout_01", "category": "workout", "look": 1, "outfit": "a black sports bra and high-waisted leggings", "hair": "her hair in a high ponytail"},
-    {"id": "workout_02", "category": "workout", "look": 2, "outfit": "a sage green workout tank and dark joggers", "hair": "her hair up in a messy bun"},
-    {"id": "fancy_dining_gallery_01", "category": "fancy_dining_gallery", "look": 1, "outfit": "a long-sleeved emerald green midi dress", "hair": "her hair in a low chignon"},
+    # Jeremy, 2026-10-17: "standing upright with hands on her hips in a running
+    # outfit on an empty street, smiling" - setting 2 is the street
+    {"id": "workout_01", "category": "workout", "look": 1, "outfit": "a fitted running top and running shorts", "hair": "her hair in a high ponytail",
+     "turn": "front", "stance": "standing upright with her hands on her hips", "expression_natural": "smiling"},
+    # "wearing yoga pants and a zip-up track suit top sitting on a workout bench in
+    # the gym, making a neutral expression" - setting 3 is the gym
+    {"id": "workout_02", "category": "workout", "look": 2, "outfit": "black yoga pants and a zip-up track jacket", "hair": "her hair up in a messy bun",
+     "turn": "front", "shot_type": "portrait", "stance": "sitting on a workout bench", "expression": "neutral"},
+    # "that picture looks horrible every time ... both the expression and the
+    # hairstyle ... simplify the language" - was a low chignon and the toothy smile
+    {"id": "fancy_dining_gallery_01", "category": "fancy_dining_gallery", "look": 1, "outfit": "a long-sleeved emerald green midi dress", "hair": "her hair worn loose",
+     "expression_natural": "a closed-lip smile"},
     {"id": "fancy_dining_gallery_02", "category": "fancy_dining_gallery", "look": 2, "outfit": "a black sheath dress with a high neckline", "hair": "her hair worn loose"},
     {"id": "fancy_town_01", "category": "fancy_town", "look": 1, "outfit": "a fitted black cocktail dress with three-quarter sleeves", "hair": "her hair half pinned back"},
     {"id": "casual_date_01", "category": "casual_date", "look": 1, "outfit": "a deep green wrap blouse and dark slim jeans", "hair": "her hair worn loose"},
