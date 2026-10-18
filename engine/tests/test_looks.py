@@ -44,6 +44,31 @@ def test_palette_colours_are_read_from_prose_longest_first():
     assert L.palette_colours("whatever she likes") == L.DEFAULT_COLOURS
 
 
+def test_a_colour_family_expands_where_it_is_written():
+    """Jeremy, 2026-10-17, after Winnie's 28 looks all rendered white from
+    "White with primary colors": "i want the parser to understand common
+    phrases like primary colors, secondary colors, earthy tones, vivid colors,
+    etc. i don't want to have to type things out color by color"."""
+    assert L.palette_colours("White with primary colors") == ("white", "red", "blue", "yellow")
+    assert L.palette_colours("earthy tones") == ("rust", "olive", "camel", "terracotta", "chocolate brown", "mustard", "cream")
+    assert L.palette_colours("pastels and a little black") == ("pale pink", "baby blue", "mint", "lavender", "lemon yellow", "peach", "black")
+    # the lines already on disk that used to fall back to the defaults
+    assert L.palette_colours("Dark colors with vivid highlight accent colors")[:6] == (
+        "black", "charcoal", "navy", "burgundy", "forest green", "plum")
+    assert "hot pink" in L.palette_colours("Dark colors with vivid highlight accent colors")
+    assert L.palette_colours("subdued tones")[0] == "dusty pink"
+    assert L.palette_colours("vivid colors and dark grays and blacks")[-2:] == ("gray", "black")
+    # "warm neutrals" is its own family, not warm + neutrals twice
+    assert L.palette_colours("warm neutrals") == ("cream", "camel", "taupe", "chocolate brown", "rust", "oatmeal")
+    # a family phrase is not double-counted with the colour words inside it
+    assert L.palette_colours("black and white") == ("black", "white", "grey", "charcoal")
+    # words that were missing: plurals and the ones his lines already use
+    assert L.palette_colours("oatmeal, pale blue, camel and black") == ("oatmeal", "pale blue", "camel", "black")
+    assert L.palette_colours("cream, bone, black and indigo denim") == ("cream", "bone", "black", "indigo", "denim")
+    assert L.palette_families("White with primary colors, some pastels") == ["primary colors", "pastels"]
+    assert L.fill("a {c} sundress", c="oatmeal") == "an oatmeal sundress"
+
+
 def test_draft_is_28_looks_in_the_pack_categories_coloured_from_her_palette(ash):
     d = L.draft_looks("ash")
     assert {k: len(v) for k, v in d.items()} == PACK_28

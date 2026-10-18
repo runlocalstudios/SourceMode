@@ -178,26 +178,91 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
 }
 
 # Colour words a palette line may carry, longest first so "denim blue" wins
-# over "blue". Anything else in the line is prose and is ignored.
+# over "blue". A trailing s is allowed ("dark grays and blacks"). Anything else
+# in the line is prose and is ignored - unless it is a colour FAMILY, below.
 _COLOURS = ("burnt orange", "denim blue", "navy blue", "baby blue", "sky blue", "royal blue",
-            "hot pink", "blush pink", "dusty pink", "pale pink", "pastel pink", "forest green", "sage green",
-            "olive green", "emerald green", "deep red", "wine red", "cherry red", "off-white",
+            "cobalt blue", "slate blue", "electric blue", "pale blue", "soft blue", "powder blue",
+            "hot pink", "blush pink", "dusty pink", "pale pink", "pastel pink", "soft pink",
+            "forest green", "sage green", "olive green", "emerald green", "deep red", "wine red",
+            "cherry red", "ruby red", "chocolate brown", "light grey", "light gray", "lemon yellow",
+            "off-white",
             "black", "white", "cream", "ivory", "beige", "tan", "camel", "brown", "chocolate",
-            "grey", "gray", "charcoal", "silver", "gold", "navy", "cobalt", "blue", "teal",
-            "turquoise", "green", "olive", "sage", "emerald", "mint", "yellow", "mustard",
-            "orange", "coral", "peach", "red", "burgundy", "maroon", "wine", "pink", "rose",
-            "fuchsia", "magenta", "purple", "lavender", "lilac", "plum", "violet", "denim")
-_COLOUR_RE = re.compile(r"\b(" + "|".join(re.escape(c) for c in _COLOURS) + r")\b", re.I)
+            "oatmeal", "bone", "ecru", "stone", "taupe", "khaki", "nude", "sand",
+            # no "copper", no "platinum": his palette lines mention hair colour
+            "grey", "gray", "charcoal", "slate", "silver", "gold", "bronze", "champagne",
+            "navy", "cobalt", "indigo", "blue", "teal", "turquoise", "aqua", "sapphire",
+            "green", "olive", "sage", "emerald", "mint", "lime", "yellow", "mustard",
+            "orange", "coral", "peach", "terracotta", "rust", "red", "burgundy", "maroon", "wine",
+            "pink", "rose", "fuchsia", "magenta", "mauve", "purple", "lavender", "lilac", "plum",
+            "violet", "amethyst", "denim")
+_COLOUR_RE = re.compile(r"\b(" + "|".join(re.escape(c) for c in _COLOURS) + r")s?\b", re.I)
 DEFAULT_COLOURS = ("black", "white", "navy", "red", "cream", "olive", "blush pink")
+
+# Colour FAMILIES. Jeremy, 2026-10-17, after Winnie's 28 looks all came out white
+# from "White with primary colors": "i want the parser to understand common
+# phrases like primary colors, secondary colors, earthy tones, vivid colors, etc.
+# i don't want to have to type things out color by color it's more of a style or
+# warmth of the character and their style than picking 6 individual colors."
+# Each family is the colours a stylist would reach for, in an order that keeps
+# neighbouring looks apart. The key is a regex over the adjective; it may be
+# followed by up to two words and then a noun - colours, tones, shades, hues,
+# accents, highlights, palette - or stand alone where the word itself is the
+# family (pastels, neutrals, metallics, monochrome).
+_FAMILY_NOUN = r"(?:\s+\w+){0,2}\s+(?:colou?rs?|tones?|shades?|hues?|accents?|highlights?|palette)"
+_FAMILIES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (r"primary" + _FAMILY_NOUN, ("red", "blue", "yellow")),
+    (r"secondary" + _FAMILY_NOUN, ("green", "orange", "purple")),
+    (r"tertiary" + _FAMILY_NOUN, ("teal", "coral", "violet", "lime", "amber", "magenta")),
+    (r"(?:earth|earthy|natural)" + _FAMILY_NOUN, ("rust", "olive", "camel", "terracotta", "chocolate brown", "mustard", "cream")),
+    (r"warm\s+neutrals?", ("cream", "camel", "taupe", "chocolate brown", "rust", "oatmeal")),
+    (r"cool\s+neutrals?", ("white", "grey", "charcoal", "slate blue", "black", "stone")),
+    (r"neutrals?(?:" + _FAMILY_NOUN + r")?", ("black", "white", "cream", "grey", "camel", "taupe")),
+    (r"pastels?(?:" + _FAMILY_NOUN + r")?|soft" + _FAMILY_NOUN, ("pale pink", "baby blue", "mint", "lavender", "lemon yellow", "peach")),
+    (r"(?:vivid|bright|bold|vibrant|saturated|loud|pop(?:py)?)" + _FAMILY_NOUN, ("hot pink", "cobalt blue", "emerald green", "red", "orange", "yellow")),
+    (r"jewel" + _FAMILY_NOUN, ("emerald green", "sapphire", "ruby red", "amethyst", "teal", "gold")),
+    (r"(?:dark|deep|moody|rich|dramatic)" + _FAMILY_NOUN + r"|darks\b", ("black", "charcoal", "navy", "burgundy", "forest green", "plum")),
+    (r"(?:muted|subdued|dusty|faded|washed[- ]out|soft\s+muted|quiet)" + _FAMILY_NOUN, ("dusty pink", "sage green", "slate blue", "mauve", "oatmeal", "taupe")),
+    (r"warm" + _FAMILY_NOUN, ("rust", "burnt orange", "mustard", "terracotta", "wine red", "camel")),
+    (r"cool" + _FAMILY_NOUN, ("navy", "teal", "slate blue", "lavender", "grey", "mint")),
+    (r"monochrome|monochromatic|black[- ]and[- ]white|grey ?scale|gray ?scale", ("black", "white", "grey", "charcoal")),
+    (r"metallics?(?:" + _FAMILY_NOUN + r")?", ("gold", "silver", "bronze", "champagne")),
+    (r"(?:autumn|fall)" + _FAMILY_NOUN, ("rust", "mustard", "olive", "burgundy", "chocolate brown", "camel")),
+    (r"spring" + _FAMILY_NOUN, ("pale pink", "mint", "lemon yellow", "lilac", "sky blue", "white")),
+    (r"summer" + _FAMILY_NOUN, ("white", "coral", "turquoise", "lemon yellow", "hot pink", "sky blue")),
+    (r"winter" + _FAMILY_NOUN, ("black", "white", "navy", "burgundy", "emerald green", "silver")),
+    (r"nautical(?:" + _FAMILY_NOUN + r")?", ("navy", "white", "red")),
+    (r"all[- ]black|head[- ]to[- ]toe black", ("black",)),
+)
+_FAMILY_RE = re.compile(r"\b(?:" + "|".join(f"(?P<f{i}>{p})" for i, (p, _) in enumerate(_FAMILIES)) + r")\b", re.I)
+
+
+def palette_families(palette: str) -> list[str]:
+    """The family phrases the line carries, as written - for the tab to echo back."""
+    return [m.group(0) for m in _FAMILY_RE.finditer(palette or "")]
 
 
 def palette_colours(palette: str) -> tuple[str, ...]:
-    """The colours named in her palette line, in order, no repeats."""
-    seen: list[str] = []
+    """The colours her palette line names, in order of appearance, no repeats.
+
+    A colour word counts once; a family phrase ("primary colors", "earth
+    tones", "pastels") expands to its colours at the place it appears, so
+    "white with primary colors" reads white, red, blue, yellow - not white,
+    white, white. A line that names neither gets the defaults."""
+    found: list[tuple[int, tuple[str, ...]]] = []
+    for m in _FAMILY_RE.finditer(palette or ""):
+        i = next(k for k in range(len(_FAMILIES)) if m.group(f"f{k}"))
+        found.append((m.start(), _FAMILIES[i][1]))
+    covered = [(m.start(), m.end()) for m in _FAMILY_RE.finditer(palette or "")]
     for m in _COLOUR_RE.finditer(palette or ""):
-        c = m.group(1).lower()
-        if c not in seen:
-            seen.append(c)
+        # "black and white" the family already said black and white
+        if any(a <= m.start() < b for a, b in covered):
+            continue
+        found.append((m.start(), (m.group(1).lower(),)))
+    seen: list[str] = []
+    for _, cols in sorted(found, key=lambda t: t[0]):
+        for c in cols:
+            if c not in seen:
+                seen.append(c)
     return tuple(seen) or DEFAULT_COLOURS
 
 
@@ -384,7 +449,8 @@ def steer(outfit: str, reg: str, rng: random.Random) -> str:
     return f"{outfit}, {rng.choice(fit)}" if fit else outfit
 
 
-_VOWEL_COLOUR_RE = re.compile(r"\ba ((?:olive|orange|emerald|ivory|off-white)\b)")
+_VOWEL_COLOUR_RE = re.compile(
+    r"\ba ((?:olive|orange|emerald|ivory|off-white|oatmeal|ecru|indigo|aqua|amethyst|amber)\b)")
 
 
 def fill(template: str, **kw: str) -> str:
@@ -559,7 +625,8 @@ def draft_looks(character: str, seed: int = 0) -> dict[str, list[dict]]:
             guide = (rec.get("outfits") or {}).get(CATEGORY_TYPE[cat], "") or ""
             tpl = guided_templates(cat, guide or rec.get("style", ""), n, rng)
             # "denim" alone in a guide line is the fabric, not a colour
-            named = [c for c in palette_colours(guide) if c != "denim"] if _COLOUR_RE.search(guide) else []
+            named = ([c for c in palette_colours(guide) if c != "denim"]
+                     if (_COLOUR_RE.search(guide) or _FAMILY_RE.search(guide)) else [])
             cols = named if len(named) > 1 else named + [c for c in colours if c not in named]
             rng.shuffle(cols)
             reg = register(guide, rec.get("style", ""))

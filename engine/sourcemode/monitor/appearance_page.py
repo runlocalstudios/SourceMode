@@ -332,7 +332,7 @@ function profile(r){
     +w.jobs.map(job).join('')+'</div>'
     +'<div class=sec><h4>Style'+(w.draft?'<span class=draft>draft - not yet saved by you</span>':'')+'</h4>'
     +'<div class=fld><label>Overall</label>'+ta('style',w.style,'short','chic, trendy, shabby, overdressed, revealing, conservative...')+'</div>'
-    +'<div class=fld><label>Palette</label>'+ta('palette',w.palette,'short','the colours she actually wears')+'</div>'
+    +'<div class=fld><label>Palette</label>'+ta('palette',w.palette,'short','the colours she wears, or a family: primary colors, earth tones, pastels, vivid colors, jewel tones, dark tones, neutrals')+'</div>'
     +'<div class=fld><label>Never wears</label>'+ta('avoid',w.avoid,'short','the line she does not cross, in any outfit')+'</div>'
     +types.map(t=>'<div class=fld><label>'+SM.esc(t.label)+' <span class=cov>- '+SM.esc(t.covers)+'</span></label>'
       +ta('o_'+t.key,w.outfits[t.key],'short')+'</div>').join('')
