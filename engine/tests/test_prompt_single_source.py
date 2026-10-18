@@ -164,4 +164,20 @@ def test_the_preflight_flag_does_not_land_in_a_positional_slot():
     src = EVAL.read_text(encoding="utf-8")
     m = re.search(r"_BARE = \{([^}]*)\}", src)
     assert m and '"--allow-incomplete-appearance"' in m.group(1) and '"--no-description"' in m.group(1)
+    assert '"--with-description"' in m.group(1)
     assert re.search(r"elif _a in _BARE:\s*\n\s*_BARESEEN\.add\(_a\)", src)
+
+
+def test_the_sweep_renders_trigger_and_scene_only_unless_asked_for_her_sentence():
+    """Jeremy, 2026-10-17: "I only want you to use the prompt and the trigger
+    word. I don't want you to incorporate the description of the character."
+    The default arm replaces her appearance clause with the sex anchor; only
+    --with-description puts the sentence back. The preflight must know the flag
+    too, or it would eat the positional after it."""
+    src = EVAL.read_text(encoding="utf-8")
+    assert re.search(r'WITH_DESCRIPTION = "--with-description" in _BARESEEN\s*\n'
+                     r'if not WITH_DESCRIPTION:\s*\n.*\n\s*_render\.appearance_clause = lambda character, \*\*_: "a woman"',
+                     src)
+    assert '"no_description": not WITH_DESCRIPTION' in src
+    from sourcemode.gpu.preflight import _positional
+    assert _positional(["python", "x.py", "a", "--with-description", "b"]) == ["python", "x.py", "a", "b"]

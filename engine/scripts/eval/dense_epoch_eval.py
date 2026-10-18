@@ -31,7 +31,8 @@ from sourcemode.render.workflow import load_template, prune_placeholder_loras, s
 _FLAGS = {"--scenes", "--epochs", "--tag", "--seed"}
 # Bare flags take no value. They are skipped here for the same reason the valued
 # ones are split out: anything left in argv lands in a positional slot by index.
-_BARE = {"--allow-incomplete-appearance", "--no-description", "--natural-prompt", "--contract-prompt"}
+_BARE = {"--allow-incomplete-appearance", "--no-description", "--with-description",
+         "--natural-prompt", "--contract-prompt"}
 POS, _FLAGVALS, _BARESEEN = [], {}, set()
 _it = iter(sys.argv)
 for _a in _it:
@@ -129,13 +130,19 @@ if SCENE_SET not in ("asset", "tiebreaker"):
         f"own prompts verbatim, or --scenes tiebreaker.")
 sys.path.insert(0, str(Path("scripts/eval").resolve()))
 from asset_scenes import asset_prompts, sweep_seed, tiebreaker_prompts  # noqa: E402
-# --no-description: Jeremy, 2026-10-08, on mei - "no character description at
-# all, just tag the photo caption with her Lora tag. I want to test if our
-# character descriptions are fucking it up". Her appearance sentence comes
-# out of every scene; everything else in the prompt is
-# byte-identical, so the two runs differ in that one thing. "a woman" stays as
-# the sex anchor (see the jojo note above) - it is the same arm Cat's test ran.
-if "--no-description" in _BARESEEN:
+# NO DESCRIPTION is the default. Jeremy, 2026-10-17: "when you run an epoch
+# sweep after doing LoRA training, I only want you to use the prompt and the
+# trigger word. I don't want you to incorporate the description of the
+# character, because if the description is throwing off the accuracy of the
+# pictures, I would be throwing off the accuracy of the epoch I choose." Her
+# appearance sentence comes out of every scene; everything else in the prompt
+# is byte-identical to a described run. "a woman" stays as the sex anchor (see
+# the jojo note above) - it is the arm Cat's test ran and the arm --no-description
+# ran from 2026-10-08 (mei: "I want to test if our character descriptions are
+# fucking it up"). --no-description is now a no-op kept for old queue lines;
+# --with-description is the A/B arm that puts her sentence back.
+WITH_DESCRIPTION = "--with-description" in _BARESEEN
+if not WITH_DESCRIPTION:
     import sourcemode.assets.render as _render  # noqa: E402
     _render.appearance_clause = lambda character, **_: "a woman"
 # --natural-prompt / --contract-prompt: Jeremy, 2026-10-09 - is the 1,900-character
@@ -231,7 +238,11 @@ log(f"sweep seed {SEED} (scene i renders on {SEED} + i at every epoch)")
 # rather than seven hours later. --allow-incomplete-appearance bypasses it, as
 # every gate here has a bypass; the refusal is the default because the cost of
 # filling the record is thirty seconds and the cost of not doing so was a sweep.
-_pre = appearance_check(CHAR)
+# Since 2026-10-17 the sweep does not use her sentence at all, so the record is
+# only read when --with-description asks for it; her negative still applies.
+_pre = appearance_check(CHAR) if WITH_DESCRIPTION else {"ok": True, "warnings": [], "missing": []}
+log("prompt: trigger + scene" + (" + her appearance sentence (--with-description)"
+                                 if WITH_DESCRIPTION else ", no description"))
 for _w in _pre["warnings"]:
     log(f"appearance: WARNING {_w}")
 if not _pre["ok"]:
@@ -334,7 +345,7 @@ if True:
                    "renders_dir": OUT, "epochs": ran_eps, "scenes": N_SCENES,
                    "tag": _FLAGVALS.get("--tag") or "", "scene_set": SCENE_SET, "seed": SEED,
                    "offset": OFFSET,
-                   "no_description": "--no-description" in _BARESEEN})
+                   "no_description": not WITH_DESCRIPTION})
     log(f"judge set dense_{SUB}: {len(items)} images")
 male_total = sum(1 for r in rows if r.get("sex") == "M")
 log(f"gender check: {male_total}/{len(rows)} male" + ("  <-- INVESTIGATE" if male_total else "  (clean)"))

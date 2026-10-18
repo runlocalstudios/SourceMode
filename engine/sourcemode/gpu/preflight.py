@@ -34,7 +34,8 @@ def _positional(cmd: list[str]) -> list[str]:
     out, it = [], iter(cmd)
     for a in it:
         if a.startswith("--") and a not in ("--apply", "--all", "--force", "--allow-incomplete-appearance",
-                                            "--no-description", "--fp8_vl", "--loragen-only", "--no-base",
+                                            "--no-description", "--with-description", "--natural-prompt",
+                                            "--contract-prompt", "--fp8_vl", "--loragen-only", "--no-base",
                                             "--dry-run"):
             next(it, None)
         elif not a.startswith("--"):
