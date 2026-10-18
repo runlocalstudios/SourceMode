@@ -230,6 +230,15 @@ document.addEventListener('click',async e=>{
   }
 });
 
+/* Jeremy, 2026-10-18: "i currently have to reload the browser after saving a
+   character's game asset looks in order to run the game asset wardrobe photo
+   shoot". The hub keeps this frame alive between tabs, so the catalog read at
+   first load - who has approved looks, what is greyed - went stale the moment
+   the Characters tab approved her 28. Read it again every time the tab is
+   shown, and when the browser tab comes back; her selection and ticks stay. */
+SM.on('shown',()=>load());
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') load(); });
+
 load();
 """
 

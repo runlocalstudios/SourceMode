@@ -114,3 +114,13 @@ def test_the_shell_is_embedded_in_every_migrated_page():
 
     for module in MIGRATED:
         assert SHELL in importlib.import_module(module).PAGE, module
+
+
+def test_the_shoots_tab_rereads_its_catalog_when_shown_again():
+    """Jeremy, 2026-10-18: approving her 28 looks on the Characters tab left the
+    pack greyed on Shoots until a browser reload, because the hub keeps the
+    frame alive and the page fetched its catalog once."""
+    from sourcemode.monitor import shoots_page
+    js = shoots_page.OWN_JS
+    assert "SM.on('shown',()=>load())" in js
+    assert "visibilitychange" in js and "load();" in js
