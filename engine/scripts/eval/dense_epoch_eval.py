@@ -32,7 +32,7 @@ _FLAGS = {"--scenes", "--epochs", "--tag", "--seed"}
 # Bare flags take no value. They are skipped here for the same reason the valued
 # ones are split out: anything left in argv lands in a positional slot by index.
 _BARE = {"--allow-incomplete-appearance", "--no-description", "--with-description",
-         "--natural-prompt", "--contract-prompt"}
+         "--natural-prompt", "--contract-prompt", "--no-lora"}
 POS, _FLAGVALS, _BARESEEN = [], {}, set()
 _it = iter(sys.argv)
 for _a in _it:
@@ -73,6 +73,12 @@ GRID = list(range(START, END + 1))
 # specific checkpoints rather than a contiguous sweep.
 if "--epochs" in _FLAGVALS:
     GRID = [int(x) for x in _FLAGVALS["--epochs"].split(",") if x.strip()]
+# --no-lora: the base model on the same prompts and seed - one arm, "nolora".
+# Jeremy, 2026-10-19, on priyanka_v3 rendering a face unlike both her references
+# and her training photos: does the trigger word alone pull the base model there?
+NO_LORA = "--no-lora" in _BARESEEN
+if NO_LORA:
+    GRID = [0]
 
 # "a woman" is load-bearing, not decoration. Without it the only thing telling the
 # model the subject is female is the trigger token, and a name the base model reads
@@ -294,10 +300,10 @@ rows = []
 ran_eps = []
 for ep in GRID:
     ck = ckpt_name(ep)
-    if not (LORA_DIR / ck).exists():
+    if not NO_LORA and not (LORA_DIR / ck).exists():
         log(f"ep{ep:02d}: {ck} missing, skipping"); continue
     ran_eps.append(ep)
-    arm = f"ep{ep:02d}"
+    arm = "nolora" if NO_LORA else f"ep{ep:02d}"
     d = OUT / arm; d.mkdir(parents=True, exist_ok=True)
     for i, scene in enumerate(SCENES):
         dest = d / f"scene_{i:02d}.png"
@@ -305,7 +311,8 @@ for ep in GRID:
             if not dest.exists():
                 files = client.outputs(client.wait(client.submit(
                     t2i(scene, SEED + i,
-                        rf"sourcemode\{SUB}\{ck}", f"coarse/{SET_ID}/{arm}")), timeout_s=3600))
+                        "" if NO_LORA else rf"sourcemode\{SUB}\{ck}", f"coarse/{SET_ID}/{arm}")),
+                    timeout_s=3600))
                 if not files:
                     log(f"  {arm} scene{i:02d}: no output"); continue
                 client.fetch(files[0], dest)
@@ -321,7 +328,8 @@ for ep in GRID:
 
 (OUT / "scores.json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
 items = [{"id": f"{r['arm']}__{r['scene']:02d}", "path": Path(r["file"]),
-          "arm": f"{SUB} epoch {r['epoch'] + OFFSET:02d}", "group": str(r["scene"])} for r in rows]
+          "arm": "no LoRA" if NO_LORA else f"{SUB} epoch {r['epoch'] + OFFSET:02d}",
+          "group": str(r["scene"])} for r in rows]
 # Keiko's run rendered all 90 images, scored none of them (her reference had no
 # detectable face, so cosine raised inside the per-scene try), left rows empty and
 # skipped set creation - then exited 0. An eval that produces nothing to judge is a
