@@ -166,3 +166,18 @@ def test_the_characters_state_carries_the_staging_and_the_queue_hook_adds_one_cp
     st = L.state(cfg, "amanda")
     assert st["staged"]["n"] == 1 and st["staged"]["sheets"] == ["compare"] and st["staged"]["shipped"] is None
     assert L.sheet_path(cfg, "amanda", "compare") == sheet and L.sheet_path(cfg, "amanda", "mapping") is None
+
+
+def test_a_key_backdrop_trial_renders_into_its_own_root_and_never_the_packs(tmp_path, quiet):
+    out = tmp_path / "out"
+    trial = tmp_path / "trial" / "renders"
+    client = FakeClient()
+    metas = P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n",
+                          backdrop="a flat magenta key", root=trial, log=lambda s: None)
+    assert len(metas) == 2 and all("a flat magenta key" in m["prompt"] for m in metas)
+    assert all(Path(m["source"]).is_relative_to(trial) for m in metas)
+    assert not P.renders_root(out, "amanda").exists()
+    # the pack itself is unchanged: the studio backdrop, its own root
+    metas = P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n", log=lambda s: None)
+    assert all(P.STUDIO_BACKDROP in m["prompt"] for m in metas)
+    assert all(Path(m["source"]).is_relative_to(P.renders_root(out, "amanda")) for m in metas)

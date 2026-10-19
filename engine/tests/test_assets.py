@@ -508,3 +508,29 @@ def test_fill_alpha_holes_respects_max_area():
     rgba[80:130, 80:130, 3] = 0                  # a 2500 px interior region
     out, filled = fill_alpha_holes(rgba, max_area=400)
     assert filled == 0 and out[100, 100, 3] == 0
+
+
+def test_auto_chroma_despills_the_edge_band_only_and_leaves_the_figure_its_colour():
+    """MEASURED 2026-10-18 on zara's 28 magenta T2I renders: the clamp ran on
+    every retained pixel and turned skin (230,170,150) into (169,170,150) -
+    whole figures grey-green, a pink skirt grey. Bounce lives at the edge:
+    the clamp is limited to the band and to pixels the key dominates."""
+    import numpy as np
+    from PIL import Image
+
+    from sourcemode.assets.cutout import auto_chroma_remover
+
+    key, skin, pink, halo = (232, 7, 98), (230, 170, 150), (240, 180, 200), (220, 80, 160)
+    im = Image.new("RGB", (120, 160), key)
+    im.paste(skin, (30, 30, 90, 130))              # the figure
+    im.paste(pink, (50, 60, 70, 100))              # a pink garment deep inside it
+    im.paste(halo, (30, 30, 90, 33))               # a magenta-tinted top edge of hair
+    out = np.asarray(auto_chroma_remover()(im))
+    rgb, a = out[:, :, :3], out[:, :, 3]
+    assert a[0, 0] == 0 and a[80, 60] == 255 and a[31, 60] == 255
+    assert tuple(rgb[80, 40]) == skin, "interior skin must be byte-identical"
+    assert tuple(rgb[80, 60]) == pink, "a pink garment inside the figure stays pink"
+    r, g, b = rgb[31, 60]
+    assert r <= g - 1 and b <= g - 1, "the halo at the edge cannot read as the key"
+    # the clamp never reaches further than the band
+    assert tuple(rgb[30 + 20, 60]) == skin

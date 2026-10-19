@@ -125,7 +125,8 @@ def key_spill(rgb: np.ndarray, key: tuple[int, int, int], *,
 
 
 def auto_chroma_remover(*, inner: float = 0.045, outer: float = 0.12,
-                        despill: float = 1.0, max_dev: float = 18.0) -> Remover:
+                        despill: float = 1.0, max_dev: float = 18.0,
+                        band_px: float = 16.0) -> Remover:
     """Key whatever uniform backdrop the plate actually has, detected per image.
 
     Use this when the backdrop is a colour someone else chose and it is not exactly
@@ -146,13 +147,44 @@ def auto_chroma_remover(*, inner: float = 0.045, outer: float = 0.12,
             return img.convert("RGBA")
         d = key_distance(rgb, key)
         alpha = np.clip((d - inner) / max(outer - inner, 1e-6), 0.0, 1.0)
-        # Despill EVERY retained pixel by clamping the key's channels to its anchor,
-        # the way the Codex skill does. Unpremultiply left 20.3% of edge pixels
-        # magenta on Amanda's v3 pack; this is 0% by construction.
-        out = np.clip(anchor_clamp(rgb, key, alpha > 0.0), 0, 255)
+        # Despill by clamping the key's channels to its anchor, the way the Codex
+        # skill does - unpremultiply left 20.3% of edge pixels magenta on Amanda's
+        # v3 pack; the clamp is 0% by construction. But NOT on every retained
+        # pixel: `alpha > 0` is the whole figure, and clamping R and B under G on
+        # skin (230,170,150) gives (169,170,150). MEASURED 2026-10-18 on zara's 28
+        # magenta T2I renders: every figure came out grey-green, a pink skirt grey,
+        # a rust romper olive. Bounce lives at the edge, so the clamp is limited
+        # to `band_px` of the matte edge, and to pixels the key actually
+        # dominates - a pink garment in the middle of the torso is pink.
+        out = np.clip(anchor_clamp(rgb, key, despill_band(rgb, key, alpha, band_px) if despill > 0
+                                   else np.zeros(alpha.shape, dtype=bool)), 0, 255)
         return Image.fromarray(np.dstack([out, alpha * 255.0]).astype(np.uint8), "RGBA")
 
     return _remove
+
+
+def despill_band(rgb: np.ndarray, key: tuple[int, int, int], alpha: np.ndarray,
+                 band_px: float) -> np.ndarray:
+    """Where despill is allowed to act: within `band_px` of a non-opaque pixel,
+    and only where every one of the key's strong channels sits above its anchor
+    channel - i.e. the pixel reads as the key's colour. Skin under a magenta key
+    has blue below green and is never touched; a garment in the key's own hue
+    is touched only along its edge, where the bounce physically lands."""
+    from scipy import ndimage  # noqa: PLC0415
+
+    k = np.asarray(key, dtype=np.int16)
+    lo = int(np.argmin(k))
+    spill = [c for c in range(3) if c != lo and k[c] - k[lo] >= 40]
+    if not spill:
+        return np.zeros(alpha.shape, dtype=bool)
+    anchor_ch = [c for c in range(3) if c not in spill]
+    anchor = np.max(rgb[:, :, anchor_ch], axis=2)
+    dominant = np.all(np.stack([rgb[:, :, c] > anchor for c in spill]), axis=0)
+    opaque = alpha >= 1.0
+    if not opaque.any():
+        return dominant
+    near_edge = ndimage.distance_transform_edt(opaque) <= band_px
+    return dominant & near_edge & (alpha > 0.0)
 
 
 def anchor_clamp(rgb: np.ndarray, key: tuple[int, int, int], where: np.ndarray) -> np.ndarray:

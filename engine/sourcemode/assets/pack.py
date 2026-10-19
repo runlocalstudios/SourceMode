@@ -81,17 +81,20 @@ def rendered_prompt(shot: Path) -> str | None:
 
 def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *,
                 lora_path: str, negative: str, ref=None, only: set[str] | None = None,
-                seed: int | None = None, log=print) -> list[dict]:
+                seed: int | None = None, backdrop: str = STUDIO_BACKDROP,
+                root: Path | None = None, log=print) -> list[dict]:
     """Every look of the plan (or `only` those) through T2I. A look whose shot is
     already on disk from the same prompt is skipped; a changed look re-renders,
     and a re-roll drops the old file first. `seed`
-    replaces the per-look seed, for a re-roll of one look. Returns the
+    replaces the per-look seed, for a re-roll of one look. `backdrop` is the
+    studio by default; a key-colour trial passes `render.KEY_BACKDROP` and its
+    own `root` so the pack's folder is never mixed with it. Returns the
     sidecars, one per look rendered or found."""
     from ..gates.identity import cosine, embed_image  # noqa: PLC0415
     from .adherence import check, measure  # noqa: PLC0415
     from .render import pose_fields, shot_prompt, t2i_workflow  # noqa: PLC0415
 
-    root = renders_root(out_root, character)
+    root = root or renders_root(out_root, character)
     retire_other_renders(root, log)
     root.mkdir(parents=True, exist_ok=True)
     out, fails = [], Counter()
@@ -102,7 +105,7 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
         d.mkdir(exist_ok=True)
         s = seed if seed is not None else seed_for(i)
         dest = d / f"shot_00_s{s}.png"
-        prompt = shot_prompt(character, slot, plan.get("trigger"), backdrop=STUDIO_BACKDROP)
+        prompt = shot_prompt(character, slot, plan.get("trigger"), backdrop=backdrop)
         try:
             if dest.exists() and rendered_prompt(dest) != prompt:
                 # winnie, 2026-10-18: her looks were rewritten off pure white and the
