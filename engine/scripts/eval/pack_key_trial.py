@@ -19,9 +19,9 @@ a floor sweep - this trial measures both on her, with the despill fixed.
 Same plan, same per-look seeds, same prompt as her pack; one change, the
 backdrop. Output is a library set of its own, never her pack's folders:
 
-    library/<char>/<date>_pack_key-trial/renders/<look>/shot_00_s<seed>.png
-    library/<char>/<date>_pack_key-trial/cutouts/<look>/...   (auto chroma)
-    library/<char>/<date>_pack_key-trial/review_white.jpg     (on WHITE, 2x)
+    library/<char>/<date>_ab_pack-key-trial/renders/<look>/shot_00_s<seed>.png
+    library/<char>/<date>_ab_pack-key-trial/cutouts/<look>/...   (auto chroma)
+    library/<char>/<date>_ab_pack-key-trial/review_white.jpg     (on WHITE, 2x)
     judge set pack_<char>_key                                  (the renders)
 """
 
@@ -72,8 +72,8 @@ LORA = resolve_lora(cfg, CHAR)
 if not LORA:
     raise SystemExit(f"no approved LoRA for {CHAR}")
 
-SET = find_set(cfg, CHAR, "pack", "key-trial", create=True)
-write_set_json(SET, character=CHAR, kind="pack", name="key-trial", date=SET.name[:10],
+SET = find_set(cfg, CHAR, "ab", "pack-key-trial", create=True)
+write_set_json(SET, character=CHAR, kind="ab", name="pack-key-trial", date=SET.name[:10],
                judge_sets=[f"pack_{CHAR}_key"])
 log(f"{CHAR}: 28 looks on the key backdrop -> {SET}")
 
