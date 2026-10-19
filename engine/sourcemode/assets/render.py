@@ -48,7 +48,21 @@ FRAMING_UPPER_THIGH = ("standing upper-thigh portrait, close enough that her fac
 # tiebreaker set (asset_scenes.TIEBREAKER, 2026-10-10) was written to that spec;
 # the pack now asks for the same thing.
 FRAMING = FRAMING_MID_THIGH
-NATURAL_FRAMING = "framed from mid-thigh up"   # his words, as the tiebreaker says it
+# Jeremy, 2026-10-18, on cici's pack coming back close up: "make sure the game
+# asset prompts indicate something like 'portrait picture from the mid-thigh
+# up'". His words, verbatim: the pack's shot type is a "portrait picture" and
+# the framing is "from the mid-thigh up".
+NATURAL_SHOT = "portrait picture"
+NATURAL_FRAMING = "from the mid-thigh up"
+# And on the body: "her body is just slightly angled, she looks directly at the
+# camera". MEASURED on cici's pack (2026-10-18, 14 slight-turn looks under
+# "turned slightly toward her right/left, looking into the camera"): the body
+# came back near-profile (MediaPipe shoulder depth past 0.8) in 9 of 14, the
+# eyes left the lens in 13 of 14, and the SIDE was ignored - all 7 "her left"
+# asks rendered toward image-left. So the slight turn names no side, and the
+# gaze is stated as his sentence says it.
+NATURAL_FRONT = "her body faces the camera, she looks directly at the camera"
+NATURAL_SLIGHT = "her body is just slightly angled, she looks directly at the camera"
 EXPRESSIONS = (
     "relaxed neutral: lips gently together, mouth corners level, cheeks soft, eyebrows resting, relaxed direct gaze; no smile",
     "warm closed-lip smile: both mouth corners lifted, cheeks slightly raised, lips gently together, brows relaxed, soft direct eye contact",
@@ -214,10 +228,14 @@ def pose_fields(character: str, slot: dict) -> dict:
             raise ValueError(f"expression must be one of {sorted(set(EXPRESSION_TYPES))}, got {slot['expression']!r}")
         ex_i = EXPRESSION_TYPES.index(slot["expression"])
     side = {"front": "front", "left": "image-left", "right": "image-right"}[family.removeprefix("slight-")]
+    # A slight turn asks the HEAD for nothing but the lens ("she looks directly
+    # at the camera"), and a 10-15 degree head turn sits under the measure's
+    # own front threshold anyway - so the head ask is front, not a side.
     return {"body": describe_yaw(body), "head": f"{head_turn}; chin {pitch}; no lateral head tilt",
             "expression": EXPRESSIONS[ex_i],
             # the structured ask, for adherence.check() against the measured render
-            "asked": {"crop": "mid-thigh-up", "body_side": side, "body_deg": body, "head_side": side,
+            "asked": {"crop": "mid-thigh-up", "body_side": side, "body_deg": body,
+                      "head_side": "front" if slight else side,
                       "head_deg": head, "pitch": pitch, "expression": EXPRESSION_TYPES[ex_i],
                       "slight": slight}}
 
@@ -271,9 +289,9 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     # captions say "her left"; the contract says image-left. image-left is her right.
     her = {"image-left": "her right", "image-right": "her left"}.get(asked["body_side"])
     if asked["body_side"] == "front":
-        body, head = "facing the camera", "looking straight into the camera"
+        body, head = NATURAL_FRONT.split(", ")
     elif asked.get("slight"):
-        body, head = f"turned slightly toward {her}", "looking into the camera"
+        body, head = NATURAL_SLIGHT.split(", ")
     else:
         body = f"in a three-quarter view toward {her}"
         head = f"her face turned slightly toward {her}, looking into the camera"
@@ -282,9 +300,9 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     # face actually are. Nothing else about the prompt changes.
     body = slot.get("facing") or body
     head = slot.get("gaze") or head
-    shot = slot.get("shot_type") or "standing portrait"
-    # the pack's wording is what the A/B was judged on, byte for byte; a shoot's
-    # own framing sentence follows the shot type as its own clause
+    shot = slot.get("shot_type") or NATURAL_SHOT
+    # a shoot's own framing sentence follows the shot type as its own clause;
+    # the pack reads "a portrait picture from the mid-thigh up", his words
     crop = f"a {shot}, {slot['framing']}" if slot.get("framing") else (
         f"a {shot} {slot.get('framing_natural') or NATURAL_FRAMING}")
     outfit = slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"])

@@ -78,11 +78,11 @@ def test_pose_slots_reach_the_prompt_and_keep_the_stockings():
     slots = sh.plan(character="nobody")
     assert len(slots) == 21 and len({s["id"] for s in slots}) == 21
     # pose 9: back to the camera, looking over her shoulder - the builder's
-    # default "facing the camera, looking straight into the camera" must go
+    # default "her body faces the camera, she looks directly at the camera" must go
     p = shot_prompt("nobody", slots[8], backdrop=slots[8]["setting"])
     assert "her back to the camera" in p
     assert "looking back over her shoulder into the camera" in p
-    assert "facing the camera" not in p and "looking straight into the camera" not in p
+    assert "her body faces the camera" not in p and "she looks directly at the camera" not in p
     assert slots[8]["stance"] in p
     # lingerie ends in stockings; drop_footwear would have eaten them
     assert "stockings" in p
@@ -91,7 +91,7 @@ def test_pose_slots_reach_the_prompt_and_keep_the_stockings():
     assert "her mouth open wide" in p3 and "smile" not in p3
     # a plain pose keeps the defaults
     p6 = shot_prompt("nobody", slots[5], backdrop=slots[5]["setting"])
-    assert "facing the camera" in p6 or "toward her" in p6
+    assert "her body faces the camera" in p6 or "slightly angled" in p6
 
 
 def test_every_submissive_pose_names_what_it_needs_and_the_bedroom_has_it():
@@ -115,8 +115,8 @@ def test_a_pack_slot_is_untouched_by_the_new_overrides():
     slot = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
             "outfit": "a blue sundress", "hair": "her hair worn loose"}
     p = shot_prompt("nobody", slot)
-    assert "a standing portrait framed from mid-thigh up" in p
-    assert "looking straight into the camera" in p
+    assert "a portrait picture from the mid-thigh up" in p
+    assert "she looks directly at the camera" in p
 
 
 def test_the_ass_up_shot_gets_a_panties_set_whatever_the_rotation_says():

@@ -39,7 +39,7 @@ def test_twenty_distinct_prompts_in_the_natural_register(zara):
     assert len({s["setting"] for s in TIEBREAKER}) == 20
     for p in ps:
         assert p.startswith("zara, a young woman") and len(p.split()) < 100
-        assert "a standing portrait framed from mid-thigh up, " in p
+        assert "a portrait picture from the mid-thigh up, " in p
         assert "beautiful, natural makeup" in p and "Photorealistic, natural skin texture, sharp focus." in p
 
 
@@ -58,11 +58,10 @@ def test_front_or_slight_turn_only_and_simple_expressions(zara):
         asked = R.pose_fields("zara", tiebreaker_slot(s))["asked"]
         assert asked["expression"] == s["expression"]
         if s["turn"] == "front":
-            assert asked["body_side"] == "front" and "facing the camera, looking straight into the camera" in p
+            assert asked["body_side"] == "front" and R.NATURAL_FRONT in p
         else:
             assert asked["slight"] and 10 <= abs(asked["body_deg"]) <= 15 and 10 <= abs(asked["head_deg"]) <= 15
-            her = "her right" if s["turn"] == "slight-left" else "her left"
-            assert f"turned slightly toward {her}, looking into the camera" in p
+            assert R.NATURAL_SLIGHT in p and asked["head_side"] == "front"
 
 
 def test_the_settings_follow_the_lighting_and_place_rules():
@@ -88,7 +87,7 @@ def test_a_pack_slot_is_byte_for_byte_unchanged(zara):
             "outfit": "a white tee and jeans", "hair": "her hair worn loose"}
     p = R.shot_prompt("zara", slot)
     assert p.startswith("zara, a young woman")
-    assert "a standing portrait framed from mid-thigh up, facing the camera, looking straight into the camera, " in p
+    assert f"a portrait picture from the mid-thigh up, {R.NATURAL_FRONT}, " in p
     assert R.pose_fields("zara", slot)["asked"]["slight"] is False
 
 

@@ -160,7 +160,10 @@ TIEBREAKER = [
      "outfit": "a cream blouse tucked into a navy A-line skirt",
      "setting": "warm window light, in a bright hallway with a plain white wall behind her"},
 ]
-TIEBREAKER_FRAMING = "framed from mid-thigh up"
+# the pack's own phrase (render.NATURAL_FRAMING): the eval renders what the pack
+# renders. 2026-10-18 it became "from the mid-thigh up"; tiebreaker numbers
+# judged before that date are not comparable to ones after it.
+from sourcemode.assets.render import NATURAL_FRAMING as TIEBREAKER_FRAMING  # noqa: E402
 
 
 def tiebreaker_slot(s: dict) -> dict:

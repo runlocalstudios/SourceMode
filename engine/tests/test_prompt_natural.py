@@ -42,10 +42,9 @@ def test_natural_carries_the_same_turn_gaze_and_expression_as_the_contract(zara)
         asked = R.pose_fields("zara", look)["asked"]
         p = R.natural_prompt("zara", look)
         if asked["body_side"] == "front":
-            assert "facing the camera" in p and "looking straight into the camera" in p
+            assert R.NATURAL_FRONT in p
         else:
-            her = "her right" if asked["body_side"] == "image-left" else "her left"
-            assert f"turned slightly toward {her}, looking into the camera" in p
+            assert R.NATURAL_SLIGHT in p and "her right" not in p and "her left" not in p
         assert R._NATURAL_EXPRESSION[asked["expression"]] in p
     # the three-quarter family is still there for a slot that asks for it by name
     her_right = R.natural_prompt("zara", {**LOOKS[0], "turn": "left"})
@@ -68,7 +67,7 @@ def test_a_pack_never_asks_for_a_three_quarter_view(zara):
     assert fams.count(("image-left", True)) == 7 and fams.count(("image-right", True)) == 7
     for look in LOOKS:
         p = R.natural_prompt("zara", look)
-        assert "three-quarter" not in p and "a standing portrait framed from mid-thigh up, " in p
+        assert "three-quarter" not in p and "a portrait picture from the mid-thigh up, " in p
 
 
 def test_natural_keeps_the_hair_and_footwear_rules(zara):
@@ -98,8 +97,8 @@ def test_natural_honours_a_shoots_composition_overrides(zara):
             "framing": "her head and chest fill the frame", "avoid": "No studio lighting."}
     p = R.natural_prompt("zara", slot, backdrop="soft daylight, in her bedroom")
     assert "a phone selfie, her head and chest fill the frame, " in p
-    assert "standing portrait" not in p and "mid-thigh" not in p
+    assert "portrait picture" not in p and "mid-thigh" not in p
     assert ", she is holding the phone above eye level, " in p
     assert p.endswith("sharp focus. No studio lighting.")
     # a pack slot, which sets none of them, gets the pack's own framing
-    assert "a standing portrait framed from mid-thigh up, " in R.natural_prompt("zara", LOOKS[0])
+    assert "a portrait picture from the mid-thigh up, " in R.natural_prompt("zara", LOOKS[0])

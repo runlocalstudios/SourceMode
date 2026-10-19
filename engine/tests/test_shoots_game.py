@@ -50,7 +50,7 @@ def test_a_pack_slot_renders_exactly_what_it_did_before_the_selfie_overrides(mon
     slot = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
             "outfit": "a blue sundress", "hair": "her hair worn loose"}
     p = shot_prompt("nobody", slot)
-    assert "a standing portrait framed from mid-thigh up" in p
+    assert "a portrait picture from the mid-thigh up" in p
     assert "phone selfie" not in p and "No studio lighting" not in p
     # and the contract arm, still selectable, is untouched by the selfie overrides
     monkeypatch.setattr(render, "PROMPT_STYLE", "contract")
