@@ -71,11 +71,20 @@ def retire_other_renders(root: Path, log=print) -> Path | None:
     return dest
 
 
+def rendered_prompt(shot: Path) -> str | None:
+    """The prompt a shot was rendered from, off its sidecar; None if unknown."""
+    try:
+        return json.loads(shot.with_suffix(".json").read_text(encoding="utf-8")).get("prompt")
+    except (OSError, ValueError):
+        return None
+
+
 def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *,
                 lora_path: str, negative: str, ref=None, only: set[str] | None = None,
                 seed: int | None = None, log=print) -> list[dict]:
     """Every look of the plan (or `only` those) through T2I. A look whose shot is
-    already on disk is skipped - a re-roll drops the old file first. `seed`
+    already on disk from the same prompt is skipped; a changed look re-renders,
+    and a re-roll drops the old file first. `seed`
     replaces the per-look seed, for a re-roll of one look. Returns the
     sidecars, one per look rendered or found."""
     from ..gates.identity import cosine, embed_image  # noqa: PLC0415
@@ -95,6 +104,11 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
         dest = d / f"shot_00_s{s}.png"
         prompt = shot_prompt(character, slot, plan.get("trigger"), backdrop=STUDIO_BACKDROP)
         try:
+            if dest.exists() and rendered_prompt(dest) != prompt:
+                # winnie, 2026-10-18: her looks were rewritten off pure white and the
+                # re-run skipped all 28 because the old shots were on disk
+                log(f"  {slot['id']}: the look changed since its shot was rendered - re-rendering")
+                dest.unlink()
             if not dest.exists():
                 files = client.outputs(client.wait(client.submit(
                     t2i_workflow(cfg, prompt, s, f"pack/{character}/{slot['id']}",

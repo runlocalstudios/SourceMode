@@ -73,6 +73,13 @@ def test_the_pack_renders_every_look_once_on_the_grey_studio_and_sets_edit_rende
     n = len(client.seen)
     P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n", log=lambda s: None)
     assert len(client.seen) == n
+    # a look rewritten since its shot was rendered renders again; the other is kept
+    plan = _plan()
+    plan["categories"]["casual"]["looks"][0]["outfit"] = "a green tee"
+    metas = P.render_pack({}, client, "amanda", plan, out, lora_path="l", negative="n", log=lambda s: None)
+    assert len(client.seen) == n + 1 and "a green tee" in metas[0]["prompt"]
+    assert P.rendered_prompt(Path(metas[0]["source"])) == metas[0]["prompt"]
+    n = len(client.seen)
     # a re-roll of one look with a retry seed renders only that look on that seed
     (root / "casual_02_standing" / "shot_00_s8100.png").unlink()
     metas = P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n",
