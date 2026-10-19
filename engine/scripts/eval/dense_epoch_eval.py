@@ -108,6 +108,9 @@ from sourcemode.assets.appearance import negative as appearance_negative  # noqa
 # the LoRA - Jeremy, 2026-10-02: "The real test would be to generate 10 different
 # examples that look just like the asset generator prompts." Default here and in
 # train_character.ps1 since then; every sweep from 2026-10-02 on is `_asset`.
+# 2026-10-19: the ten were trimmed to his model sentence (asset_scenes.sweep_prompt) -
+# no lighting, makeup, finish words or exact outfit - so a sweep no longer renders
+# the pack prompt verbatim. `_asset` rates before that date are not comparable.
 #
 # The favorable and standard scene sets are SHELVED. They composed their own
 # prompt - "{trigger}, a woman, {scene}" - with no age and no appearance, which

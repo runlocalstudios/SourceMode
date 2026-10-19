@@ -1,78 +1,84 @@
-"""Eval scenes that ARE the asset generator's prompts.
+"""The ten epoch-sweep prompts, and the tiebreaker set.
 
 Jeremy, 2026-10-02: "The real test would be to generate 10 different examples that
-look just like the asset generator prompts." So these are not scenes at all - each
-is the exact text `sourcemode.assets.render.shot_prompt` emits for a wardrobe-pack
-look (the ported Codex contract: mid-thigh-up crop, body turn, head turn, closed
-expression table), for ten looks spread across the six categories and the four
-seeded hairstyles. The eval renders the prompt verbatim through the LoRA; nothing
-is prepended.
+look just like the asset generator prompts." Until 2026-10-19 the ten were the
+pack's own `shot_prompt` text with a real setting swapped in for the backdrop.
+
+Jeremy, 2026-10-19, rewrote them: "less prescriptive, more natural, get rid of
+lighting, makeup, skin commentary, focus, the exact outfit, etc. i want it to be
+as trimmed down as possible to limit the amount of things fucking up the
+pictures", with this as the model:
+
+    lena, portrait picture of a woman from the mid-thigh up, her body faces the
+    camera, she looks directly at the camera and makes a neutral expression, her
+    hair worn loose, standing in a kitchen wearing a casual outfit
+
+So the sweep no longer renders the pack prompt verbatim. Each scene keeps the
+place, hair, body turn and expression it had; the outfit is a kind, not a
+garment. Rates judged before 2026-10-19 are not comparable to rates after it.
 """
-from sourcemode.assets.render import shot_prompt
+from sourcemode.assets import render as _render
+from sourcemode.assets.render import NATURAL_FRAMING, NATURAL_FRONT, NATURAL_SLIGHT, shot_prompt
 
-# ten looks: category coverage 2/2/2/1/1/2, hair loose x5 / up x5
-# Jeremy, 2026-10-03: the epoch evals came back on the magenta key backdrop, because
-# they render the asset prompt verbatim and that is what a shipping asset needs. For
-# judging he wants a real setting - "it looks more real" - so every look carries one.
-# Everything else about the prompt stays byte-identical to what `assets render` emits.
-#
-# 2026-10-09: across 23 judged sweeps (1,720 verdicts) the four scenes lit flat or
-# cool - overcast, gym, dim restaurant, office - filled four of the bottom five
-# (28-35% keep) while every warm directional setting sat in the top half (41-49%).
-# The packs render on the grey key, so flat light was an eval-only penalty. Jeremy:
-# "We don't need to do a resweep, just change it to fix it." Those four now carry
-# warm directional light; the places stay. Sweeps judged before this date used the
-# old strings, so their scene_02/03/04/08 rates are not comparable to new ones.
-#
-# 2026-10-17, across 43 judged sweeps (3,480 verdicts) the bottom four were the
-# gym with mirrors (36%), the coffee shop (37%), the sports bra against the sunlit
-# wall (39%) and the emerald dress with the broad smile (40%). Jeremy, same day:
-# "the gym photos are always pretty bad" - the gym is now her sitting on a workout
-# bench in yoga pants and a zip-up track top with a neutral expression, and the
-# sunlit wall is her standing upright, hands on her hips, in a running outfit on an
-# empty street, smiling. The green dress "looks horrible every time ... both the
-# expression and the hairstyle": the chignon and the toothy smile are gone, the
-# words are plain - "a closed-lip smile", "her hair worn loose". Again no resweep;
-# scene_02/03/04 rates before this date are not comparable to new ones.
-SETTINGS = [
-    "soft window daylight, in a sunlit kitchen",
-    "warm late-afternoon sun, on a quiet residential street",
-    "warm morning sunlight, on an empty street",
-    "warm window light, in a gym",
-    "warm directional restaurant light, in an elegant dining room",
-    "soft gallery lighting, in an art gallery with pale walls",
-    "evening street light, outside a bar at night",
-    "soft window daylight, in a coffee shop by the window",
-    "warm window light, in a bright open-plan office",
-    "golden-hour light, on a rooftop terrace at dusk",
-]
+BODY = {"front": NATURAL_FRONT.split(", ")[0], "slight-left": NATURAL_SLIGHT.split(", ")[0],
+        "slight-right": NATURAL_SLIGHT.split(", ")[0]}
 
+# category/look/outfit also let the hair tests build a pack prompt from each look
 LOOKS = [
-    {"id": "casual_01", "category": "casual", "look": 1, "outfit": "a soft oatmeal knit sweater and straight-leg jeans", "hair": "her hair worn loose"},
-    {"id": "casual_02", "category": "casual", "look": 2, "outfit": "a white cotton blouse and dark jeans", "hair": "her hair in a high ponytail"},
-    # Jeremy, 2026-10-17: "standing upright with hands on her hips in a running
-    # outfit on an empty street, smiling" - setting 2 is the street
-    {"id": "workout_01", "category": "workout", "look": 1, "outfit": "a fitted running top and running shorts", "hair": "her hair in a high ponytail",
-     "turn": "front", "stance": "standing upright with her hands on her hips", "expression_natural": "smiling"},
-    # "wearing yoga pants and a zip-up track suit top sitting on a workout bench in
-    # the gym, making a neutral expression" - setting 3 is the gym
-    {"id": "workout_02", "category": "workout", "look": 2, "outfit": "black yoga pants and a zip-up track jacket", "hair": "her hair up in a messy bun",
-     "turn": "front", "shot_type": "portrait", "stance": "sitting on a workout bench", "expression": "neutral"},
-    # "that picture looks horrible every time ... both the expression and the
-    # hairstyle ... simplify the language" - was a low chignon and the toothy smile
-    {"id": "fancy_dining_gallery_01", "category": "fancy_dining_gallery", "look": 1, "outfit": "a long-sleeved emerald green midi dress", "hair": "her hair worn loose",
-     "expression_natural": "a closed-lip smile"},
-    {"id": "fancy_dining_gallery_02", "category": "fancy_dining_gallery", "look": 2, "outfit": "a black sheath dress with a high neckline", "hair": "her hair worn loose"},
-    {"id": "fancy_town_01", "category": "fancy_town", "look": 1, "outfit": "a fitted black cocktail dress with three-quarter sleeves", "hair": "her hair half pinned back"},
-    {"id": "casual_date_01", "category": "casual_date", "look": 1, "outfit": "a deep green wrap blouse and dark slim jeans", "hair": "her hair worn loose"},
-    {"id": "work_01", "category": "work", "look": 1, "outfit": "a cream blouse tucked into a navy A-line skirt", "hair": "her hair in a low ponytail"},
-    {"id": "work_02", "category": "work", "look": 2, "outfit": "a soft grey cardigan over a white shirt, charcoal trousers", "hair": "her hair worn loose"},
+    {"id": "casual_01", "category": "casual", "look": 1, "turn": "front",
+     "face": "makes a neutral expression", "hair": "her hair worn loose",
+     "doing": "standing in a kitchen", "outfit": "a casual outfit"},
+    {"id": "casual_02", "category": "casual", "look": 2, "turn": "slight-left",
+     "face": "smiles with her mouth closed", "hair": "her hair in a high ponytail",
+     "doing": "standing on a quiet residential street", "outfit": "a casual outfit"},
+    {"id": "workout_01", "category": "workout", "look": 1, "turn": "front",
+     "face": "smiles", "hair": "her hair in a high ponytail",
+     "doing": "standing with her hands on her hips on an empty street", "outfit": "a running outfit"},
+    {"id": "workout_02", "category": "workout", "look": 2, "turn": "front",
+     "face": "makes a neutral expression", "hair": "her hair up in a messy bun",
+     "doing": "sitting on a workout bench in a gym", "outfit": "a workout outfit"},
+    {"id": "fancy_dining_gallery_01", "category": "fancy_dining_gallery", "look": 1, "turn": "front",
+     "face": "smiles with her mouth closed", "hair": "her hair worn loose",
+     "doing": "standing in an elegant restaurant", "outfit": "a dress"},
+    {"id": "fancy_dining_gallery_02", "category": "fancy_dining_gallery", "look": 2, "turn": "slight-right",
+     "face": "gives a soft flirty smile", "hair": "her hair worn loose",
+     "doing": "standing in an art gallery", "outfit": "a dress"},
+    {"id": "fancy_town_01", "category": "fancy_town", "look": 1, "turn": "front",
+     "face": "smiles with her mouth closed", "hair": "her hair half pinned back",
+     "doing": "standing outside a bar at night", "outfit": "a cocktail dress"},
+    {"id": "casual_date_01", "category": "casual_date", "look": 1, "turn": "front",
+     "face": "makes a neutral expression", "hair": "her hair worn loose",
+     "doing": "standing in a coffee shop", "outfit": "a casual outfit"},
+    {"id": "work_01", "category": "work", "look": 1, "turn": "front",
+     "face": "gives a soft flirty smile", "hair": "her hair in a low ponytail",
+     "doing": "standing in an office", "outfit": "a work outfit"},
+    {"id": "work_02", "category": "work", "look": 2, "turn": "slight-left",
+     "face": "makes a neutral expression", "hair": "her hair worn loose",
+     "doing": "standing on a rooftop terrace", "outfit": "a smart casual outfit"},
 ]
+
+
+def sweep_prompt(trigger: str, look: dict, character: str | None = None) -> str:
+    """One trimmed sweep prompt. The subject is her appearance sentence, which
+    the eval replaces with "a woman" unless --with-description; a look that puts
+    the hair up drops its length words, and a canned up-style is swapped for a
+    short-haired character, both exactly as the pack builder does."""
+    from sourcemode.assets.wardrobe import SHORT_HAIR, is_own_hair, is_short_haired  # noqa: PLC0415
+
+    character = character or trigger
+    hair = look["hair"]
+    if is_short_haired(character) and _render.is_up_style(hair) and not is_own_hair(character, hair):
+        hair = SHORT_HAIR[int(look.get("look", 1)) % len(SHORT_HAIR)]
+    subject = _render.appearance_clause(character) or "a woman"
+    if _render.is_up_style(hair):
+        subject = _render.drop_length(subject)
+    return (f"{trigger}, portrait picture of {subject} {NATURAL_FRAMING}, {BODY[look['turn']]}, "
+            f"she looks directly at the camera and {look['face']}, {hair}, "
+            f"{look['doing']} wearing {look['outfit']}")
 
 
 def asset_prompts(trigger: str) -> list[str]:
-    return [shot_prompt(trigger, dict(l, pose="standing"), backdrop=SETTINGS[i % len(SETTINGS)])
-            for i, l in enumerate(LOOKS)]
+    return [sweep_prompt(trigger, l) for l in LOOKS]
 
 
 # THE TIEBREAKER SET. Jeremy, 2026-10-10, after vivienne's natural sweep: "some of

@@ -31,18 +31,28 @@ sys.path.insert(0, str(ENGINE_ROOT / "scripts" / "eval"))
 EVAL = ENGINE_ROOT / "scripts" / "eval" / "dense_epoch_eval.py"
 
 
-def test_the_eval_renders_exactly_what_the_pack_renders():
-    """asset_prompts() is shot_prompt() per look with a real setting swapped in
-    for the key backdrop. True by construction today; pinned so an inlined copy
-    cannot drift."""
-    from asset_scenes import LOOKS, SETTINGS, asset_prompts
+def test_the_sweep_prompt_is_his_trimmed_sentence():
+    """Jeremy, 2026-10-19: no lighting, makeup, skin, focus or exact outfit. His
+    model sentence is scene 00 word for word once her sentence is "a woman"."""
+    import sourcemode.assets.render as R
+    from asset_scenes import LOOKS, asset_prompts
 
-    got = asset_prompts("amanda")
-    assert len(got) == len(LOOKS)
-    for i, look in enumerate(LOOKS):
-        want = shot_prompt("amanda", dict(look, pose="standing"),
-                           backdrop=SETTINGS[i % len(SETTINGS)])
-        assert got[i] == want, f"look {look['id']} drifted from shot_prompt"
+    real = R.appearance_clause
+    R.appearance_clause = lambda character, **_: "a woman"
+    try:
+        got = asset_prompts("lena")
+    finally:
+        R.appearance_clause = real
+    assert len(got) == len(LOOKS) == 10
+    assert got[0] == ("lena, portrait picture of a woman from the mid-thigh up, her body faces the "
+                      "camera, she looks directly at the camera and makes a neutral expression, her "
+                      "hair worn loose, standing in a kitchen wearing a casual outfit")
+    import re
+
+    for p in got:
+        for word in ("light", "lighting", "sunlight", "makeup", "skin", "focus", "photorealistic",
+                     "beautiful", "sun"):
+            assert not re.search(rf"{word}", p, re.I), f"{word!r} is back in a sweep prompt: {p}"
 
 
 def test_the_eval_keeps_no_second_description_of_a_character():
