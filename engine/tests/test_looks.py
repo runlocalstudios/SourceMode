@@ -108,6 +108,23 @@ def test_what_she_never_wears_is_never_drafted(monkeypatch):
     assert {k: len(v) for k, v in L.draft_looks("hannah").items()} == PACK_28
 
 
+def test_any_item_he_writes_is_banned_not_only_known_words(monkeypatch):
+    """Jeremy, 2026-10-20: "The restriction on never wears cargo pants is not
+    working." Kasia's line, verbatim: only "Denim" was a known word, so her
+    draft carried cargo pants and the tee worn as a dress."""
+    line = "Denim, cargo pants, cargo shorts, oversized tee worn as a dress"
+    ban = L.banned(line)
+    assert L.avoids("a navy baby tee and low-rise cargo pants, cut close to the body", ban)
+    assert L.avoids("an oversized blush pink graphic tee worn as a dress with a thin belt", ban)
+    assert L.avoids("khaki cargo shorts and a tank", ban)
+    assert not L.avoids("a fitted navy t-shirt and a pleated skirt", ban)
+    assert not L.avoids("a fitted pink tee and a mini skirt", ban)     # a tee is not the dress
+    _record(monkeypatch, avoid=line)
+    for s in range(4):
+        for o in _all_outfits(L.draft_looks("hannah", s)):
+            assert not L.avoids(o, ban), o
+
+
 def test_the_avoid_line_reaches_cues_colours_and_the_job_looks(monkeypatch):
     # sandra's line: the revealing cues it names are never appended
     ban = L.banned("crop tops, micro skirts, plunging necklines, bare midriff - none of it is her")

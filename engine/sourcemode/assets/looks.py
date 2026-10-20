@@ -295,7 +295,34 @@ def banned(avoid: str) -> re.Pattern | None:
     pats = [rx for phrase, rx in _AVOID_WORDS if re.search(rf"\b(?:{phrase})\b", avoid or "", re.I)]
     # whole words: "red" must not ban "tailored"
     pats += [rf"\b{re.escape(c)}s?\b" for c in _colours_in(avoid)]
+    pats += _avoid_phrases(avoid)
     return re.compile(r"(?:" + "|".join(pats) + r")", re.I) if pats else None
+
+
+_PHRASE_STOP = {"a", "an", "the", "as", "of", "with", "in", "on", "to", "her", "she", "or", "and",
+                "no", "nothing", "never", "any", "anything"}
+
+
+def _avoid_phrases(avoid: str) -> list[str]:
+    """Each short item of her line as a whole-word, any-order match.
+
+    Jeremy, 2026-10-20: "The restriction on never wears cargo pants is not
+    working." Kasia's line reads "Denim, cargo pants, cargo shorts, oversized
+    tee worn as a dress" and only "Denim" was on the word list above - her
+    draft carried "a navy baby tee and low-rise cargo pants" and "an oversized
+    blush pink graphic tee worn as a dress". So every comma item he writes is
+    matched as itself: all of its words, in any order, on one look - when the item names a garment. What
+    follows a dash ("nothing prim or preppy - she is...") is prose, skipped."""
+    out = []
+    # everything after a dash is prose about her, never a list of garments
+    for item in re.split(r"[,;]", re.split(r" [-–] ", avoid or "")[0]):
+        if not GARMENT_RE.search(item):       # "nothing prim or preppy" names no garment
+            continue
+        words = [_singular(w) for w in re.findall(r"[a-z]+", item.lower()) if w not in _PHRASE_STOP]
+        if not words or len(words) > 5 or (len(words) == 1 and len(words[0]) < 4):
+            continue
+        out.append("".join(rf"(?=.*\b{re.escape(w)}(?:e?s)?\b)" for w in words) + ".")
+    return out
 
 
 def avoids(text: str, ban: re.Pattern | None) -> bool:
