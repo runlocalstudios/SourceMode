@@ -731,6 +731,14 @@ CUTS: tuple[tuple[str, str, str], ...] = (
 )
 
 
+# Looks drafted only when her line asks for them: (the look, the words that ask).
+# Jeremy, 2026-10-20: "The outfit generator is way too overindexed on tshirts
+# worn as a dress that should be a very rare look" - it was in 10 of 13 plans.
+RARE: tuple[tuple[str, str], ...] = (
+    (r"tee worn as a dress", r"t-?shirt dress|tee dress|worn as a dress|oversized (?:tee|t-?shirt)"),
+)
+
+
 def _direction(guide: str) -> list[tuple[str, str]]:
     """(fits, never) for every style and cut word the line carries."""
     g = (guide or "").lower()
@@ -749,6 +757,8 @@ def guided_templates(pool: str | list[str], guide: str, n: int, rng: random.Rand
     elif isinstance(pool, str):
         pool = list(TEMPLATES[pool])
     pool = [t for t in pool if not avoids(t, ban)]
+    pool = [t for t in pool if not any(re.search(look, t) and not re.search(asked, guide or "", re.I)
+                                       for look, asked in RARE)]
     nouns = {_singular(m.group(0)) for m in GARMENT_RE.finditer(guide or "")}
     nouns -= {"set", "top"}                   # too common to mean anything
     rules = _direction(guide)

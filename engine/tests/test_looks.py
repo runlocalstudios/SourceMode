@@ -143,6 +143,11 @@ def test_style_synonym_and_length_words_steer_the_draft(monkeypatch):
             assert re.search(r"jumpsuit|unitard|onesie|one-piece|romper", lk["outfit"]), lk
         for lk in d["fancy_dining_gallery"]:
             assert not re.search(r"midi|maxi|knee-length|column", lk["outfit"]), lk
+    # the tee worn as a dress is rare: only when a line asks for it
+    for c in ("ash", "zoe", "kim", "bea"):
+        assert not any("worn as a dress" in o for o in _all_outfits(L.draft_looks(c))), c
+    assert any("worn as a dress" in t for s in range(10)
+               for t in L.guided_templates("casual", "a tee dress", 7, random.Random(s)))
     # "cargo shorts" bans cargo shorts, not every pair of shorts
     assert not L.avoids("a red one-piece unitard with short shorts", L.banned("cargo shorts"))
     assert L.avoids("denim shorts", L.banned("shorts"))
