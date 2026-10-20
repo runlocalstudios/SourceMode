@@ -44,6 +44,8 @@ def test_alpha_report_flags():
     assert set(alpha_report(a)["flags"]) == {"clipped"}
     b = np.zeros((100, 100), np.uint8); b[10:50, 10:50] = 255; b[70:90, 70:90] = 255
     assert "islands" in alpha_report(b)["flags"] and alpha_report(b)["components"] == 2
+    s = np.zeros((1536, 1024), np.uint8); s[100:1400, 200:800] = 255; s[50:58, 900:908] = 255
+    assert "islands" not in alpha_report(s)["flags"]           # a 64 px strand bit is hair, not a defect
     c = np.full((100, 100), 128, np.uint8)                      # everything half-transparent
     assert "hollow" in alpha_report(c)["flags"]
     d = np.zeros((100, 100), np.uint8); d[50:52, 50:52] = 255

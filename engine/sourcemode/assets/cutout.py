@@ -544,6 +544,19 @@ def _components(mask: np.ndarray, max_side: int = 128) -> int:
     return n
 
 
+ISLAND_SHARE = 0.0007     # of the canvas: ~1,100 px at 1024x1536
+
+
+def _largest_stray(mask: np.ndarray) -> int:
+    """Pixels in the second-largest connected piece of the figure; 0 if one piece."""
+    from scipy import ndimage  # noqa: PLC0415
+
+    lab, n = ndimage.label(mask, structure=np.ones((3, 3)))
+    if n < 2:
+        return 0
+    return int(sorted(ndimage.sum(mask, lab, index=np.arange(1, n + 1)), reverse=True)[1])
+
+
 def alpha_report(alpha: np.ndarray) -> dict:
     """Numbers and flags from an alpha channel (uint8 HxW). Pure; never raises on odd input."""
     a = np.asarray(alpha)
@@ -569,7 +582,10 @@ def alpha_report(alpha: np.ndarray) -> dict:
         flags.append("hollow")
     if any(s in touches for s in ("left", "right", "top")):
         flags.append("clipped")         # bottom contact is normal for a standing figure
-    if comps > 1:
+    if comps > 1 and _largest_stray(fg) >= max(64, ISLAND_SHARE * total):
+        # 2026-10-20: every BiRefNet cutout carries 5-150 px specks - detached bits
+        # of real hair strand against a 500-800k px figure. Flagging any speck put
+        # all 28 of nisha's looks in front of him; a detached CHUNK is the defect.
         flags.append("islands")
     return {"coverage": round(coverage, 4), "partial": round(partial, 4), "bbox": bbox,
             "components": comps, "touches": touches, "flags": flags, "pixels": int(total)}
