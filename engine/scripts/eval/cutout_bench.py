@@ -56,8 +56,8 @@ import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage
 
-from sourcemode.assets.cutout import (alpha_report, anchor_clamp, auto_chroma_remover, key_distance,
-                                      rembg_remover, sample_backdrop)
+from sourcemode.assets.cutout import (BIG, alpha_report, auto_chroma_remover, backdrop_kind, big_components,
+                                      bleed, hybrid_matte, key_alpha, rembg_remover, sample_backdrop)
 from sourcemode.config import load_config, outputs_dir
 from sourcemode.library import find_set, write_set_json
 
@@ -78,9 +78,6 @@ FORCE = "--force" in ARGS
 LOG = OUT / "logs" / "cutout_bench.log"
 LOG.parent.mkdir(parents=True, exist_ok=True)
 
-BIG = 1500          # px: a region of pure backdrop this size is background, full stop
-SURE_FG, SURE_BG = 0.85, 0.15
-BAND = 6.0          # px of despill, grown from the real outside only
 
 
 def log(s: str) -> None:
@@ -104,13 +101,6 @@ def sources() -> list[tuple[str, str, Path, Path]]:
     return found
 
 
-def kind_of(key: tuple[int, int, int]) -> str:
-    r, g, b = key
-    if max(key) - min(key) < 20:
-        return "grey"
-    return "pink" if r > 150 and b > 60 and g < 80 else "green" if g > 150 else "other"
-
-
 _bire = None
 
 
@@ -128,54 +118,6 @@ def birefnet_alpha(img: Image.Image, cache: Path) -> np.ndarray:
     return np.asarray(m.convert("L"), dtype=np.float32) / 255.0
 
 
-def key_alpha(rgb: np.ndarray, key: tuple[int, int, int], kind: str) -> np.ndarray:
-    """1 = not the backdrop, 0 = exactly the backdrop. Chromaticity for a coloured
-    key (shadowed pink is still pink); plain RGB distance for grey, where every
-    neutral - white, black, grey cloth - has the backdrop's chromaticity."""
-    if kind == "grey":
-        d = np.sqrt(((rgb - np.asarray(key, dtype=np.float32)) ** 2).sum(axis=2))
-        return np.clip((d - 6.0) / 12.0, 0.0, 1.0)
-    d = key_distance(rgb, key)
-    return np.clip((d - 0.045) / (0.12 - 0.045), 0.0, 1.0)
-
-
-def big_components(mask: np.ndarray, min_px: int) -> np.ndarray:
-    lab, n = ndimage.label(mask, structure=np.ones((3, 3)))
-    if n == 0:
-        return np.zeros_like(mask)
-    sizes = ndimage.sum(mask, lab, index=np.arange(1, n + 1))
-    keep = np.zeros(n + 1, dtype=bool)
-    keep[1:] = sizes >= min_px
-    return keep[lab]
-
-
-def hybrid(rgb: np.ndarray, key, kind: str, b: np.ndarray) -> tuple[np.ndarray, np.ndarray, dict]:
-    ka = key_alpha(rgb, key, kind)
-    pure_big = big_components(ka <= 0.0, BIG)
-    alpha = np.where(b >= SURE_FG, 1.0, np.where(b <= SURE_BG, 0.0, ka))
-    # On grey the override is off: a white polo sleeve in shade sits within a few
-    # counts of a light-grey wall (cici work_01, 2026-10-20 - 3,559 px of sleeve cut
-    # away), and BiRefNet filled no enclosed gap on any of her 56 renders.
-    cut = pure_big if kind != "grey" else pure_big & (b < SURE_FG)
-    alpha = np.where(cut, 0.0, alpha)
-    out = rgb
-    if kind != "grey":
-        outside = big_components(alpha < 0.5, BIG)
-        near = ndimage.distance_transform_edt(~outside) <= BAND
-        k = np.asarray(key, dtype=np.float32)
-        lo = int(np.argmin(k))
-        spill = [c for c in range(3) if c != lo and k[c] - k[lo] >= 40]
-        anchor = rgb[:, :, lo]
-        dominant = np.all(np.stack([rgb[:, :, c] > anchor for c in spill]), axis=0)
-        # ...and only where the pixel actually reads as the backdrop (ka < 1). A
-        # garment in the key's own family - sienna's purple flares, every maroon -
-        # is R and B over G too, and clamping its rim turned it grey (2026-10-20).
-        out = anchor_clamp(rgb, key, near & dominant & (ka < 1.0) & (alpha > 0))
-    stats = {"override": int((pure_big & (b >= SURE_FG)).sum()),
-             "dropped": int(((ka >= 1.0) & (b <= SURE_BG) & ~pure_big).sum())}
-    return np.clip(out, 0, 255), alpha, stats
-
-
 def measure(rgba: np.ndarray, rgb: np.ndarray, key, kind: str) -> dict:
     a = rgba[..., 3]
     rep = alpha_report(a)
@@ -187,7 +129,7 @@ def measure(rgba: np.ndarray, rgb: np.ndarray, key, kind: str) -> dict:
     # halo: the backdrop's colour still showing on the figure's rim (coloured keys)
     halo = 0.0
     if kind in ("pink", "green"):
-        rim = fig & (ndimage.distance_transform_edt(fig) <= 4)
+        rim = (a > 24) & (ndimage.distance_transform_edt(a > 24) <= 6)   # see-through strands too
         keyish = key_alpha(rgba[..., :3].astype(np.float32), key, kind) < 1.0
         halo = float((rim & keyish).sum() / max(rim.sum(), 1))
     return {"coverage": rep["coverage"], "partial": rep["partial"], "flags": rep["flags"],
@@ -227,13 +169,14 @@ def run() -> None:
             img = Image.open(p)
             rgb = np.asarray(img.convert("RGB"), dtype=np.float32)
             key, dev = sample_backdrop(img)
-            kind = kind_of(key) if dev <= 18 else "noisy"
+            kind = backdrop_kind(key, dev)
             row = metrics.setdefault(look, {"source": str(p), "key": list(key), "kind": kind})
             cells = [img.convert("RGB")]
+            shown = [m for m in ("prod", "birefnet", "hybrid") if m in METHODS or (SET / m / f"{look}.webp").is_file()]
             b = None
-            for m in METHODS:
+            for m in shown:
                 dest = SET / m / f"{look}.webp"
-                if dest.is_file() and not FORCE and m in row:
+                if dest.is_file() and m in row and (m not in METHODS or not FORCE):
                     cells.append(Image.open(dest).convert("RGBA"))
                     continue
                 t0 = time.time()
@@ -250,35 +193,34 @@ def run() -> None:
                     rgba = np.dstack([rgb, b * 255.0]).astype(np.uint8)
                 elif m == "hybrid":
                     b = b if b is not None else birefnet_alpha(img, SET / "_cache" / "birefnet" / f"{look}.png")
-                    if kind == "noisy":
-                        rgba = np.dstack([rgb, b * 255.0]).astype(np.uint8)
-                    else:
-                        out, alpha, extra = hybrid(rgb, key, kind, b)
-                        rgba = np.dstack([out, alpha * 255.0]).astype(np.uint8)
+                    out, alpha, extra = hybrid_matte(rgb, key, kind, b)
+                    rgba = np.dstack([out, alpha * 255.0]).astype(np.uint8)
                 else:
                     raise SystemExit(f"unknown method {m}")
-                row[m] = {**measure(rgba, rgb, key, kind), **extra, "secs": round(time.time() - t0, 1)}
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                cut = Image.fromarray(rgba, "RGBA")
-                cut.save(dest, "WEBP", quality=92, method=4, exact=True)
+                Image.fromarray(bleed(rgba), "RGBA").save(dest, "WEBP", quality=92, method=4, exact=True)
+                # measured as SAVED: WebP's half-resolution colour is where a
+                # strand picked the backdrop back up (sienna casual_09)
+                cut = Image.open(dest).convert("RGBA")
+                row[m] = {**measure(np.asarray(cut), rgb, key, kind), **extra, "secs": round(time.time() - t0, 1)}
                 cells.append(cut)
             log(f"  {c} {look} [{kind}] " + "  ".join(
                 f"{m}: shift {row[m]['shift']:.3f} holes {row[m]['holes']} halo {row[m].get('halo', 0):.3f}"
-                + (f" ovr {row[m]['override']} drop {row[m]['dropped']}" if m == "hybrid" and "override" in row[m] else "")
-                for m in METHODS if m in row))
+                + (f" ovr {row[m]['override']}" if m == "hybrid" and "override" in row[m] else "")
+                for m in shown if m in row))
             tiles.append((look, kind, cells))
             mpath.write_text(json.dumps(metrics, indent=1), encoding="utf-8")
         # sheet: each look as a strip [render | method...] on a dark/light checker
         tw, th = 200, 300
         cols = 2
-        strip_w = tw * (1 + len(METHODS)) + 10
+        strip_w = tw * 4 + 10
         rows = -(-len(tiles) // cols)
         sheet = Image.new("RGB", (cols * strip_w, rows * (th + 16)), (255, 255, 255))
         draw = ImageDraw.Draw(sheet)
         bg = checker(tw, th)
         for i, (look, kind, cells) in enumerate(tiles):
             x0, y0 = (i % cols) * strip_w, (i // cols) * (th + 16) + 14
-            draw.text((x0 + 2, y0 - 13), f"{look[:40]} [{kind}]  render | {' | '.join(METHODS)}",
+            draw.text((x0 + 2, y0 - 13), f"{look[:40]} [{kind}]  render | prod | birefnet | hybrid",
                       fill=(20, 20, 20))
             for j, im in enumerate(cells):
                 im = im.copy()

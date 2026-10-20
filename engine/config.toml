@@ -117,9 +117,10 @@ engine = "chatterbox"
 
 [assets]
 # `sourcemode assets cutout`: background removal for in-game assets.
-# isnet-general-use is a good default on people; birefnet-portrait is sharper on
-# hair at ~900 MB. The game consumes RGBA WebP at game_size (src/assets/...).
-cutout_model = "isnet-general-use"
+# "hybrid" (2026-10-20) is BiRefNet-general plus the backdrop key - measured on
+# 583 pack renders against isnet and the chroma key (cutout.py, "hybrid"). Any
+# rembg model name still works. The game consumes RGBA WebP at game_size.
+cutout_model = "hybrid"
 game_size = [1024, 1536]
 # Where plans, renders, cutouts and the staged outfits/ folder live per character;
 # the control panel's /assets review reads and writes here (never the game repo).

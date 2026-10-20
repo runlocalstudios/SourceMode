@@ -534,3 +534,56 @@ def test_auto_chroma_despills_the_edge_band_only_and_leaves_the_figure_its_colou
     assert r <= g - 1 and b <= g - 1, "the halo at the edge cannot read as the key"
     # the clamp never reaches further than the band
     assert tuple(rgb[30 + 20, 60]) == skin
+
+
+def test_hybrid_keeps_a_maroon_dress_on_hot_pink_and_cuts_the_enclosed_gap(tmp_path: Path):
+    """2026-10-20, cici's key trial: a maroon dress in shadow is 0.15 from Qwen's
+    hot pink, so the chroma key speckled it and its despill blackened the whole
+    garment. The hybrid lets the learned matte say what is her (faked here) and
+    the key say what is exactly backdrop: the dress keeps its colour, the
+    enclosed gap of backdrop beside it goes, and nothing is written in pink."""
+    from sourcemode.assets.cutout import bleed, hybrid_remover
+
+    pink, maroon = (240, 12, 128), (57, 16, 31)
+    a = np.zeros((300, 200, 3), np.uint8)
+    a[:] = pink
+    a[60:280, 40:160] = maroon
+    rng = np.random.default_rng(0)
+    speck = rng.random((220, 120)) < 0.05
+    a[60:280, 40:160][speck] = (70, 14, 40)            # shadowed maroon, keyable alone
+    a[100:200, 80:120] = pink                          # the gap between arm and waist
+    fig = np.zeros((300, 200), np.float32)
+    fig[60:280, 40:160] = 1.0                          # BiRefNet fills the gap, as it does
+    out = np.asarray(hybrid_remover(lambda img: fig)(Image.fromarray(a)))
+    gap = np.zeros((220, 120), bool)
+    gap[40:140, 40:80] = True
+    dress = out[60:280, 40:160][~speck & ~gap]
+    assert (out[60:280, 40:80, 3] == 255).all()
+    assert np.abs(dress[..., :3].astype(int) - maroon).max(axis=1).mean() < 3   # not blackened
+    assert (out[120:180, 90:110, 3] == 0).all()                                  # the gap is cut
+    assert (out[:40, :, 3] == 0).all()
+
+    # a garment the backdrop's own colour: BiRefNet wins, and it is flagged
+    b = np.zeros((300, 200, 3), np.uint8)
+    b[:] = pink
+    b[40:290, 30:170] = (238, 14, 130)
+    whole = np.zeros((300, 200), np.float32)
+    whole[40:290, 30:170] = 1.0
+    cut = hybrid_remover(lambda img: whole)(Image.fromarray(b))
+    assert cut.info["hybrid"]["clash"] and (np.asarray(cut)[100:200, 60:140, 3] == 255).all()
+
+    # nothing transparent keeps the backdrop's colour for WebP to bleed back in
+    bled = bleed(out)
+    assert not ((bled[..., 3] == 0) & (np.abs(bled[..., :3].astype(int) - pink).max(axis=2) < 10)).any()
+
+
+def test_hybrid_on_grey_is_the_learned_matte_snapped():
+    """BiRefNet leaves alpha 1-5 over ~40% of a grey background - a film in the game."""
+    from sourcemode.assets.cutout import hybrid_remover
+
+    a = np.full((120, 80, 3), 205, np.uint8)
+    a[30:110, 20:60] = (240, 240, 240)                 # a white top against the wall
+    m = np.full((120, 80), 0.015, np.float32)
+    m[30:110, 20:60] = 0.996
+    out = np.asarray(hybrid_remover(lambda img: m)(Image.fromarray(a)))
+    assert (out[:20, :, 3] == 0).all() and (out[40:100, 25:55, 3] == 255).all()

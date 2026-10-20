@@ -391,7 +391,7 @@ def assets_cutout(
     The report only annotates: flags are hollow / clipped / islands / tiny; nothing is rejected."""
     from .assets.cutout import (  # noqa: PLC0415
         GREEN, MAGENTA, auto_chroma_remover, checkerboard_sheet, chroma_remover, collect,
-        cutout_batch, parse_size, rembg_remover,
+        cutout_batch, hybrid_remover, parse_size, rembg_remover,
     )
 
     cfg, _ = _ctx()
@@ -421,7 +421,7 @@ def assets_cutout(
             raise typer.Exit(2)
     else:
         try:
-            remover = rembg_remover(model, matting=not no_matting)
+            remover = hybrid_remover() if model == "hybrid" else rembg_remover(model, matting=not no_matting)
         except ImportError:
             rprint("[red]rembg is not installed[/red] — `uv sync --inexact --extra assets`")
             raise typer.Exit(2)

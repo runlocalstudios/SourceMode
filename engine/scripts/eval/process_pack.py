@@ -2,7 +2,7 @@
 
     python scripts/eval/process_pack.py <character> [--set pack_<character>]
 
-  1. the one T2I shot per look -> rembg matte -> RGBA WebP on the game canvas
+  1. the one T2I shot per look -> hybrid matte (BiRefNet + key) -> RGBA WebP on the game canvas
   2. `place`: the cutouts named and sorted into outputs/game-assets/<char>/outfits/
   3. two sheets in review/: the mapping on a checker, and every new look beside
      what the game ships under that name today
@@ -19,7 +19,7 @@ from pathlib import Path
 
 from sourcemode.assets import pack as P
 from sourcemode.assets.catalog import mapping_sheet, place
-from sourcemode.assets.cutout import cutout_batch, rembg_remover
+from sourcemode.assets.cutout import cutout_batch, hybrid_remover, rembg_remover
 from sourcemode.assets.judge import judge_root
 from sourcemode.assets.looks import GAME_ROOT
 from sourcemode.config import load_config, outputs_dir
@@ -53,7 +53,7 @@ if not pngs:
 log(f"{CHAR}: {len(pngs)} looks -> cutout, place, sheets")
 
 acfg = cfg.get("assets", {})
-model = acfg.get("cutout_model", "isnet-general-use")
+model = acfg.get("cutout_model", "hybrid")
 size = tuple(acfg.get("game_size", (1024, 1536)))
 cut_dir = home / "cutouts"
 if cut_dir.is_dir() and any(cut_dir.rglob("*.json")):
@@ -64,7 +64,8 @@ if cut_dir.is_dir() and any(cut_dir.rglob("*.json")):
         aside = cut_dir.with_name(f"cutouts_edit_{time.strftime('%Y%m%d-%H%M')}")
         cut_dir.rename(aside)
         log(f"  older cutouts set aside as {aside.name}")
-results = cutout_batch(pngs, cut_dir, remover=rembg_remover(model), model=model, size=size, webp=True, log=log)
+remover = hybrid_remover() if model == "hybrid" else rembg_remover(model)
+results = cutout_batch(pngs, cut_dir, remover=remover, model=model, size=size, webp=True, log=log)
 flagged = [r for r in results if r["report"]["flags"]]
 log(f"  cut {len(results)}, {len(flagged)} flagged for a look")
 

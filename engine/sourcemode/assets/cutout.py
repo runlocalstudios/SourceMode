@@ -384,6 +384,141 @@ def rembg_remover(model: str = DEFAULT_MODEL, *, matting: bool = True) -> Remove
     return _remove
 
 
+# ----------------------------------------------------------------- hybrid
+#
+# Jeremy, 2026-10-20: "the goal is for me not to need to review the transparencies
+# once we are done with this work." Measured on 583 existing pack renders
+# (scripts/eval/cutout_bench.py), against isnet on grey and the auto chroma key on
+# pink: the chroma key blackened 57 pink looks (a maroon dress is 0.15 from Qwen's
+# hot pink, so it speckles, and the despill grew out of every speck); isnet left
+# 65 grey looks hollow. BiRefNet-general (MIT) is what remove.bg-style services
+# are: a learned matte. Alone on pink it left a pink fringe on 269 of 269.
+#
+#   grey   BiRefNet's alpha, snapped at both ends - the wall is uneven, so a
+#          colour key misreads the pixels round hair; neutral needs no despill.
+#   pink   BiRefNet decides what is her; the key decides what is exactly backdrop.
+#          A large region of pure backdrop goes whatever BiRefNet says (the
+#          enclosed arm-to-waist gap) - unless it is so large it is a garment in
+#          the backdrop's own colour, when BiRefNet wins and the cut is flagged
+#          `key-clash`. Pink-cast pixels take the colour of the nearest solid
+#          pixel of her: hair from un-cast hair, a garment rim from the garment.
+
+HYBRID_MODEL = "birefnet-general"
+BIG = 1500          # px: pure backdrop this size is background
+SURE_FG, SURE_BG = 0.85, 0.15
+SOFT = 0.95         # BiRefNet under this is a soft edge - hair
+CLASH_PX = 10000    # px of "her" the key would cut before it is a garment, not a gap
+BAND = 6.0          # px a garment rim is despilled, from the real outside only
+
+
+def backdrop_kind(key: tuple[int, int, int], dev: float, max_dev: float = 18.0) -> str:
+    if dev > max_dev:
+        return "noisy"
+    r, g, b = key
+    if max(key) - min(key) < 20:
+        return "grey"
+    return "pink" if r > 150 and b > 60 and g < 80 else "green" if g > 150 else "other"
+
+
+def key_alpha(rgb: np.ndarray, key: tuple[int, int, int], kind: str) -> np.ndarray:
+    """1 = not the backdrop, 0 = exactly it. Chromaticity for a coloured key
+    (shadowed pink is still pink); RGB distance for grey, whose chromaticity
+    every neutral garment shares."""
+    if kind == "grey":
+        d = np.sqrt(((rgb - np.asarray(key, dtype=np.float32)) ** 2).sum(axis=2))
+        return np.clip((d - 6.0) / 12.0, 0.0, 1.0)
+    return np.clip((key_distance(rgb, key) - 0.045) / (0.12 - 0.045), 0.0, 1.0)
+
+
+def big_components(mask: np.ndarray, min_px: int) -> np.ndarray:
+    from scipy import ndimage  # noqa: PLC0415
+
+    lab, n = ndimage.label(mask, structure=np.ones((3, 3)))
+    if n == 0:
+        return np.zeros_like(mask, dtype=bool)
+    sizes = ndimage.sum(mask, lab, index=np.arange(1, n + 1))
+    keep = np.zeros(n + 1, dtype=bool)
+    keep[1:] = sizes >= min_px
+    return keep[lab]
+
+
+def hybrid_matte(rgb: np.ndarray, key: tuple[int, int, int], kind: str,
+                 b: np.ndarray) -> tuple[np.ndarray, np.ndarray, dict]:
+    """(rgb, alpha 0..1, stats) from the render and BiRefNet's alpha `b`."""
+    from scipy import ndimage  # noqa: PLC0415
+
+    if kind in ("grey", "noisy"):
+        return rgb, np.clip((b - 0.03) / 0.94, 0.0, 1.0), {"override": 0, "clash": False}
+    ka = key_alpha(rgb, key, kind)
+    pure_big = big_components(ka <= 0.0, BIG)
+    alpha = np.where(b >= SURE_FG, 1.0, np.where(b <= SURE_BG, 0.0, ka))
+    override = int((pure_big & (b >= SURE_FG)).sum())
+    clash = override > CLASH_PX
+    cut = pure_big & (b < SURE_FG) if clash else pure_big
+    alpha = np.where(cut, 0.0, alpha)
+    outside = big_components(alpha < 0.5, BIG)
+    near = ndimage.distance_transform_edt(~outside) <= BAND
+    k = np.asarray(key, dtype=np.float32)
+    lo = int(np.argmin(k))
+    spill = [c for c in range(3) if c != lo and k[c] - k[lo] >= 40]
+    dominant = np.all(np.stack([rgb[:, :, c] > rgb[:, :, lo] for c in spill]), axis=0)
+    out = rgb.copy()
+    sure = (b >= 0.98) & (ka >= 1.0)
+    # a soft pixel copies un-cast solid hair (the model paints bounce onto whole
+    # strands); a crisp rim that reads as backdrop copies its own garment
+    for tgt, src in ((dominant & (alpha > 0) & (b < SOFT), sure & ~dominant),
+                     (dominant & (alpha > 0) & (b >= SOFT) & near & (ka < 1.0), sure)):
+        if tgt.any() and src.any():
+            _, (iy, ix) = ndimage.distance_transform_edt(~src, return_indices=True)
+            out[tgt] = rgb[iy[tgt], ix[tgt]]
+    return np.clip(out, 0, 255), alpha, {"override": override, "clash": clash}
+
+
+def hybrid_remover(mask_fn: Callable[[Image.Image], np.ndarray] | None = None) -> Remover:
+    """BiRefNet + the key, per image, whatever its backdrop. `mask_fn` returns
+    the learned alpha 0..1; the default is BiRefNet-general on the CPU, so a
+    CPU-lane job never touches the card. The stats ride on `.info["hybrid"]`."""
+
+    def _birefnet(img: Image.Image) -> np.ndarray:
+        from rembg import new_session, remove  # noqa: PLC0415
+
+        if HYBRID_MODEL not in _sessions:
+            _sessions[HYBRID_MODEL] = new_session(HYBRID_MODEL, providers=["CPUExecutionProvider"])
+        m = remove(img.convert("RGB"), session=_sessions[HYBRID_MODEL], only_mask=True)
+        return np.asarray(m.convert("L"), dtype=np.float32) / 255.0
+
+    fn = mask_fn or _birefnet
+
+    def _remove(img: Image.Image) -> Image.Image:
+        rgb = np.asarray(img.convert("RGB"), dtype=np.float32)
+        key, dev = sample_backdrop(img)
+        kind = backdrop_kind(key, dev)
+        out, alpha, stats = hybrid_matte(rgb, key, kind, fn(img))
+        cut = Image.fromarray(np.dstack([out, alpha * 255.0]).astype(np.uint8), "RGBA")
+        cut.info["hybrid"] = {**stats, "kind": kind, "key": list(key)}
+        return cut
+
+    return _remove
+
+
+def bleed(rgba: np.ndarray) -> np.ndarray:
+    """Fully transparent pixels take the colour of the nearest visible one.
+
+    Invisible on its own, the backdrop under them comes back on save: WebP keeps
+    colour at half resolution, so a one-pixel strand beside them is averaged with
+    it. Measured 2026-10-20: sienna's flyaways left the matte brown and the
+    .webp rose (200,90,115)."""
+    from scipy import ndimage  # noqa: PLC0415
+
+    clear = rgba[..., 3] == 0
+    if not clear.any() or clear.all():
+        return rgba
+    _, (iy, ix) = ndimage.distance_transform_edt(clear, return_indices=True)
+    out = rgba.copy()
+    out[..., :3][clear] = rgba[..., :3][iy[clear], ix[clear]]
+    return out
+
+
 # ----------------------------------------------------------------- report
 
 def _components(mask: np.ndarray, max_side: int = 128) -> int:
@@ -502,10 +637,14 @@ def cutout_file(src: Path, out_dir: Path, *, remover: Remover, model: str,
     out_dir.mkdir(parents=True, exist_ok=True)
     img = Image.open(src)
     cut = remover(img)
+    hybrid = cut.info.get("hybrid")
     frame_note = None
     if size:
         cut = fit_canvas(cut, size)
+    cut = Image.fromarray(bleed(np.asarray(cut.convert("RGBA"))), "RGBA")
     report = alpha_report(np.asarray(cut.getchannel("A")))
+    if hybrid and hybrid.get("clash"):
+        report["flags"].append("key-clash")     # a garment the backdrop's colour
     png = out_dir / f"{src.stem}.png"
     cut.save(png)
     outputs = {"png": str(png)}
@@ -521,6 +660,7 @@ def cutout_file(src: Path, out_dir: Path, *, remover: Remover, model: str,
         "outputs": outputs,
         "report": report,
         "framing": frame_note,
+        "hybrid": hybrid,
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
     meta = source_meta(src)
