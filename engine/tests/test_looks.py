@@ -125,6 +125,29 @@ def test_any_item_he_writes_is_banned_not_only_known_words(monkeypatch):
             assert not L.avoids(o, ban), o
 
 
+def test_style_synonym_and_length_words_steer_the_draft(monkeypatch):
+    """Jeremy, 2026-10-20, on kasia's draft: "It also really didn't pick up
+    her ... professional looks, casual wear direction, did it?" Her lines,
+    verbatim: casual came back overalls and a sweatshirt, workout had no
+    jumpsuit, dressy was midi dresses."""
+    _record(monkeypatch, style="Elegant and sexy",
+            avoid="Denim, cargo pants, cargo shorts, oversized tee worn as a dress",
+            outfits={"everyday": "Chic professional looks", "workout": "Jumpsuits",
+                     "dressy": "Midriff tops and short skirts, short dresses", "date": "Revealing outfits"})
+    for s in range(4):
+        d = L.draft_looks("kasia", s)
+        casual = " | ".join(lk["outfit"] for lk in d["casual"])
+        assert not re.search(r"hoodie|sweatshirt|overalls|graphic|joggers|flannel|cargo", casual), casual
+        assert len(re.findall(r"tailored|silk|blouse|pencil|tweed|polo|vest|cinched", casual)) >= 2, casual
+        for lk in d["workout"]:
+            assert re.search(r"jumpsuit|unitard|onesie|one-piece|romper", lk["outfit"]), lk
+        for lk in d["fancy_dining_gallery"]:
+            assert not re.search(r"midi|maxi|knee-length|column", lk["outfit"]), lk
+    # "cargo shorts" bans cargo shorts, not every pair of shorts
+    assert not L.avoids("a red one-piece unitard with short shorts", L.banned("cargo shorts"))
+    assert L.avoids("denim shorts", L.banned("shorts"))
+
+
 def test_the_avoid_line_reaches_cues_colours_and_the_job_looks(monkeypatch):
     # sandra's line: the revealing cues it names are never appended
     ban = L.banned("crop tops, micro skirts, plunging necklines, bare midriff - none of it is her")

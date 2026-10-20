@@ -77,6 +77,16 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} zip-front knit romper with short shorts, the zip pulled down a little",
         "a fitted {c} long-sleeve knit unitard cut to mid-thigh, worn as the whole outfit",
         "a {c} stretchy knit shorts-romper with a square neckline and thin straps",
+        # Jeremy, 2026-10-20, kasia's "Chic professional looks": the pool above is
+        # streetwear and had nothing chic to find - polished daytime looks
+        "a {c} silk blouse tucked into a high-waisted pencil skirt",
+        "a {c} fine-knit polo tucked into tailored wide-leg trousers",
+        "a {c} sleeveless mock-neck knit top and tailored high-waisted shorts",
+        "a cropped {c} tweed jacket over a matching mini skirt",
+        "a {c} fitted knit midi dress cinched with a thin belt",
+        "a {c} wrap blouse and tailored cigarette trousers",
+        "a {c} satin button-up shirt tucked into a tailored mini skirt",
+        "a {c} fitted vest worn as a top with tailored trousers",
     ),
     "workout": (
         "a {c} sports bra and matching high-waisted leggings",
@@ -123,6 +133,13 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} fitted long-sleeve midi dress with a keyhole neckline",
         "a fitted {c} long-sleeve knit romper with a square neckline and tailored mid-thigh shorts",
         "a {c} stretchy knit one-piece with a high neck, long sleeves and short shorts, a slim gold belt",
+        # kasia's dressy line, 2026-10-20: "Midriff tops and short skirts, short
+        # dresses" - the pool had no crop top and few short hems
+        "a {c} satin cropped bustier top and a tailored mini skirt",
+        "a cropped {c} tailored jacket buttoned over a bare midriff, with a matching mini skirt",
+        "a {c} cropped corset top and a satin mini skirt",
+        "a {c} satin mini dress with a square neckline",
+        "a {c} structured strapless mini dress",
     ),
     "fancy_town": (
         "a {c} sequined mini dress",
@@ -289,10 +306,25 @@ _AVOID_WORDS: tuple[tuple[str, str], ...] = (
 )
 
 
+def _word_bans(phrase: str, item: str) -> bool:
+    """Whether a known word in one item of her line bans its whole family. Not
+    when it is only the head of a qualified garment: kasia's "cargo shorts"
+    banned every pair of shorts - and with them every unitard cut to the
+    thigh, which is what her "Jumpsuits" workout line asked for (2026-10-20).
+    "cargo shorts" bans cargo shorts; "shorts" alone bans shorts."""
+    m = re.search(rf"\b(?:{phrase})\b", item, re.I)
+    if not m:
+        return False
+    words = [w for w in re.findall(r"[a-z]+", item.lower()) if w not in _PHRASE_STOP]
+    qualified = GARMENT_RE.search(item) and len(words) >= 2 and m.group(0).lower() == words[-1]
+    return not qualified
+
+
 def banned(avoid: str) -> re.Pattern | None:
     """A matcher for what her "Never wears" line rules out, None when the line
     carries nothing the generator knows how to act on."""
-    pats = [rx for phrase, rx in _AVOID_WORDS if re.search(rf"\b(?:{phrase})\b", avoid or "", re.I)]
+    pats = [rx for phrase, rx in _AVOID_WORDS
+            if any(_word_bans(phrase, item) for item in re.split(r"[,;]", avoid or ""))]
     # whole words: "red" must not ban "tailored"
     pats += [rf"\b{re.escape(c)}s?\b" for c in _colours_in(avoid)]
     pats += _avoid_phrases(avoid)
@@ -473,7 +505,7 @@ REGISTERS: tuple[tuple[str, str, tuple[tuple[str, str, str], ...]], ...] = (
          r"dress|blouse|shirt|\btee\b|knit|cami|bodysuit|\btop\b", r"sheer|mesh|lace|jacket|hoodie|sweatshirt|track|sports bra|bralette|leather|vinyl|latex|sequin"),
         ("the top cropped to show her midriff",
          r"\btop\b|\btee\b|shirt|sweater|blouse|knit|hoodie|sweatshirt|tank|polo|henley|cardigan",
-         r"crop|dress|jumpsuit|unitard|onesie|romper|bodysuit|overalls|tucked|corset|bustier|bralette|bikini|tube|"
+         r"crop|dress|jumpsuit|unitard|onesie|one-piece|romper|bodysuit|overalls|tucked|corset|bustier|bralette|bikini|tube|"
          r"worn open|knotted|tied at"),
         ("the hem cut well above mid-thigh", _HEM, r"mini|micro|short|tennis"),
         ("with a slit up the thigh", _HEM, r"slit|mini|micro|short|tennis"),
@@ -660,6 +692,51 @@ def _singular(w: str) -> str:
     return w if w in _ALWAYS_PLURAL else re.sub(r"(ss)es$|s$", lambda m: m.group(1) or "", w)
 
 
+# STYLE WORDS in a direction line. Jeremy, 2026-10-20, on kasia's draft: "It
+# also really didn't pick up her ... professional looks, casual wear direction,
+# did it?" - "Chic professional looks" names no garment, so the casual pick was
+# random streetwear. A style word now steers the pick: (words he writes, looks
+# that fit, looks that never fit). Fitting looks come first; looks that never
+# fit leave the pool while enough are left to fill the category.
+STYLES: tuple[tuple[str, str, str], ...] = (
+    (r"chic|polished|elegant|classy|sophisticated|professional|office|tailored|smart|refined|put[- ]together",
+     r"tailored|blazer|sheath|trousers|silk|satin|blouse|turtleneck|pencil|wrap|bodysuit|column|cinched|tweed|"
+     r"mock-neck|polo|vest|structured|fine-knit",
+     r"jeans|denim|hoodie|sweatshirt|overalls|joggers|cargo|graphic|flannel|distressed|cut-off|baby tee|"
+     r"crochet|track|bike shorts|henley|tennis|drawstring|striped|crewneck|onesie"),
+    (r"sporty|athletic|active", r"sports bra|leggings|track|athletic|tennis|bike shorts|running|joggers|zip", r""),
+    (r"edgy|grunge|rock|punk", r"leather|vinyl|latex|chain|mesh|corset|fishnet|distressed|black",
+     r"floral|ruffle|puff|tiered|crochet"),
+    (r"romantic|feminine|girly|sweet|soft", r"floral|ruffle|lace|puff|sweetheart|tiered|smocked|milkmaid|flutter|wrap",
+     r"leather|vinyl|latex|chain|cargo"),
+    (r"streetwear|laid[- ]back|relaxed|comfy", r"hoodie|sweatshirt|jeans|denim|joggers|cargo|graphic|tee|overalls", r""),
+)
+
+# Garments that answer for each other: "Jumpsuits" for workout found nothing in
+# a pool that says unitard.
+SYNONYMS: dict[str, str] = {
+    "jumpsuit": r"jumpsuit|unitard|catsuit|onesie|one-piece|romper",
+    "romper": r"romper|playsuit|shorts-unitard|one-piece",
+    "unitard": r"unitard|catsuit|jumpsuit|one-piece",
+    "pants": r"pants|trousers|slacks",
+    "trouser": r"trousers|pants|slacks",
+}
+
+# Length and cut words: (words he writes, looks that fit, looks that never fit).
+CUTS: tuple[tuple[str, str, str], ...] = (
+    (r"short (?:skirts?|dress(?:es)?|hems?)|minis?\b|micro", r"\bmini\b|micro|short",
+     r"midi|maxi|knee-length|column|floor|bias-cut|long (?:skirt|dress)|flowing|ankle"),
+    (r"midriff|crop(?:ped)? tops?", r"crop|midriff|bralette|bustier|bandeau|tube top|sports bra", r""),
+    (r"long (?:skirts?|dress(?:es)?)|maxi|midi|floor[- ]length", r"midi|maxi|long|floor", r"\bmini\b|micro"),
+)
+
+
+def _direction(guide: str) -> list[tuple[str, str]]:
+    """(fits, never) for every style and cut word the line carries."""
+    g = (guide or "").lower()
+    return [(fit, never) for words, fit, never in STYLES + CUTS if re.search(rf"\b(?:{words})", g)]
+
+
 def guided_templates(pool: str | list[str], guide: str, n: int, rng: random.Random,
                      ban: re.Pattern | None = None) -> list[str]:
     """`n` templates from the pool (a category name, "*" for every category, or
@@ -674,15 +751,28 @@ def guided_templates(pool: str | list[str], guide: str, n: int, rng: random.Rand
     pool = [t for t in pool if not avoids(t, ban)]
     nouns = {_singular(m.group(0)) for m in GARMENT_RE.finditer(guide or "")}
     nouns -= {"set", "top"}                   # too common to mean anything
+    rules = _direction(guide)
+    for _, never in rules:
+        if never:
+            kept = [t for t in pool if not re.search(never, t, re.I)]
+            pool = kept if len(kept) >= n else pool
+
+    def noun_hit(w: str, t: str) -> bool:
+        return bool(re.search(SYNONYMS.get(w) or rf"\b{re.escape(w)}(?:e?s)?\b", t, re.I))
 
     def hits(t: str) -> int:
-        return sum(bool(re.search(rf"\b{re.escape(w)}(?:e?s)?\b", t, re.I)) for w in nouns)
+        return sum(noun_hit(w, t) for w in nouns)
 
     named = [t for t in pool if hits(t)]
     rng.shuffle(named)
     named.sort(key=hits, reverse=True)       # stable: shuffled within a score
-    rest = [t for t in pool if t not in named]
     picked = named[:n]
+    # a style or cut word guarantees a SHARE, sampled: every "edgy" character
+    # given the same two edgy looks is the sameness of 2026-10-12 again
+    fits = [t for t in pool if t not in picked and any(re.search(f, t, re.I) for f, _ in rules)]
+    if fits:
+        picked += rng.sample(fits, min(len(fits) // 3, n - len(picked)))
+    rest = [t for t in pool if t not in picked]
     picked += rng.sample(rest, min(len(rest), n - len(picked)))
     rng.shuffle(picked)
     return picked
