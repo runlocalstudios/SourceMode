@@ -167,7 +167,10 @@ def hybrid(rgb: np.ndarray, key, kind: str, b: np.ndarray) -> tuple[np.ndarray, 
         spill = [c for c in range(3) if c != lo and k[c] - k[lo] >= 40]
         anchor = rgb[:, :, lo]
         dominant = np.all(np.stack([rgb[:, :, c] > anchor for c in spill]), axis=0)
-        out = anchor_clamp(rgb, key, near & dominant & (alpha > 0))
+        # ...and only where the pixel actually reads as the backdrop (ka < 1). A
+        # garment in the key's own family - sienna's purple flares, every maroon -
+        # is R and B over G too, and clamping its rim turned it grey (2026-10-20).
+        out = anchor_clamp(rgb, key, near & dominant & (ka < 1.0) & (alpha > 0))
     stats = {"override": int((pure_big & (b >= SURE_FG)).sum()),
              "dropped": int(((ka >= 1.0) & (b <= SURE_BG) & ~pure_big).sum())}
     return np.clip(out, 0, 255), alpha, stats
@@ -185,7 +188,7 @@ def measure(rgba: np.ndarray, rgb: np.ndarray, key, kind: str) -> dict:
     halo = 0.0
     if kind in ("pink", "green"):
         rim = fig & (ndimage.distance_transform_edt(fig) <= 4)
-        keyish = key_alpha(rgba[..., :3].astype(np.float32), key, kind) < 0.5
+        keyish = key_alpha(rgba[..., :3].astype(np.float32), key, kind) < 1.0
         halo = float((rim & keyish).sum() / max(rim.sum(), 1))
     return {"coverage": rep["coverage"], "partial": rep["partial"], "flags": rep["flags"],
             "halo": round(halo, 4),
@@ -219,7 +222,8 @@ def run() -> None:
         metrics = json.loads(mpath.read_text(encoding="utf-8")) if mpath.is_file() else {}
         tiles = []
         for label, p, root in items:
-            look = f"{label}_{p.parent.name}"
+            # a folder holding more than one shot (edit-era re-rolls) keys by file too
+            look = f"{label}_{p.parent.name}" + (f"_{p.stem}" if len(list(p.parent.glob("shot_*.png"))) > 1 else "")
             img = Image.open(p)
             rgb = np.asarray(img.convert("RGB"), dtype=np.float32)
             key, dev = sample_backdrop(img)
