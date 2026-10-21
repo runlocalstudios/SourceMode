@@ -157,8 +157,16 @@ def test_plan_assigns_look_numbers_once_and_can_extend_a_pack():
     work = [s for s in slots if s["category"] == "work"]
     assert work[0]["outfit"] == "a blazer" and work[1]["outfit"] == ""      # unfilled looks stay blank
     assert work[0]["filename"] == "work_01_standing.webp"
-    ext = make_plan("priyanka", counts={"casual": 2}, start_after={"casual": 7})
-    assert [s["id"] for s in plan_slots(ext)] == ["casual_08", "casual_09"]
+    # A plan approved under the old numbering (casual_08.. after seven in the
+    # game) keeps its ids but ships positionally, replacing her looks: the game
+    # draws 1..lookCount, so files numbered on from 28 were never shown
+    # (Jeremy, 2026-10-21: "the new assets are supposed to replace the existing").
+    old = {"character": "nisha", "pose": "standing",
+           "categories": {"casual": {"lookCount": 2, "looks": [
+               {"look": 8, "id": "casual_08", "outfit": "a", "hair": "b"},
+               {"look": 9, "id": "casual_09", "outfit": "a", "hair": "b"}]}}}
+    assert [(s["id"], s["filename"]) for s in plan_slots(old)] == [
+        ("casual_08", "casual_01_standing.webp"), ("casual_09", "casual_02_standing.webp")]
 
 
 def test_place_picks_best_per_slot_and_names_by_contract(tmp_path: Path):

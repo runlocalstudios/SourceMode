@@ -291,18 +291,19 @@ def assets_plan(
     from .assets.catalog import PACK_28, existing_looks, make_plan, plan_slots  # noqa: PLC0415
 
     counts = PACK_28 if pack == "28" else {k: int(v) for k, v in (kv.split("=") for kv in pack.split(","))}
-    start_after = existing_looks(game_root / "src" / "assets" / "characters" / character / "outfits") if game_root else {}
     look_map = json.loads(looks.read_text(encoding="utf-8")) if looks else None
     plan = make_plan(character, counts=counts, pose=pose, lora=lora,
                      source_asset=str(source_asset) if source_asset else None,
-                     reference=str(reference) if reference else None, looks=look_map, start_after=start_after)
+                     reference=str(reference) if reference else None, looks=look_map)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(plan, indent=1), encoding="utf-8")
     slots = plan_slots(plan)
     blank = sum(1 for s in slots if not s["outfit"] or not s["hair"])
     rprint(f"plan for [cyan]{character}[/cyan]: {len(slots)} looks -> {out}")
-    if start_after:
-        rprint(f"  extending shipped looks: {start_after}")
+    # the pack replaces her looks in the game, so say what it will overwrite
+    shipped = existing_looks(game_root / "src" / "assets" / "characters" / character / "outfits") if game_root else {}
+    if shipped:
+        rprint(f"  replaces her shipped looks: {shipped}")
     if blank:
         rprint(f"  [yellow]{blank} looks have no outfit/hair yet[/yellow] — fill them in before `assets render`")
 

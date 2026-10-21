@@ -460,7 +460,7 @@ def _cfg(tmp_path: Path) -> dict:
     return {"paths": {"outputs": str(tmp_path / "out"), "library": str(tmp_path / "lib")}}
 
 
-def test_draft_extends_her_shipped_looks_and_approve_writes_the_pack_plan(tmp_path, ash, monkeypatch):
+def test_draft_numbers_from_one_to_replace_her_shipped_looks_and_approve_writes_the_pack_plan(tmp_path, ash, monkeypatch):
     cfg = _cfg(tmp_path)
     from sourcemode.assets import lora as LORA
     monkeypatch.setattr(LORA, "resolve_lora", lambda cfg, c: {
@@ -473,8 +473,11 @@ def test_draft_extends_her_shipped_looks_and_approve_writes_the_pack_plan(tmp_pa
     st = L.draft(cfg, "ash")
     assert st["state"] == "draft" and st["blank"] == 0
     ids = [lk["id"] for c in st["categories"] for lk in c["looks"]]
-    assert "casual_08" in ids and "casual_01" not in ids     # 7 shipped -> 8..14
-    assert "work_06" in ids and "workout_01" in ids
+    # 7 casual shipped already: the pack replaces them, so it is casual_01..07
+    # again, not 08..14 (Jeremy, 2026-10-21: "the new assets are supposed to
+    # replace the existing")
+    assert "casual_01" in ids and "casual_08" not in ids
+    assert "work_01" in ids and "workout_01" in ids
     assert L.draft_path(Path(cfg["paths"]["outputs"]), "ash").is_file()
     assert not L.approved_path(Path(cfg["paths"]["outputs"]), "ash").is_file()
     # the guide line shows what her record says for that category
@@ -483,16 +486,16 @@ def test_draft_extends_her_shipped_looks_and_approve_writes_the_pack_plan(tmp_pa
     assert next(c for c in st["categories"] if c["key"] == "work")["guide"] == "a short black shirt-dress uniform"
 
     # his edit lands in the draft
-    st = L.save(cfg, "ash", {"all": [{"id": "casual_08", "outfit": "a cobalt moto jacket over a black cami",
+    st = L.save(cfg, "ash", {"all": [{"id": "casual_03", "outfit": "a cobalt moto jacket over a black cami",
                                       "hair": "her hair worn loose"}]})
-    got = next(lk for c in st["categories"] for lk in c["looks"] if lk["id"] == "casual_08")
+    got = next(lk for c in st["categories"] for lk in c["looks"] if lk["id"] == "casual_03")
     assert got["outfit"] == "a cobalt moto jacket over a black cami"
 
     # a blank refuses approval, by name
-    L.save(cfg, "ash", {"all": [{"id": "work_06", "outfit": "", "hair": "her hair worn loose"}]})
-    with pytest.raises(ValueError, match="work_06"):
+    L.save(cfg, "ash", {"all": [{"id": "work_02", "outfit": "", "hair": "her hair worn loose"}]})
+    with pytest.raises(ValueError, match="work_02"):
         L.approve(cfg, "ash")
-    L.save(cfg, "ash", {"all": [{"id": "work_06", "outfit": "the uniform", "hair": "her hair worn loose"}]})
+    L.save(cfg, "ash", {"all": [{"id": "work_02", "outfit": "the uniform", "hair": "her hair worn loose"}]})
 
     st = L.approve(cfg, "ash")
     assert st["state"] == "approved" and st["approved_at"]
@@ -516,7 +519,7 @@ def test_draft_extends_her_shipped_looks_and_approve_writes_the_pack_plan(tmp_pa
     fresh = [lk["outfit"] for c in st2["categories"] for lk in c["looks"] if c["key"] == "casual"]
     assert fresh != [lk["outfit"] for c in st["categories"] for lk in c["looks"] if c["key"] == "casual"]
     # edits go into the draft, not the approved plan
-    L.save(cfg, "ash", {"all": [{"id": "casual_08", "outfit": "a second-roll edit", "hair": "her hair worn loose"}]})
+    L.save(cfg, "ash", {"all": [{"id": "casual_03", "outfit": "a second-roll edit", "hair": "her hair worn loose"}]})
     kept = json.loads(plan_file.read_text(encoding="utf-8"))
     assert all(e["outfit"] != "a second-roll edit" for e in kept["categories"]["casual"]["looks"])
     st3 = L.approve(cfg, "ash")

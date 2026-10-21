@@ -456,7 +456,7 @@ function drawLooks(el,st){
   if(st.state==='none'){
     const n=Object.values(st.shipped||{}).reduce((a,b)=>a+b,0);
     h+='<div class=sub>Nothing drafted yet. The asset pack on the Shoots tab stays locked until 28 looks are approved.'
-      +(n?' She has '+n+' outfits in the game already, so the new looks number on from there.':'')+'</div>'
+      +(n?' She has '+n+' outfits in the game already; this pack replaces them when you approve it.':'')+'</div>'
       +'<div class=row><button class="btn btn-primary" data-act=lk_draft>Draft the 28 looks</button></div>';
     el.innerHTML=h; return;
   }

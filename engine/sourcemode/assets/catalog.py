@@ -68,21 +68,24 @@ def existing_looks(outfits_dir: Path) -> dict[str, int]:
 
 def make_plan(character: str, *, counts: dict[str, int] | None = None, pose: str = DEFAULT_POSE,
               lora: str | None = None, source_asset: str | None = None, reference: str | None = None,
-              looks: dict[str, list[dict]] | None = None, start_after: dict[str, int] | None = None) -> dict:
-    """A plan is the single place look numbers are decided.
+              looks: dict[str, list[dict]] | None = None) -> dict:
+    """A plan is the single place look numbers are decided, and they start at 1:
+    a pack REPLACES what the game ships for her. Plans used to number on from
+    her shipped looks (casual_08 after casual_01-07), which put 28 files in the
+    game that nothing could show - the game draws looks 1..lookCount per
+    category (Jeremy, 2026-10-21: "the new assets are supposed to replace the
+    existing").
 
     looks: {category: [{"outfit": ..., "hair": ...}, ...]} — one pairing per look,
     in look-number order. Missing pairings are left blank for the author to
     fill; rendering refuses blank ones."""
     counts = counts or PACK_28
-    start_after = start_after or {}
     cats = {}
     for cat, n in counts.items():
         given = (looks or {}).get(cat, [])
-        first = start_after.get(cat, 0) + 1
         entries = []
         for i in range(n):
-            look = first + i
+            look = 1 + i
             pair = given[i] if i < len(given) else {}
             entries.append({"look": look, "id": look_id(cat, look),
                             "outfit": pair.get("outfit", ""), "hair": pair.get("hair", "")})
@@ -93,14 +96,20 @@ def make_plan(character: str, *, counts: dict[str, int] | None = None, pose: str
 
 
 def plan_slots(plan: dict) -> list[dict]:
-    """Every (category, look) the plan defines, flattened, with its runtime name."""
+    """Every (category, look) the plan defines, flattened, with its runtime name.
+
+    The runtime name is POSITIONAL - the first casual look ships as casual_01
+    whatever the plan calls it - so a plan approved under the old numbering
+    (nisha's and kasia's say casual_08.., with renders, judge items and queued
+    re-rolls under those ids) still replaces her looks in the game rather than
+    landing beside them. The id and folder keep the plan's own number."""
     out = []
+    pose = plan.get("pose", DEFAULT_POSE)
     for cat, block in plan["categories"].items():
-        for entry in block["looks"]:
+        for i, entry in enumerate(block["looks"]):
             out.append({"category": cat, "look": entry["look"], "id": entry["id"],
                         "outfit": entry["outfit"], "hair": entry["hair"],
-                        "pose": plan.get("pose", DEFAULT_POSE),
-                        "filename": runtime_name(cat, entry["look"], plan.get("pose", DEFAULT_POSE))})
+                        "pose": pose, "filename": runtime_name(cat, i + 1, pose)})
     return out
 
 

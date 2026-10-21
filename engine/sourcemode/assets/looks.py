@@ -14,8 +14,10 @@ edit, not a result.
     outputs/game-assets/<char>/plan_28.draft.json   his to edit
     outputs/game-assets/<char>/plan_28.json         approved; the pack renders this
 
-Look numbers extend what the game already ships for her (`existing_looks`),
-so a character with 28 outfits in the game drafts 29-56, not a collision.
+Look numbers start at 1: the pack replaces what the game ships for her.
+(Drafts used to number on from her shipped looks, 29-56 after 28, which the
+game cannot show - it draws looks 1..lookCount per category. Jeremy,
+2026-10-21: "the new assets are supposed to replace the existing".)
 """
 
 from __future__ import annotations
@@ -943,7 +945,7 @@ def draft(cfg: dict, character: str) -> dict:
     plan = make_plan(c, lora=(lora or {}).get("path"),
                      source_asset=str(src) if src else None,
                      reference=str(ref) if ref else None,
-                     looks=draft_looks(c, seed), start_after=shipped(c))
+                     looks=draft_looks(c, seed))
     plan["seed"] = seed
     _write(draft_path(out, c), plan)
     return state(cfg, c)
