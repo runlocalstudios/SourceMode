@@ -113,6 +113,9 @@ document.addEventListener('click',async e=>{
   SM.set($('bars'),null,'<div class=actbar>'
     +'<button class="btn" data-act=copy>Copy the snippet</button>'
     +'<button class="btn btn-ghost" onclick="location.reload()">Add another</button>'
+    /* this page replaced the Characters frame, so going back is a plain link -
+       SM.nav would only move the hash of the frame it is already in */
+    +'<a class="btn btn-ghost" href="/characters#'+encodeURIComponent(d.character)+'">Back to characters</a>'
     +'</div>');
   window.__snip=d.snippet;
 });
