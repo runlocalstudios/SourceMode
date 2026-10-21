@@ -41,6 +41,53 @@ def seed_for(index: int) -> int:
     return SEED_BASE + index * 1000
 
 
+# Jeremy, 2026-10-20: "auto-reroll ... reroll those before the queue moves on to
+# the next thing when they are wrong". A fresh shot that comes back chest-up
+# when mid-thigh was asked, or with her head cut off at the top edge, is drawn
+# again on a new seed inside the same job. Kasia's framing A/B showed no prompt
+# wording fixes a chest-up dress; a new seed does. The stride is not redo's
+# 10007, so a later reject's re-roll never lands on a seed tried here.
+REROLLS = 3
+REROLL_STRIDE = 7919
+TOP_RUN = 40         # px of unbroken non-backdrop along every one of the top 4 rows
+
+
+def touches_top(path: Path) -> bool:
+    """True when her head runs off the top edge of the render. The backdrop is
+    keyed from the top rows' own corners (the studio darkens toward the top, so
+    the frame-wide key called 96 clean shots touching), and she touches when an
+    unbroken run of more than TOP_RUN px differs from it on each of the top 4
+    rows. On 312 pack renders, 2026-10-20: 10 of the 11 the cutout found
+    touching the top, no false alarms."""
+    import numpy as np  # noqa: PLC0415
+    from PIL import Image  # noqa: PLC0415
+
+    a = np.asarray(Image.open(path).convert("RGB"), dtype=np.float32)[:4]
+    key = np.median(np.concatenate([a[:, :80].reshape(-1, 3), a[:, -80:].reshape(-1, 3)]), axis=0)
+    off = np.abs(a - key).max(axis=2) > 30
+
+    def longest(row) -> int:
+        best = cur = 0
+        for v in row:
+            cur = cur + 1 if v else 0
+            best = max(best, cur)
+        return best
+
+    return min(longest(r) for r in off) > TOP_RUN
+
+
+def framing_problem(asked: dict, got: dict, path: Path) -> str | None:
+    """Why a fresh shot gets re-drawn, or None when its framing is fine."""
+    if asked.get("crop") in ("mid-thigh-up", "knee-up", "full-body") and got.get("crop") == "chest-up":
+        return "chest-up"
+    try:
+        if touches_top(path):
+            return "head cut off"
+    except (OSError, ValueError):
+        pass
+    return None
+
+
 def renders_root(out_root: Path, character: str) -> Path:
     return Path(out_root) / "game-assets" / character / "renders"
 
@@ -103,7 +150,10 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
             continue
         d = root / slot_dirname(slot)
         d.mkdir(exist_ok=True)
-        s = seed if seed is not None else seed_for(i)
+        base = seed if seed is not None else seed_for(i)
+        # a shot re-drawn for its framing sits under its re-draw seed
+        s = next((base + REROLL_STRIDE * k for k in range(REROLLS + 1)
+                  if (d / f"shot_00_s{base + REROLL_STRIDE * k}.png").exists()), base)
         dest = d / f"shot_00_s{s}.png"
         prompt = shot_prompt(character, slot, plan.get("trigger"), backdrop=backdrop)
         try:
@@ -112,20 +162,47 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
                 # re-run skipped all 28 because the old shots were on disk
                 log(f"  {slot['id']}: the look changed since its shot was rendered - re-rendering")
                 dest.unlink()
-            if not dest.exists():
+                s, dest = base, d / f"shot_00_s{base}.png"
+
+            def draw(seed: int, path: Path) -> bool:
                 files = client.outputs(client.wait(client.submit(
-                    t2i_workflow(cfg, prompt, s, f"pack/{character}/{slot['id']}",
+                    t2i_workflow(cfg, prompt, seed, f"pack/{character}/{slot['id']}",
                                  lora_path=lora_path, negative=negative, width=W, height=H)),
                     timeout_s=3600))
-                if not files:
-                    log(f"  {slot['id']}: no output")
-                    continue
-                client.fetch(files[0], dest)
+                if files:
+                    client.fetch(files[0], path)
+                return bool(files)
+
+            def adherence(path: Path) -> dict:
+                try:
+                    return check(asked, measure(path))
+                except Exception as exc:  # noqa: BLE001 - a measurement, never a blocker
+                    return {"failed": [], "soft": [], "got": {}, "error": str(exc)}
+
             asked = pose_fields(character, slot)["asked"]
-            try:
-                adh = check(asked, measure(dest))
-            except Exception as exc:  # noqa: BLE001 - a measurement, never a blocker
-                adh = {"failed": [], "soft": [], "got": {}, "error": str(exc)}
+            fresh = not dest.exists()
+            if fresh and not draw(s, dest):
+                log(f"  {slot['id']}: no output")
+                continue
+            adh = adherence(dest)
+            why = framing_problem(asked, adh.get("got") or {}, dest) if fresh else None
+            for k in range(1, REROLLS + 1):
+                if not why:
+                    break
+                s2 = s + REROLL_STRIDE * k
+                alt = d / f"shot_00_s{s2}.png"
+                log(f"  {slot['id']}: {why} - re-drawing on seed {s2}")
+                if not draw(s2, alt):
+                    break
+                alt_adh = adherence(alt)
+                alt_why = framing_problem(asked, alt_adh.get("got") or {}, alt)
+                if alt_why:
+                    alt.unlink(missing_ok=True)       # the first draw stays the fallback
+                    continue
+                dest.unlink(missing_ok=True)
+                dest, s, adh, why = alt, s2, alt_adh, None
+            if why:
+                log(f"  {slot['id']}: still {why} after {REROLLS} re-draws - kept the first, judge it")
             e = embed_image(dest)
             score = round(float(cosine(ref, e)), 4) if (ref is not None and e is not None) else None
             meta = {"source": str(dest),

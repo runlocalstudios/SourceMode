@@ -181,3 +181,36 @@ def test_a_key_backdrop_trial_renders_into_its_own_root_and_never_the_packs(tmp_
     metas = P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n", log=lambda s: None)
     assert all(P.STUDIO_BACKDROP in m["prompt"] for m in metas)
     assert all(Path(m["source"]).is_relative_to(P.renders_root(out, "amanda")) for m in metas)
+
+
+def test_a_fresh_shot_framed_wrong_is_redrawn_in_the_same_job(tmp_path, quiet, monkeypatch):
+    """Jeremy, 2026-10-20: "reroll those before the queue moves on to the next
+    thing when they are wrong". casual_01's first draw is chest-up; its second
+    seed is fine and replaces it. casual_02 never comes right and keeps its
+    first draw after REROLLS tries, for him to judge."""
+    bad = {P.SEED_BASE, *(P.SEED_BASE + 1000 + P.REROLL_STRIDE * k for k in range(P.REROLLS + 1))}
+    monkeypatch.setattr(P, "framing_problem",
+                        lambda asked, got, p: "chest-up" if int(p.stem.split("_s")[1]) in bad else None)
+    out = tmp_path / "out"
+    client = FakeClient()
+    metas = P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n", log=lambda s: None)
+    assert metas[0]["seed"] == P.SEED_BASE + P.REROLL_STRIDE
+    assert metas[1]["seed"] == P.SEED_BASE + 1000                 # the first draw is the fallback
+    assert len(client.seen) == 2 + 1 + P.REROLLS        # casual_01 twice, casual_02 every try
+    root = P.renders_root(out, "amanda")
+    assert [p.name for p in sorted((root / "casual_01_standing").glob("shot_*.png"))] == [f"shot_00_s{P.SEED_BASE + P.REROLL_STRIDE}.png"]
+    assert len(list((root / "casual_02_standing").glob("shot_*.png"))) == 1
+    # a shot already on disk is never redrawn: it may already be judged
+    n = len(client.seen)
+    P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n", log=lambda s: None)
+    assert len(client.seen) == n
+
+
+def test_touches_top_reads_a_head_cut_off_at_the_top_edge(tmp_path):
+    import numpy as np
+    a = np.full((60, 400, 3), 185, np.uint8)
+    a[:6] = 175                                   # the studio darkens toward the top
+    clean = tmp_path / "clean.png"; Image.fromarray(a).save(clean)
+    a[:30, 170:240] = (90, 60, 40)                # hair running off the top
+    cut = tmp_path / "cut.png"; Image.fromarray(a).save(cut)
+    assert not P.touches_top(clean) and P.touches_top(cut)
