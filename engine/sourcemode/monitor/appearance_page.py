@@ -530,7 +530,7 @@ async function looksAct(b){
       SM.toast(c+': 28 looks approved - the pack is open on Shoots',{label:'Shoots',run:()=>SM.nav('shoots',c)});
     }
     else if(a==='lk_ship'){
-      const n=el.querySelector('[data-act=lk_ship]').textContent;
+      const n=b.textContent;   /* the button sits in the top box, outside the looks section */
       if(!confirm('Copy the staged outfits into the game for '+c+'? '+n.replace(/^Approve\s*[-\u2014]\s*/,'')+'. This is the one step that writes into the game repo.')){ b.disabled=false; return; }
       const r=await SM.postJSON('/characters/'+encodeURIComponent(c)+'/pack/ship',{});
       SM.toast(c+': '+r.files.length+' files copied into the game'+(r.overwrote?', '+r.overwrote+' overwritten':''));
