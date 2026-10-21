@@ -595,7 +595,7 @@ def test_scrubs_always_name_the_trousers():
 
 def test_short_dresses_name_the_hem_and_her_legs():
     assert L.with_legs("a navy silk shirt dress cinched with a belt") == \
-        "a navy silk shirt dress cinched with a belt, her bare legs showing below the hem"
+        "a navy silk shirt dress cinched with a belt, her bare upper thighs showing below the hem"
     assert L.with_legs("a white floral sundress").endswith("below the hem")
     assert L.with_legs("a pink off-the-shoulder midi dress") == "a pink off-the-shoulder midi dress"
     assert L.with_legs("a white tennis dress with built-in shorts").endswith("shorts")

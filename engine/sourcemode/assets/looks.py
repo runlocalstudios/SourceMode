@@ -641,10 +641,11 @@ def with_legs(outfit: str) -> str:
     """A short dress with the hem and her legs named. Measured 2026-10-21: of
     the 19 kasia/hannah looks still chest-up after three re-draws, almost every
     one was a dress naming nothing below the waist. Jeremy: "name the hem and
-    her legs". A long dress is left alone - its hem sits below the crop."""
+    her legs" - as "bare upper thighs": "bare legs" asks for a full-length
+    shot. A long dress is left alone - its hem sits below the crop."""
     if (re.search(r"dress\b", outfit, re.I) and not _BOTTOMS_RE.search(outfit)
             and not _LONG_RE.search(outfit)):
-        return f"{outfit}, her bare legs showing below the hem"
+        return f"{outfit}, her bare upper thighs showing below the hem"
     return outfit
 
 
