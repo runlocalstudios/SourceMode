@@ -301,11 +301,20 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     body = slot.get("facing") or body
     head = slot.get("gaze") or head
     shot = slot.get("shot_type") or NATURAL_SHOT
+    outfit = slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"])
+    # Jeremy, 2026-10-21: the pack prompt had lost the contract's "standing"
+    # and daisy came back seated in 8 of 28; chest-up looks were dresses and
+    # scrubs naming nothing below the waist. Done here, at render, so plans
+    # approved before the fix (kasia's, nisha's scrubs) get it too.
+    pack = not (slot.get("framing") or slot.get("shot_type") or slot.get("framing_natural"))
+    if pack:
+        from .looks import with_bottoms, with_legs  # noqa: PLC0415
+        shot = f"standing {shot}"
+        outfit = with_legs(with_bottoms(outfit))
     # a shoot's own framing sentence follows the shot type as its own clause;
-    # the pack reads "a portrait picture from the mid-thigh up", his words
+    # the pack reads "a standing portrait picture from the mid-thigh up"
     crop = f"a {shot}, {slot['framing']}" if slot.get("framing") else (
         f"a {shot} {slot.get('framing_natural') or NATURAL_FRAMING}")
-    outfit = slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"])
     stance = f", {slot['stance']}" if slot.get("stance") else ""
     avoid = f" {slot['avoid']}" if slot.get("avoid") else ""
     expression = slot.get("expression_natural") or _NATURAL_EXPRESSION[asked["expression"]]

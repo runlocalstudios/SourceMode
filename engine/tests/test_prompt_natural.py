@@ -67,7 +67,7 @@ def test_a_pack_never_asks_for_a_three_quarter_view(zara):
     assert fams.count(("image-left", True)) == 7 and fams.count(("image-right", True)) == 7
     for look in LOOKS:
         p = R.natural_prompt("zara", look)
-        assert "three-quarter" not in p and "a portrait picture from the mid-thigh up, " in p
+        assert "three-quarter" not in p and "a standing portrait picture from the mid-thigh up, " in p
 
 
 def test_natural_keeps_the_hair_and_footwear_rules(zara):
@@ -101,4 +101,4 @@ def test_natural_honours_a_shoots_composition_overrides(zara):
     assert ", she is holding the phone above eye level, " in p
     assert p.endswith("sharp focus. No studio lighting.")
     # a pack slot, which sets none of them, gets the pack's own framing
-    assert "a portrait picture from the mid-thigh up, " in R.natural_prompt("zara", LOOKS[0])
+    assert "a standing portrait picture from the mid-thigh up, " in R.natural_prompt("zara", LOOKS[0])
