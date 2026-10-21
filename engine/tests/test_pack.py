@@ -137,6 +137,31 @@ def test_the_compare_sheet_counts_what_the_game_would_lose_and_ship_is_the_only_
     assert P.discard(out, "amanda") is True and P.discard(out, "amanda") is False
 
 
+def test_the_compare_sheet_shows_her_current_look_when_the_plan_numbers_on(tmp_path):
+    """Jeremy, 2026-10-20, on gabi: the compare sheet "showed completely blank for
+    the current game assets ... even though there are current game assets for
+    her". Her plan numbered on from the 28 in the game (casual_08..), so no
+    staged name matched a game file. Each new look now sits beside her look in
+    the same category at the same position; a matching name still counts as an
+    overwrite."""
+    staged = tmp_path / "staged"; staged.mkdir()
+    gdir = tmp_path / "game"; gdir.mkdir()
+    for n in ("casual_08_standing.webp", "casual_09_standing.webp", "work_06_standing.webp", "work_07_standing.webp"):
+        Image.new("RGBA", (16, 24), (0, 200, 0, 255)).save(staged / n, "WEBP")
+    for n in ("casual_01_standing.webp", "casual_02_standing.webp", "work_06_standing.webp"):
+        Image.new("RGBA", (16, 24), (0, 0, 200, 255)).save(gdir / n, "WEBP")
+    slots = [{"id": i, "file": f"{i}_standing.webp"} for i in ("casual_08", "casual_09", "work_06", "work_07")]
+    assert P.game_counterpart(slots[0], 0, "standing", gdir).name == "casual_01_standing.webp"
+    assert P.game_counterpart(slots[1], 1, "standing", gdir).name == "casual_02_standing.webp"
+    assert P.game_counterpart(slots[2], 0, "standing", gdir).name == "work_06_standing.webp"   # the same name wins
+    assert P.game_counterpart(slots[3], 1, "standing", gdir).name == "work_06_standing.webp"   # her only work look
+    assert P.game_counterpart({"id": "workout_05", "file": "workout_05_standing.webp"}, 0, "standing", gdir) is None
+    assert P.game_counterpart(slots[0], 0, "standing", tmp_path / "nowhere") is None
+    sheet, overwrite = P.compare_sheet({"character": "gabi", "pose": "standing", "slots": slots},
+                                       staged, gdir, tmp_path / "review" / "compare.jpg")
+    assert sheet.is_file() and overwrite == 1
+
+
 def test_the_characters_state_carries_the_staging_and_the_queue_hook_adds_one_cpu_job(tmp_path, monkeypatch):
     from sourcemode.assets import looks as L
     from sourcemode.monitor.queue_page import queue_process_if_ready

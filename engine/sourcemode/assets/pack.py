@@ -23,6 +23,7 @@ Layout, unchanged for cutout and place:
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import time
 from collections import Counter
@@ -275,19 +276,44 @@ def process_due(judge_root: Path, out_root: Path, set_id: str) -> str | None:
     return f"all {len(ids)} looks kept"
 
 
+def game_counterpart(slot: dict, ordinal: int, pose: str, game_outfits: Path) -> Path | None:
+    """The game file a staged look is compared against. The same name when the
+    game has one (the ship would overwrite it); otherwise her look in the same
+    category at the same position - a plan numbers on from what she already has
+    (looks.py: casual_08 when the game ships casual_01-07), so the names never
+    match and the old sheet read "not in the game" for a character with a full
+    wardrobe (Jeremy, 2026-10-20, on gabi: "showed completely blank for the
+    current game assets ... even though there are current game assets for her")."""
+    from .catalog import parse_runtime_name  # noqa: PLC0415
+
+    same = game_outfits / slot["file"]
+    if same.is_file():
+        return same
+    cat = re.sub(r"_\d+$", "", slot["id"])
+    have = sorted((p for p in game_outfits.iterdir() if game_outfits.is_dir()
+                   and (parse_runtime_name(p.name) or {}).get("category") == cat
+                   and (parse_runtime_name(p.name) or {}).get("pose") == pose),
+                  key=lambda p: parse_runtime_name(p.name)["look"]) if game_outfits.is_dir() else []
+    return have[ordinal % len(have)] if have else None
+
+
 def compare_sheet(mapping: dict, staged_outfits: Path, game_outfits: Path, out: Path, *,
                   tile: int = 240, cols: int = 4) -> tuple[Path, int]:
-    """Each staged look beside what the game ships under that name today, on a
-    checker, so the approval is a comparison and not a leap. Returns the sheet
-    and how many game files would be overwritten."""
+    """Each staged look beside what the game ships today - the file it would
+    overwrite, or failing that her look in the same category at the same
+    position (`game_counterpart`) - on a checker, so the approval is a
+    comparison and not a leap. Returns the sheet and how many game files would
+    be overwritten."""
     from PIL import Image, ImageDraw  # noqa: PLC0415
 
     th = int(tile * 1.5)
     slots = mapping["slots"]
+    pose = mapping.get("pose", "standing")
     rows = max(1, -(-len(slots) // cols))
     sheet = Image.new("RGB", (cols * (2 * tile + 12), 24 + rows * (th + 40)), (236, 236, 236))
     draw = ImageDraw.Draw(sheet)
     overwrite = 0
+    seen_in_cat: dict[str, int] = {}
 
     def board(p: Path | None) -> Image.Image:
         b = Image.new("RGB", (tile, th), (205, 205, 205))
@@ -306,12 +332,17 @@ def compare_sheet(mapping: dict, staged_outfits: Path, game_outfits: Path, out: 
     for i, s in enumerate(slots):
         x0 = (i % cols) * (2 * tile + 12) + 6
         y0 = 24 + (i // cols) * (th + 40) + 14
-        g = game_outfits / s["file"]
-        if g.is_file():
+        cat = re.sub(r"_\d+$", "", s["id"])
+        ordinal = seen_in_cat.get(cat, 0)
+        seen_in_cat[cat] = ordinal + 1
+        g = game_counterpart(s, ordinal, pose, game_outfits)
+        same = g is not None and g.name == s["file"]
+        if same:
             overwrite += 1
         sheet.paste(board(staged_outfits / s["file"]), (x0, y0))
-        sheet.paste(board(g if g.is_file() else None), (x0 + tile, y0))
-        draw.text((x0, y0 - 13), f"{s['id']}   new  |  in the game now", fill=(30, 30, 30))
+        sheet.paste(board(g), (x0 + tile, y0))
+        right = ("overwrites " + g.stem if same else "beside " + g.stem) if g else "nothing in the game"
+        draw.text((x0, y0 - 13), f"{s['id']}   new  |  {right}", fill=(30, 30, 30))
     out.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(out, quality=88)
     return out, overwrite
