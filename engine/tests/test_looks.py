@@ -576,3 +576,15 @@ def test_approve_still_refuses_without_a_lock(tmp_path, ash, monkeypatch):
     with pytest.raises(ValueError, match="no locked LoRA"):
         L.approve(cfg, "ash")
     assert L.state(cfg, "ash")["state"] == "draft"
+
+
+def test_scrubs_always_name_the_trousers():
+    """Kasia's framing A/B, 2026-10-20: scrubs with no trousers named came back
+    chest-up every time; naming them pulled the frame back to mid-thigh."""
+    assert L.with_bottoms("Nurse scrubs") == "Nurse scrubs and matching scrub trousers"
+    assert L.with_bottoms("scrubs with a pink printed top and plain trousers").endswith("plain trousers")
+    assert L.with_bottoms("a red slip dress") == "a red slip dress"
+    rng = random.Random(3)
+    job = {"job": "Nurse at the hospital", "outfit": "Nurse scrubs", "places": []}
+    looks = L._job_looks(job, 5, ["navy", "cream", "black"], rng, "")
+    assert all(re.search(r"trousers|pants", lk) for lk in looks), looks

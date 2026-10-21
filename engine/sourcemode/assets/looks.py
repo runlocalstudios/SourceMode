@@ -618,6 +618,21 @@ def job_kind(text: str) -> str:
     return "uniform"
 
 
+_BOTTOMS_RE = re.compile(r"trousers|pants|joggers|leggings|skirt|shorts", re.I)
+
+
+def with_bottoms(outfit: str) -> str:
+    """Scrubs with the trousers named. Measured 2026-10-20: across eight packs a
+    look naming nothing below the waist came back chest-up 9 of 18 times, every
+    scrubs look among them; on kasia's matched seeds, adding "and matching scrub
+    trousers" pulled 3 of 5 back to mid-thigh, and Jeremy judged it the best arm.
+    Rewording the framing line moved none. Dresses are not touched - naming
+    the hem did nothing on the same test."""
+    if re.search(r"\bscrubs\b", outfit, re.I) and not _BOTTOMS_RE.search(outfit):
+        return f"{outfit} and matching scrub trousers"
+    return outfit
+
+
 def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_job: str,
                style: str = "", ban: re.Pattern | None = None) -> list[str]:
     base = job_base(job["outfit"])
@@ -651,7 +666,7 @@ def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_j
     rng.shuffle(cols)
     out = []
     for i, t in enumerate(tpl[:n]):
-        look = fill(t, base=base, c=cols[i % len(cols)])
+        look = with_bottoms(fill(t, base=base, c=cols[i % len(cols)]))
         out.append(look if t == "{base}" else steer(look, reg, rng, ban))   # her own line stays hers
     while len(out) < n:                       # more looks asked than variants
         out.append(out[len(out) % len(tpl)])
