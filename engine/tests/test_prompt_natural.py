@@ -102,3 +102,12 @@ def test_natural_honours_a_shoots_composition_overrides(zara):
     assert p.endswith("sharp focus. No studio lighting.")
     # a pack slot, which sets none of them, gets the pack's own framing
     assert "a standing portrait picture from the mid-thigh up, " in R.natural_prompt("zara", LOOKS[0])
+
+
+def test_a_pack_camera_reaches_only_her_pack_prompt(monkeypatch):
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "pack_camera", lambda c: {"prompt": "the camera at her eye level"} if c == "zara" else {})
+    slot = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
+            "outfit": "a white tee and jeans", "hair": "her hair worn loose"}
+    assert "from the mid-thigh up, the camera at her eye level, " in R.natural_prompt("zara", slot)
+    assert "eye level" not in R.natural_prompt("zara", {**slot, "framing_natural": "framed from the chest up"})

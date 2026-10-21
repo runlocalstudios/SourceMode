@@ -246,6 +246,14 @@ def negative(character: str) -> str:
     return ((_load()["look"].get(character.lower()) or {}).get("negative") or "").strip()
 
 
+def pack_camera(character: str) -> dict:
+    """Her pack-only camera words, {"prompt", "negative"}, or {}. For a LoRA
+    that learned a camera angle with her face - sarah's training set is shot
+    from above and her pack came back top-down (2026-10-21). Kept out of
+    CONFIRM_FIELDS: it is about the shot, not her description."""
+    return (_load()["look"].get((character or "").lower()) or {}).get("pack_camera") or {}
+
+
 # What a render from the LoRA needs documented BEFORE the first text-only
 # inference - the epoch sweep - because that is the first time text alone has
 # to carry identity. Training images come from reference photos and captions

@@ -142,6 +142,10 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
     from .adherence import check, measure  # noqa: PLC0415
     from .render import pose_fields, shot_prompt, t2i_workflow  # noqa: PLC0415
 
+    from .appearance import pack_camera  # noqa: PLC0415
+    cam_neg = pack_camera(character).get("negative")
+    negative = f"{negative}, {cam_neg}" if cam_neg else negative
+
     root = root or renders_root(out_root, character)
     retire_other_renders(root, log)
     root.mkdir(parents=True, exist_ok=True)

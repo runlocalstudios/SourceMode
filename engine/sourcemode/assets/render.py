@@ -315,6 +315,10 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     # the pack reads "a standing portrait picture from the mid-thigh up"
     crop = f"a {shot}, {slot['framing']}" if slot.get("framing") else (
         f"a {shot} {slot.get('framing_natural') or NATURAL_FRAMING}")
+    if pack:
+        from .appearance import pack_camera  # noqa: PLC0415
+        cam = pack_camera(character).get("prompt")
+        crop = f"{crop}, {cam}" if cam else crop
     stance = f", {slot['stance']}" if slot.get("stance") else ""
     avoid = f" {slot['avoid']}" if slot.get("avoid") else ""
     expression = slot.get("expression_natural") or _NATURAL_EXPRESSION[asked["expression"]]
