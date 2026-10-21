@@ -82,7 +82,30 @@ def _packs(char: str, outputs: Path | None, judge_root: Path | None) -> dict:
                            "n": n, "judged": len(v),
                            "kept": sum(1 for x in v.values() if x == "keep")})
     plan = bool(outputs and (outputs / "game-assets" / char / "plan_28.json").is_file())
-    return {"shipped": shipped, "shoots": shoots, "plan": plan}
+    staged = None
+    if outputs:
+        from ..assets.pack import read_staged  # noqa: PLC0415
+
+        staged = read_staged(outputs, char)
+    # cut and staged, not yet copied into the game by his approval
+    awaiting = bool(staged and not staged.get("shipped"))
+    return {"shipped": shipped, "shoots": shoots, "plan": plan, "awaiting": awaiting}
+
+
+def todo(row: dict) -> list[str]:
+    """Jeremy, 2026-10-20: badges in the character dropdown for what is left to
+    do - "keep the badges as short as possible". A description counts only once
+    he has confirmed it; a job only once a job line has words in it."""
+    out = []
+    if not row["confirmed"]:
+        out.append("DESC")
+    if not any((j.get("job") or "").strip() for j in row["wardrobe"].get("jobs") or []):
+        out.append("JOB")
+    if row["packs"]["awaiting"]:
+        out.append("APPROVE WARDROBE")
+    elif not row["packs"]["shipped"]:
+        out.append("NO WARDROBE")
+    return out
 
 
 def records(outputs: Path | None = None, judge_root: Path | None = None) -> list[dict]:
@@ -126,6 +149,7 @@ def records(outputs: Path | None = None, judge_root: Path | None = None) -> list
             "wardrobe": W.editable(c),
             "hair_default": list(W.DEFAULT_HAIR if not W.is_short_haired(c) else W.SHORT_HAIR),
         })
+        out[-1]["todo"] = todo(out[-1])
     out.sort(key=lambda r: (r["confirmed"], r["character"]))
     return out
 
@@ -244,7 +268,7 @@ function drawPicker(){
   const opt=(v,t)=>'<option value="'+SM.esc(v)+'"'+(v===pick?' selected':'')+'>'+SM.esc(t)+'</option>';
   $('who').innerHTML=opt('','Needs review ('+open.length+')')
     +recs.slice().sort((a,b)=>a.character.localeCompare(b.character))
-      .map(r=>opt(r.character,r.character+(r.confirmed?'  ✓':'  • needs review'))).join('');
+      .map(r=>opt(r.character,r.character+((r.todo||[]).length?'  · '+r.todo.join(' · '):'  ✓'))).join('');
 }
 $('who').addEventListener('change',e=>{
   if(dirty() && !confirm('Unsaved changes on this page. Leave without saving?')){ e.target.value=pick; return; }
