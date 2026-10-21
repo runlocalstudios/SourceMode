@@ -450,6 +450,8 @@ async function loadLooks(){
 }
 function drawLooks(el,st){
   const c=st.character;
+  const top=el.closest('.lk')&&el.closest('.lk').querySelector('[data-ship]');
+  if(top){ top.innerHTML=shipBlock(st); top.hidden=!st.staged||!!st.staged.shipped; }
   let h='<h4>Wardrobe pack &mdash; 28 looks'
     +(st.state==='approved'?'<span class=draft style="color:var(--done-ink)">approved'+(st.approved_at?' '+SM.esc(SM.ago(st.approved_at)):' - an older plan, written before this tab')+'</span>'
      :st.state==='draft'?'<span class=draft>'+(st.approved_at?'new draft - replaces the approved plan once approved':'draft - edit, then approve')+'</span>':'')+'</h4>';
@@ -470,7 +472,6 @@ function drawLooks(el,st){
         +'</div>';
     }
   }
-  h+=shipBlock(st);
   h+='<div class=row><button class="btn btn-primary" data-act=lk_save>Save</button>'
     +(st.state==='draft'
       ?'<button class="btn" data-act=lk_approve'+(st.blank?' disabled title="'+st.blank+' blank"':'')+'>Approve &mdash; '+(st.approved_at?'replaces the approved plan':'unlocks the pack on Shoots')+'</button>'
@@ -495,18 +496,18 @@ function shipBlock(st){
     +(s.missing.length?' &middot; <b>'+s.missing.length+' missing</b>: '+SM.esc(s.missing.join(', ')):'')
     +(s.flagged.length?' &middot; '+s.flagged.length+' flagged by the alpha report':'')
     +' &middot; '+(s.would_overwrite?'<b>'+s.would_overwrite+'</b> would overwrite files in the game':'nothing in the game yet under these names')+'</div>';
-  /* Jeremy, 2026-10-14: the sheet "takes up the entire screen on my phone" - folded,
-     opens full size in its own tab */
-  if(s.sheets.includes('compare')) h+='<details class=sheet><summary>See each new look beside the game&rsquo;s current one</summary>'
-    +'<a href="'+sheet('compare')+'" target=_blank><img loading=lazy src="'+sheet('compare')+'" alt="new beside the game, per look"></a>'
-    +'<div class=sub>Tap the sheet to open it full size.</div></details>';
-  if(s.sheets.includes('mapping')) h+='<div class=sub><a href="'+sheet('mapping')+'" target=_blank>mapping sheet</a></div>';
   if(s.shipped){
     h+='<div class=sub>Copied '+s.shipped.files.length+' files into the game'+(s.shipped.overwrote?', '+s.shipped.overwrote+' overwritten':'')+'.</div>';
   } else {
     h+='<div class=row><button class="btn btn-primary" data-act=lk_ship>Approve &mdash; copy '+s.n+' files into the game'+(s.would_overwrite?' (overwrites '+s.would_overwrite+')':'')+'</button>'
       +'<button class="btn btn-ghost" data-act=lk_discard>Discard this staging</button></div>';
   }
+  /* Jeremy, 2026-10-14: the sheet "takes up the entire screen on my phone" - folded,
+     opens full size in its own tab */
+  if(s.sheets.includes('compare')) h+='<details class=sheet><summary>See each new look beside the game&rsquo;s current one</summary>'
+    +'<a href="'+sheet('compare')+'" target=_blank><img loading=lazy src="'+sheet('compare')+'" alt="new beside the game, per look"></a>'
+    +'<div class=sub>Tap the sheet to open it full size.</div></details>';
+  if(s.sheets.includes('mapping')) h+='<div class=sub><a href="'+sheet('mapping')+'" target=_blank>mapping sheet</a></div>';
   return h;
 }
 function collectLooks(el){
@@ -514,7 +515,8 @@ function collectLooks(el){
     hair:(el.querySelector('[data-lh="'+CSS.escape(t.dataset.lo)+'"]')||{}).value||''}))};
 }
 async function looksAct(b){
-  const el=b.closest('[data-looks]'), c=el.dataset.looks, a=b.dataset.act;
+  /* the approval box at the top of the card belongs to the looks section */
+  const el=b.closest('.lk').querySelector('.looks[data-looks]'), c=el.dataset.looks, a=b.dataset.act;
   const u='/characters/'+encodeURIComponent(c)+'/looks';
   if(a==='lk_draft' && el.querySelector('[data-lo]') && !confirm('Start over with a different roll of 28? Every edit here is lost'+(el.querySelector('[data-act=lk_approve]')?'.':'; the approved plan stays until you approve the new draft.'))) return;
   b.disabled=true;
@@ -554,6 +556,9 @@ function draw(){
       +'<div class=card-head>'+SM.pill(r.confirmed?'done':'you')
       +'<h3>'+SM.esc(r.character)+'</h3>'
       +(r.confirmed?'<span class=age>confirmed '+SM.esc(SM.ago(r.confirmed_at))+'</span>':'')+'</div>'
+      /* Jeremy, 2026-10-21: "scrolling all the way to the bottom to do that makes
+         no sense" - the staged pack, its sheets and its approval sit at the top */
+      +(one?'<div class="sec ship" data-ship hidden></div>':'')
       +appearance(r)+(one?profile(r):'')
     +'</div>').join(''));
   for(const t of document.querySelectorAll('.lk textarea')) fit(t);
