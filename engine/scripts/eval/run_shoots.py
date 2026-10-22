@@ -190,7 +190,13 @@ def run_shoot(sh) -> int:
     if extra:
         log(f"  {sh.id}: stacked under hers: " + ", ".join(f"{p} x{s}" for p, s in extra))
     items, n = [], 0
-    for k, slot in enumerate(sh.plan(character=CHAR)):
+    plan = sh.plan(character=CHAR)
+    if sh.id == "selfies":
+        # the game reads which look each selfie wears and when it was taken
+        from sourcemode.assets.selfies import manifest  # noqa: PLC0415
+
+        write_set_json(d, selfies=manifest(plan))
+    for k, slot in enumerate(plan):
         dest = d / f"{slot['id']}.png"
         try:
             if not dest.exists():

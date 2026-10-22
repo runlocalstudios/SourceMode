@@ -192,6 +192,12 @@ def _run_shoots(cmd: list[str], cwd: Path, outputs: Path, previews_root: Path | 
     p = _appearance_problem(char)
     if p:
         out.append(p)
+    if "selfies" in pos[i + 2].split(","):
+        from ..assets.looks import approved_path  # noqa: PLC0415
+
+        if not approved_path(outputs, char).is_file():
+            out.append(f"{char} has no approved wardrobe pack - the selfies wear its "
+                       "outfits, approve her looks on the Characters tab first")
     return out
 
 

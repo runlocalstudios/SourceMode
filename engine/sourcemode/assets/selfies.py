@@ -9,8 +9,11 @@ for." The spec below was settled that day and then never written as a script -
 the run was queued behind vivienne and zara and fell off. 2026-10-04 it becomes
 a tickable pack on the shoots tab.
 
-THE SHAPE, as agreed:
-  24 shots - 8 casual / 6 flirty / 5 date / 5 intimate
+THE SHAPE, as agreed (2026-10-02), then re-tied to her wardrobe pack:
+  24 shots - 8 casual / 6 flirty / 5 date / 5 intimate, until 2026-10-22
+  24 shots - 7 casual / 4 casual_date / 4 fancy_dining_gallery / 4 fancy_town /
+             2 work / 3 intimate, every tied slot wearing the outfit and hair
+             of the SAME-NUMBERED look in her approved plan_28 (see `GROUPS`)
   1024x1536, the TRAINING bucket
   backgrounds KEPT - a selfie has a room behind it, so no chroma plate and no
   cutout; these ship as rendered
@@ -416,43 +419,164 @@ _D = (
 
 _TONE_IDS = ("selfie_casual", "selfie_flirty", "selfie_date", "selfie_intimate")
 SETS = {"A": (_CASUAL, _FLIRTY, _DATE, _INTIMATE), "B": _B, "C": _C, "D": _D}
-_TONES = tuple(zip(_TONE_IDS, SETS["A"]))
+_INTIMATE_TONE = _TONE_IDS.index("selfie_intimate")
+
+# --- tied to her wardrobe pack ----------------------------------------------------
+# Jeremy, 2026-10-22: "in the game, i will code it so that if she texts you
+# after a date, it's for the outfit she was just wearing ON the date ... rather
+# than getting a pic of her in some random outfit which makes no sense. And it
+# will also mean the player will see her with the same hair style she had on
+# the date." So the casual, date, fancy and work selfies take their outfit AND
+# hair from the same-numbered look of her approved plan_28; only the intimate
+# three still draw from the sets above, "because she'd be sending a pic from a
+# time he didn't see her". The rows of _CASUAL/_FLIRTY/_DATE stay as set data
+# the intimate pick is indexed into; nothing else reads them now.
+#
+# WHEN each date selfie was taken is fixed per look number, the same for all
+# three date categories, so the game can rely on it: looks 1, 2 and 4 are her
+# just home afterwards, look 3 is her getting ready - which she still sends
+# AFTER the date ("that was me getting ready"). The selfie is never sent
+# before. `manifest` writes the timing beside each file for the game to read.
+#: (plan category, how many looks), in render order. Totals 21 + INTIMATE = 24.
+GROUPS = (("casual", 7), ("casual_date", 4), ("fancy_dining_gallery", 4),
+          ("fancy_town", 4), ("work", 2))
+INTIMATE = 3
+DATE_GROUPS = ("casual_date", "fancy_dining_gallery", "fancy_town")
+
+# Head and shoulders in the upper half, waist up: a closet selfie that shows
+# the outfit without becoming a full-length shot.
+WAIST_FRAMING = ("arm's-length selfie from the waist up, her head and shoulders filling the "
+                 "upper half of the frame, her face large and sharp; never a wide shot, "
+                 "never full-body")
+
+#: casual: (setting, stance) - daytime, her place or out, a "bumped into you" pic.
+CASUAL_MOMENTS = (
+    ("soft daylight, in her bedroom with a made bed and a doorway behind her", STANCE),
+    ("bright morning light, in her kitchen with the counter behind her", STANCE),
+    ("window light, at a table in a small coffee shop", STANCE_SEATED),
+    ("overcast daylight through the windshield, in the driver's seat of her car", STANCE_SEATED),
+    ("golden-hour sunlight, on a city sidewalk with blurred shopfronts behind her", STANCE),
+    ("soft daylight, on a park bench with trees blurred behind her", STANCE_SEATED),
+    ("warm lamplight, on the sofa in her living room in the evening", STANCE_SEATED),
+)
+#: dates: (timing, setting, stance, framing) by look number, identical for the
+#: three date categories. Jeremy, 2026-10-22: 1 on the edge of the bed, 2 on
+#: the sofa with no feet unless she is curled up (never full body), 3 the
+#: bathroom mirror getting ready, 4 the walk-in closet about to get undressed,
+#: waist up.
+DATE_MOMENTS = (
+    ("after", "warm bedside lamplight, sitting on the edge of her bed, just home from the "
+              "date and still dressed from it", STANCE, FRAMING),
+    ("after", "dim warm lamplight, curled up on the sofa late at night, just home from the "
+              "date", STANCE_SEATED, FRAMING),
+    ("before", "bright bathroom light, in front of her bathroom mirror, getting ready to go "
+               "out", STANCE_MIRROR, MIRROR_FRAMING),
+    ("after", "warm light, in her walk-in closet late at night, just home and about to get "
+              "undressed", STANCE, WAIST_FRAMING),
+)
+#: work: appended to her job's scene from the influencer PLACES table, which is
+#: the one place SourceMode knows where she works and what it looks like.
+WORK_BREAKS = ("on a quick break", "in a quiet corner on her break")
+WORK_FALLBACK = "soft indoor light, at work"
 
 
-def slots(pick: str = "A") -> list[dict]:
-    """The 24 shot slots, in tone order, shaped the way `shot_prompt` wants them.
+def work_settings(character: str) -> tuple[str, str]:
+    """Two settings at her job, from her game schedule; a character the game
+    gives no scene for (bri, cici, daisy, hannah, maddie, winnie on 2026-10-22)
+    gets a generic one."""
+    from .influencer import _moments, _places  # noqa: PLC0415
 
-    `pick` names the set each slot comes from: one letter for a whole set, or
-    24 letters, one per slot. The mirror rows sit at the same positions in
-    every set, so any mix keeps four mirror selfies.
+    work, _play = _places(character) if character else ([], [])
+    scenes = [m[0] for _loc, m in _moments(work, "job")] or [WORK_FALLBACK]
+    return (f"{scenes[0]}, {WORK_BREAKS[0]}",
+            f"{scenes[1 % len(scenes)]}, {WORK_BREAKS[1]}")
 
-    `look` walks 1..24 rather than restarting per tone, because it drives the
-    expression table and the body/head yaw in `pose_fields` - so every selfie
-    gets a different face and a different turn instead of twenty-four copies of
-    one pose.
-    """
-    n = sum(len(rows) for rows in SETS["A"])
-    pick = pick * n if len(pick) == 1 else pick
-    out: list[dict] = []
-    for t, tone in enumerate(_TONE_IDS):
-        for r in range(len(SETS["A"][t])):
-            i = len(out)
-            outfit, hair, setting, stance = SETS[pick[i]][t][r]
-            out.append({
-                "id": f"selfie_{i + 1:02d}", "look": i + 1,
-                "category": tone, "tone": tone, "pose": "standing",
-                "outfit": outfit, "hair": hair, "setting": setting,
-                "stance": stance,
-                "framing": MIRROR_FRAMING if stance is STANCE_MIRROR else FRAMING,
-                "shot_type": "mirror selfie" if stance is STANCE_MIRROR else SHOT_TYPE,
-                "avoid": AVOID,
-                "negative": MIRROR_NEGATIVE if stance is STANCE_MIRROR else NEGATIVE,
-            })
+
+def looks_for(character: str) -> dict[str, list[dict]]:
+    """category -> its looks (outfit, hair) from her approved plan_28, the
+    first GROUPS count of each. Refuses rather than inventing an outfit when
+    she has no approved pack or it is short a look."""
+    import json  # noqa: PLC0415
+
+    from ..config import load_config, outputs_dir  # noqa: PLC0415
+    from .looks import approved_path  # noqa: PLC0415
+
+    pp = approved_path(outputs_dir(load_config()), (character or "").lower())
+    if not pp.is_file():
+        raise ValueError(f"{character} has no approved wardrobe pack ({pp.name}) - "
+                         "the selfies wear its outfits, approve her looks first")
+    return check_looks(json.loads(pp.read_text(encoding="utf-8")), character)
+
+
+def check_looks(plan: dict, character: str = "") -> dict[str, list[dict]]:
+    out = {}
+    for cat, n in GROUPS:
+        looks = (plan.get("categories", {}).get(cat) or {}).get("looks") or []
+        if len(looks) < n:
+            raise ValueError(f"{character or 'the plan'} has {len(looks)} {cat} looks, "
+                             f"the selfies need {n}")
+        out[cat] = [{"outfit": x["outfit"], "hair": x["hair"]} for x in looks[:n]]
     return out
 
 
-COUNTS = {tone: len(rows) for tone, rows in _TONES}
+def slots(looks: dict[str, list[dict]], work: tuple[str, str] = (WORK_FALLBACK, WORK_FALLBACK),
+          pick: str = "A") -> list[dict]:
+    """The 24 shot slots, in GROUPS order then intimate, shaped the way
+    `shot_prompt` wants them. Ids carry the look they are tied to
+    (selfie_casual_date_03) so the game maps a date to its selfie by name,
+    never by position.
+
+    `pick` is her set mix (see `set_for`); only its last INTIMATE letters are
+    read now. `look` walks 1..24 rather than restarting per group, because it
+    drives the expression table and the body/head yaw in `pose_fields`.
+    """
+    out: list[dict] = []
+
+    def add(cat: str, look: int, outfit: str, hair: str, setting: str, stance: str,
+            framing: str, timing: str | None):
+        mirror = stance is STANCE_MIRROR
+        out.append({
+            "id": f"selfie_{cat}_{look:02d}", "look": len(out) + 1,
+            "look_id": f"{cat}_{look:02d}" if cat != "intimate" else None,
+            "timing": timing,
+            "category": f"selfie_{cat}", "tone": f"selfie_{cat}", "pose": "standing",
+            "outfit": outfit, "hair": hair, "setting": setting, "stance": stance,
+            "framing": framing,
+            "shot_type": "mirror selfie" if mirror else SHOT_TYPE,
+            "avoid": AVOID,
+            "negative": MIRROR_NEGATIVE if mirror else NEGATIVE,
+        })
+
+    for cat, n in GROUPS:
+        for i in range(n):
+            lk = looks[cat][i]
+            if cat == "casual":
+                setting, stance = CASUAL_MOMENTS[i]
+                add(cat, i + 1, lk["outfit"], lk["hair"], setting, stance, FRAMING, None)
+            elif cat in DATE_GROUPS:
+                timing, setting, stance, framing = DATE_MOMENTS[i]
+                add(cat, i + 1, lk["outfit"], lk["hair"], setting, stance, framing, timing)
+            else:
+                add(cat, i + 1, lk["outfit"], lk["hair"], work[i], STANCE, FRAMING, None)
+    pick = pick * TOTAL if len(pick) == 1 else pick
+    for r in range(INTIMATE):
+        outfit, hair, setting, stance = SETS[pick[len(out)]][_INTIMATE_TONE][r]
+        add("intimate", r + 1, outfit, hair, setting, stance,
+            MIRROR_FRAMING if stance is STANCE_MIRROR else FRAMING, None)
+    return out
+
+
+COUNTS = {f"selfie_{cat}": n for cat, n in GROUPS} | {"selfie_intimate": INTIMATE}
 TOTAL = sum(COUNTS.values())
+
+
+def manifest(slots_: list[dict]) -> list[dict]:
+    """What the game needs per selfie, written into the set's set.json:
+    the file, the look it was tied to and when it was taken."""
+    return [{"file": f"{s['id']}.png", "category": s["category"].removeprefix("selfie_"),
+             "look_id": s["look_id"], "timing": s["timing"],
+             "outfit": s["outfit"], "hair": s["hair"]} for s in slots_]
+
 
 # --- which set each character gets ----------------------------------------------
 # "random": every slot draws its own set, so no two characters share a pack and
@@ -472,9 +596,11 @@ def _picks_file():
 def _had_selfies(character: str) -> bool:
     from ..config import ENGINE_ROOT  # noqa: PLC0415
     # rendered images, not the folder: run_shoots makes the folder before it
-    # asks for the plan, so a folder alone would pin every new character to A
-    return any(d.glob("selfie_*.png")
-               for d in (ENGINE_ROOT.parent / "library" / character).glob("*_selfies_selfies"))
+    # asks for the plan, so a folder alone would pin every new character to A.
+    # 2026-10-22: `any(d.glob(...) for d in ...)` tested the generator, which is
+    # always true - every character on 10-21 was written down as set A.
+    return any(True for d in (ENGINE_ROOT.parent / "library" / character).glob("*_selfies_selfies")
+               for _ in d.glob("selfie_*.png"))
 
 
 def set_for(character: str, path=None, mode: str | None = None) -> str:
@@ -503,10 +629,12 @@ def set_for(character: str, path=None, mode: str | None = None) -> str:
 
 
 def slots_for(character: str, batch: int = 1) -> list[dict]:
-    """Her selfie pack: her set mix, with her own hair vocabulary rotating
-    under it, exactly as the fixed pack applied it."""
+    """Her selfie pack: her approved looks under the fixed moments, her job's
+    scene for the work pair, and her own hair vocabulary over the intimate
+    three, exactly as the fixed pack applied it."""
     from .wardrobe import hair_options  # noqa: PLC0415
 
-    out = slots(set_for(character)) if character else slots()
+    out = slots(looks_for(character), work_settings(character), set_for(character))
     hair = hair_options(character) if character else ()
-    return [{**x, "hair": hair[i % len(hair)]} for i, x in enumerate(out)] if hair else out
+    return [{**x, "hair": hair[i % len(hair)]} if (hair and x["look_id"] is None) else x
+            for i, x in enumerate(out)]

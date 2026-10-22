@@ -34,16 +34,113 @@ def test_the_wardrobe_pack_is_one_shot_per_look_not_four():
     assert total_shots(["pack28", "selfies"]) == 52
 
 
+def fake_plan(n_work: int = 5) -> dict:
+    """A plan_28 shaped like the real ones: distinct outfit and hair per look."""
+    hairs = ("her hair worn loose", "her hair pulled back in a high ponytail",
+             "her hair up in a messy bun", "her hair half-up")
+    cats = {"casual": 7, "workout": 4, "fancy_dining_gallery": 4, "fancy_town": 4,
+            "casual_date": 4, "work": n_work}
+    return {"categories": {cat: {"lookCount": n, "looks": [
+        {"look": i + 1, "id": f"{cat}_{i + 1:02d}", "outfit": f"the {cat} outfit {i + 1}",
+         "hair": hairs[(i + len(cat)) % len(hairs)]} for i in range(n)]}
+        for cat, n in cats.items()}}
+
+
+LOOKS = selfies.check_looks(fake_plan())
+WORK = ("bright even light, in the lobby of a precinct, on a quick break",
+        "bright even light, in the lobby of a precinct, in a quiet corner on her break")
+
+
+@pytest.fixture
+def planned(monkeypatch):
+    """Every character has the fake plan and a job scene, so a shoot's plan can
+    be built for anyone without the outputs folder or the game repo."""
+    monkeypatch.setattr(selfies, "looks_for", lambda c: LOOKS)
+    monkeypatch.setattr(selfies, "work_settings", lambda c: WORK)
+    monkeypatch.setattr(selfies, "set_for", lambda c, path=None, mode=None: "A" * 24)
+
+
 def test_selfie_pack_is_the_agreed_mix():
-    # Settled 2026-10-02: 8 casual / 6 flirty / 5 date / 5 intimate.
-    assert selfies.COUNTS == {"selfie_casual": 8, "selfie_flirty": 6,
-                              "selfie_date": 5, "selfie_intimate": 5}
-    s = selfies.slots()
-    assert len({x["id"] for x in s}) == 24
+    # Jeremy, 2026-10-22: tied to her pack - 7 casual / 4 casual date / 4 fancy
+    # dining / 4 fancy town / 2 work (looks 1 and 2) / 3 intimate, still 24.
+    assert selfies.COUNTS == {"selfie_casual": 7, "selfie_casual_date": 4,
+                              "selfie_fancy_dining_gallery": 4, "selfie_fancy_town": 4,
+                              "selfie_work": 2, "selfie_intimate": 3}
+    s = selfies.slots(LOOKS, WORK)
+    assert len({x["id"] for x in s}) == 24 == selfies.TOTAL
     # `look` drives the expression table and the body yaw, so it must not repeat
     # or all 24 selfies come back with one face and one turn.
     assert sorted(x["look"] for x in s) == list(range(1, 25))
     assert all(x["setting"] and x["outfit"] and x["hair"] for x in s)
+
+
+def test_a_tied_selfie_wears_the_same_numbered_look_and_is_named_after_it():
+    """Jeremy, 2026-10-22: "if she texts you after a date, it's for the outfit
+    she was just wearing ON the date ... the same hair style she had on the
+    date." The id carries the look so the game maps by name, not position."""
+    s = {x["id"]: x for x in selfies.slots(LOOKS, WORK)}
+    for cat, n in selfies.GROUPS:
+        for i in range(n):
+            x = s[f"selfie_{cat}_{i + 1:02d}"]
+            assert x["look_id"] == f"{cat}_{i + 1:02d}"
+            assert x["outfit"] == LOOKS[cat][i]["outfit"] and x["hair"] == LOOKS[cat][i]["hair"]
+    assert s["selfie_work_01"]["setting"] == WORK[0] and s["selfie_work_02"]["setting"] == WORK[1]
+    # the intimate three are not tied to any look and still draw from the sets
+    assert all(s[f"selfie_intimate_{r + 1:02d}"]["look_id"] is None for r in range(3))
+
+
+def test_date_selfie_timing_is_fixed_by_look_number_for_all_three_date_categories():
+    """The game relies on it: looks 1, 2 and 4 are her just home afterwards,
+    look 3 is her getting ready in the bathroom mirror. Never sent before the
+    date - the "before" shot is sent after, explained."""
+    s = {x["id"]: x for x in selfies.slots(LOOKS, WORK)}
+    for cat in selfies.DATE_GROUPS:
+        t = [s[f"selfie_{cat}_{i:02d}"]["timing"] for i in (1, 2, 3, 4)]
+        assert t == ["after", "after", "before", "after"], cat
+        assert "edge of her bed" in s[f"selfie_{cat}_01"]["setting"]
+        assert "curled up on the sofa" in s[f"selfie_{cat}_02"]["setting"]
+        assert s[f"selfie_{cat}_03"]["stance"] is selfies.STANCE_MIRROR
+        assert "bathroom mirror" in s[f"selfie_{cat}_03"]["setting"]
+        assert "walk-in closet" in s[f"selfie_{cat}_04"]["setting"]
+        assert s[f"selfie_{cat}_04"]["framing"] == selfies.WAIST_FRAMING
+        # the same four moments for every date category, by design
+        assert [s[f"selfie_{cat}_{i:02d}"]["setting"] for i in (1, 2, 3, 4)] == \
+            [s[f"selfie_casual_date_{i:02d}"]["setting"] for i in (1, 2, 3, 4)]
+    for x in s.values():
+        if x["timing"] is None:
+            assert x["category"] not in {f"selfie_{c}" for c in selfies.DATE_GROUPS}
+        assert "feet" not in x["setting"] and "full body" not in x["setting"]
+
+
+def test_the_manifest_tells_the_game_the_look_and_the_timing_of_every_file():
+    m = selfies.manifest(selfies.slots(LOOKS, WORK))
+    assert len(m) == 24 and {x["file"] for x in m} == {f"{x['id']}.png" for x in selfies.slots(LOOKS, WORK)}
+    d3 = next(x for x in m if x["file"] == "selfie_fancy_town_03.png")
+    assert d3 == {"file": "selfie_fancy_town_03.png", "category": "fancy_town",
+                  "look_id": "fancy_town_03", "timing": "before",
+                  "outfit": LOOKS["fancy_town"][2]["outfit"], "hair": LOOKS["fancy_town"][2]["hair"]}
+    assert next(x for x in m if x["file"] == "selfie_intimate_01.png")["look_id"] is None
+
+
+def test_a_short_or_missing_plan_refuses_rather_than_inventing_an_outfit(monkeypatch, tmp_path):
+    with pytest.raises(ValueError, match="1 work looks"):
+        selfies.check_looks(fake_plan(n_work=1), "zara")
+    from sourcemode import config as C
+    monkeypatch.setattr(C, "load_config", lambda: {})
+    monkeypatch.setattr(C, "outputs_dir", lambda cfg: tmp_path)
+    with pytest.raises(ValueError, match="no approved wardrobe pack"):
+        selfies.looks_for("zara")
+
+
+def test_the_work_selfies_use_her_job_scene_from_the_game_schedule(monkeypatch):
+    from sourcemode.assets import influencer as I
+    monkeypatch.setattr(I, "_places", lambda c: (["policeStation"], []))
+    a, b = selfies.work_settings("zara")
+    assert a.startswith(I.PLACES["policeStation"]["job"][0][0]) and a.endswith("on a quick break")
+    assert b.startswith(I.PLACES["policeStation"]["job"][0][0]) and "on her break" in b
+    monkeypatch.setattr(I, "_places", lambda c: ([], []))
+    assert selfies.work_settings("nobody") == (f"{selfies.WORK_FALLBACK}, on a quick break",
+                                               f"{selfies.WORK_FALLBACK}, in a quiet corner on her break")
 
 
 def test_a_pack_slot_renders_exactly_what_it_did_before_the_selfie_overrides(monkeypatch):
@@ -63,7 +160,7 @@ def test_a_pack_slot_renders_exactly_what_it_did_before_the_selfie_overrides(mon
 def test_a_selfie_is_not_described_as_a_standing_portrait_that_forbids_sitting():
     # Half the pack is shot sitting on a bed or a sofa. The wardrobe pack's
     # closing line rules that out, so a selfie slot replaces it.
-    sitting = [x for x in selfies.slots() if "sitting" in x["stance"]]
+    sitting = [x for x in selfies.slots(LOOKS, WORK) if "sitting" in x["stance"]]
     assert sitting, "the pack should carry seated selfies"
     p = shot_prompt("nobody", sitting[0], backdrop=sitting[0]["setting"])
     assert "a selfie, " in p and "standing portrait" not in p
@@ -79,9 +176,10 @@ def test_the_phone_is_in_the_picture_only_in_a_mirror_selfie():
     phone. You shouldn't see the phone in a selfie photo unless it's a mirror
     selfie." Gabi's pack rendered a phone in hand on most of the non-mirror
     slots because every slot named it."""
-    mirror = [x for x in selfies.slots() if x["stance"] is selfies.STANCE_MIRROR]
-    plain = [x for x in selfies.slots() if x["stance"] is not selfies.STANCE_MIRROR]
-    assert len(mirror) == 4 and len(plain) == 20
+    mirror = [x for x in selfies.slots(LOOKS, WORK) if x["stance"] is selfies.STANCE_MIRROR]
+    plain = [x for x in selfies.slots(LOOKS, WORK) if x["stance"] is not selfies.STANCE_MIRROR]
+    # look 3 of each date category is the bathroom mirror, getting ready
+    assert len(mirror) == 3 and len(plain) == 21
     for slot in plain:
         p = shot_prompt("nobody", slot, backdrop=slot["setting"])
         assert "phone" not in p.lower(), slot["id"]
@@ -112,7 +210,7 @@ def test_the_mirror_shoot_is_mirror_selfies_with_the_phone_in_every_shot():
 def test_the_selfie_prompt_never_names_the_outstretched_arm():
     # Measured at 1024x1536, n=4: bare 3/4 keep, geometric 3/4, "her arm
     # outstretched and visible in the frame" 1/4. It is the arm that lost.
-    for slot in selfies.slots():
+    for slot in selfies.slots(LOOKS, WORK):
         p = shot_prompt("nobody", slot, backdrop=slot["setting"])
         assert "outstretched" not in p
 
@@ -170,7 +268,7 @@ def test_the_queue_row_only_claims_training_and_sweep_for_a_training_job():
 
 # --- per-character hair -----------------------------------------------------
 
-def test_a_box_braided_character_is_never_asked_for_loose_hair():
+def test_a_box_braided_character_is_never_asked_for_loose_hair(monkeypatch):
     """Jeremy, 2026-10-04: Tess's braid is a specific protective style, not the
     generic braid the shared vocabulary means.
 
@@ -191,9 +289,15 @@ def test_a_box_braided_character_is_never_asked_for_loose_hair():
     assert not any("braid" in h for h in tess)
     assert not any("loose" in h or "down and flowing" in h for h in tess)
 
-    for sid in ("boudoir", "selfies"):
-        hairs = {s["hair"] for s in BY_ID[sid].plan(character="tess")}
-        assert not any("loose" in h for h in hairs), sid
+    hairs = {s["hair"] for s in BY_ID["boudoir"].plan(character="tess")}
+    assert not any("loose" in h for h in hairs)
+    # the tied selfies wear the plan's hair, which was written from her own
+    # vocabulary; the intimate three still rotate it
+    monkeypatch.setattr(selfies, "looks_for", lambda c: LOOKS)
+    monkeypatch.setattr(selfies, "work_settings", lambda c: WORK)
+    monkeypatch.setattr(selfies, "set_for", lambda c, path=None, mode=None: "A" * 24)
+    hairs = {s["hair"] for s in BY_ID["selfies"].plan(character="tess") if s["look_id"] is None}
+    assert hairs and not any("loose" in h for h in hairs)
 
 
 def test_a_character_with_no_list_keeps_the_shared_rotation():
@@ -276,7 +380,7 @@ def test_no_record_still_asserts_long_hair_under_an_up_style():
         assert not re.search(r"\b(very long|long)\b", drop_length(clause(c)), re.I), c
 
 
-def test_makeup_reaches_every_path_from_the_one_builder():
+def test_makeup_reaches_every_path_from_the_one_builder(planned):
     """Jeremy, 2026-10-04, on zara's pack: "I think we should add beautiful and
     natural makeup to the prompts... Some of those Zara pictures just look
     frumpy." Stated once so the pack, the shoots, the selfies and the eval all
@@ -290,7 +394,7 @@ def test_makeup_reaches_every_path_from_the_one_builder():
     sit = {**pack, "pose": "sitting"}
     assert MAKEUP in shot_prompt("nobody", sit)
     for sid in ("boudoir", "selfies"):
-        slot = BY_ID[sid].plan()[0]
+        slot = BY_ID[sid].plan(character="nobody")[0]
         assert MAKEUP in shot_prompt("nobody", slot, backdrop=slot["setting"])
     # and a slot may ask for less - a gym shot or a just-woken selfie
     assert ", none, bare skin, " in shot_prompt(
@@ -314,21 +418,37 @@ def test_a_pack_resumes_but_re_renders_when_the_prompt_changed():
     assert not needs_rerender({"prompt": ""}, "anything")
 
 
-def test_four_selfie_sets_share_the_shape_and_differ_in_every_shot():
+def test_the_intimate_three_differ_by_set_and_the_rest_ignore_the_pick():
     """Jeremy, 2026-10-21: every girl had the same black-shirt, gold-chains
-    cafe selfie. Four sets, same 8/6/5/5 and mirror positions, no shared row."""
-    base = selfies.slots("A")
-    mirrors = [i for i, x in enumerate(base) if x["stance"] is selfies.STANCE_MIRROR]
-    outfits = set()
+    cafe selfie. The tied 21 now differ by her pack; the intimate three still
+    draw from four sets by her pick, and no set names the phone."""
+    tied = lambda s: [(x["outfit"], x["setting"]) for x in s if x["look_id"] is None]  # noqa: E731
+    seen = set()
     for letter in "ABCD":
-        s = selfies.slots(letter)
-        assert [x["category"] for x in s] == [x["category"] for x in base]
-        assert [i for i, x in enumerate(s) if x["stance"] is selfies.STANCE_MIRROR] == mirrors
+        s = selfies.slots(LOOKS, WORK, letter)
+        assert [x["id"] for x in s] == [x["id"] for x in selfies.slots(LOOKS, WORK, "A")]
+        assert [x for x in s if x["look_id"]] == [x for x in selfies.slots(LOOKS, WORK, "A") if x["look_id"]]
         for x in s:
             if x["stance"] is not selfies.STANCE_MIRROR:
                 assert "phone" not in (x["outfit"] + x["setting"]).lower()
-        outfits |= {x["outfit"] for x in s}
-    assert len(outfits) == 4 * 24
+        seen |= set(tied(s))
+    assert len(seen) == 4 * 3
+    # a 24-letter mix reads the intimate letters at the intimate positions
+    mix = "A" * 21 + "BCD"
+    assert tied(selfies.slots(LOOKS, WORK, mix)) == [
+        tied(selfies.slots(LOOKS, WORK, l))[r] for r, l in enumerate("BCD")]
+
+
+def test_had_selfies_means_rendered_images_not_a_folder(tmp_path, monkeypatch):
+    # 2026-10-22: `any(d.glob(...) for d in ...)` was true for the generator
+    # itself, so every character shot on 10-21 was pinned to set A.
+    from sourcemode import config as C
+    monkeypatch.setattr(C, "ENGINE_ROOT", tmp_path / "engine")
+    d = tmp_path / "library" / "zara" / "2026-10-22_selfies_selfies"
+    d.mkdir(parents=True)
+    assert selfies._had_selfies("zara") is False
+    (d / "selfie_casual_01.png").write_bytes(b"")
+    assert selfies._had_selfies("zara") is True
 
 
 def test_a_character_keeps_her_selfie_mix_and_old_packs_stay_on_set_a(tmp_path, monkeypatch):

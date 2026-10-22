@@ -463,12 +463,13 @@ CATALOG: tuple[Shoot, ...] = (
 def _selfie_pack() -> Shoot:
     from .selfies import TOTAL, slots_for  # noqa: PLC0415
 
-    # each character draws her own mix of the four sets; not `make`, which
-    # would turn every tick into a new batch
+    # her approved looks under fixed moments; not `make`, which would turn
+    # every tick into a new batch
     return Shoot("selfies", "Selfie pack", "game",
                  "real rooms and streets, her own phone, backgrounds kept",
                  (), (), shots=TOTAL, per_character=slots_for,
-                 note="24 phone selfies - 8 casual, 6 flirty, 5 date, 5 intimate. "
+                 note="24 phone selfies wearing her approved pack: 7 casual, 4 casual date, "
+                      "4 fancy dining, 4 fancy town, 2 work, 3 intimate. Needs plan_28. "
                       "Ships as rendered: no chroma plate, no cutout.")
 
 
