@@ -468,6 +468,9 @@ def _selfie_pack() -> Shoot:
     return Shoot("selfies", "Selfie pack", "game",
                  "real rooms and streets, her own phone, backgrounds kept",
                  (), (), shots=TOTAL, per_character=slots_for,
+                 # the same plan the pack renders: the tab greys the box and the
+                 # guard refuses until her 28 looks are approved
+                 plan_file="game-assets/{character}/plan_28.json",
                  note="24 phone selfies wearing her approved pack: 7 casual, 4 casual date, "
                       "4 fancy dining, 4 fancy town, 2 work, 3 intimate. Needs plan_28. "
                       "Ships as rendered: no chroma plate, no cutout.")
@@ -670,12 +673,13 @@ def buckets() -> list[dict]:
 
 
 def plan_path(shoot: Shoot, character: str, outputs_root) -> object | None:
-    """Where a pack shoot's plan lives for this character, or None if it is not
-    a pack. Existence is the caller's question - the page greys the box, the
-    runner refuses."""
+    """Where the plan a shoot renders from lives for this character, or None
+    if it needs none - the pack, and since 2026-10-22 the selfies that wear
+    its looks. Existence is the caller's question - the page greys the box,
+    the runner refuses."""
     from pathlib import Path  # noqa: PLC0415
 
-    if shoot.kind != "pack" or not shoot.plan_file:
+    if not shoot.plan_file:
         return None
     return Path(outputs_root) / shoot.plan_file.format(character=character)
 

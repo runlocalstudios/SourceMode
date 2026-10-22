@@ -128,9 +128,10 @@ def blocked_shoots(cfg: dict, character: str) -> dict[str, str]:
     say what is missing instead of letting her queue a job that dies at the
     guard an hour later.
 
-    Today only the wardrobe pack can be blocked: its 28 outfits are a decision
-    somebody makes per character, and a plan that does not exist is not a
-    default to fall back on.
+    The wardrobe pack is blocked without her plan: its 28 outfits are a
+    decision somebody makes per character, and a plan that does not exist is
+    not a default to fall back on. Since 2026-10-22 the selfie pack wears
+    those same looks, so it is blocked by the same missing file.
     """
     from ..config import outputs_dir  # noqa: PLC0415
     from .shoots import CATALOG, plan_path  # noqa: PLC0415
@@ -141,5 +142,7 @@ def blocked_shoots(cfg: dict, character: str) -> dict[str, str]:
         pp = plan_path(sh, character, out)
         if pp is not None and not pp.is_file():
             blocked[sh.id] = ("no wardrobe plan yet - draft and approve her 28 looks "
-                              "on the Characters tab")
+                              "on the Characters tab" if sh.kind == "pack" else
+                              "wears her wardrobe pack's outfits - draft and approve her "
+                              "28 looks on the Characters tab first")
     return blocked

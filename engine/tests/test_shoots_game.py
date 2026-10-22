@@ -223,11 +223,13 @@ def test_a_mixed_job_is_priced_at_two_rates_not_one():
     assert estimate_seconds(["boudoir"], 75.0, 116.0) == pytest.approx(12 * 75.0)
 
 
-def test_only_the_wardrobe_pack_needs_a_plan_on_disk(tmp_path):
-    assert plan_path(BY_ID["pack28"], "zara", tmp_path) == (
-        tmp_path / "game-assets" / "zara" / "plan_28.json")
+def test_only_the_wardrobe_pack_and_the_selfies_need_a_plan_on_disk(tmp_path):
+    # the selfies wear the pack's looks (2026-10-22), so they need the same file
+    for sid in ("pack28", "selfies"):
+        assert plan_path(BY_ID[sid], "zara", tmp_path) == (
+            tmp_path / "game-assets" / "zara" / "plan_28.json")
     for s in CATALOG:
-        if s.id != "pack28":
+        if s.id not in ("pack28", "selfies"):
             assert plan_path(s, "zara", tmp_path) is None
 
 
@@ -241,7 +243,11 @@ def test_a_character_with_no_wardrobe_plan_is_blocked_with_a_reason(tmp_path, mo
     blocked = lora.blocked_shoots({}, "nobody")
     assert "pack28" in blocked
     assert "wardrobe plan" in blocked["pack28"]
-    assert "selfies" not in blocked, "the selfie pack is fully specified, never blocked"
+    # Jeremy, 2026-10-22: "Why is it that i can queue a selfie pack for Kimmy
+    # when she doesn't have a defined wardrobe pack?" The guard refused at the
+    # click; the tab now greys the box too, with the reason.
+    assert "selfies" in blocked and "28 looks" in blocked["selfies"]
+    assert set(blocked) == {"pack28", "selfies"}
 
     # ...and present once the plan exists.
     p = tmp_path / "game-assets" / "nobody" / "plan_28.json"
