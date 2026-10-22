@@ -352,18 +352,70 @@ def compare_sheet(mapping: dict, staged_outfits: Path, game_outfits: Path, out: 
     return out, overwrite
 
 
-def ship(out_root: Path, character: str, game_root: Path) -> dict:
+def pairs(out_root: Path, character: str, game_root: Path) -> list[dict]:
+    """Each staged look beside the game file it stands against, for the
+    Characters tab to show as tiles he can pick between. Jeremy, 2026-10-22:
+    approve all by default, "but I would like an option to choose which one to
+    keep from the side-by-side sets". Same rule as the compare sheet: the
+    file it would overwrite, else her look in the same category at the same
+    position; `game` is None when the game has nothing to put beside it."""
+    from .catalog import look_id, parse_runtime_name  # noqa: PLC0415
+
+    st = read_staged(out_root, character)
+    if not st or not st.get("files"):
+        return []
+    gdir = game_root / "src" / "assets" / "characters" / character / "outfits"
+    seen: dict[str, int] = {}
+    out = []
+    for name in st["files"]:
+        m = parse_runtime_name(name)
+        sid = look_id(m["category"], m["look"]) if m else Path(name).stem
+        cat = m["category"] if m else re.sub(r"_\d+$", "", sid)
+        ordinal = seen.get(cat, 0)
+        seen[cat] = ordinal + 1
+        g = game_counterpart({"id": sid, "file": name}, ordinal, m["pose"] if m else "standing", gdir)
+        out.append({"id": sid, "file": name, "game": g.name if g else None,
+                    "overwrites": bool(g and g.name == name)})
+    return out
+
+
+def thumb(src: Path, out_root: Path, character: str, side: str, width: int = 360) -> Path:
+    """A small RGBA WebP of a cutout for the tiles, cached under review/ -
+    never beside the game's files, which the game counts."""
+    from PIL import Image  # noqa: PLC0415
+
+    cache = Path(out_root) / "game-assets" / character / "review" / "_thumbs" / side / f"{src.stem}_{width}.webp"
+    if cache.is_file() and cache.stat().st_mtime >= src.stat().st_mtime:
+        return cache
+    im = Image.open(src).convert("RGBA")
+    im.thumbnail((width, width * 2))
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    tmp = cache.with_suffix(".tmp")
+    im.save(tmp, "WEBP", quality=80)
+    tmp.replace(cache)
+    return cache
+
+
+def ship(out_root: Path, character: str, game_root: Path, keep: list[str] | None = None) -> dict:
     """The approval: copy the staged outfits into the game's folder for her,
     overwriting what is there under the same names, and record it. The ONLY
-    place in the engine that writes into the game repo."""
+    place in the engine that writes into the game repo.
+
+    `keep` is the files he ticked; None means every staged file (the default).
+    An unticked look is skipped - the game keeps whatever it has there."""
     st = read_staged(out_root, character)
     if not st or not st.get("files"):
         raise ValueError("nothing is staged for her")
+    chosen = list(st["files"]) if keep is None else [n for n in st["files"] if n in set(keep)]
+    if keep is not None and set(keep) - set(st["files"]):
+        raise ValueError("not staged: " + ", ".join(sorted(set(keep) - set(st["files"]))))
+    if not chosen:
+        raise ValueError("nothing ticked - tick at least one new look, or discard the staging")
     src = Path(out_root) / "game-assets" / character / "outfits"
     dest = game_root / "src" / "assets" / "characters" / character / "outfits"
     dest.mkdir(parents=True, exist_ok=True)
     copied, overwrote = [], 0
-    for name in st["files"]:
+    for name in chosen:
         f = src / name
         if not f.is_file():
             continue
@@ -372,7 +424,8 @@ def ship(out_root: Path, character: str, game_root: Path) -> dict:
         shutil.copy2(f, dest / name)
         copied.append(name)
     rec = {"at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()), "files": copied,
-           "overwrote": overwrote, "to": str(dest), "from_set": st.get("set")}
+           "overwrote": overwrote, "to": str(dest), "from_set": st.get("set"),
+           "skipped": [n for n in st["files"] if n not in chosen]}
     st["shipped"] = rec
     staged_path(out_root, character).write_text(json.dumps(st, indent=1), encoding="utf-8")
     pp = Path(out_root) / "game-assets" / character / "plan_28.json"

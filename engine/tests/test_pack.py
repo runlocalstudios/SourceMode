@@ -137,6 +137,44 @@ def test_the_compare_sheet_counts_what_the_game_would_lose_and_ship_is_the_only_
     assert P.discard(out, "amanda") is True and P.discard(out, "amanda") is False
 
 
+def test_ship_copies_only_the_ticked_looks_and_the_pairs_say_what_each_stands_against(tmp_path):
+    """Jeremy, 2026-10-22: approve all by default, "but I would like an option
+    to choose which one to keep from the side-by-side sets ... whichever is not
+    checked would be ignored". An unticked look leaves the game's file as it
+    was; a name that is not staged, or nothing ticked, refuses."""
+    out, game = tmp_path / "out", tmp_path / "game"
+    staged = out / "game-assets" / "amanda" / "outfits"; staged.mkdir(parents=True)
+    gdir = game / "src" / "assets" / "characters" / "amanda" / "outfits"; gdir.mkdir(parents=True)
+    files = ["casual_01_standing.webp", "casual_02_standing.webp", "work_01_standing.webp"]
+    for n in files:
+        Image.new("RGBA", (16, 24), (0, 200, 0, 255)).save(staged / n, "WEBP")
+    for n in ("casual_01_standing.webp", "casual_02_standing.webp"):
+        Image.new("RGBA", (16, 24), (0, 0, 200, 255)).save(gdir / n, "WEBP")
+    P.staged_path(out, "amanda").write_text(json.dumps({"files": files, "set": "pack_amanda"}))
+    assert P.pairs(out, "amanda", game) == [
+        {"id": "casual_01", "file": files[0], "game": files[0], "overwrites": True},
+        {"id": "casual_02", "file": files[1], "game": files[1], "overwrites": True},
+        {"id": "work_01", "file": files[2], "game": None, "overwrites": False}]
+    with pytest.raises(ValueError):
+        P.ship(out, "amanda", game, keep=["nope.webp"])
+    with pytest.raises(ValueError):
+        P.ship(out, "amanda", game, keep=[])
+    assert not (gdir / "work_01_standing.webp").exists()                 # a refusal wrote nothing
+    rec = P.ship(out, "amanda", game, keep=[files[0], files[2]])
+    assert rec["files"] == [files[0], files[2]] and rec["overwrote"] == 1 and rec["skipped"] == [files[1]]
+    assert Image.open(gdir / files[0]).convert("RGBA").getpixel((0, 0))[1] > 150   # ticked: the new one
+    assert Image.open(gdir / files[1]).convert("RGBA").getpixel((0, 0))[2] > 150   # unticked: as the game had it
+    assert (gdir / files[2]).is_file()
+    assert P.read_staged(out, "amanda")["shipped"]["skipped"] == [files[1]]
+    # the tile is a small RGBA copy cached under review/, never beside the game's files
+    cut = Image.new("RGBA", (16, 24), (0, 0, 0, 0)); cut.putpixel((8, 12), (0, 200, 0, 255))
+    cut.save(staged / "casual_03_standing.webp", "WEBP", lossless=True)
+    t = P.thumb(staged / "casual_03_standing.webp", out, "amanda", "new")
+    assert t.is_relative_to(out / "game-assets" / "amanda" / "review")
+    assert Image.open(t).convert("RGBA").getpixel((0, 0))[3] == 0            # the transparency survives
+    assert not list(gdir.glob("_*"))
+
+
 def test_the_compare_sheet_shows_her_current_look_when_the_plan_numbers_on(tmp_path):
     """Jeremy, 2026-10-20, on gabi: the compare sheet "showed completely blank for
     the current game assets ... even though there are current game assets for
@@ -172,6 +210,7 @@ def test_the_characters_state_carries_the_staging_and_the_queue_hook_adds_one_cp
     monkeypatch.setattr("sourcemode.assets.judge.judge_root", lambda c: jr)
     monkeypatch.setattr("sourcemode.assets.wardrobe.editable", lambda c: {"jobs": [], "outfits": {}})
     monkeypatch.setattr(L, "shipped", lambda c: {})
+    monkeypatch.setattr(L, "GAME_ROOT", tmp_path / "game")
     home = out / "game-assets" / "amanda"; home.mkdir(parents=True)
     (home / "plan_28.json").write_text(json.dumps({**_plan(), "approved": "2026-10-14T00:00:00"}))
     st = L.state(cfg, "amanda")
@@ -190,6 +229,9 @@ def test_the_characters_state_carries_the_staging_and_the_queue_hook_adds_one_cp
                                                        "set": "pack_amanda", "sheets": {"compare": str(sheet)}}))
     st = L.state(cfg, "amanda")
     assert st["staged"]["n"] == 1 and st["staged"]["sheets"] == ["compare"] and st["staged"]["shipped"] is None
+    assert st["staged"]["looks"] == [{"id": "casual_01", "file": "casual_01_standing.webp", "game": None, "overwrites": False}]
+    assert L.look_tile(cfg, "amanda", "casual_01_standing.webp", "new") is None     # no cutout on disk yet
+    assert L.look_tile(cfg, "amanda", "../plan_28.json", "new") is None
     assert L.sheet_path(cfg, "amanda", "compare") == sheet and L.sheet_path(cfg, "amanda", "mapping") is None
 
 

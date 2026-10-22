@@ -219,6 +219,18 @@ OWN_CSS += r"""
 .looks details.sheet{margin:var(--s2) 0}
 .looks details.sheet summary{cursor:pointer;font:var(--t-meta);font-weight:600;color:var(--g8);padding:var(--s2) 0}
 .looks details.sheet img{display:block;width:100%;max-width:900px;border:1px solid var(--g3);border-radius:var(--r2);margin:var(--s2) 0}
+/* the ship box: one row per look, new beside the game, tick the keeper */
+.pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--s2);margin:var(--s2) 0}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--s1);position:relative;padding-top:18px}
+.pair .lid{position:absolute;top:0;left:0;font:var(--t-small);color:var(--g6);font-variant-numeric:tabular-nums}
+.tile{display:block;position:relative;border:2px solid var(--g3);border-radius:var(--r2);overflow:hidden;cursor:pointer;
+  background-color:#ddd;background-image:linear-gradient(45deg,#fff 25%,transparent 25%,transparent 75%,#fff 75%),
+  linear-gradient(45deg,#fff 25%,transparent 25%,transparent 75%,#fff 75%);background-size:16px 16px;background-position:0 0,8px 8px}
+.tile.on{border-color:var(--act);box-shadow:0 0 0 2px var(--act) inset}
+.tile input{position:absolute;top:6px;left:6px;width:22px;height:22px;margin:0;z-index:1}
+.tile .who{position:absolute;top:6px;right:6px;font:var(--t-small);background:rgba(0,0,0,.6);color:#fff;padding:1px 6px;border-radius:var(--r2)}
+.tile img{display:block;width:100%;aspect-ratio:2/3;object-fit:contain}
+.tile .none{display:flex;align-items:center;justify-content:center;aspect-ratio:2/3;font:var(--t-small);color:var(--g6);background:var(--g1)}
 .voice audio{width:100%;max-width:420px;height:32px;display:block}
 .voice .vrow{display:flex;align-items:center;gap:var(--s2);margin:2px 0}
 .voice .vrow span{flex:none;width:150px;font:var(--t-small);color:var(--g7)}
@@ -497,18 +509,54 @@ function shipBlock(st){
     +(s.flagged.length?' &middot; '+s.flagged.length+' flagged by the alpha report':'')
     +' &middot; '+(s.would_overwrite?'<b>'+s.would_overwrite+'</b> would overwrite files in the game':'nothing in the game yet under these names')+'</div>';
   if(s.shipped){
-    h+='<div class=sub>Copied '+s.shipped.files.length+' files into the game'+(s.shipped.overwrote?', '+s.shipped.overwrote+' overwritten':'')+'.</div>';
+    h+='<div class=sub>Copied '+s.shipped.files.length+' files into the game'+(s.shipped.overwrote?', '+s.shipped.overwrote+' overwritten':'')
+      +((s.shipped.skipped||[]).length?', '+s.shipped.skipped.length+' kept as the game had them':'')+'.</div>';
   } else {
-    h+='<div class=row><button class="btn btn-primary" data-act=lk_ship>Approve &mdash; copy '+s.n+' files into the game'+(s.would_overwrite?' (overwrites '+s.would_overwrite+')':'')+'</button>'
+    h+='<div class=row><button class="btn btn-primary" data-act=lk_ship data-n="'+s.n+'">'+shipLabel(s.n,s.n,s.would_overwrite)+'</button>'
       +'<button class="btn btn-ghost" data-act=lk_discard>Discard this staging</button></div>';
+    /* Jeremy, 2026-10-22: approve all by default, "but I would like an option to
+       choose which one to keep from the side-by-side sets". Every pair is new
+       beside the game's; the tick marks the keeper. New is ticked to start, so
+       Approve with nothing touched is the whole pack. Ticking the game's side
+       leaves that file alone - only ticked new looks are copied. */
+    if((s.looks||[]).length){
+      const tile=(l,side)=>{
+        const f=side==='new'?l.file:l.game;
+        const on=side==='new';
+        return '<label class="tile'+(on?' on':'')+'" data-tile="'+SM.esc(l.file)+'" data-side='+side+(on&&l.overwrites?' data-ow=1':'')+'>'
+          +'<input type=checkbox'+(on?' checked':'')+'><span class=who>'+(side==='new'?'new':(l.overwrites?'in the game':'game: '+SM.esc((l.game||'').replace(/_standing\.webp$/,''))))+'</span>'
+          +(f?'<img loading=lazy src="/characters/'+encodeURIComponent(c)+'/pack/look?side='+side+'&file='+encodeURIComponent(f)+'" alt="">':'<span class=none>nothing in the game</span>')
+          +'</label>';
+      };
+      h+='<div class=sub>Tap the one to keep in each pair. New is ticked; tick the game&rsquo;s to leave that look as it is.</div>';
+      h+='<div class=pairs>'+s.looks.map(l=>'<div class=pair><span class=lid>'+SM.esc(l.id)+'</span>'
+        +tile(l,'new')+(l.game?tile(l,'game'):'')+'</div>').join('')+'</div>';
+    }
   }
   /* Jeremy, 2026-10-14: the sheet "takes up the entire screen on my phone" - folded,
      opens full size in its own tab */
-  if(s.sheets.includes('compare')) h+='<details class=sheet><summary>See each new look beside the game&rsquo;s current one</summary>'
+  if(s.sheets.includes('compare')) h+='<details class=sheet><summary>The whole sheet, new beside the game</summary>'
     +'<a href="'+sheet('compare')+'" target=_blank><img loading=lazy src="'+sheet('compare')+'" alt="new beside the game, per look"></a>'
     +'<div class=sub>Tap the sheet to open it full size.</div></details>';
   if(s.sheets.includes('mapping')) h+='<div class=sub><a href="'+sheet('mapping')+'" target=_blank>mapping sheet</a></div>';
   return h;
+}
+function shipLabel(k,n,ow){
+  return 'Approve &mdash; copy '+(k===n?n+' files':k+' of '+n+' files')+' into the game'+(ow?' (overwrites '+ow+')':'');
+}
+/* the ticked new files in the ship box, and the button reads how many */
+function keepers(box){
+  return [...box.querySelectorAll('.tile[data-side=new] input:checked')].map(i=>i.closest('.tile').dataset.tile);
+}
+function tileTick(inp){
+  const t=inp.closest('.tile'), pair=t.closest('.pair'), box=t.closest('[data-ship]');
+  const other=[...pair.querySelectorAll('.tile')].find(x=>x!==t);
+  if(!inp.checked && !other){ inp.checked=true; return; }   /* nothing in the game: new stays the keeper */
+  if(!inp.checked){ other.querySelector('input').checked=true; }
+  else if(other){ other.querySelector('input').checked=false; }
+  for(const x of pair.querySelectorAll('.tile')) x.classList.toggle('on', x.querySelector('input').checked);
+  const b=box.querySelector('[data-act=lk_ship]'), n=+b.dataset.n, k=keepers(box).length;
+  b.innerHTML=shipLabel(k,n,box.querySelectorAll('.tile.on[data-side=new][data-ow]').length);
 }
 function collectLooks(el){
   return {all:[...el.querySelectorAll('[data-lo]')].map(t=>({id:t.dataset.lo,outfit:t.value,
@@ -531,9 +579,12 @@ async function looksAct(b){
     }
     else if(a==='lk_ship'){
       const n=b.textContent;   /* the button sits in the top box, outside the looks section */
-      if(!confirm('Copy the staged outfits into the game for '+c+'? '+n.replace(/^Approve\s*[-\u2014]\s*/,'')+'. This is the one step that writes into the game repo.')){ b.disabled=false; return; }
-      const r=await SM.postJSON('/characters/'+encodeURIComponent(c)+'/pack/ship',{});
-      SM.toast(c+': '+r.files.length+' files copied into the game'+(r.overwrote?', '+r.overwrote+' overwritten':''));
+      const box=b.closest('[data-ship]'), keep=keepers(box), all=+b.dataset.n;
+      const left=all-keep.length;
+      if(!confirm('Copy the staged outfits into the game for '+c+'? '+n.replace(/^Approve\s*[-\u2014]\s*/,'')
+        +(left?'. '+left+' unticked stay as the game has them':'')+'. This is the one step that writes into the game repo.')){ b.disabled=false; return; }
+      const r=await SM.postJSON('/characters/'+encodeURIComponent(c)+'/pack/ship', keep.length===all?{}:{keep});
+      SM.toast(c+': '+r.files.length+' files copied into the game'+(r.overwrote?', '+r.overwrote+' overwritten':'')+((r.skipped||[]).length?', '+r.skipped.length+' left as they were':''));
       st=await SM.getJSON(u);
     }
     else if(a==='lk_discard'){
@@ -568,6 +619,7 @@ function draw(){
 }
 /* the whole text visible at once - no inner scrolling to read what she is */
 function fit(t){ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
+document.addEventListener('change',e=>{ if(e.target.closest('.tile')) tileTick(e.target); });
 document.addEventListener('input',e=>{
   if(e.target.tagName==='TEXTAREA') fit(e.target);
   dirty();
@@ -712,12 +764,24 @@ def appearance_router(cfg: dict):
             raise HTTPException(404)
         return FileResponse(web_copy(p, 1600))
 
-    @r.post("/characters/{char}/pack/ship")
-    def _pack_ship(char: str) -> dict:
+    @r.get("/characters/{char}/pack/look")
+    def _pack_look(char: str, file: str, side: str = "new"):
+        """One tile: the staged look (`new`) or the game's current file (`game`)."""
         from ..assets import looks as L  # noqa: PLC0415
 
+        p = L.look_tile(cfg, _char(char), file, side)
+        if p is None:
+            raise HTTPException(404)
+        return FileResponse(p, media_type="image/webp")
+
+    @r.post("/characters/{char}/pack/ship")
+    def _pack_ship(char: str, body: dict | None = Body(None)) -> dict:
+        """`{keep: [files]}` ships only the ticked looks; no body ships them all."""
+        from ..assets import looks as L  # noqa: PLC0415
+
+        keep = (body or {}).get("keep")
         try:
-            return L.ship(cfg, _char(char))
+            return L.ship(cfg, _char(char), None if keep is None else [str(x) for x in keep])
         except ValueError as e:
             raise HTTPException(409, str(e)) from e
 

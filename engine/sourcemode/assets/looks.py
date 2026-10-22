@@ -1057,7 +1057,9 @@ def state(cfg: dict, character: str) -> dict:
         staged = {"at": staged.get("at"), "n": staged.get("n"), "missing": staged.get("missing") or [],
                   "flagged": staged.get("flagged") or [], "would_overwrite": staged.get("would_overwrite", 0),
                   "set": staged.get("set"), "shipped": staged.get("shipped"),
-                  "sheets": [k for k, v in (staged.get("sheets") or {}).items() if Path(v).is_file()]}
+                  "sheets": [k for k, v in (staged.get("sheets") or {}).items() if Path(v).is_file()],
+                  # each new look beside the game's, for the tiles he ticks
+                  "looks": [] if staged.get("shipped") else P.pairs(out, c, GAME_ROOT)}
     return {"character": c, "state": st, "approved_at": (ap or {}).get("approved"),
             "seed": (doc or {}).get("seed", 0),
             "categories": cats, "blank": blank, "shipped": shipped(c),
@@ -1074,14 +1076,30 @@ def sheet_path(cfg: dict, character: str, which: str) -> Path | None:
     return Path(p) if p and Path(p).is_file() else None
 
 
-def ship(cfg: dict, character: str) -> dict:
+def ship(cfg: dict, character: str, keep: list[str] | None = None) -> dict:
     """The formal approval. Jeremy, 2026-10-14: "I would like a formal approval
     step of that final shift ... before just deciding to overwrite whatever is
-    in the game currently." The only write into the game repo."""
+    in the game currently." The only write into the game repo. `keep` is the
+    files he ticked; None is all of them."""
     from ..config import outputs_dir  # noqa: PLC0415
     from . import pack as P  # noqa: PLC0415
 
-    return P.ship(outputs_dir(cfg), character.lower(), GAME_ROOT)
+    return P.ship(outputs_dir(cfg), character.lower(), GAME_ROOT, keep)
+
+
+def look_tile(cfg: dict, character: str, name: str, side: str) -> Path | None:
+    """A small image of one staged look (`new`) or the game's file (`game`)
+    for the tiles on the Characters tab; None when there is no such file."""
+    from ..config import outputs_dir  # noqa: PLC0415
+    from . import pack as P  # noqa: PLC0415
+
+    c = character.lower()
+    if side not in ("new", "game") or Path(name).name != name:
+        return None
+    out = outputs_dir(cfg)
+    p = ((out / "game-assets" / c / "outfits") if side == "new"
+         else (GAME_ROOT / "src" / "assets" / "characters" / c / "outfits")) / name
+    return P.thumb(p, out, c, side) if p.is_file() else None
 
 
 def discard_staging(cfg: dict, character: str) -> bool:
