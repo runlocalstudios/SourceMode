@@ -54,9 +54,17 @@ from __future__ import annotations
 FRAMING = ("close arm's-length selfie; her head and chest fill the frame and her face is "
            "large and sharp; the top of her head sits near the top edge; never a wide shot, "
            "never full-body")
-MIRROR_FRAMING = ("mirror selfie: her reflection from the thighs up, her phone held at chest "
-                  "height and visible in her hand, her face still large in the frame; "
-                  "never a wide shot")
+# Waist up, not thighs up. The first wording asked for "thighs up" AND "her face
+# still large in the frame", and the model obeyed the first: across the fourteen
+# packs judged on 2026-10-21 the four mirror slots were four of the five
+# lowest-scoring slots (0.63-0.67 against 0.69-0.74 everywhere else) and took
+# four of Jeremy's six rejects, with the face about an eighth of the frame -
+# roughly 200px at 1024x1536, under the size where the LoRA holds identity.
+# Waist up doubles the face while keeping the mirror and the phone.
+MIRROR_FRAMING = ("mirror selfie: her reflection from the waist up, her phone held at chest "
+                  "height and visible in her hand, her head and shoulders filling the upper "
+                  "half of the frame, her face large and sharp; never a wide shot, never "
+                  "full-body")
 
 STANCE = ("she is taking a selfie, the camera held a little above eye level and angled "
           "slightly down toward her")
