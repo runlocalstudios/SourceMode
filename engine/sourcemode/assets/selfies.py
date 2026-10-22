@@ -35,6 +35,11 @@ TWO MEASURED THINGS the prompts here obey:
    frame" kept 1/4. n=4, so that is a direction and not a measurement - but
    there is no case for paying words for it.
 
+3. **Do not name the camera either** (2026-10-21, casey). "the camera held a
+   little above eye level" drew a phone in her free hand on three of her six
+   rejects and a DSLR on a fourth, straight through the negative. Describe the
+   viewpoint ("shot from a little above eye level"), never the thing taking it.
+
 Every slot goes through `assets.render.shot_prompt`, the one inference builder,
 so a selfie cannot describe her differently from her wardrobe pack. A slot
 supplies framing, stance, outfit, hair, setting and the avoid clause; her age,
@@ -61,22 +66,38 @@ FRAMING = ("close arm's-length selfie; her head and chest fill the frame and her
 # four of Jeremy's six rejects, with the face about an eighth of the frame -
 # roughly 200px at 1024x1536, under the size where the LoRA holds identity.
 # Waist up doubles the face while keeping the mirror and the phone.
-MIRROR_FRAMING = ("mirror selfie: her reflection from the waist up, her phone held at chest "
-                  "height and visible in her hand, her head and shoulders filling the upper "
-                  "half of the frame, her face large and sharp; never a wide shot, never "
-                  "full-body")
+MIRROR_FRAMING = ("mirror selfie: the picture is her reflection from the waist up, her phone "
+                  "held at chest height and visible in her hand in the reflection, her head and "
+                  "shoulders filling the upper half of the frame, her face large and sharp; "
+                  "never a wide shot, never full-body")
 
-STANCE = ("she is taking a selfie, the camera held a little above eye level and angled "
-          "slightly down toward her")
-STANCE_SEATED = ("she is sitting back comfortably and taking a selfie, the camera held a little "
-                 "above eye level")
-STANCE_MIRROR = ("she stands in front of a full-length mirror photographing her own reflection, "
-                 "phone held at chest height, her other hand relaxed at her side")
+# Jeremy, 2026-10-21, on casey's pack: "horrible prompts still plagued by her
+# arm outstretched but showing the cell phone in the other hand or showing a
+# mirror selfie where the mirror is behind her". The negative was reaching the
+# run (run_shoots.slot_negative, redo.neg); the positive was beating it. Both
+# stances said "the camera held a little above eye level" - an instruction to
+# draw a device, and slot 21 drew a DSLR. The viewpoint is now described with
+# no object in it: the camera is where the picture is taken FROM.
+STANCE = ("she is taking a selfie, shot from a little above eye level and angled slightly "
+          "down toward her")
+STANCE_SEATED = ("she is sitting back comfortably and taking a selfie, shot from a little above "
+                 "eye level")
+# And "stands in front of a full-length mirror photographing her reflection"
+# rendered her facing the lens with a mirror BEHIND her showing her back (casey
+# 08 and 10). The picture IS the reflection; say so, and refuse the other
+# reading in the mirror slots' own negative.
+STANCE_MIRROR = ("she stands facing a full-length mirror and the whole picture is her "
+                 "reflection in it, her phone held at chest height and pointed at the mirror, "
+                 "her other hand relaxed at her side")
 
 AVOID = ("No studio lighting, no professional photoshoot look, no third-person camera angle, "
          "no plain backdrop: this is a casual selfie she took herself, in a real room.")
 #: Appended to the run's negative on every non-mirror slot.
-NEGATIVE = "phone, smartphone, phone in hand, phone screen, phone frame around the picture"
+NEGATIVE = ("phone, smartphone, phone in hand, phone screen, phone frame around the picture, "
+            "camera, DSLR camera, camera in hand")
+#: Appended on the mirror slots: the mirror is in front of her, not behind.
+MIRROR_NEGATIVE = ("mirror behind her, a second mirror, her back, rear view, two of her, "
+                   "seen from behind, full-body")
 
 SHOT_TYPE = "selfie"
 
@@ -425,7 +446,7 @@ def slots(pick: str = "A") -> list[dict]:
                 "framing": MIRROR_FRAMING if stance is STANCE_MIRROR else FRAMING,
                 "shot_type": "mirror selfie" if stance is STANCE_MIRROR else SHOT_TYPE,
                 "avoid": AVOID,
-                **({} if stance is STANCE_MIRROR else {"negative": NEGATIVE}),
+                "negative": MIRROR_NEGATIVE if stance is STANCE_MIRROR else NEGATIVE,
             })
     return out
 

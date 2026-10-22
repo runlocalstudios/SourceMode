@@ -85,12 +85,18 @@ def test_the_phone_is_in_the_picture_only_in_a_mirror_selfie():
     for slot in plain:
         p = shot_prompt("nobody", slot, backdrop=slot["setting"])
         assert "phone" not in p.lower(), slot["id"]
+        # 2026-10-21, casey: "the camera held" drew a device too. The viewpoint
+        # is described, never the thing taking the picture.
+        assert "camera held" not in p.lower(), slot["id"]
         assert "a selfie, " in p
         assert "phone" in slot["negative"] and "phone frame" in slot["negative"]
+        assert "camera" in slot["negative"]
     for slot in mirror:
         p = shot_prompt("nobody", slot, backdrop=slot["setting"])
         assert "a mirror selfie, " in p and "phone held at chest height" in p
-        assert "negative" not in slot
+        # The picture is the reflection; the mirror is never behind her.
+        assert "her reflection" in p and "facing a full-length mirror" in p
+        assert "mirror behind her" in slot["negative"] and "phone" not in slot["negative"]
 
 
 def test_the_mirror_shoot_is_mirror_selfies_with_the_phone_in_every_shot():
