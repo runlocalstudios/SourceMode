@@ -156,22 +156,259 @@ _INTIMATE = (
      "low warm light, in front of her bedroom mirror at night", STANCE_MIRROR),
 )
 
-_TONES = (("selfie_casual", _CASUAL), ("selfie_flirty", _FLIRTY),
-          ("selfie_date", _DATE), ("selfie_intimate", _INTIMATE))
+# --- sets B, C and D ------------------------------------------------------------
+# Jeremy, 2026-10-21: "The selfie packs all look like the exact same prompts ...
+# I don't want for example every girl to have a black shirt selfie sitting at a
+# table with a bunch of gold chains." Three more sets of the same shape - 8/6/5/5,
+# the mirror rows at the SAME positions so every mix keeps four mirror selfies -
+# and each character draws her own mix of the four (see `set_for`).
+_B = (
+    (("a cobalt blue cropped cardigan buttoned up",
+      "her hair worn loose",
+      "soft daylight, on a park bench with trees blurred behind her", STANCE_SEATED),
+     ("a striped navy and white boat-neck top",
+      "her hair half-up",
+      "bright midday light, on a boardwalk by the sea", STANCE),
+     ("a mustard yellow hoodie with the hood down",
+      "her hair up in a messy bun",
+      "cool morning light, in her apartment hallway with coats on hooks behind her", STANCE),
+     ("a white button-down shirt with the sleeves rolled up",
+      "her hair pulled back in a high ponytail",
+      "fluorescent office light, at her desk with a monitor blurred behind her", STANCE_SEATED),
+     ("a lavender zip-up track jacket over a sports bra",
+      "her hair pulled back in a high ponytail",
+      "bright overhead light, in a gym with racks blurred behind her", STANCE),
+     ("an olive utility shirt over a black tank top",
+      "her hair worn loose",
+      "dappled afternoon light, on a forest trail", STANCE),
+     ("a soft peach crewneck sweatshirt",
+      "her hair worn loose",
+      "warm shop light, between the shelves of a bookstore", STANCE),
+     ("a matching charcoal sweatshirt and biker shorts set",
+      "her hair half-up",
+      "warm hallway light, in front of a tall mirror by her front door", STANCE_MIRROR)),
+    (("a lilac satin cami tucked into a short denim skirt",
+      "her hair worn loose",
+      "warm evening light, on her apartment balcony with the city behind her", STANCE),
+     ("a white ribbed crop top and pale pink pyjama shorts",
+      "her hair up in a messy bun",
+      "morning daylight, in front of the mirrored wardrobe in her bedroom", STANCE_MIRROR),
+     ("a red bandeau top under an open white linen shirt",
+      "her hair worn loose",
+      "bright afternoon sun, on a lounger by a pool", STANCE_SEATED),
+     ("a fitted black tube top",
+      "her hair pulled back in a high ponytail",
+      "neon-tinted night light, in the back seat of a car", STANCE_SEATED),
+     ("a baby blue knit cardigan worn with only a bralette under it",
+      "her hair half-up",
+      "warm lamplight, curled up in an armchair", STANCE_SEATED),
+     ("an oversized boyfriend shirt slipping off one shoulder",
+      "her hair worn loose",
+      "early morning light through sheer curtains, in her bedroom", STANCE)),
+    (("a cream corset top and black wide-leg trousers",
+      "her hair worn loose",
+      "golden light, on a rooftop terrace at sunset", STANCE),
+     ("a sapphire blue velvet mini dress",
+      "her hair pulled back in a high ponytail",
+      "dim amber light, at a cocktail bar with bottles glowing behind her", STANCE_SEATED),
+     ("a white halter top and a black leather mini skirt",
+      "her hair half-up",
+      "warm streetlight, outside a restaurant at night", STANCE),
+     ("a dusty pink one-shoulder midi dress",
+      "her hair worn loose",
+      "soft candlelight, in a quiet wine bar", STANCE_SEATED),
+     ("a fitted bronze satin mini dress",
+      "her hair worn loose",
+      "bright vanity bulbs, in front of a full-length mirror in a hotel room", STANCE_MIRROR)),
+    (("a sheer black mesh top over a black bra",
+      "her hair worn loose",
+      "red-tinted low light, lying across her bed", STANCE_SEATED),
+     ("an ivory satin robe tied loosely at the waist",
+      "her hair up in a messy bun",
+      "soft morning light, in a hotel bed with white sheets", STANCE_SEATED),
+     ("a navy lace bralette and matching high-waisted briefs",
+      "her hair worn loose",
+      "cool moonlight from the window, standing by her bed", STANCE),
+     ("an oversized grey t-shirt and nothing else",
+      "her hair worn loose",
+      "warm bedside light, under the covers at night", STANCE_SEATED),
+     ("a deep plum lace teddy",
+      "her hair half-up",
+      "candlelight, in front of a tall bathroom mirror", STANCE_MIRROR)),
+)
+_C = (
+    (("a forest green turtleneck sweater",
+      "her hair worn loose",
+      "crisp autumn daylight, on a street lined with orange trees", STANCE),
+     ("a coral tank top and white shorts",
+      "her hair pulled back in a high ponytail",
+      "bright sun, at an outdoor market with fruit stalls behind her", STANCE),
+     ("a heather grey zip hoodie, half unzipped",
+      "her hair up in a messy bun",
+      "soft window light, on the floor of her living room with a blanket", STANCE_SEATED),
+     ("a powder blue polo shirt",
+      "her hair half-up",
+      "overcast daylight, on a train seat by the window", STANCE_SEATED),
+     ("a black denim jacket over a burgundy top",
+      "her hair worn loose",
+      "night city lights, on a crosswalk with traffic blurred behind her", STANCE),
+     ("a cream cable-knit cardigan",
+      "her hair worn loose",
+      "warm cafe light, in a window seat with a latte on the table", STANCE_SEATED),
+     ("a bright red windbreaker",
+      "her hair pulled back in a high ponytail",
+      "windy daylight, on a beach with waves behind her", STANCE),
+     ("a white tank top and light-wash mom jeans",
+      "her hair worn loose",
+      "bright daylight, in a store fitting room mirror", STANCE_MIRROR)),
+    (("a cherry red ribbed cami",
+      "her hair worn loose",
+      "warm golden-hour light through blinds, on her bed", STANCE_SEATED),
+     ("a cropped baby pink cardigan and a white mini skirt",
+      "her hair half-up",
+      "soft daylight, in front of a full-length mirror propped against her wall", STANCE_MIRROR),
+     ("a black sports bra and grey joggers",
+      "her hair up in a messy bun",
+      "bright light, in her kitchen after a workout", STANCE),
+     ("a sheer white blouse knotted at the waist",
+      "her hair worn loose",
+      "sunset light, on a sailboat deck", STANCE_SEATED),
+     ("a teal satin pyjama shirt unbuttoned low",
+      "her hair worn loose",
+      "warm lamplight, on her sofa with a blanket over her legs", STANCE_SEATED),
+     ("a strapless denim top",
+      "her hair pulled back in a high ponytail",
+      "late afternoon sun, leaning on a car outside", STANCE)),
+    (("a silver metallic slip dress",
+      "her hair worn loose",
+      "colourful club lights, in a lounge with a blurred crowd behind her", STANCE),
+     ("a white off-the-shoulder top and a pleated black skirt",
+      "her hair half-up",
+      "warm string lights, on a restaurant patio at night", STANCE_SEATED),
+     ("a fuchsia bodycon mini dress",
+      "her hair pulled back in a high ponytail",
+      "soft car interior light, in the passenger seat on the way out", STANCE_SEATED),
+     ("a black lace top and high-waisted cream trousers",
+      "her hair worn loose",
+      "warm theatre lobby light, under a chandelier", STANCE),
+     ("a royal blue satin cowl-neck dress",
+      "her hair worn loose",
+      "soft bathroom light, in front of the vanity mirror getting ready", STANCE_MIRROR)),
+    (("a red satin bralette and matching shorts",
+      "her hair worn loose",
+      "warm low light, sitting on the edge of a bathtub", STANCE_SEATED),
+     ("a white cotton tank top and lace-trim panties",
+      "her hair up in a messy bun",
+      "soft morning sunlight, stretched out on rumpled sheets", STANCE_SEATED),
+     ("a sheer black babydoll",
+      "her hair worn loose",
+      "dim purple lamplight, standing in her bedroom", STANCE),
+     ("a soft sage green silk slip",
+      "her hair half-up",
+      "warm fairy lights above her bed at night", STANCE_SEATED),
+     ("a black strappy lace bodysuit",
+      "her hair worn loose",
+      "low warm light, in front of a full-length mirror in a dark room", STANCE_MIRROR)),
+)
+_D = (
+    (("a tan suede jacket over a white turtleneck",
+      "her hair worn loose",
+      "soft overcast light, outside a brick building downtown", STANCE),
+     ("a sky blue sundress with thin straps",
+      "her hair half-up",
+      "bright sun, in a flower garden", STANCE),
+     ("an oversized black band t-shirt",
+      "her hair worn loose",
+      "warm lamplight, sitting on her bedroom floor against the bed", STANCE_SEATED),
+     ("a pastel green knit vest over a white t-shirt",
+      "her hair pulled back in a high ponytail",
+      "soft daylight, at a library table with shelves behind her", STANCE_SEATED),
+     ("a fitted navy athletic zip top",
+      "her hair pulled back in a high ponytail",
+      "early morning light, on a running track", STANCE),
+     ("a burnt orange off-the-shoulder top",
+      "her hair worn loose",
+      "warm patio light, at an outdoor brunch table", STANCE_SEATED),
+     ("a white puffer jacket and a pink beanie",
+      "her hair worn loose",
+      "snowy daylight, on a winter street", STANCE),
+     ("a black ribbed tank and grey sweat shorts",
+      "her hair up in a messy bun",
+      "bright bathroom light, in front of the bathroom mirror", STANCE_MIRROR)),
+    (("a lemon yellow bikini top under a sheer cover-up",
+      "her hair worn loose",
+      "bright beach sun, on a towel on the sand", STANCE_SEATED),
+     ("a black corset top and ripped jeans",
+      "her hair pulled back in a high ponytail",
+      "warm light, in front of a gold-framed mirror in her hallway", STANCE_MIRROR),
+     ("a cropped white button-up tied under her chest",
+      "her hair half-up",
+      "soft afternoon light, at her vanity table", STANCE_SEATED),
+     ("a pink satin bralette under an open denim shirt",
+      "her hair worn loose",
+      "warm sunset light, on a rooftop", STANCE),
+     ("a grey cropped tank and cotton boy shorts",
+      "her hair up in a messy bun",
+      "lazy morning light, sitting up in bed with coffee", STANCE_SEATED),
+     ("a fitted burgundy long-sleeve bodysuit",
+      "her hair worn loose",
+      "warm practical light, leaning in a doorway at home", STANCE)),
+    (("an ivory satin midi skirt and a black fitted top",
+      "her hair half-up",
+      "warm gallery lighting, at an art exhibit", STANCE),
+     ("a crimson halter mini dress",
+      "her hair worn loose",
+      "dim red booth lighting, in a jazz club", STANCE_SEATED),
+     ("a black blazer dress with a plunging neckline",
+      "her hair pulled back in a high ponytail",
+      "city lights at night, in the back of a taxi", STANCE_SEATED),
+     ("a gold shimmer cami and black satin trousers",
+      "her hair worn loose",
+      "warm light, on a hotel balcony overlooking the skyline at night", STANCE),
+     ("a pale lilac tulle mini dress",
+      "her hair worn loose",
+      "soft bedroom light, in front of her mirror ready to leave", STANCE_MIRROR)),
+    (("a white lace bralette and matching briefs",
+      "her hair worn loose",
+      "soft daylight through sheer curtains, kneeling on her bed", STANCE_SEATED),
+     ("a black satin robe slipping off one shoulder",
+      "her hair half-up",
+      "warm low light, on a velvet chaise", STANCE_SEATED),
+     ("a ruby red lace bodysuit",
+      "her hair worn loose",
+      "candlelight, standing beside her bed at night", STANCE),
+     ("an unbuttoned men's dress shirt and lace panties",
+      "her hair up in a messy bun",
+      "warm morning light, sitting on the kitchen counter", STANCE_SEATED),
+     ("an emerald green satin teddy",
+      "her hair worn loose",
+      "dim warm light, in front of a full-length mirror in her bedroom", STANCE_MIRROR)),
+)
+
+_TONE_IDS = ("selfie_casual", "selfie_flirty", "selfie_date", "selfie_intimate")
+SETS = {"A": (_CASUAL, _FLIRTY, _DATE, _INTIMATE), "B": _B, "C": _C, "D": _D}
+_TONES = tuple(zip(_TONE_IDS, SETS["A"]))
 
 
-def slots() -> list[dict]:
+def slots(pick: str = "A") -> list[dict]:
     """The 24 shot slots, in tone order, shaped the way `shot_prompt` wants them.
+
+    `pick` names the set each slot comes from: one letter for a whole set, or
+    24 letters, one per slot. The mirror rows sit at the same positions in
+    every set, so any mix keeps four mirror selfies.
 
     `look` walks 1..24 rather than restarting per tone, because it drives the
     expression table and the body/head yaw in `pose_fields` - so every selfie
     gets a different face and a different turn instead of twenty-four copies of
     one pose.
     """
+    n = sum(len(rows) for rows in SETS["A"])
+    pick = pick * n if len(pick) == 1 else pick
     out: list[dict] = []
-    for tone, rows in _TONES:
-        for outfit, hair, setting, stance in rows:
+    for t, tone in enumerate(_TONE_IDS):
+        for r in range(len(SETS["A"][t])):
             i = len(out)
+            outfit, hair, setting, stance = SETS[pick[i]][t][r]
             out.append({
                 "id": f"selfie_{i + 1:02d}", "look": i + 1,
                 "category": tone, "tone": tone, "pose": "standing",
@@ -187,3 +424,57 @@ def slots() -> list[dict]:
 
 COUNTS = {tone: len(rows) for tone, rows in _TONES}
 TOTAL = sum(COUNTS.values())
+
+# --- which set each character gets ----------------------------------------------
+# "random": every slot draws its own set, so no two characters share a pack and
+# a given shot repeats across characters about one time in four. "rotate": the
+# next character gets the next whole set, A B C D A... Either way the pick is
+# written down the first time, because a re-roll rebuilds the slot from the
+# plan and must get the same prompt the judged shot had.
+MODE = "random"
+LETTERS = "ABCD"
+
+
+def _picks_file():
+    from ..config import load_config, outputs_dir  # noqa: PLC0415
+    return outputs_dir(load_config()) / "game-assets" / "selfie_sets.json"
+
+
+def _had_selfies(character: str) -> bool:
+    from ..config import ENGINE_ROOT  # noqa: PLC0415
+    return any((ENGINE_ROOT.parent / "library" / character).glob("*_selfies_selfies"))
+
+
+def set_for(character: str, path=None, mode: str | None = None) -> str:
+    """Her 24-letter pick, assigned on first use and kept. A character who
+    already has a selfie set stays on set A, the set she was shot with."""
+    import json  # noqa: PLC0415
+    import random  # noqa: PLC0415
+
+    c = (character or "").lower()
+    path = path or _picks_file()
+    doc = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    if c in doc:
+        return doc[c]
+    if _had_selfies(c):
+        pick = "A" * TOTAL
+    elif (mode or MODE) == "rotate":
+        whole = sum(1 for v in doc.values() if len(set(v)) == 1)
+        pick = LETTERS[whole % len(LETTERS)] * TOTAL
+    else:
+        rng = random.Random(f"{c}-selfies")
+        pick = "".join(rng.choice(LETTERS) for _ in range(TOTAL))
+    doc[c] = pick
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+    return pick
+
+
+def slots_for(character: str, batch: int = 1) -> list[dict]:
+    """Her selfie pack: her set mix, with her own hair vocabulary rotating
+    under it, exactly as the fixed pack applied it."""
+    from .wardrobe import hair_options  # noqa: PLC0415
+
+    out = slots(set_for(character)) if character else slots()
+    hair = hair_options(character) if character else ()
+    return [{**x, "hair": hair[i % len(hair)]} for i, x in enumerate(out)] if hair else out

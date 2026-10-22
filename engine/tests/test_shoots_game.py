@@ -306,3 +306,32 @@ def test_a_pack_resumes_but_re_renders_when_the_prompt_changed():
     # a sidecar from before prompts were recorded is left alone, not re-rolled
     assert not needs_rerender({}, "anything")
     assert not needs_rerender({"prompt": ""}, "anything")
+
+
+def test_four_selfie_sets_share_the_shape_and_differ_in_every_shot():
+    """Jeremy, 2026-10-21: every girl had the same black-shirt, gold-chains
+    cafe selfie. Four sets, same 8/6/5/5 and mirror positions, no shared row."""
+    base = selfies.slots("A")
+    mirrors = [i for i, x in enumerate(base) if x["stance"] is selfies.STANCE_MIRROR]
+    outfits = set()
+    for letter in "ABCD":
+        s = selfies.slots(letter)
+        assert [x["category"] for x in s] == [x["category"] for x in base]
+        assert [i for i, x in enumerate(s) if x["stance"] is selfies.STANCE_MIRROR] == mirrors
+        for x in s:
+            if x["stance"] is not selfies.STANCE_MIRROR:
+                assert "phone" not in (x["outfit"] + x["setting"]).lower()
+        outfits |= {x["outfit"] for x in s}
+    assert len(outfits) == 4 * 24
+
+
+def test_a_character_keeps_her_selfie_mix_and_old_packs_stay_on_set_a(tmp_path, monkeypatch):
+    f = tmp_path / "picks.json"
+    monkeypatch.setattr(selfies, "_had_selfies", lambda c: c == "bianca")
+    a = selfies.set_for("newgirl", path=f)
+    assert len(a) == 24 and set(a) <= set("ABCD") and len(set(a)) > 1
+    assert selfies.set_for("newgirl", path=f) == a          # a re-roll gets the same prompts
+    assert selfies.set_for("bianca", path=f) == "A" * 24
+    r1 = selfies.set_for("r1", path=f, mode="rotate")
+    r2 = selfies.set_for("r2", path=f, mode="rotate")
+    assert len(set(r1)) == len(set(r2)) == 1 and r1 != r2

@@ -59,6 +59,9 @@ class Shoot:
     # job and hobbies off the game) builds them with make(character, batch).
     make: object = None
     batch: int = 0
+    # A fixed-size set whose slots still depend on who she is (the selfie
+    # pack's set mix): per_character(character) -> slots. One folder, no batches.
+    per_character: object = None
     # Jeremy, 2026-10-12: a shoot authored pose by pose. Each entry is a stance
     # plus whatever composition it needs (framing, facing, gaze, shot_type);
     # the outfits rotate under them. `()` keeps the outfit x pose rotation.
@@ -88,6 +91,8 @@ class Shoot:
 
         if self.make is not None:
             return self.make(character or "", self.batch or 1)
+        if self.per_character is not None:
+            return self.per_character(character or "")
         if self.explicit:
             return [dict(x) for x in self.explicit] if not character else [
                 {**x, "hair": hair_options(character)[i % len(hair_options(character))]}
@@ -456,11 +461,13 @@ CATALOG: tuple[Shoot, ...] = (
 # things that actually ship into the game - so they sit in their own group,
 # first, with their real cost on the label.
 def _selfie_pack() -> Shoot:
-    from .selfies import TOTAL, slots  # noqa: PLC0415
+    from .selfies import TOTAL, slots_for  # noqa: PLC0415
 
+    # each character draws her own mix of the four sets; not `make`, which
+    # would turn every tick into a new batch
     return Shoot("selfies", "Selfie pack", "game",
                  "real rooms and streets, her own phone, backgrounds kept",
-                 (), (), shots=TOTAL, explicit=tuple(slots()),
+                 (), (), shots=TOTAL, per_character=slots_for,
                  note="24 phone selfies - 8 casual, 6 flirty, 5 date, 5 intimate. "
                       "Ships as rendered: no chroma plate, no cutout.")
 
