@@ -322,9 +322,11 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     stance = f", {slot['stance']}" if slot.get("stance") else ""
     avoid = f" {slot['avoid']}" if slot.get("avoid") else ""
     expression = slot.get("expression_natural") or _NATURAL_EXPRESSION[asked["expression"]]
+    from .appearance import hair_unsaid  # noqa: PLC0415
+    hair = "" if slot["hair"].strip().lower() in hair_unsaid(character) else f"{slot['hair']}, "
     return (f"{trigger or character}, {app + ', ' if app else ''}{crop}, {body}, {head}{stance}, "
             f"{expression}, {slot.get('makeup') or MAKEUP}, "
-            f"{slot['hair']}, wearing {outfit}, "
+            f"{hair}wearing {outfit}, "
             f"{backdrop or KEY_BACKDROP}. Photorealistic, natural skin texture, sharp focus.{avoid}")
 
 

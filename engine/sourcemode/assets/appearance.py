@@ -254,6 +254,15 @@ def pack_camera(character: str) -> dict:
     return (_load()["look"].get((character or "").lower()) or {}).get("pack_camera") or {}
 
 
+def hair_unsaid(character: str) -> set[str]:
+    """Hair clauses her prompt leaves out entirely, lower-cased. Jeremy,
+    2026-10-22, on cassie's selfies: every "her hair worn loose" came back flat
+    and centre-parted and not her (4 of 5 rejected, 0 of 19 other styles) -
+    "just don't caption her hair in those". Kept out of CONFIRM_FIELDS."""
+    rec = _load()["look"].get((character or "").lower()) or {}
+    return {str(x).strip().lower() for x in rec.get("hair_unsaid") or []}
+
+
 # What a render from the LoRA needs documented BEFORE the first text-only
 # inference - the epoch sweep - because that is the first time text alone has
 # to carry identity. Training images come from reference photos and captions

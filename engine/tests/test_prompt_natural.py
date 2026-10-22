@@ -111,3 +111,14 @@ def test_a_pack_camera_reaches_only_her_pack_prompt(monkeypatch):
             "outfit": "a white tee and jeans", "hair": "her hair worn loose"}
     assert "from the mid-thigh up, the camera at her eye level, " in R.natural_prompt("zara", slot)
     assert "eye level" not in R.natural_prompt("zara", {**slot, "framing_natural": "framed from the chest up"})
+
+
+def test_an_unsaid_hair_clause_leaves_her_hair_out_of_the_prompt(monkeypatch):
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "hair_unsaid", lambda c: {"her hair worn loose"} if c == "zara" else set())
+    slot = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
+            "outfit": "a white tee and jeans", "hair": "her hair worn loose"}
+    p = R.natural_prompt("zara", slot)
+    assert "hair worn loose" not in p and ", wearing a white tee" in p and ", ," not in p
+    assert "her hair worn loose, wearing" in R.natural_prompt("mia", slot)
+    assert "high ponytail, wearing" in R.natural_prompt("zara", {**slot, "hair": "her hair in a high ponytail"})
