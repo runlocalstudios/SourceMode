@@ -216,9 +216,9 @@ html,body{overflow-x:hidden}
 """
 
 OWN_CSS += r"""
-.looks details.sheet{margin:var(--s2) 0}
-.looks details.sheet summary{cursor:pointer;font:var(--t-meta);font-weight:600;color:var(--g8);padding:var(--s2) 0}
-.looks details.sheet img{display:block;width:100%;max-width:900px;border:1px solid var(--g3);border-radius:var(--r2);margin:var(--s2) 0}
+[data-ship] details.contact{margin:var(--s2) 0}
+[data-ship] details.contact summary{cursor:pointer;font:var(--t-meta);font-weight:600;color:var(--g8);padding:var(--s2) 0}
+[data-ship] details.contact img{display:block;width:100%;max-width:900px;border:1px solid var(--g3);border-radius:var(--r2);margin:var(--s2) 0}
 /* the ship box: one row per look, new beside the game, tick the keeper */
 .pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--s2);margin:var(--s2) 0}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--s1);position:relative;padding-top:18px}
@@ -535,7 +535,9 @@ function shipBlock(st){
   }
   /* Jeremy, 2026-10-14: the sheet "takes up the entire screen on my phone" - folded,
      opens full size in its own tab */
-  if(s.sheets.includes('compare')) h+='<details class=sheet><summary>The whole sheet, new beside the game</summary>'
+  /* NOT class=sheet: that is the hub's fixed picker drawer (ui.py), and on the
+     iPad it pinned this fold to the left edge over the card (2026-10-22) */
+  if(s.sheets.includes('compare')) h+='<details class=contact><summary>The whole sheet, new beside the game</summary>'
     +'<a href="'+sheet('compare')+'" target=_blank><img loading=lazy src="'+sheet('compare')+'" alt="new beside the game, per look"></a>'
     +'<div class=sub>Tap the sheet to open it full size.</div></details>';
   if(s.sheets.includes('mapping')) h+='<div class=sub><a href="'+sheet('mapping')+'" target=_blank>mapping sheet</a></div>';
