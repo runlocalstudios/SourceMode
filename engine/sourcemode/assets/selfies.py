@@ -442,7 +442,10 @@ def _picks_file():
 
 def _had_selfies(character: str) -> bool:
     from ..config import ENGINE_ROOT  # noqa: PLC0415
-    return any((ENGINE_ROOT.parent / "library" / character).glob("*_selfies_selfies"))
+    # rendered images, not the folder: run_shoots makes the folder before it
+    # asks for the plan, so a folder alone would pin every new character to A
+    return any(d.glob("selfie_*.png")
+               for d in (ENGINE_ROOT.parent / "library" / character).glob("*_selfies_selfies"))
 
 
 def set_for(character: str, path=None, mode: str | None = None) -> str:
