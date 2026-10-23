@@ -85,9 +85,18 @@ let data=null, who=null, picked=new Set();
 async function load(){
   try{ data=await SM.getJSON('/queue/shoots'); }
   catch(e){ $('list').innerHTML='<div class=errbox><b>Could not load</b>'+SM.esc(e.message)+'</div>'; return; }
+  /* Jeremy, 2026-10-23: the Characters tab's "Shoots" button after approving
+     her 28 hands her name over in the hash; select her, once, then drop the
+     hash so a later manual pick is not pulled back to her on every reload */
+  const asked=decodeURIComponent(location.hash.slice(1));
+  if(asked){
+    if(data.characters.some(x=>x.character===asked) && asked!==who){ who=asked; picked.clear(); }
+    history.replaceState(null,'',location.pathname);
+  }
   if(!who && data.characters.length) who=data.characters[0].character;
   draw();
 }
+window.addEventListener('hashchange',()=>load());
 
 function draw(){
   SM.set($('who'),null, data.characters.map(c=>

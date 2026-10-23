@@ -124,3 +124,15 @@ def test_the_shoots_tab_rereads_its_catalog_when_shown_again():
     js = shoots_page.OWN_JS
     assert "SM.on('shown',()=>load())" in js
     assert "visibilitychange" in js and "load();" in js
+
+
+def test_the_shoots_tab_selects_the_character_the_hub_hands_it_in_the_hash():
+    """Jeremy, 2026-10-23: the Characters tab's Shoots button after approving
+    her 28 should land with her selected, not cost one more click."""
+    from sourcemode.monitor import shoots_page
+    js = shoots_page.OWN_JS
+    assert "decodeURIComponent(location.hash.slice(1))" in js
+    assert "who=asked; picked.clear();" in js
+    # consumed once, so his own later pick is not undone on the next reload
+    assert "history.replaceState(null,'',location.pathname)" in js
+    assert "addEventListener('hashchange',()=>load())" in js
