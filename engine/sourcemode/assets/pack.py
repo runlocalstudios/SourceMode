@@ -9,7 +9,9 @@ final shift though."
 So the pack is: render here -> judge (`pack_<char>`) -> rejects re-roll through
 `redo.py` back into the same folders -> when every look is a keep, a CPU-lane
 job cuts them out and stages them (`process_pack.py`) -> he approves on the
-Characters tab, and ONLY that approval writes into the game.
+Characters tab, and ONLY that approval writes into the game - that, and the
+profile pick on the same tab (`ship_portrait`: one reference photo becomes
+`portraits/profile.webp`). Nothing else in the engine writes there.
 
 The Edit graph (a plate re-dressed 28 times on magenta) stays in
 `render.render_plan` for anything that still wants it; the pack no longer
@@ -398,8 +400,9 @@ def thumb(src: Path, out_root: Path, character: str, side: str, width: int = 360
 
 def ship(out_root: Path, character: str, game_root: Path, keep: list[str] | None = None) -> dict:
     """The approval: copy the staged outfits into the game's folder for her,
-    overwriting what is there under the same names, and record it. The ONLY
-    place in the engine that writes into the game repo.
+    overwriting what is there under the same names, and record it. With
+    `ship_portrait` below, the only place in the engine that writes into the
+    game repo.
 
     `keep` is the files he ticked; None means every staged file (the default).
     An unticked look is skipped - the game keeps whatever it has there."""
@@ -445,3 +448,64 @@ def discard(out_root: Path, character: str) -> bool:
         return False
     p.unlink()
     return True
+
+
+# --- the profile portrait ----------------------------------------------------
+# The game shows `<char>/portraits/profile.webp` as her profile picture: one
+# file, an RGB WebP at the photo's own size (cassie's is her reference portrait
+# byte for byte). Jeremy, 2026-10-23: pick it from her reference photos on the
+# Characters tab - one, never several.
+
+PORTRAIT_QUALITY = 88      # what the game's own convert-assets-webp.mjs uses
+
+
+def portrait_path(game_root: Path, character: str) -> Path:
+    return game_root / "src" / "assets" / "characters" / character / "portraits" / "profile.webp"
+
+
+def portrait_record_path(out_root: Path, character: str) -> Path:
+    return Path(out_root) / "game-assets" / character / "portrait.json"
+
+
+def portrait_state(out_root: Path | None, character: str, game_root: Path) -> dict:
+    """What the card shows: whether the game has a profile for her, and which
+    reference it came from when it was picked here (None when the game's file
+    predates the picker or was replaced some other way)."""
+    gp = portrait_path(game_root, character)
+    have = gp.is_file()
+    rec = None
+    rp = portrait_record_path(out_root, character) if out_root else None
+    if have and rp and rp.is_file():
+        try:
+            rec = json.loads(rp.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            rec = None
+        # a file the record did not write (newer than the pick) is not that pick
+        if rec and abs(gp.stat().st_mtime - float(rec.get("mtime") or 0)) > 2:
+            rec = None
+    return {"game": have, "from": (rec or {}).get("from"), "at": (rec or {}).get("at")}
+
+
+def ship_portrait(out_root: Path, character: str, game_root: Path, src: Path) -> dict:
+    """Make `src` (one of her reference photos) the game's profile portrait:
+    an RGB WebP at the photo's own size at portraits/profile.webp, replacing
+    whatever is there. Records which photo it was so the card can mark it."""
+    from PIL import Image  # noqa: PLC0415
+
+    src = Path(src)
+    if not src.is_file():
+        raise ValueError(f"no such photo: {src.name}")
+    dest = portrait_path(game_root, character)
+    overwrote = dest.is_file()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    im = Image.open(src).convert("RGB")
+    tmp = dest.with_suffix(".tmp")
+    im.save(tmp, "WEBP", quality=PORTRAIT_QUALITY)
+    tmp.replace(dest)
+    rec = {"at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()), "from": src.name,
+           "to": str(dest), "overwrote": overwrote, "size": list(im.size),
+           "mtime": dest.stat().st_mtime}
+    rp = portrait_record_path(out_root, character)
+    rp.parent.mkdir(parents=True, exist_ok=True)
+    rp.write_text(json.dumps(rec, indent=1), encoding="utf-8")
+    return rec

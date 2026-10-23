@@ -1112,3 +1112,23 @@ def discard_staging(cfg: dict, character: str) -> bool:
     from . import pack as P  # noqa: PLC0415
 
     return P.discard(outputs_dir(cfg), character.lower())
+
+
+def ship_portrait(cfg: dict, character: str, src: Path) -> dict:
+    """One reference photo becomes the game's profile portrait for her. The
+    other write into the game repo, beside `ship`."""
+    from ..config import outputs_dir  # noqa: PLC0415
+    from . import pack as P  # noqa: PLC0415
+
+    return P.ship_portrait(outputs_dir(cfg), character.lower(), GAME_ROOT, src)
+
+
+def portrait_tile(cfg: dict, character: str) -> Path | None:
+    """A small image of the game's current profile for the card; None when the
+    game has none. Cached under outputs, never beside the game's file."""
+    from ..config import outputs_dir  # noqa: PLC0415
+    from . import pack as P  # noqa: PLC0415
+
+    c = character.lower()
+    p = P.portrait_path(GAME_ROOT, c)
+    return P.thumb(p, outputs_dir(cfg), c, "portrait") if p.is_file() else None

@@ -281,3 +281,37 @@ def test_touches_top_reads_a_head_cut_off_at_the_top_edge(tmp_path):
     a[:30, 170:240] = (90, 60, 40)                # hair running off the top
     cut = tmp_path / "cut.png"; Image.fromarray(a).save(cut)
     assert not P.touches_top(clean) and P.touches_top(cut)
+
+
+def test_the_profile_pick_writes_one_rgb_webp_into_portraits_and_records_which_photo(tmp_path):
+    """Jeremy, 2026-10-23: the game shows portraits/profile.webp as her profile
+    picture; pick it from her reference photos, "only one". The pick converts
+    the photo to an RGB WebP at its own size, replaces what is there, leaves
+    nothing else in the folder, and the state names the photo it came from."""
+    out, game = tmp_path / "out", tmp_path / "game"
+    refs = tmp_path / "refs"; refs.mkdir()
+    Image.new("RGBA", (30, 45), (200, 0, 0, 255)).save(refs / "zara_portrait1.png")
+    Image.new("RGB", (32, 48), (0, 0, 200)).save(refs / "zara_portrait2.jpg")
+    assert P.portrait_state(out, "zara", game) == {"game": False, "from": None, "at": None}
+    with pytest.raises(ValueError):
+        P.ship_portrait(out, "zara", game, refs / "missing.png")
+    rec = P.ship_portrait(out, "zara", game, refs / "zara_portrait1.png")
+    dest = P.portrait_path(game, "zara")
+    assert rec["from"] == "zara_portrait1.png" and rec["overwrote"] is False and rec["size"] == [30, 45]
+    im = Image.open(dest)
+    assert im.format == "WEBP" and im.mode == "RGB" and im.size == (30, 45) and im.getpixel((0, 0))[0] > 150
+    assert [p.name for p in dest.parent.iterdir()] == ["profile.webp"]       # no tmp, no cache beside it
+    st = P.portrait_state(out, "zara", game)
+    assert st["game"] and st["from"] == "zara_portrait1.png"
+    rec = P.ship_portrait(out, "zara", game, refs / "zara_portrait2.jpg")
+    assert rec["overwrote"] is True and Image.open(dest).getpixel((0, 0))[2] > 150
+    assert P.portrait_state(out, "zara", game)["from"] == "zara_portrait2.jpg"
+    # a file put there some other way is not the recorded pick
+    Image.new("RGB", (8, 12)).save(dest, "WEBP")
+    import os
+    os.utime(dest, (dest.stat().st_atime, dest.stat().st_mtime + 60))
+    assert P.portrait_state(out, "zara", game) == {"game": True, "from": None, "at": None}
+    # the small copy for the card lives under outputs, never in the game folder
+    t = P.thumb(dest, out, "zara", "portrait")
+    assert t.is_relative_to(out / "game-assets" / "zara" / "review")
+    assert [p.name for p in dest.parent.iterdir()] == ["profile.webp"]

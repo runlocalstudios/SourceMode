@@ -5,6 +5,8 @@
     GET  /appearance/ref?char=&name=   one reference photo (web-sized)
     POST /appearance/<char>/confirm    {prompt, negative} -> confirmed record
     POST /characters/<char>/profile    {ethnicity, age, wardrobe} -> saved
+    GET  /characters/<char>/portrait   the game's current profile picture, small
+    POST /characters/<char>/portrait   {ref} -> that reference photo becomes it
 
 Was the Looks tab. Jeremy, 2026-10-06, after Bri's invented "lighter caramel
 ends" and Jaina's freckles: "I need to now review all of these because they're
@@ -110,6 +112,8 @@ def todo(row: dict) -> list[str]:
 
 def records(outputs: Path | None = None, judge_root: Path | None = None) -> list[dict]:
     from ..assets import appearance as A  # noqa: PLC0415
+    from ..assets import looks as L  # noqa: PLC0415
+    from ..assets import pack as P  # noqa: PLC0415
     from ..assets import wardrobe as W  # noqa: PLC0415
 
     A.reload()
@@ -141,6 +145,7 @@ def records(outputs: Path | None = None, judge_root: Path | None = None) -> list
             "confirmed_at": (rec.get("confirmed") or {}).get("at"),
             "race": sorted({m.group(0) for m in RACE.finditer(rec.get("prompt", ""))}),
             "game": g.get("opening", ""), "refs": _refs(c),
+            "portrait": P.portrait_state(outputs, c, L.GAME_ROOT),
             "ethnicity": rec.get("ethnicity", ""),
             "game_job": A.persona_job(c),
             "places": places,
@@ -173,6 +178,9 @@ html,body{overflow-x:hidden}
 .lk .refs{display:flex;gap:var(--s2);overflow-x:auto;padding-bottom:var(--s2);
   max-width:100%;-webkit-overflow-scrolling:touch}
 .lk .refs img{height:220px;border-radius:var(--r1);background:var(--photo);flex:none;cursor:zoom-in}
+.lk .refs figure{margin:0;flex:none;text-align:center}
+.lk .refs figcaption,.lk .refs figure label{display:block;font:var(--t-small);color:var(--g6);padding-top:var(--s1);cursor:pointer}
+.lk .refs figure.cur img{outline:2px solid var(--g6)}
 .lk .game{font:var(--t-small);color:var(--g6);margin:var(--s2) 0}
 .lk textarea{width:100%;box-sizing:border-box;min-height:120px;padding:var(--s3);
   background:var(--g1);border:1px solid var(--g4);border-radius:var(--r2);color:var(--g9);
@@ -319,9 +327,26 @@ function shown(){
 const ta=(k,v,cls,ph)=>'<textarea rows=1 data-k="'+k+'"'+(cls?' class='+cls:'')+' spellcheck=true'
   +(ph?' placeholder="'+SM.esc(ph)+'"':'')+'>'+SM.esc(v||'')+'</textarea>';
 
+/* Jeremy, 2026-10-23: the game shows portraits/profile.webp as her profile
+   picture; pick it from her reference photos here - one, never several. The
+   game's current one leads the strip; the radio under a reference picks it. */
+function refs(r){
+  const c=r.character, pf=r.portrait||{};
+  if(!r.refs.length && !pf.game) return '<div class=card-sub>No reference photos.</div>';
+  let h='<div class=refs>';
+  if(pf.game) h+='<figure class=cur><img loading=lazy src="/characters/'+encodeURIComponent(c)+'/portrait?v='+encodeURIComponent(pf.at||'')+'" alt="game profile"><figcaption>Game profile now</figcaption></figure>';
+  h+=r.refs.map(n=>'<figure'+(n===pf.from?' class=cur':'')+'><img loading=lazy src="'+refUrl(c,n)+'" alt="'+SM.esc(n)+'">'
+    +'<label><input type=radio name="pf_'+SM.esc(c)+'" value="'+SM.esc(n)+'"'+(n===pf.from?' checked':'')+'> '+(n===pf.from?'her profile':'profile')+'</label></figure>').join('');
+  h+='</div>';
+  if(r.refs.length) h+='<div class=row><button class="btn btn-sm" data-act=pf_use disabled>'+(pf.game?'Replace the game profile with the ticked photo':'Make the ticked photo her game profile')+'</button></div>';
+  return h;
+}
+function pfTick(inp){
+  const card=inp.closest('.lk'), r=recs.find(x=>x.character===card.dataset.c)||{};
+  const b=card.querySelector('[data-act=pf_use]'); if(b) b.disabled=inp.value===((r.portrait||{}).from||'');
+}
 function appearance(r){
-  return (r.refs.length?'<div class=refs>'+r.refs.map(n=>'<img loading=lazy src="'+refUrl(r.character,n)+'" alt="'+SM.esc(n)+'">').join('')+'</div>'
-                       :'<div class=card-sub>No reference photos.</div>')
+  return refs(r)
     +(r.game?'<div class=game>Game: '+SM.esc(r.game)+'</div>':'')
     +'<h4 class=sr-only>Description</h4>'
     +'<textarea data-k=prompt spellcheck=false>'+SM.esc(r.prompt)+'</textarea>'
@@ -584,7 +609,7 @@ async function looksAct(b){
       const box=b.closest('[data-ship]'), keep=keepers(box), all=+b.dataset.n;
       const left=all-keep.length;
       if(!confirm('Copy the staged outfits into the game for '+c+'? '+n.replace(/^Approve\s*[-\u2014]\s*/,'')
-        +(left?'. '+left+' unticked stay as the game has them':'')+'. This is the one step that writes into the game repo.')){ b.disabled=false; return; }
+        +(left?'. '+left+' unticked stay as the game has them':'')+'. This writes into the game repo.')){ b.disabled=false; return; }
       const r=await SM.postJSON('/characters/'+encodeURIComponent(c)+'/pack/ship', keep.length===all?{}:{keep});
       SM.toast(c+': '+r.files.length+' files copied into the game'+(r.overwrote?', '+r.overwrote+' overwritten':'')+((r.skipped||[]).length?', '+r.skipped.length+' left as they were':''));
       st=await SM.getJSON(u);
@@ -621,7 +646,10 @@ function draw(){
 }
 /* the whole text visible at once - no inner scrolling to read what she is */
 function fit(t){ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
-document.addEventListener('change',e=>{ if(e.target.closest('.tile')) tileTick(e.target); });
+document.addEventListener('change',e=>{
+  if(e.target.closest('.tile')) tileTick(e.target);
+  else if(e.target.name&&e.target.name.startsWith('pf_')) pfTick(e.target);
+});
 document.addEventListener('input',e=>{
   if(e.target.tagName==='TEXTAREA') fit(e.target);
   dirty();
@@ -665,6 +693,12 @@ document.addEventListener('click',async e=>{
     }else if(b.dataset.act==='save'){
       await SM.postJSON('/characters/'+encodeURIComponent(c)+'/profile',collect(card));
       SM.toast(c+' saved');
+    }else if(b.dataset.act==='pf_use'){
+      const t=card.querySelector('input[name^=pf_]:checked');
+      if(!t){ SM.toast('tick a reference photo first'); b.disabled=false; return; }
+      if(!confirm('Make '+t.value+' the game profile for '+c+'? It replaces portraits/profile.webp in the game repo.')){ b.disabled=false; return; }
+      const rec=await SM.postJSON('/characters/'+encodeURIComponent(c)+'/portrait',{ref:t.value});
+      SM.toast(c+': profile '+(rec.overwrote?'replaced':'added')+' in the game ('+rec.size.join('×')+')');
     }
     const y=window.scrollY; await load(); window.scrollTo(0,y);
   }catch(err){ SM.toast(err.message); dirty(); }
@@ -792,6 +826,32 @@ def appearance_router(cfg: dict):
         from ..assets import looks as L  # noqa: PLC0415
 
         return {"discarded": L.discard_staging(cfg, _char(char))}
+
+    # --- the profile portrait ------------------------------------------------
+    @r.get("/characters/{char}/portrait")
+    def _portrait(char: str):
+        """The game's current profile for her, small; 404 when it has none."""
+        from ..assets import looks as L  # noqa: PLC0415
+
+        p = L.portrait_tile(cfg, _char(char))
+        if p is None:
+            raise HTTPException(404)
+        return FileResponse(p, media_type="image/webp")
+
+    @r.post("/characters/{char}/portrait")
+    def _portrait_pick(char: str, body: dict = Body(...)) -> dict:
+        """`{ref: name}` - one of her reference photos becomes the game's
+        profile.webp. The other write into the game repo, beside pack/ship."""
+        from ..assets import looks as L  # noqa: PLC0415
+
+        c = _char(char)
+        name = str(body.get("ref") or "")
+        if name not in _refs(c):
+            raise HTTPException(404, f"not one of {c}'s reference photos: {name}")
+        try:
+            return L.ship_portrait(cfg, c, REFS / name)
+        except ValueError as e:
+            raise HTTPException(409, str(e)) from e
 
     @r.post("/characters/{char}/profile")
     def _profile(char: str, body: dict = Body(...)) -> dict:
