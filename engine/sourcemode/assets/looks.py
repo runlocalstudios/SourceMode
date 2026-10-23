@@ -581,6 +581,93 @@ def fill(template: str, **kw: str) -> str:
     return _VOWEL_COLOUR_RE.sub(r"an \1", template.format(**kw))
 
 
+# A SECOND COLOUR. Jeremy, 2026-10-23, on Maya's pack: "The color selections
+# are too repetitive - Maya's outfits only have like 3-4 colors. There needs to
+# be more combination of colors and accents on clothing unless stated to be
+# very plain or simple." Every template carried one {c}, so a four-colour
+# palette gave 28 looks in four colours with the second garment left bare
+# ("a rust polo tucked into tailored trousers"). Now the second garment gets a
+# colour of its own, and a one-piece look gets an accent on about half the
+# days. The second colour is another of hers, or a neutral that goes with
+# anything; the first stays from her palette, so every look still reads as
+# hers. A style, palette or category line that says plain, simple, minimal or
+# monochrome turns this off.
+PAIR_NEUTRALS = ("white", "black", "cream", "grey", "navy", "camel")
+PLAIN_RE = re.compile(r"\b(?:plain|simple|minimal(?:ist|ism)?|monochrome|monochromatic|understated|"
+                      r"one[- ]colou?r|single[- ]colou?r|solid colou?rs?|tonal|tone[- ]on[- ]tone)\b", re.I)
+_GARMENT = (r"(?:trousers|pants|skirt|shorts|leggings|joggers|sweatpants|blazer|jacket|cardigan|coat|"
+            r"cami|camisole|tank top|tank|tee|t-shirt|turtleneck|polo|blouse|shirt|sweater|hoodie|"
+            r"sweatshirt|vest|bodysuit|bralette|sports bra|bra|jumpsuit|romper|dress|corset|bustier|"
+            r"top|unitard|overalls|tights|culottes|chinos|skort|crewneck|pullover|button-up|button-down|"
+            r"henley|flannel)")
+# a second garment after a connector: up to three plain words, then the noun
+_STOP = r"(?!(?:and|or|it|her|his|with|over|under|into|a|an|the|nothing)\s)"   # \s, not \b: "A-line"
+_SECOND_RE = re.compile(r"\b(and|over|under|with|into|beneath|plus)\s+(a |an |the )?"
+                        r"((?:" + _STOP + r"[\w-]+\s+){0,3}?)" + _GARMENT + r"\b", re.I)
+# a phrase that already has its colour, is a fabric that is one, or belongs to
+# the first garment (matching, built-in, the shorts of a romper)
+_OWN_COLOUR_RE = re.compile(_COLOUR_RE.pattern + r"|\b(?:denim|jeans|chambray|leather|suede|matching|"
+                            r"built-in|sheer|mesh|striped|plaid|printed|graphic|metallic|sequin\w*|lace|"
+                            r"nude|same|plain)\b", re.I)
+_ONE_PIECE_RE = re.compile(r"\b(?:romper|unitard|one-piece|onesie|jumpsuit)\b", re.I)
+_AN_RE = re.compile(r"^(?:olive|orange|emerald|ivory|off-white|oatmeal|ecru|indigo|aqua|amethyst|amber)\b")
+# accents for a look with nowhere to put a second garment colour; (cue, never)
+ACCENTS: tuple[tuple[str, str], ...] = (
+    ("a thin {c2} belt", r"\bbelt\b|sash|bikini|bra\b|thong"),
+    ("a {c2} sash tied at the waist", r"\bbelt\b|sash|bikini|bra\b|thong|jumpsuit|romper|trousers|pants|shorts"),
+    ("{c2} piping along the seams", r"sheer|mesh|lace|sequin|bikini|thong|slip dress"),
+    ("{c2} trim at the neckline", r"strapless|tube top|bikini|thong|neckline|bustier|corset"),
+    ("a contrasting {c2} collar", r"strapless|halter|off-the-shoulder|one-shoulder|tube top|bikini|bra\b|thong|"
+                                 r"neckline|cowl|slip|cami|bustier|corset|turtleneck|bodysuit|sports"),
+    ("{c2} buttons down the front", r"dress|bodysuit|bikini|bra\b|thong|zip|sequin|bustier|corset|sports"),
+    ("{c2} stitching", r"sheer|mesh|lace|sequin|latex|vinyl|bikini|thong|satin|silk"),
+)
+
+
+def is_plain(*texts: str) -> bool:
+    return any(PLAIN_RE.search(t or "") for t in texts)
+
+
+def second_colour(line: str, c2: str) -> str | None:
+    """`line` with `c2` on its second garment; None when there is no bare one."""
+    for m in _SECOND_RE.finditer(line):
+        phrase = line[m.start(3):m.end()]
+        if _OWN_COLOUR_RE.search(phrase):
+            continue
+        if phrase.rstrip().endswith("shorts") and _ONE_PIECE_RE.search(line[:m.start()]):
+            continue                      # a romper's own shorts are the romper
+        art = m.group(2)
+        if art and art.strip() in ("a", "an"):
+            art = "an " if _AN_RE.match(c2) else "a "
+        return line[:m.start(2) if m.group(2) else m.start(3)] + (art or "") + c2 + " " + line[m.start(3):]
+    return None
+
+
+def pair_colours(line: str, colours: list[str], rng: random.Random,
+                 ban: re.Pattern | None = None, plain: bool = False) -> str:
+    """A second colour on the second garment, or an accent on about every
+    other look that has none; the line as it was when she dresses plain."""
+    if plain or not line:
+        return line
+    first = next((c for c in colours if re.search(rf"\b{re.escape(c)}\b", line, re.I)), None)
+    pool = _allowed([c for c in colours if c != first] * 2
+                    + [n for n in PAIR_NEUTRALS if n not in colours and n != first], ban)
+    pool = [c for c in pool if not re.search(rf"\b{re.escape(c)}\b", line, re.I)]
+    if not pool:
+        return line
+    c2 = rng.choice(pool)
+    two = second_colour(line, c2)
+    if two:
+        return two
+    if rng.random() < 0.5:
+        fit = [cue for cue, never in ACCENTS if not re.search(never, line, re.I) and not avoids(cue, ban)]
+        if fit:
+            # "a dress with a slit, with piping" reads twice; join on "and"
+            sep = " and " if re.search(r"\bwith\b", line) else ", with "
+            return line + sep + rng.choice(fit).format(c2=c2)
+    return line
+
+
 def _placed(text: str) -> str:
     """The kind the text itself names, "" when it names none."""
     k = job_kind(text)
@@ -685,10 +772,12 @@ def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_j
     reg = register(words) or (register(style) if brief else "")
     cols = colours[:]
     rng.shuffle(cols)
+    plain = is_plain(words, style)
     out = []
     for i, t in enumerate(tpl[:n]):
         look = with_bottoms(fill(t, base=base, c=cols[i % len(cols)]))
-        out.append(look if t == "{base}" else steer(look, reg, rng, ban))   # her own line stays hers
+        # her own line stays hers; a template gets its second colour
+        out.append(look if t == "{base}" else steer(pair_colours(look, cols, rng, ban, plain), reg, rng, ban))
     while len(out) < n:                       # more looks asked than variants
         out.append(out[len(out) % len(tpl)])
     return out
@@ -864,8 +953,10 @@ def draft_looks(character: str, seed: int = 0) -> dict[str, list[dict]]:
             cols = named if len(named) > 1 else named + [c for c in colours if c not in named]
             rng.shuffle(cols)
             reg = register(guide, rec.get("style", ""))
+            plain = is_plain(guide, rec.get("style", ""), rec.get("palette", ""))
             for i in range(n):
-                looks.append({"outfit": steer(fill(tpl[i], c=cols[i % len(cols)]), reg, rng, ban),
+                look = pair_colours(fill(tpl[i], c=cols[i % len(cols)]), cols, rng, ban, plain)
+                looks.append({"outfit": steer(look, reg, rng, ban),
                               "hair": hair[(i + ci + off) % len(hair)]})
         out[cat] = looks
     return out

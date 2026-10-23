@@ -601,3 +601,48 @@ def test_short_dresses_name_the_hem_and_her_legs():
     assert L.with_legs("a pink off-the-shoulder midi dress") == "a pink off-the-shoulder midi dress"
     assert L.with_legs("a white tennis dress with built-in shorts").endswith("shorts")
     assert L.with_legs("a cropped hoodie and bike shorts").endswith("shorts")
+
+
+def test_a_second_colour_lands_on_the_second_garment_and_a_plain_style_keeps_one(monkeypatch):
+    """Jeremy, 2026-10-23, on Maya's pack: "The color selections are too
+    repetitive - Maya's outfits only have like 3-4 colors. There needs to be
+    more combination of colors and accents on clothing unless stated to be very
+    plain or simple." Her four-colour palette gave 28 looks in four colours."""
+    assert L.second_colour("a rust polo tucked into tailored wide-leg trousers", "cream") == (
+        "a rust polo tucked into cream tailored wide-leg trousers")
+    assert L.second_colour("a rust button-up shirt tucked into an A-line skirt", "olive") == (
+        "a rust button-up shirt tucked into an olive A-line skirt")
+    assert L.second_colour("a rust silk blouse tucked into a high-waisted pencil skirt", "olive") == (
+        "a rust silk blouse tucked into an olive high-waisted pencil skirt")
+    for line in ("a rust ribbed knit romper with spaghetti straps and short shorts, one piece",   # the romper's own shorts
+                 "a rust sports bra and matching high-waisted leggings",                         # matching
+                 "a rust tennis dress with built-in shorts",
+                 "a rust and white striped tee and a denim mini skirt",                          # coloured already
+                 "a rust satin cami tucked into high-waisted jeans",                              # denim is its colour
+                 "a rust satin midi dress with a cowl neckline"):                                 # nothing to colour
+        assert L.second_colour(line, "cream") is None, line
+    rec = {"style": "grown-up and earthy", "palette": "chocolate brown, rust, cream and black", "avoid": "pastels",
+           "outfits": {}, "jobs": [{"job": "Analyst", "outfit": "a cream blouse and trousers", "places": []}],
+           "hair": [], "note": "", "draft": False}
+    plain = {**rec, "style": "plain and simple - one colour, nothing fussy"}
+    monkeypatch.setattr(W, "editable", lambda c: plain if c == "pia" else rec)
+    monkeypatch.setattr(W, "hair_options", lambda c: ("her hair worn loose",))
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "persona_job", lambda c: "")
+
+    def colours(c):
+        return [{m.lower() for m in L._COLOUR_RE.findall(lk["outfit"])}
+                for looks in L.draft_looks(c).values() for lk in looks if lk["outfit"]]
+    maya = colours("maya")
+    assert len(set().union(*maya)) >= 7                       # more than her four
+    assert sum(len(cs) >= 2 for cs in maya) >= len(maya) // 2  # most looks wear two
+    assert all(cs & {"chocolate brown", "rust", "cream", "black"} for cs in maya)   # and the first is hers
+    # plain: one colour of hers a look, as before (a template's own "white cami" stays)
+    pia = colours("pia")
+    assert all(len(cs - {"denim", "white", "black"}) <= 1 for cs in pia), pia
+    accent = r"thin \w+ belt|sash tied|piping along|trim at the neckline|contrasting \w+ collar|buttons down the front|\w+ stitching"
+    assert not any(re.search(accent, lk["outfit"]) for looks in L.draft_looks("pia").values() for lk in looks)
+    # a banned colour is never the second one
+    ban = {**rec, "avoid": "navy and grey"}
+    monkeypatch.setattr(W, "editable", lambda c: ban)
+    assert not any({"navy", "grey"} & cs for cs in colours("maya"))
