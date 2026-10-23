@@ -603,6 +603,48 @@ def _had_selfies(character: str) -> bool:
                for _ in d.glob("selfie_*.png"))
 
 
+def pack_state(character: str, library=None) -> dict | None:
+    """Has she a selfie pack that wears her approved looks? Jeremy, 2026-10-23:
+    he could not tell which characters' selfies predate the wardrobe tie-in.
+
+    None when she has no selfie set with a rendered image. A pack from this
+    script leaves a `selfies` manifest in the set's set.json (run_shoots
+    writes it before the first render); an older set - 24 `selfie_NN.png`
+    and no manifest - reads `wardrobe: False`. For a manifest set:
+    `rendered` of `total` manifest files on disk and `at`, the UTC time the
+    newest of them was written, which the Characters tab holds against the
+    plan's approval time: looks approved after the selfies were shot need
+    shooting again.
+    """
+    import json  # noqa: PLC0415
+    from datetime import datetime, timezone  # noqa: PLC0415
+    from pathlib import Path  # noqa: PLC0415
+
+    from ..config import ENGINE_ROOT  # noqa: PLC0415
+
+    def iso(t):
+        return datetime.fromtimestamp(t, timezone.utc).isoformat(timespec="seconds") if t else None
+
+    home = Path(library) if library else ENGINE_ROOT.parent / "library"
+    best = None
+    for d in sorted((home / (character or "").lower()).glob("*_selfies_selfies")):
+        sj = d / "set.json"
+        try:
+            man = json.loads(sj.read_text(encoding="utf-8")).get("selfies") if sj.is_file() else None
+        except (OSError, ValueError):
+            man = None
+        if man:
+            have = [d / m["file"] for m in man if (d / m["file"]).is_file()]
+            best = {"set": d.name, "wardrobe": True, "rendered": len(have), "total": len(man),
+                    "at": iso(max((p.stat().st_mtime for p in have), default=None))}
+        elif not (best and best["wardrobe"]):
+            old = list(d.glob("selfie_*.png"))
+            if old:
+                best = {"set": d.name, "wardrobe": False, "rendered": len(old), "total": len(old),
+                        "at": iso(max(p.stat().st_mtime for p in old))}
+    return best
+
+
 def set_for(character: str, path=None, mode: str | None = None) -> str:
     """Her 24-letter pick, assigned on first use and kept. A character who
     already has a selfie set stays on set A, the set she was shot with."""

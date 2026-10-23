@@ -85,13 +85,25 @@ def _packs(char: str, outputs: Path | None, judge_root: Path | None) -> dict:
                            "kept": sum(1 for x in v.values() if x == "keep")})
     plan = bool(outputs and (outputs / "game-assets" / char / "plan_28.json").is_file())
     staged = None
+    looks, looks_at = "none", None
     if outputs:
+        from ..assets import looks as L  # noqa: PLC0415
         from ..assets.pack import read_staged  # noqa: PLC0415
 
         staged = read_staged(outputs, char)
+        # the 28-look plan: none / draft (nothing approved yet) / approved,
+        # and when it was approved - the selfies are held against that time
+        ap = L._read(L.approved_path(outputs, char))
+        if ap:
+            looks, looks_at = "approved", ap.get("approved")
+        elif L.draft_path(outputs, char).is_file():
+            looks = "draft"
     # cut and staged, not yet copied into the game by his approval
     awaiting = bool(staged and not staged.get("shipped"))
-    return {"shipped": shipped, "shoots": shoots, "plan": plan, "awaiting": awaiting}
+    from ..assets.selfies import pack_state  # noqa: PLC0415
+
+    return {"shipped": shipped, "shoots": shoots, "plan": plan, "awaiting": awaiting,
+            "looks": looks, "looks_at": looks_at, "selfies": pack_state(char)}
 
 
 def todo(row: dict) -> list[str]:
@@ -107,6 +119,21 @@ def todo(row: dict) -> list[str]:
         out.append("APPROVE WARDROBE")
     elif not row["packs"]["shipped"]:
         out.append("NO WARDROBE")
+    # Jeremy, 2026-10-23: since the selfies wear her approved looks he could
+    # not tell who still has no 28-look plan, and whose selfies predate it.
+    p = row["packs"]
+    if p.get("looks") == "draft":
+        out.append("APPROVE LOOKS")
+    elif p.get("looks") != "approved":
+        out.append("NO LOOKS")
+    else:
+        s = p.get("selfies")
+        if not s:
+            out.append("NO SELFIES")
+        elif (not s["wardrobe"] or s["rendered"] < s["total"]
+              or (p.get("looks_at") and s["at"] and s["at"] < p["looks_at"])):
+            # shot before the tie-in, still rendering, or looks re-approved since
+            out.append("NEEDS NEW SELFIES")
     return out
 
 
