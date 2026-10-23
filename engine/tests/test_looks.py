@@ -286,6 +286,7 @@ def test_a_dancer_gets_five_different_outfits_in_her_palette_her_own_line_first(
     w = L.work_outfits("kimmy")
     assert len(w) == 5 and len(set(w)) == 5
     assert w[0] == "black long-sleeve bodycon mini, covered but close-fitting"
+    assert "fishnet sling bikini" in w[1]                  # the sling is in every dancer's five
     assert not any("bodycon mini" in x for x in w[1:])
     assert all(any(c in x for c in ("black", "hot pink", "silver")) for x in w[1:])
     assert L.work_outfits("kimmy") == w

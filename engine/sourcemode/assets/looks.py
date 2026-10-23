@@ -404,6 +404,11 @@ WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     )),
     ("dancer", r"dancer|stripper|chill trap|strip club|pole|burlesque|stage name|exotic", (
         "{base}",
+        # Jeremy, 2026-10-22, from a reference photo: a one-piece sheer fishnet
+        # sling - halter strap, mesh triangle cups, thin straps down to a thong.
+        # Second so a dancer's five looks always draw it (looks are positional).
+        "a sheer {c} fishnet sling bikini with a halter neck strap and mesh triangle cups "
+        "running down to a thong cut and clear heels",
         "a {c} satin bralette with matching micro shorts and a sheer wrap skirt",
         "a {c} lace bodysuit cut high on the hip with sheer black thigh-highs",
         "a {c} sequin two-piece - a tiny bra top and a thong-cut bottom",
