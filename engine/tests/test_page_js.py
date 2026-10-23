@@ -122,7 +122,7 @@ def test_the_shoots_tab_rereads_its_catalog_when_shown_again():
     frame alive and the page fetched its catalog once."""
     from sourcemode.monitor import shoots_page
     js = shoots_page.OWN_JS
-    assert "SM.on('shown',()=>load())" in js
+    assert "SM.on('shown',()=>{ pickFromHash(); load(); })" in js
     assert "visibilitychange" in js and "load();" in js
 
 
@@ -132,7 +132,20 @@ def test_the_shoots_tab_selects_the_character_the_hub_hands_it_in_the_hash():
     from sourcemode.monitor import shoots_page
     js = shoots_page.OWN_JS
     assert "decodeURIComponent(location.hash.slice(1))" in js
-    assert "who=asked; picked.clear();" in js
+    # selected from the catalog already on screen, before the server is asked
+    assert "who=asked; picked.clear();\n  if(data) draw();" in js
     # consumed once, so his own later pick is not undone on the next reload
     assert "history.replaceState(null,'',location.pathname)" in js
-    assert "addEventListener('hashchange',()=>load())" in js
+    assert "addEventListener('hashchange',()=>{ pickFromHash(); load(); })" in js
+    assert "SM.on('shown',()=>{ pickFromHash(); load(); })" in js
+    # the hub's one click fires both; the catalog is read once
+    assert "if(loading) return loading;" in js
+
+
+def test_the_shoots_rail_card_carries_its_own_queue_button():
+    """Jeremy, 2026-10-23: "I don't want to have to scroll to the bottom each
+    time" - the cost card and the bottom bar both queue, and a click disables both."""
+    from sourcemode.monitor import shoots_page
+    js = shoots_page.OWN_JS
+    assert js.count("data-act=queue>") == 2
+    assert "document.querySelectorAll('[data-act=queue]')" in js

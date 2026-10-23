@@ -82,21 +82,36 @@ OWN_JS = r"""
 const $=id=>document.getElementById(id);
 let data=null, who=null, picked=new Set();
 
-async function load(){
-  try{ data=await SM.getJSON('/queue/shoots'); }
-  catch(e){ $('list').innerHTML='<div class=errbox><b>Could not load</b>'+SM.esc(e.message)+'</div>'; return; }
-  /* Jeremy, 2026-10-23: the Characters tab's "Shoots" button after approving
-     her 28 hands her name over in the hash; select her, once, then drop the
-     hash so a later manual pick is not pulled back to her on every reload */
+/* Jeremy, 2026-10-23: the Characters tab's "Shoots" button after approving
+   her 28 hands her name over in the hash. Select her NOW from the catalog
+   already on screen - "it should be nearly instantaneous" - and let the
+   re-read below catch up; the hash is dropped once read so a later manual
+   pick is not pulled back to her on every reload. */
+function pickFromHash(){
   const asked=decodeURIComponent(location.hash.slice(1));
-  if(asked){
-    if(data.characters.some(x=>x.character===asked) && asked!==who){ who=asked; picked.clear(); }
-    history.replaceState(null,'',location.pathname);
-  }
-  if(!who && data.characters.length) who=data.characters[0].character;
-  draw();
+  if(!asked) return;
+  history.replaceState(null,'',location.pathname);
+  if(asked===who) return;
+  who=asked; picked.clear();
+  if(data) draw();
 }
-window.addEventListener('hashchange',()=>load());
+
+/* one read at a time: the hub moves the hash AND posts 'shown' on the same
+   click, and each asked the server for the ~0.4 s catalog */
+let loading=null;
+function load(){
+  if(loading) return loading;
+  loading=(async()=>{
+    try{ data=await SM.getJSON('/queue/shoots'); }
+    catch(e){ $('list').innerHTML='<div class=errbox><b>Could not load</b>'+SM.esc(e.message)+'</div>'; return; }
+    finally{ loading=null; }
+    if(who && !data.characters.some(x=>x.character===who)) who=null;
+    if(!who && data.characters.length) who=data.characters[0].character;
+    draw();
+  })();
+  return loading;
+}
+window.addEventListener('hashchange',()=>{ pickFromHash(); load(); });
 
 function draw(){
   SM.set($('who'),null, data.characters.map(c=>
@@ -210,7 +225,11 @@ function bar(){
     +'<ul class=picks>'+sel.map(s=>'<li><span>'+SM.esc(s.label)+'</span><b>'
       +SM.dur(cost(s))+'</b></li>').join('')+'</ul>'
     +'<div class=basis>Queued as ONE job. Each one writes its own output as it'
-    +' finishes, so a run that stops part-way still leaves the rest usable.</div></div>');
+    +' finishes, so a run that stops part-way still leaves the rest usable.</div>'
+    /* Jeremy, 2026-10-23: the same Queue button here, so the bottom bar need
+       not be scrolled to */
+    +'<div class=row><button class="btn btn-primary" data-act=queue>Queue for '
+    +SM.esc(c?c.who:who)+'</button></div></div>');
   SM.set($('bars'),null,'<div class=actbar>'
     +'<button class="btn btn-primary" data-act=queue>Queue '+sel.length+' '
     +word('selection')+' for '+SM.esc(c?c.who:who)+' &mdash; '+SM.dur(secs)+'</button>'
@@ -230,12 +249,13 @@ document.addEventListener('click',async e=>{
   if(b.dataset.act==='clear'){ picked.clear(); draw(); return; }
   if(b.dataset.act==='mixadd'){ picked.add(mixPick.scene+'-'+mixPick.wardrobe+'-'+mixPick.poses); draw(); return; }
   if(b.dataset.act==='queue'){
-    b.disabled=true;
+    const both=[...document.querySelectorAll('[data-act=queue]')];   /* rail and bottom bar */
+    both.forEach(x=>x.disabled=true);
     try{
       await SM.postJSON('/queue/shoot',{character:who,shoots:[...picked]});
       SM.toast('queued as one job',{label:'Open the queue',run:()=>SM.nav('gpu')});
       picked.clear(); draw(); SM.recount();
-    }catch(err){ SM.toast(err.message); b.disabled=false; }
+    }catch(err){ SM.toast(err.message); both.forEach(x=>x.disabled=false); }
   }
 });
 
@@ -245,9 +265,10 @@ document.addEventListener('click',async e=>{
    first load - who has approved looks, what is greyed - went stale the moment
    the Characters tab approved her 28. Read it again every time the tab is
    shown, and when the browser tab comes back; her selection and ticks stay. */
-SM.on('shown',()=>load());
+SM.on('shown',()=>{ pickFromHash(); load(); });
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') load(); });
 
+pickFromHash();
 load();
 """
 
