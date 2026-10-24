@@ -53,7 +53,13 @@ FRAMING = FRAMING_MID_THIGH
 # up'". His words, verbatim: the pack's shot type is a "portrait picture" and
 # the framing is "from the mid-thigh up".
 NATURAL_SHOT = "portrait picture"
-NATURAL_FRAMING = "from the mid-thigh up"
+# Jeremy, 2026-10-23, after maya's, marisol's and lizzie's packs read as less
+# like her: MEASURED over ten packs, the grey-studio pack put her face at a
+# median 285 px tall against 359 px in the sweep renders she was approved on
+# (both asked "from the mid-thigh up") and ~350-440 px in her training set.
+# "zoom in a little bit more to upper thigh so that the girls' face takes up
+# more of the picture". The sweep keeps its own mid-thigh wording.
+NATURAL_FRAMING = "from the upper thigh up"
 # And on the body: "her body is just slightly angled, she looks directly at the
 # camera". MEASURED on cici's pack (2026-10-18, 14 slight-turn looks under
 # "turned slightly toward her right/left, looking into the camera"): the body
@@ -63,6 +69,20 @@ NATURAL_FRAMING = "from the mid-thigh up"
 # gaze is stated as his sentence says it.
 NATURAL_FRONT = "her body faces the camera, she looks directly at the camera"
 NATURAL_SLIGHT = "her body is just slightly angled, she looks directly at the camera"
+# Jeremy, 2026-10-23: the 15 front / 13 slight pack "almost are TOO static now
+# and TOO front facing ... go with up to 45 degree turns, just make sure the
+# mix is as follows: 1/4 front facing, 1/4 body at a slight angle to the
+# camera, 1/4 body at a 45 degree angle to the camera, 1/4 in a relaxed pose
+# with (arms in her pockets / arms crossed / arms behind her back) - randomize
+# the arm position". The 45 is written as a turn toward her side with her face
+# on the camera, never "three-quarter view", which Qwen read as a profile 60
+# times in 63 (2026-10-15).
+NATURAL_QUARTER = "her body turned about 45 degrees toward {her}, her face turned to the camera, she looks directly at the camera"
+ROTATION = ("front", "slight", "quarter", "relaxed")
+ARMS = ("her hands in her pockets", "her arms crossed", "her hands behind her back")
+#: pockets only where the outfit has some - a dress or a bodysuit gets the other two
+_POCKETS = re.compile(r"\b(?:jeans|trousers|pants|chinos|cargo\w*|shorts|joggers|sweatpants|overalls"
+                      r"|jacket|blazer|coat|hoodie|cardigan)\b", re.I)
 EXPRESSIONS = (
     "relaxed neutral: lips gently together, mouth corners level, cheeks soft, eyebrows resting, relaxed direct gaze; no smile",
     "warm closed-lip smile: both mouth corners lifted, cheeks slightly raised, lips gently together, brows relaxed, soft direct eye contact",
@@ -192,27 +212,50 @@ def describe_yaw(degrees: int) -> str:
 #: what asks: Jeremy, 2026-10-10 - "either front facing or a very slight angle
 #: looking at the camera with very simple expressions like a closed lip smile a
 #: broad smile or a neutral expression". "slight" turns the body and head 10-15
-#: degrees against the pack's 35-45 / 20-30. A pack slot sets neither and is
-#: byte-for-byte unchanged.
+#: degrees against the pack's 40-45 / 20-30. A pack slot sets neither and
+#: takes ROTATION by look number.
 TURNS = ("front", "left", "right", "slight-left", "slight-right")
 
 
 def pose_fields(character: str, slot: dict) -> dict:
-    """Screen-relative body geometry and an independent head pose, seeded per look."""
+    """Screen-relative body geometry and an independent head pose, seeded per look.
+
+    A pack slot rotates front / slight / 45 / relaxed by look number (seven of
+    each over 28); the side of a turn, the degrees and the relaxed arms are
+    drawn from the per-look rng. `turn` on the slot still picks a TURNS family
+    outright, which is what the sweep and tiebreaker scenes do.
+    """
     look = int(slot.get("look", 1))
-    # MEASURED 2026-10-15 over the four packs rendered through T2I (amanda, gabi,
-    # nisha, vera): a "three-quarter view" ask (35-45 deg) came back near-profile
-    # 60 times in 63 - the body past 0.8 of full side-on - while a front ask came
-    # back front 35 in 36. Qwen reads the phrase as a profile. So the pack never
-    # asks for it: the rotation is front, slight-left, front, slight-right, the
-    # tiebreaker's mix. `turn` on the slot still picks any family.
-    family = slot.get("turn") or ("front", "slight-left", "front", "slight-right")[(look - 1) % 4]
+    rng = random.Random(f"{character}-{slot.get('id', look)}")
+    family = slot.get("turn")
+    arms = None
+    # a selfie, a shoot or an influencer slot brings its own framing or shot
+    # type; its body stays front / slight as before - an arm's-length selfie
+    # with "her hands in her pockets" holds no phone
+    pack = not (slot.get("framing") or slot.get("shot_type") or slot.get("framing_natural"))
+    if not family and not pack:
+        family = ("front", "slight-left", "front", "slight-right")[(look - 1) % 4]
+    if not family:
+        # by place in the whole plan when the slot carries one (plan_slots
+        # sets `n`), so a 28-look pack gets seven of each family
+        fam = ROTATION[(int(slot.get("n", look)) - 1) % 4]
+        side = rng.choice(("left", "right"))
+        if fam == "front":
+            family = "front"
+        elif fam == "slight":
+            family = f"slight-{side}"
+        elif fam == "quarter":
+            family = side
+        else:
+            # relaxed: front or a slight turn, and one of the three arm positions
+            family = rng.choice(("front", f"slight-{side}"))
+            pool = ARMS if _POCKETS.search(slot.get("outfit") or "") else ARMS[1:]
+            arms = rng.choice(pool)
     if family not in TURNS:
         raise ValueError(f"turn must be one of {TURNS}, got {family!r}")
     slight = family.startswith("slight-")
-    rng = random.Random(f"{character}-{slot.get('id', look)}")
     sign = {"front": 0, "left": -1, "right": 1}[family.removeprefix("slight-")]
-    body = sign * (rng.randint(10, 15) if slight else rng.randint(35, 45))
+    body = sign * (rng.randint(10, 15) if slight else rng.randint(40, 45))
     head = sign * (rng.randint(10, 15) if slight else rng.randint(20, 30))
     pitch = ("level", "slightly lowered", "slightly raised")[(look - 1) % 3]
     if sign:
@@ -231,13 +274,14 @@ def pose_fields(character: str, slot: dict) -> dict:
     # A slight turn asks the HEAD for nothing but the lens ("she looks directly
     # at the camera"), and a 10-15 degree head turn sits under the measure's
     # own front threshold anyway - so the head ask is front, not a side.
-    return {"body": describe_yaw(body), "head": f"{head_turn}; chin {pitch}; no lateral head tilt",
+    return {"body": describe_yaw(body) + (f"; {arms}" if arms else ""),
+            "head": f"{head_turn}; chin {pitch}; no lateral head tilt",
             "expression": EXPRESSIONS[ex_i],
             # the structured ask, for adherence.check() against the measured render
-            "asked": {"crop": "mid-thigh-up", "body_side": side, "body_deg": body,
+            "asked": {"crop": "upper-thigh-up", "body_side": side, "body_deg": body,
                       "head_side": "front" if slight else side,
                       "head_deg": head, "pitch": pitch, "expression": EXPRESSION_TYPES[ex_i],
-                      "slight": slight}}
+                      "slight": slight, "arms": arms}}
 
 
 #: Jeremy, 2026-10-09: "review the prompts to ensure that they are optimized for
@@ -293,8 +337,9 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     elif asked.get("slight"):
         body, head = NATURAL_SLIGHT.split(", ")
     else:
-        body = f"in a three-quarter view toward {her}"
-        head = f"her face turned slightly toward {her}, looking into the camera"
+        body, head = NATURAL_QUARTER.format(her=her).split(", ", 1)
+    if asked.get("arms"):
+        body = f"{body} with {asked['arms']}"
     # Jeremy, 2026-10-12, the submissive pose set: half of it is not facing the
     # camera or looking into it, so a pose slot may say where her body and her
     # face actually are. Nothing else about the prompt changes.
@@ -312,7 +357,7 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
         shot = f"standing {shot}"
         outfit = with_legs(with_bottoms(outfit))
     # a shoot's own framing sentence follows the shot type as its own clause;
-    # the pack reads "a standing portrait picture from the mid-thigh up"
+    # the pack reads "a standing portrait picture from the upper thigh up"
     crop = f"a {shot}, {slot['framing']}" if slot.get("framing") else (
         f"a {shot} {slot.get('framing_natural') or NATURAL_FRAMING}")
     if pack:

@@ -107,7 +107,11 @@ def plan_slots(plan: dict) -> list[dict]:
     pose = plan.get("pose", DEFAULT_POSE)
     for cat, block in plan["categories"].items():
         for i, entry in enumerate(block["looks"]):
-            out.append({"category": cat, "look": entry["look"], "id": entry["id"],
+            # `n` is the look's place in the WHOLE plan (1..28): the pose
+            # rotation walks it so the four pose families land seven each,
+            # where `look` restarts per category and would give casual two
+            # fronts for every relaxed pose
+            out.append({"category": cat, "look": entry["look"], "n": len(out) + 1, "id": entry["id"],
                         "outfit": entry["outfit"], "hair": entry["hair"],
                         "pose": pose, "filename": runtime_name(cat, i + 1, pose)})
     return out

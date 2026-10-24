@@ -81,7 +81,7 @@ def touches_top(path: Path) -> bool:
 
 def framing_problem(asked: dict, got: dict, path: Path) -> str | None:
     """Why a fresh shot gets re-drawn, or None when its framing is fine."""
-    if asked.get("crop") in ("mid-thigh-up", "knee-up", "full-body") and got.get("crop") == "chest-up":
+    if asked.get("crop") in ("upper-thigh-up", "mid-thigh-up", "knee-up", "full-body") and got.get("crop") == "chest-up":
         return "chest-up"
     try:
         if touches_top(path):

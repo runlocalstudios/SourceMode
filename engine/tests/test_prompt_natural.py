@@ -41,33 +41,79 @@ def test_natural_carries_the_same_turn_gaze_and_expression_as_the_contract(zara)
     for look in LOOKS:
         asked = R.pose_fields("zara", look)["asked"]
         p = R.natural_prompt("zara", look)
+        body = p.split(", she looks directly at the camera")[0]
         if asked["body_side"] == "front":
-            assert R.NATURAL_FRONT in p
+            assert "her body faces the camera" in body
+        elif asked["slight"]:
+            assert "her body is just slightly angled" in body
         else:
-            assert R.NATURAL_SLIGHT in p and "her right" not in p and "her left" not in p
+            assert "her body turned about 45 degrees toward her " in body
+        if asked["arms"]:
+            assert f" with {asked['arms']}, " in p
         assert R._NATURAL_EXPRESSION[asked["expression"]] in p
-    # the three-quarter family is still there for a slot that asks for it by name
+    # a named turn still picks its family; the 45 never says "three-quarter view"
     her_right = R.natural_prompt("zara", {**LOOKS[0], "turn": "left"})
-    assert "in a three-quarter view toward her right" in her_right
+    assert "her body turned about 45 degrees toward her right, her face turned to the camera" in her_right
+    assert "three-quarter" not in her_right
 
 
-def test_a_pack_never_asks_for_a_three_quarter_view(zara):
-    """Jeremy, 2026-10-15, nisha's pack: "they are all supposed to be either front
-    facing or NEARLY front facing with slight angles, from the mid-thigh up".
-    Measured over amanda, gabi, nisha and vera: 60 of 63 three-quarter asks came
-    back near-profile. The pack rotates front / slight-left / front / slight-right."""
-    fams = []
+def test_a_pack_rotates_front_slight_45_and_relaxed_with_random_arms(zara):
+    """Jeremy, 2026-10-23: "TOO static now and TOO front facing ... 1/4 front
+    facing, 1/4 body at a slight angle, 1/4 body at a 45 degree angle, 1/4 in a
+    relaxed pose with (arms in her pockets / arms crossed / arms behind her
+    back) - randomize the arm position"."""
+    fams, arms, sides = [], [], set()
     for look in range(1, 29):
-        asked = R.pose_fields("zara", {"id": f"casual_{look:02d}", "look": look, "category": "casual",
-                                       "pose": "standing", "outfit": "x", "hair": "y"})["asked"]
-        assert asked["crop"] == "mid-thigh-up"
-        assert abs(asked["body_deg"]) <= 15 and abs(asked["head_deg"]) <= 15
-        fams.append((asked["body_side"], asked["slight"]))
-    assert fams.count(("front", False)) == 14
-    assert fams.count(("image-left", True)) == 7 and fams.count(("image-right", True)) == 7
+        outfit = "a navy tee and dark jeans" if look % 2 else "a red slip dress"
+        # the plan's own look numbers restart per category; `n` is the place in the plan
+        asked = R.pose_fields("zara", {"id": f"casual_{look:02d}", "look": (look - 1) % 7 + 1, "n": look,
+                                       "category": "casual", "pose": "standing", "outfit": outfit,
+                                       "hair": "y"})["asked"]
+        assert asked["crop"] == "upper-thigh-up"
+        if asked["arms"]:
+            fams.append("relaxed"); arms.append(asked["arms"])
+            assert abs(asked["body_deg"]) <= 15
+            if "pockets" in asked["arms"]:
+                assert "jeans" in outfit          # no pockets on a slip dress
+        elif asked["body_side"] == "front":
+            fams.append("front")
+        elif asked["slight"]:
+            fams.append("slight"); sides.add(asked["body_side"])
+            assert 10 <= abs(asked["body_deg"]) <= 15
+        else:
+            fams.append("quarter"); sides.add(asked["body_side"])
+            assert 40 <= abs(asked["body_deg"]) <= 45 and asked["head_side"] == asked["body_side"]
+    assert all(fams.count(f) == 7 for f in ("front", "slight", "quarter", "relaxed")), fams
+    assert len(set(arms)) >= 2 and sides == {"image-left", "image-right"}
     for look in LOOKS:
         p = R.natural_prompt("zara", look)
-        assert "three-quarter" not in p and "a standing portrait picture from the mid-thigh up, " in p
+        assert "three-quarter" not in p and "a standing portrait picture from the upper thigh up, " in p
+
+
+def test_a_selfie_or_shoot_slot_keeps_the_front_slight_body_and_never_gets_arms(zara):
+    """The 45 and the relaxed arms are the pack's. An arm's-length selfie with
+    "her hands in her pockets" holds no phone."""
+    for look in range(1, 25):
+        slot = {"id": f"selfie_{look:02d}", "look": look, "n": look, "category": "selfie_casual",
+                "pose": "standing", "outfit": "a tee and jeans", "hair": "y",
+                "shot_type": "phone selfie", "framing": "her head and chest fill the frame"}
+        asked = R.pose_fields("zara", slot)["asked"]
+        assert asked["arms"] is None and abs(asked["body_deg"]) <= 15
+        p = R.natural_prompt("zara", slot, backdrop="in her bedroom")
+        assert "45 degrees" not in p and " with her " not in p.split(", she looks directly")[0]
+
+
+def test_the_sweep_scenes_keep_their_mid_thigh_sentence():
+    """The pack moved to the upper thigh on 2026-10-23; a sweep rate is compared
+    only with another sweep, so his 2026-10-19 sentence stays as written."""
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location(
+        "asset_scenes", Path(__file__).resolve().parents[1] / "scripts" / "eval" / "asset_scenes.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    assert "portrait picture of a woman from the mid-thigh up, her body faces the camera" in \
+        m.sweep_prompt("lena", m.LOOKS[0], "nobody_without_a_record")
 
 
 def test_natural_keeps_the_hair_and_footwear_rules(zara):
@@ -97,11 +143,11 @@ def test_natural_honours_a_shoots_composition_overrides(zara):
             "framing": "her head and chest fill the frame", "avoid": "No studio lighting."}
     p = R.natural_prompt("zara", slot, backdrop="soft daylight, in her bedroom")
     assert "a phone selfie, her head and chest fill the frame, " in p
-    assert "portrait picture" not in p and "mid-thigh" not in p
+    assert "portrait picture" not in p and "upper thigh" not in p
     assert ", she is holding the phone above eye level, " in p
     assert p.endswith("sharp focus. No studio lighting.")
     # a pack slot, which sets none of them, gets the pack's own framing
-    assert "a standing portrait picture from the mid-thigh up, " in R.natural_prompt("zara", LOOKS[0])
+    assert "a standing portrait picture from the upper thigh up, " in R.natural_prompt("zara", LOOKS[0])
 
 
 def test_a_pack_camera_reaches_only_her_pack_prompt(monkeypatch):
@@ -109,7 +155,7 @@ def test_a_pack_camera_reaches_only_her_pack_prompt(monkeypatch):
     monkeypatch.setattr(A, "pack_camera", lambda c: {"prompt": "the camera at her eye level"} if c == "zara" else {})
     slot = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
             "outfit": "a white tee and jeans", "hair": "her hair worn loose"}
-    assert "from the mid-thigh up, the camera at her eye level, " in R.natural_prompt("zara", slot)
+    assert "from the upper thigh up, the camera at her eye level, " in R.natural_prompt("zara", slot)
     assert "eye level" not in R.natural_prompt("zara", {**slot, "framing_natural": "framed from the chest up"})
 
 

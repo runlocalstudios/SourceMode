@@ -39,7 +39,7 @@ def test_twenty_distinct_prompts_in_the_natural_register(zara):
     assert len({s["setting"] for s in TIEBREAKER}) == 20
     for p in ps:
         assert p.startswith("zara, a young woman") and len(p.split()) < 100
-        assert "a portrait picture from the mid-thigh up, " in p
+        assert "a portrait picture from the upper thigh up, " in p
         assert "beautiful, natural makeup" in p and "Photorealistic, natural skin texture, sharp focus." in p
 
 
@@ -87,7 +87,7 @@ def test_a_pack_slot_is_byte_for_byte_unchanged(zara):
             "outfit": "a white tee and jeans", "hair": "her hair worn loose"}
     p = R.shot_prompt("zara", slot)
     assert p.startswith("zara, a young woman")
-    assert f"a standing portrait picture from the mid-thigh up, {R.NATURAL_FRONT}, " in p
+    assert f"a standing portrait picture from the upper thigh up, {R.NATURAL_FRONT}, " in p
     assert R.pose_fields("zara", slot)["asked"]["slight"] is False
 
 

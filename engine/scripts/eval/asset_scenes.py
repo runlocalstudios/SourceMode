@@ -18,7 +18,12 @@ place, hair, body turn and expression it had; the outfit is a kind, not a
 garment. Rates judged before 2026-10-19 are not comparable to rates after it.
 """
 from sourcemode.assets import render as _render
-from sourcemode.assets.render import NATURAL_FRAMING, NATURAL_FRONT, NATURAL_SLIGHT, shot_prompt
+from sourcemode.assets.render import NATURAL_FRONT, NATURAL_SLIGHT, shot_prompt
+
+# The ten keep his 2026-10-19 sentence as written. The pack moved to "from the
+# upper thigh up" on 2026-10-23 (render.NATURAL_FRAMING); a sweep rate is only
+# ever compared with another sweep, so the sweep's framing stays put.
+NATURAL_FRAMING = "from the mid-thigh up"
 
 BODY = {"front": NATURAL_FRONT.split(", ")[0], "slight-left": NATURAL_SLIGHT.split(", ")[0],
         "slight-right": NATURAL_SLIGHT.split(", ")[0]}

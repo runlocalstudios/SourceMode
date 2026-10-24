@@ -115,7 +115,7 @@ def test_a_pack_slot_is_untouched_by_the_new_overrides():
     slot = {"id": "casual_01", "look": 1, "category": "casual", "pose": "standing",
             "outfit": "a blue sundress", "hair": "her hair worn loose"}
     p = shot_prompt("nobody", slot)
-    assert "a standing portrait picture from the mid-thigh up" in p
+    assert "a standing portrait picture from the upper thigh up" in p
     assert "she looks directly at the camera" in p
 
 
