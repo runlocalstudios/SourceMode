@@ -27,13 +27,13 @@ def test_a_finished_character_has_no_badges():
 def test_each_missing_thing_is_one_short_badge():
     assert todo(row(confirmed=False)) == ["DESC"]
     assert todo(row(jobs=("", "  "))) == ["JOB"]
-    assert todo(row(shipped=0)) == ["NO WARDROBE"]
+    assert todo(row(shipped=0)) == ["NOT IN GAME"]
     assert todo(row(awaiting=True)) == ["APPROVE WARDROBE"]
 
 
 def test_a_staged_pack_waiting_on_him_replaces_no_wardrobe():
     assert todo(row(shipped=0, awaiting=True)) == ["APPROVE WARDROBE"]
-    assert todo(row(confirmed=False, jobs=(), shipped=0)) == ["DESC", "JOB", "NO WARDROBE"]
+    assert todo(row(confirmed=False, jobs=(), shipped=0)) == ["DESC", "JOB", "NOT IN GAME"]
 
 
 def test_the_looks_plan_and_the_selfies_shot_against_it_each_get_a_badge():

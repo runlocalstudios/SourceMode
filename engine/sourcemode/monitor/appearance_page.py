@@ -118,7 +118,10 @@ def todo(row: dict) -> list[str]:
     if row["packs"]["awaiting"]:
         out.append("APPROVE WARDROBE")
     elif not row["packs"]["shipped"]:
-        out.append("NO WARDROBE")
+        # Jeremy, 2026-10-23: was NO WARDROBE, which read as "no plan" when
+        # eden had her plan and her 28 renders; it only ever meant the game
+        # repo has no outfit files for her yet
+        out.append("NOT IN GAME")
     # Jeremy, 2026-10-23: since the selfies wear her approved looks he could
     # not tell who still has no 28-look plan, and whose selfies predate it.
     p = row["packs"]
