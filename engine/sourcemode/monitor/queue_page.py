@@ -1238,8 +1238,46 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
     return None
 
 
-def render_done(cfg: dict, cmd: list[str]) -> int | None:
-    """How many images this render job has already written.
+def _written(root: Path, glob: str, since: float | None) -> int:
+    """Renders under `root` this job wrote: not the web copies, and not what an
+    earlier run left in the same folder. aya's selfie pack, 2026-10-25: the
+    rerun landed beside her first pack's 24 (the slots had been renamed in
+    between) and the card read "44 of 24" as if an audit had re-rolled twenty."""
+    if not root.is_dir():
+        return 0
+    n = 0
+    for p in root.rglob(glob):
+        if "_web" in p.parts:
+            continue
+        if since is not None:
+            try:
+                if p.stat().st_mtime < since:
+                    continue
+            except OSError:
+                continue
+        n += 1
+    return n
+
+
+def _started(job: dict) -> float | None:
+    """The job's start as epoch seconds, or None for a job with no start on record."""
+    from datetime import datetime, timezone  # noqa: PLC0415
+
+    raw = job.get("started_at")
+    if not raw:
+        return None
+    try:
+        t = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    return t.timestamp()
+
+
+def render_done(cfg: dict, cmd: list[str], since: float | None = None) -> int | None:
+    """How many images this render job has already written - written by THIS
+    run, when `since` (its start) is known.
 
     The counterpart to render_count(): that one reads the job's command to say
     how many images it WILL write, this one counts how many exist. The two give
@@ -1264,7 +1302,7 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
                 return None
             doc = _json.loads(Path(plan_p).read_text(encoding="utf-8"))
             root = Path(flag("--out") or (out / "game-assets")) / doc["character"] / "renders"
-            return len(list(root.rglob("shot_*.png"))) if root.is_dir() else 0
+            return _written(root, "shot_*.png", since)
 
         if "run_shoots.py" in joined:
             pos = [c for c in cmd if not c.startswith("--")]
@@ -1289,7 +1327,7 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
                     roots += batches[-1:]
                 else:
                     roots.append(L.find_set(cfg, char, L.shoot_kind(sh.id), sh.id))
-            return sum(1 for r in set(roots) if r.is_dir() for _ in r.rglob("*.png"))
+            return sum(_written(r, "*.png", since) for r in set(roots))
 
         if "prompt_ab.py" in joined:
             pos = [c for c in cmd if not c.startswith("--")]
@@ -1298,7 +1336,7 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
             # --tag names the folder (ab_jojo_skin); "hair" was the only test once
             from .. import library as L  # noqa: PLC0415
             root = L.find_set(cfg, char, "ab", flag("--tag", "hair"))
-            return len(list(root.rglob("scene_*.png"))) if root.is_dir() else 0
+            return _written(root, "scene_*.png", since)
 
         if "dense_epoch_eval.py" in joined:
             pos = [c for c in cmd if not c.startswith("--")]
@@ -1314,8 +1352,7 @@ def render_done(cfg: dict, cmd: list[str]) -> int | None:
             from .. import library as L  # noqa: PLC0415
             sid = f"dense_{sub}{suffix}{'_' + tag if tag else ''}"
             root = L.find_set(cfg, pos[i + 1], "sweep", L.set_name(sid, "dense_", pos[i + 1], "v2"))
-            return len([q for q in root.rglob("scene_*.png") if "_web" not in q.parts]) \
-                if root.is_dir() else 0
+            return _written(root, "scene_*.png", since)
     except (OSError, ValueError, KeyError, StopIteration, IndexError):
         return None
     return None
@@ -1337,10 +1374,10 @@ def job_done(cfg: dict, job: dict) -> int | None:
     # folder is dated the day it starts and a queued job may start tomorrow, and
     # jobs queued before the library wrote to outputs/ - so a recorded folder that
     # does not exist is re-derived from the command rather than read as zero.
+    since = _started(job)
     if e.get("dir") and e.get("glob") and Path(e["dir"]).is_dir():
-        root = Path(e["dir"])
-        return sum(1 for p in root.rglob(e["glob"]) if "_web" not in p.parts)
-    return render_done(cfg, job.get("cmd") or [])
+        return _written(Path(e["dir"]), e["glob"], since)
+    return render_done(cfg, job.get("cmd") or [], since)
 
 
 def render_target(cfg: dict, cmd: list[str]) -> tuple[Path, str] | None:

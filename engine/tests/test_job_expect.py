@@ -75,3 +75,27 @@ def test_expect_is_stored_on_the_job_and_survives_a_round_trip(tmp_path):
     assert jobs[0]["expect"] == {"total": 3, "what": "3 things"}
     assert jobs[1]["expect"] is None
     assert Path(path).is_file()
+
+
+def test_a_rerun_shoot_counts_only_what_it_wrote_not_the_last_runs_renders(tmp_path):
+    # aya's selfie pack, 2026-10-25: the card read "44 of 24". The rerun wrote
+    # into the folder her first pack already filled (the slots were renamed
+    # between the two), and the counter read both runs as one.
+    import os  # noqa: PLC0415
+
+    cfg = {"paths": {"outputs": str(tmp_path), "library": str(tmp_path / "library")}}
+    d = tmp_path / "library" / "aya" / "2026-10-21_selfies_selfies"
+    d.mkdir(parents=True)
+    started = time.time() - 600
+    for i in range(24):
+        p = d / f"selfie_{i + 1:02d}.png"
+        p.write_bytes(b"")
+        os.utime(p, (started - 3600, started - 3600))
+    for stem in ("selfie_casual_01", "selfie_casual_02", "selfie_work_01"):
+        (d / f"{stem}.png").write_bytes(b"")
+    job = {"cmd": ["python", "scripts/eval/run_shoots.py", "aya", "selfies"],
+           "expect": {"total": 24, "what": "Selfie pack"},
+           "started_at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime(started))}
+    assert job_done(cfg, job) == 3
+    # a job with no start on record still counts everything there
+    assert job_done(cfg, {**job, "started_at": None}) == 27
