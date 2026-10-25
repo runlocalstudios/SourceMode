@@ -149,3 +149,11 @@ def test_the_shoots_rail_card_carries_its_own_queue_button():
     js = shoots_page.OWN_JS
     assert js.count("data-act=queue>") == 2
     assert "document.querySelectorAll('[data-act=queue]')" in js
+
+
+def test_the_judge_image_url_carries_the_items_hash():
+    """A re-rolled slot keeps its id; the browser showed iris's previous
+    workout_03 from its cache (2026-10-24) until the URL changed with the file."""
+    from sourcemode.assets import judge as J
+    assert "+(it&&it.hash?'&v='+it.hash:'')" in J.PAGE
+    assert 'headers={"Cache-Control": "no-cache"}' in open(J.__file__, encoding="utf-8").read()

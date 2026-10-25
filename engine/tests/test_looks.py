@@ -737,3 +737,13 @@ def test_half_the_looks_wear_jewelry_and_a_quarter_of_the_fancy_ones_carry_a_bag
     bags = [m.group(0) for s in range(20) for cat in L.BAG_CATEGORIES for lk in L.draft_looks("pia", s)[cat]
             for m in [L.ACCESSORY_RE.search(lk["outfit"])] if m and "clutch" in m.group(0) or m and "bag" in m.group(0)]
     assert bags and all("black" in b for b in bags), bags
+
+
+def test_no_pool_names_a_hem_below_the_knee():
+    """Jeremy, 2026-10-24, iris workout_03 full length twice: "flared yoga
+    pants ... would not be shown in an upper thigh-up picture"."""
+    hem = re.compile(r"flared?|bootcut|ankle-length|cuffed", re.I)
+    for cat, pool in L.TEMPLATES.items():
+        assert not any(hem.search(t) for t in pool), cat
+    for kind, _, pool in L.WORK_KINDS:
+        assert not any(hem.search(t) for t in pool), kind

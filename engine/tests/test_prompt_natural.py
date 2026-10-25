@@ -168,3 +168,15 @@ def test_an_unsaid_hair_clause_leaves_her_hair_out_of_the_prompt(monkeypatch):
     assert "hair worn loose" not in p and ", wearing a white tee" in p and ", ," not in p
     assert "her hair worn loose, wearing" in R.natural_prompt("mia", slot)
     assert "high ponytail, wearing" in R.natural_prompt("zara", {**slot, "hair": "her hair in a high ponytail"})
+
+
+def test_a_hem_detail_below_the_knee_is_dropped_at_render(zara):
+    """iris workout_03, "olive flared yoga pants", came back full length on
+    both rolls: the flare is at the ankle, so the model showed the ankle.
+    Dropped at render like footwear, so his plan lines stay his."""
+    assert R.drop_hem_detail("a blush pink longline sports bra and olive flared yoga pants") == \
+        "a blush pink longline sports bra and olive yoga pants"
+    assert R.drop_hem_detail("a navy bootcut jeans and a white tee") == "a navy jeans and a white tee"
+    assert R.drop_hem_detail("a red wrap dress with a flare at the hem") == "a red wrap dress with a flare at the hem"
+    p = R.natural_prompt("zara", {**LOOKS[1], "outfit": "a sage green tank and black flared leggings"})
+    assert "wearing a sage green tank and black leggings," in p and "flared" not in p

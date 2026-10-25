@@ -786,8 +786,13 @@ try{ refCorner=+(localStorage.getItem('refCorner')||0);
 SM.chrome('immersive');
 SM.on('shown',()=>SM.chrome('immersive'));
 
-const fileUrl=(set,id,w)=>'/judge/file?set='+encodeURIComponent(set)
-  +'&id='+encodeURIComponent(id)+(w?'&w='+w:'');
+/* The item's content hash rides on the URL: a re-rolled slot keeps its id, and
+   without it the browser showed the previous render from its cache (iris
+   workout_03, 2026-10-24 - olive flared pants on the board, navy on disk). */
+const fileUrl=(set,id,w)=>{
+  const it=(typeof cur!=='undefined'&&cur&&cur.id===set&&cur.items||[]).find(x=>x.id===id);
+  return '/judge/file?set='+encodeURIComponent(set)+'&id='+encodeURIComponent(id)
+    +(w?'&w='+w:'')+(it&&it.hash?'&v='+it.hash:''); };
 
 /* --- the set list and the one picker ------------------------------------- */
 async function loadSets(){
@@ -1438,7 +1443,8 @@ def judge_router(cfg: dict):
         p = item_path(root, set, id)
         if p is None:
             raise HTTPException(404)
-        return FileResponse(web_copy(p, w))
+        # no-cache: revalidate every time - the same id serves a new file after a re-roll
+        return FileResponse(web_copy(p, w), headers={"Cache-Control": "no-cache"})
 
     @r.get("/judge/ref")
     def _ref(set: str):  # noqa: A002

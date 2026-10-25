@@ -175,6 +175,20 @@ def drop_footwear(outfit: str) -> str:
     return ",".join(keep).strip(" ,")
 
 
+#: A hem detail below the knee pulls the frame down the same way shoes do.
+#: Jeremy, 2026-10-24, on iris's workout_03, "a blush pink longline sports bra
+#: and olive flared yoga pants", full length on both rolls: "flared yoga pants
+#: ... would not be shown in an upper thigh-up picture". Measured over the
+#: packs: prompts saying flared came back below mid-thigh 3 of 13, every other
+#: prompt 3 in 100. The word goes at render, so his plan lines stay his.
+_HEM_DETAIL = re.compile(r"\b(?:flared|flare-leg|bootcut|boot-cut|ankle-length|cuffed)\s+(?=\w)", re.I)
+
+
+def drop_hem_detail(outfit: str) -> str:
+    """"olive flared yoga pants" -> "olive yoga pants"."""
+    return _HEM_DETAIL.sub("", outfit or "")
+
+
 #: A graphic tee left to the model comes back with gibberish lettering, or her
 #: own face printed on it. Jeremy, 2026-10-18, on a cici reject: "graphic ts
 #: need to be without words or faces".
@@ -346,7 +360,7 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
     body = slot.get("facing") or body
     head = slot.get("gaze") or head
     shot = slot.get("shot_type") or NATURAL_SHOT
-    outfit = slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"])
+    outfit = drop_hem_detail(slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"]))
     # Jeremy, 2026-10-21: the pack prompt had lost the contract's "standing"
     # and daisy came back seated in 8 of 28; chest-up looks were dresses and
     # scrubs naming nothing below the waist. Done here, at render, so plans
@@ -434,7 +448,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
             f"Makeup: {slot.get('makeup') or MAKEUP}. "
             f"Pose: {slot.get('stance') or STANCE}. "
             f"Hair: {slot['hair']}. "
-            f"Outfit: {slot['outfit'] if slot.get('shoes') else drop_footwear(slot['outfit'])}. "
+            f"Outfit: {drop_hem_detail(slot['outfit'] if slot.get('shoes') else drop_footwear(slot['outfit']))}. "
             f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. "
             f"Natural realistic human proportions, correct anatomy. "
             + (slot.get("avoid") or "No profiles, rear views, seated poses, or off-camera gaze."))

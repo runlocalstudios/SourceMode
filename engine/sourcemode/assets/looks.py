@@ -94,7 +94,9 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} racerback tank over a black sports bra and bike shorts",
         "a {c} seamless crop top and leggings set",
         "a cropped {c} zip hoodie over a sports bra and running shorts",
-        "a {c} longline sports bra and flared yoga pants",
+        # no flares, no bootcuts: a hem below the knee is outside the crop and
+        # pulls the shot to full length (Jeremy, 2026-10-24, iris workout_03)
+        "a {c} longline sports bra and high-waisted yoga pants",
         "a {c} one-piece athletic unitard",
         "a {c} tennis dress with built-in shorts",
         "a {c} mesh-panel sports bra and matching cycling shorts",
@@ -102,7 +104,7 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} crop top and high-waisted joggers",
         "a {c} sports bra under an open black mesh tank, with leggings",
         "a {c} ribbed workout onesie unzipped to the sternum",
-        "a {c} halter sports bra and flared leggings",
+        "a {c} halter sports bra and ribbed leggings",
         "a {c} baggy sweatshirt pulled off one shoulder over a sports bra and bike shorts",
         "a {c} scoop-neck bodysuit and wide-leg track pants",
         "a {c} strappy-back sports bra and a wrap skirt over leggings",
@@ -511,7 +513,7 @@ WORK_KINDS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         "a {c} sports bra and matching high-waisted leggings",
         "a {c} racerback tank over a black sports bra and bike shorts",
         "a cropped {c} zip hoodie over a sports bra and leggings",
-        "a {c} longline sports bra and flared yoga pants",
+        "a {c} longline sports bra and high-waisted yoga pants",
         "a {c} seamless crop top and matching bike shorts",
     )),
     ("academic", r"teach|professor|lecturer|university|tutor|school", (
