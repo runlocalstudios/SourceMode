@@ -470,8 +470,10 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
 def t2i_workflow(cfg: dict, prompt: str, seed: int, prefix: str, *, lora_path: str,
                  negative: str, width: int = W, height: int = H,
                  render_pass: str = "medium",
-                 extra_loras: tuple[tuple[str, float], ...] = ()) -> dict:
+                 extra_loras: tuple[tuple[str, float], ...] = (),
+                 lora_strength: float = 1.0) -> dict:
     """The plain Qwen-Image text-to-image graph a shoot renders through.
+    `lora_strength` exists for A/Bs only; every shoot renders hers at 1.0.
 
     Here rather than in a script because TWO things render shoots now - the
     first pass and the re-roll of whatever was rejected - and a second copy of
@@ -499,7 +501,7 @@ def t2i_workflow(cfg: dict, prompt: str, seed: int, prefix: str, *, lora_path: s
             "TEXT_ENCODER": cfg["models"]["qwen_text_encoder"],
             "VAE": cfg["models"]["qwen_vae"],
             "POSITIVE": prompt, "NEGATIVE": negative,
-            "LORA_PATH": lora_path, "LORA_STRENGTH": 1.0,
+            "LORA_PATH": lora_path, "LORA_STRENGTH": float(lora_strength),
             "LIGHTNING": extra_path, "LIGHTNING_STRENGTH": float(extra_strength),
             "SHIFT": float(cfg["render"]["qwen_shift"]), "SEED": int(seed),
             "STEPS": int(preset["qwen_t2i_steps"]), "CFG": float(preset["qwen_t2i_cfg"]),
