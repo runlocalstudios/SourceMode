@@ -432,10 +432,11 @@ def test_the_category_lines_guide_the_other_categories(ash):
     casual = [lk["outfit"] for lk in d["casual"]]
     assert sum("bodysuit" in x or "skirt" in x for x in casual) >= 5, casual
     cues = _cues("revealing")
-    assert sum(any(x.endswith(c) for c in cues) for x in casual + workout) >= len(casual + workout) - 2
+    bare = [L.ACCESSORY_RE.sub("", x) for x in casual + workout]     # the cue sits before her jewelry
+    assert sum(any(x.endswith(c) for c in cues) for x in bare) >= len(bare) - 2
     # the same record without the brief words drafts plain lines
     ash["style"] = "edgy"
-    plain = [lk["outfit"] for lk in L.draft_looks("ash")["casual"]]
+    plain = [L.ACCESSORY_RE.sub("", lk["outfit"]) for lk in L.draft_looks("ash")["casual"]]
     assert not any(any(x.endswith(c) for c in cues) for x in plain)
 
 
@@ -631,7 +632,8 @@ def test_a_second_colour_lands_on_the_second_garment_and_a_plain_style_keeps_one
     monkeypatch.setattr(A, "persona_job", lambda c: "")
 
     def colours(c):
-        return [{m.lower() for m in L._COLOUR_RE.findall(lk["outfit"])}
+        # garment colours: the jewelry clause says gold and silver, the bag its own
+        return [{m.lower() for m in L._COLOUR_RE.findall(L.ACCESSORY_RE.sub("", lk["outfit"]))}
                 for looks in L.draft_looks(c).values() for lk in looks if lk["outfit"]]
     maya = colours("maya")
     assert len(set().union(*maya)) >= 7                       # more than her four
@@ -646,3 +648,92 @@ def test_a_second_colour_lands_on_the_second_garment_and_a_plain_style_keeps_one
     ban = {**rec, "avoid": "navy and grey"}
     monkeypatch.setattr(W, "editable", lambda c: ban)
     assert not any({"navy", "grey"} & cs for cs in colours("maya"))
+
+
+def _record_for(monkeypatch, style, avoid="", outfits=None, job="Analyst", job_outfit="a cream blouse and trousers"):
+    rec = {"style": style, "palette": "vivid colors, primary colors, grays", "avoid": avoid,
+           "outfits": outfits or {}, "jobs": [{"job": job, "outfit": job_outfit, "places": []}],
+           "hair": [], "note": "", "draft": False}
+    monkeypatch.setattr(W, "editable", lambda c: rec)
+    monkeypatch.setattr(W, "hair_options", lambda c: ("her hair worn loose",))
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "persona_job", lambda c: "")
+    return rec
+
+
+_ONE_PIECE = r"romper|jumpsuit|unitard|onesie|one-piece"
+
+
+def test_rompers_are_casual_at_most_one_a_category_and_a_statement_piece_on_a_night_out(monkeypatch):
+    """Jeremy, 2026-10-24: "you are drafting too many rompers, and way too many
+    rompers in fancy / town - rompers are casual outfits, possibly date outfits,
+    almost never fancy town outfits unless it's a statement piece"."""
+    _record_for(monkeypatch, "chic luxury")
+    for c in ("viv", "ana", "bea", "cleo", "dee", "eva"):
+        for s in range(3):
+            d = L.draft_looks(c, s)
+            for cat in ("casual", "workout", "casual_date", "fancy_dining_gallery", "fancy_town"):
+                pieces = [lk["outfit"] for lk in d[cat] if re.search(_ONE_PIECE, lk["outfit"])]
+                assert len(pieces) <= 1, (cat, pieces)
+            assert not any("romper" in lk["outfit"] for lk in d["fancy_dining_gallery"])
+            for lk in d["fancy_town"]:
+                assert "romper" not in lk["outfit"] or "sequined" in lk["outfit"], lk
+    # her line asking for them lifts the cap (kasia's "Jumpsuits" workout line)
+    _record_for(monkeypatch, "edgy", outfits={"workout": "Jumpsuits"})
+    assert all(re.search(_ONE_PIECE, lk["outfit"]) for lk in L.draft_looks("kasia")["workout"])
+
+
+def test_sheer_and_fetish_fabric_pieces_wait_for_her_words(monkeypatch):
+    """vivienne, "chic luxury", drafted "a hot pink bralette under a sheer black
+    maxi dress" for a night out. Jeremy: "what in the fuck?"."""
+    raunchy = r"sheer|mesh|see-through|thong|latex|vinyl|chainmail|fishnet"
+    _record_for(monkeypatch, "chic luxury")
+    for s in range(4):
+        for cat, looks in L.draft_looks("vivienne", s).items():
+            assert not any(re.search(raunchy, lk["outfit"]) for lk in looks), (cat, looks)
+    # a revealing word in her style brings them back; a dancer's job title counts as her words
+    _record_for(monkeypatch, "sexy girl next door")
+    assert any(re.search(raunchy, lk["outfit"]) for s in range(6) for lk in L.draft_looks("zara", s)["fancy_town"])
+    _record_for(monkeypatch, "chic", job="exotic dancer at the Chill Trap", job_outfit="trendy outfits with chokers")
+    assert any(re.search(raunchy, o) for o in L.work_outfits("vivienne", 5))
+
+
+def test_half_the_looks_wear_jewelry_and_a_quarter_of_the_fancy_ones_carry_a_bag(monkeypatch):
+    """Jeremy, 2026-10-24: "roll jewelry at 50% on each look to sort of match
+    the kind of look, and roll a handbag at 25% odds so maybe 1 of 4 fancy looks
+    gets a handbag (on average) and half the looks get earrings and a necklace"."""
+    _record_for(monkeypatch, "chic luxury")
+    dressed, jewelled, fancy, bagged = 0, 0, 0, 0
+    for c in ("viv", "ana", "bea", "cleo", "dee", "eva", "fay", "gia"):
+        for s in range(5):
+            d = L.draft_looks(c, s)
+            for cat in ("work", "workout"):
+                assert not any(L.ACCESSORY_RE.search(lk["outfit"]) for lk in d[cat]), cat
+            for cat in L.JEWELRY:
+                for lk in d[cat]:
+                    dressed += 1
+                    m = L.ACCESSORY_RE.search(lk["outfit"])
+                    if m and "earrings" in m.group(0):
+                        jewelled += 1
+                        assert m.group(0)[7:].split(" and a ")[0] in " ".join(L.JEWELRY[cat]) or \
+                            any(j in m.group(0) for j in L.JEWELRY[cat]), (cat, lk)
+                    if cat in L.BAG_CATEGORIES:
+                        fancy += 1
+                        bagged += bool(m and re.search(r"clutch|shoulder bag", m.group(0)))
+                    else:
+                        assert not re.search(r"clutch|shoulder bag", lk["outfit"]), lk
+    assert 0.4 <= jewelled / dressed <= 0.6, jewelled / dressed
+    assert 0.15 <= bagged / fancy <= 0.35, bagged / fancy
+    # a night out wears the night-out jewelry, a casual day the small hoops
+    _record_for(monkeypatch, "chic luxury")
+    town = " | ".join(lk["outfit"] for s in range(6) for lk in L.draft_looks("viv", s)["fancy_town"])
+    assert re.search(r"drop earrings|oversized gold hoop", town) and "small gold hoop earrings and a thin chain" not in town
+    # her "Never wears" line turns either off
+    _record_for(monkeypatch, "chic luxury", avoid="jewelry and handbags")
+    assert not any(L.ACCESSORY_RE.search(lk["outfit"]) for s in range(3)
+                   for looks in L.draft_looks("viv", s).values() for lk in looks)
+    # the bag takes a colour of hers; a plain dresser carries black
+    _record_for(monkeypatch, "plain and simple")
+    bags = [m.group(0) for s in range(20) for cat in L.BAG_CATEGORIES for lk in L.draft_looks("pia", s)[cat]
+            for m in [L.ACCESSORY_RE.search(lk["outfit"])] if m and "clutch" in m.group(0) or m and "bag" in m.group(0)]
+    assert bags and all("black" in b for b in bags), bags

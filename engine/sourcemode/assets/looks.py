@@ -62,7 +62,6 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} off-the-shoulder knit top and a denim skirt",
         "a {c} tube top under an open denim jacket with jeans",
         "a {c} tennis skirt and a white cropped polo",
-        "a {c} romper with a drawstring waist",
         "a {c} plaid flannel tied at the waist over a white tank top and shorts",
         "a {c} crewneck sweatshirt and a pleated mini skirt",
         "a {c} satin cami tucked into high-waisted jeans",
@@ -72,13 +71,13 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} crop top and a flowing white maxi skirt",
         # Jeremy, 2026-10-15: "form-fitting pastel pink long-sleeve square-neckline
         # romper, stretchy knit fabric, short mid-thigh shorts, one-piece outfit"
-        # - more like it, across the pools
+        # - more like it, across the pools. Jeremy, 2026-10-24: "you are drafting
+        # too many rompers" - three of the six went, and a category draws at
+        # most one one-piece unless her line asks for them (guided_templates)
         "a form-fitting {c} long-sleeve square-neckline romper in stretchy knit fabric, with short mid-thigh shorts",
         "a {c} ribbed knit romper with spaghetti straps and short shorts, one piece",
-        "a {c} stretchy knit romper with a scoop neck, short sleeves and short mid-thigh shorts",
         "a {c} zip-front knit romper with short shorts, the zip pulled down a little",
         "a fitted {c} long-sleeve knit unitard cut to mid-thigh, worn as the whole outfit",
-        "a {c} stretchy knit shorts-romper with a square neckline and thin straps",
         # Jeremy, 2026-10-20, kasia's "Chic professional looks": the pool above is
         # streetwear and had nothing chic to find - polished daytime looks
         "a {c} silk blouse tucked into a high-waisted pencil skirt",
@@ -133,8 +132,9 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} high-neck sleeveless midi dress",
         "a {c} draped satin wrap top and a long bias-cut skirt",
         "a {c} fitted long-sleeve midi dress with a keyhole neckline",
-        "a fitted {c} long-sleeve knit romper with a square neckline and tailored mid-thigh shorts",
-        "a {c} stretchy knit one-piece with a high neck, long sleeves and short shorts, a slim gold belt",
+        # no rompers here - Jeremy, 2026-10-24: "rompers are casual outfits,
+        # possibly date outfits, almost never fancy town outfits unless it's a
+        # statement piece"; the tailored jumpsuit above is the one one-piece
         # kasia's dressy line, 2026-10-20: "Midriff tops and short skirts, short
         # dresses" - the pool had no crop top and few short hems
         "a {c} satin cropped bustier top and a tailored mini skirt",
@@ -164,9 +164,8 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} satin bustier and wide-leg black trousers",
         "a {c} fringe mini dress",
         "a {c} sheer mesh long-sleeve dress over a black bra and thong",
-        "a form-fitting {c} long-sleeve romper in stretchy knit fabric with a square neckline and micro shorts",
-        "a {c} bodycon knit romper with a deep square neckline and short shorts",
-        "a {c} off-the-shoulder stretchy knit romper with short mid-thigh shorts",
+        # the one romper a night out allows: a statement piece (Jeremy, 2026-10-24)
+        "a {c} sequined long-sleeve romper with a plunging neckline",
     ),
     "casual_date": (
         "a {c} wrap dress",
@@ -190,11 +189,77 @@ TEMPLATES: dict[str, tuple[str, ...]] = {
         "a {c} fitted turtleneck mini dress",
         "a {c} satin slip skirt and a cropped knit top",
         "a form-fitting {c} long-sleeve square-neckline romper in stretchy knit fabric, short mid-thigh shorts",
-        "a {c} ribbed knit romper with a sweetheart neckline and short shorts",
         "a {c} stretchy knit halter romper with mid-thigh shorts, one piece",
-        "a {c} long-sleeve knit romper with a low scoop back and short shorts",
     ),
 }
+
+# JEWELRY AND A BAG. Jeremy, 2026-10-24: "i also felt like we had added jewelry
+# and handbags at some point in fancy/town looks and they are never present
+# currently ... i won't want crazy jewelry and a handbag on every piece - roll
+# jewelry at 50% on each look to sort of match the kind of look, and roll a
+# handbag at 25% odds so maybe 1 of 4 fancy looks gets a handbag (on average)
+# and half the looks get earrings and a necklace." The jewelry was in the
+# retired August contract prompt and never reached the plan lines. Work looks
+# are her uniform and workout has none; the other four roll per look, the
+# jewelry in the category's register, the bag only on the two fancy categories.
+JEWELRY: dict[str, tuple[str, ...]] = {
+    "casual": (
+        "small gold hoop earrings and a thin chain necklace",
+        "small silver stud earrings and a delicate pendant necklace",
+        "small gold hoop earrings and a dainty layered necklace",
+    ),
+    "casual_date": (
+        "small gold hoop earrings and a dainty pendant necklace",
+        "pearl stud earrings and a thin gold necklace",
+        "small drop earrings and a delicate chain necklace",
+    ),
+    "fancy_dining_gallery": (
+        "drop earrings and a delicate pendant necklace",
+        "pearl earrings and a fine gold chain necklace",
+        "small diamond stud earrings and a slim gold necklace",
+    ),
+    "fancy_town": (
+        "long drop earrings and a thin layered necklace",
+        "oversized gold hoop earrings and a delicate necklace",
+        "sparkling drop earrings and a slim choker necklace",
+    ),
+}
+HANDBAGS: tuple[str, ...] = (
+    "a small {c2} clutch in her hand",
+    "a small {c2} leather clutch in her hand",
+    "a mini {c2} shoulder bag",
+)
+BAG_CATEGORIES = ("fancy_dining_gallery", "fancy_town")
+JEWELRY_ODDS, HANDBAG_ODDS = 0.5, 0.25
+_WEARS_JEWELRY_RE = re.compile(r"earrings?|necklace|choker|jewel|pendant", re.I)
+_CARRIES_BAG_RE = re.compile(r"clutch|handbag|shoulder bag|purse|\bbag\b", re.I)
+#: the accessory clause a look ends with, for anything that reads garments only
+ACCESSORY_RE = re.compile(r", with (?:[^,]*\b(?:earrings|necklace|clutch|shoulder bag)\b[^,]*)$", re.I)
+
+
+def accessorise(look: str, cat: str, rng: random.Random, colours: list[str],
+                ban: re.Pattern | None = None, plain: bool = False) -> str:
+    """Her jewelry on about half the looks, a bag on about a quarter of the
+    fancy ones, in a clause the look ends with. The rolls are drawn for every
+    category so a seed's garments do not move when a category gains or loses
+    the clause; nothing is added where her line already names it or her
+    "Never wears" line rules it out."""
+    jewel = rng.random() < JEWELRY_ODDS
+    bag = rng.random() < HANDBAG_ODDS
+    if not look or cat not in JEWELRY:
+        return look
+    bits = []
+    if jewel and not _WEARS_JEWELRY_RE.search(look):
+        fit = [j for j in JEWELRY[cat] if not avoids(j, ban)]
+        if fit:
+            bits.append(rng.choice(fit))
+    if bag and cat in BAG_CATEGORIES and not _CARRIES_BAG_RE.search(look):
+        fit = [b for b in HANDBAGS if not avoids(b, ban)]
+        if fit:
+            pool = ["black"] if plain else _allowed(
+                [c for c in colours if not re.search(rf"\b{re.escape(c)}\b", look, re.I)] or ["black"], ban)
+            bits.append(rng.choice(fit).format(c2=rng.choice(pool)))
+    return f"{look}, with {' and '.join(bits)}" if bits else look
 
 # Colour words a palette line may carry, longest first so "denim blue" wins
 # over "blue". A trailing s is allowed ("dark grays and blacks"). Anything else
@@ -305,6 +370,8 @@ _AVOID_WORDS: tuple[tuple[str, str], ...] = (
     (r"strapless", r"strapless|tube|bandeau"),
     (r"halters?", r"halter"),
     (r"bikinis?|swimwear", r"bikini|swimsuit|one-piece"),
+    (r"jewel\w*|earrings?|necklaces?|chokers?", r"earrings|necklace|choker|pendant"),
+    (r"handbags?|purses?|clutch(?:es)?|bags?", r"clutch|handbag|shoulder bag|purse"),
 )
 
 
@@ -761,7 +828,7 @@ def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_j
         # the shorts-and-shirt looks)
         placed = kind not in ("", "uniform")
         pool = [t for t in next(t for k, _, t in WORK_KINDS if k == kind) if t != "{base}"] if placed else "*"
-        tpl = guided_templates(pool, base, n, rng, ban)
+        tpl = guided_templates(pool, base, n, rng, ban, asked=job.get("job", ""))
     elif kind in ("", "uniform"):
         tpl = ["{base}"] + [v for key, v in UNIFORM_VARIANTS if key not in base.lower() and not avoids(v, ban)]
     else:
@@ -824,11 +891,13 @@ def _singular(w: str) -> str:
 # that fit, looks that never fit). Fitting looks come first; looks that never
 # fit leave the pool while enough are left to fill the category.
 STYLES: tuple[tuple[str, str, str], ...] = (
-    (r"chic|polished|elegant|classy|sophisticated|professional|office|tailored|smart|refined|put[- ]together",
+    (r"chic|polished|elegant|classy|sophisticated|professional|office|tailored|smart|refined|put[- ]together|"
+     r"luxury|luxe|designer|high[- ]end|upscale|glam(?:orous)?",
      r"tailored|blazer|sheath|trousers|silk|satin|blouse|turtleneck|pencil|wrap|bodysuit|column|cinched|tweed|"
      r"mock-neck|polo|vest|structured|fine-knit",
      r"jeans|denim|hoodie|sweatshirt|overalls|joggers|cargo|graphic|flannel|distressed|cut-off|baby tee|"
-     r"crochet|track|bike shorts|henley|tennis|drawstring|striped|crewneck|onesie"),
+     r"crochet|track|bike shorts|henley|tennis|drawstring|striped|crewneck|onesie|"
+     r"sheer|mesh|latex|vinyl|chainmail|fishnet|thong|bralette|lace-up|fringe"),
     (r"sporty|athletic|active", r"sports bra|leggings|track|athletic|tennis|bike shorts|running|joggers|zip", r""),
     (r"edgy|grunge|rock|punk", r"leather|vinyl|latex|chain|mesh|corset|fishnet|distressed|black",
      r"floral|ruffle|puff|tiered|crochet"),
@@ -861,6 +930,14 @@ CUTS: tuple[tuple[str, str, str], ...] = (
 # worn as a dress that should be a very rare look" - it was in 10 of 13 plans.
 RARE: tuple[tuple[str, str], ...] = (
     (r"tee worn as a dress", r"t-?shirt dress|tee dress|worn as a dress|oversized (?:tee|t-?shirt)"),
+    # Jeremy, 2026-10-24, on vivienne's "chic luxury" draft: "you have her
+    # wearing a see through maxi dress with a bralette - what in the fuck?"
+    # Sheer and fetish-fabric club pieces only when her words go there.
+    (r"sheer|mesh|see-through|thong",
+     r"sheer|mesh|see[- ]through|reveal|slutty|sexy|racy|daring|provocative|skimpy|risqu|scandal|lingerie|"
+     r"dancer|stripper|exotic|club"),
+    (r"latex|vinyl|chainmail|fishnet",
+     r"latex|vinyl|chainmail|fishnet|edgy|fetish|club|goth|punk|rock|dancer|stripper|exotic"),
 )
 
 
@@ -871,19 +948,22 @@ def _direction(guide: str) -> list[tuple[str, str]]:
 
 
 def guided_templates(pool: str | list[str], guide: str, n: int, rng: random.Random,
-                     ban: re.Pattern | None = None) -> list[str]:
+                     ban: re.Pattern | None = None, asked: str = "") -> list[str]:
     """`n` templates from the pool (a category name, "*" for every category, or
     a list), the ones naming a garment her guide line names first - most of
     them first ("sleeveless blouses, bodysuits" puts the bodysuit looks in) -
     the rest sampled. A template her "Never wears" line rules out is not in
-    the pool at all."""
+    the pool at all. `asked` is more of her words (the job title) consulted
+    only for the RARE looks. At most one one-piece a category unless her line
+    names them - Jeremy, 2026-10-24: "you are drafting too many rompers"."""
     if pool == "*":                           # the daytime pools; a job brief is not clubwear
         pool = [t for c in ("casual", "casual_date") for t in TEMPLATES[c]]
     elif isinstance(pool, str):
         pool = list(TEMPLATES[pool])
     pool = [t for t in pool if not avoids(t, ban)]
-    pool = [t for t in pool if not any(re.search(look, t) and not re.search(asked, guide or "", re.I)
-                                       for look, asked in RARE)]
+    words = f"{guide or ''} {asked or ''}"
+    pool = [t for t in pool if not any(re.search(look, t) and not re.search(asks, words, re.I)
+                                       for look, asks in RARE)]
     nouns = {_singular(m.group(0)) for m in GARMENT_RE.finditer(guide or "")}
     nouns -= {"set", "top"}                   # too common to mean anything
     rules = _direction(guide)
@@ -909,6 +989,15 @@ def guided_templates(pool: str | list[str], guide: str, n: int, rng: random.Rand
         picked += rng.sample(fits, min(len(fits) // 3, n - len(picked)))
     rest = [t for t in pool if t not in picked]
     picked += rng.sample(rest, min(len(rest), n - len(picked)))
+    if not re.search(r"romper|jumpsuit|unitard|onesie|one-piece|playsuit|catsuit", words, re.I):
+        pieces = [t for t in picked if _ONE_PIECE_RE.search(t)]
+        spare = [t for t in pool if t not in picked and not _ONE_PIECE_RE.search(t)]
+        rng.shuffle(spare)
+        spare.sort(key=hits)                  # a swapped-in look still wears what she named
+        for extra in pieces[1:]:
+            if not spare:
+                break
+            picked[picked.index(extra)] = spare.pop()
     rng.shuffle(picked)
     return picked
 
@@ -956,8 +1045,8 @@ def draft_looks(character: str, seed: int = 0) -> dict[str, list[dict]]:
             plain = is_plain(guide, rec.get("style", ""), rec.get("palette", ""))
             for i in range(n):
                 look = pair_colours(fill(tpl[i], c=cols[i % len(cols)]), cols, rng, ban, plain)
-                looks.append({"outfit": steer(look, reg, rng, ban),
-                              "hair": hair[(i + ci + off) % len(hair)]})
+                look = accessorise(steer(look, reg, rng, ban), cat, rng, cols, ban, plain)
+                looks.append({"outfit": look, "hair": hair[(i + ci + off) % len(hair)]})
         out[cat] = looks
     return out
 
