@@ -180,3 +180,30 @@ def test_a_hem_detail_below_the_knee_is_dropped_at_render(zara):
     assert R.drop_hem_detail("a red wrap dress with a flare at the hem") == "a red wrap dress with a flare at the hem"
     p = R.natural_prompt("zara", {**LOOKS[1], "outfit": "a sage green tank and black flared leggings"})
     assert "wearing a sage green tank and black leggings," in p and "flared" not in p
+
+
+def test_hands_on_hips_and_one_hand_in_a_pocket_land_only_on_casual_and_work_looks(zara):
+    """Jeremy, 2026-10-25: "add hands on hips and hand in pocket rolls only to
+    casual and work outfits, do not add it to any of the date or fancy/town/
+    workout outfits where it probably doesn't fit well"."""
+    everyday, other = set(), set()
+    for cat in ("casual", "work", "workout", "casual_date", "fancy_dining_gallery", "fancy_town"):
+        for n in range(4, 400, 4):          # n = 4, 8, ... are the relaxed slots
+            asked = R.pose_fields("zara", {"id": f"{cat}_{n:03d}", "look": n, "n": n, "category": cat,
+                                           "pose": "standing", "outfit": "a tee and jeans", "hair": "y"})["asked"]
+            (everyday if cat in ("casual", "work") else other).add(asked["arms"])
+    assert {"her hands on her hips", "one hand in her pocket"} <= everyday
+    assert set(R.ARMS) <= everyday and other == set(R.ARMS)
+    # no pockets on the outfit: no hand in one, hips still allowed
+    seen = {R.pose_fields("zara", {"id": f"casual_{n:03d}", "look": n, "n": n, "category": "casual",
+                                   "pose": "standing", "outfit": "a slip dress", "hair": "y"})["asked"]["arms"]
+            for n in range(4, 200, 4)}
+    assert "her hands on her hips" in seen and not any("pocket" in a for a in seen)
+    assert R._NATURAL_EXPRESSION["teeth"] == "a broad smile showing her teeth"   # the captions' phrase
+
+
+def test_a_selfie_places_the_other_hand_and_refuses_a_second_raised_arm():
+    from sourcemode.assets import selfies as S
+    assert S.STANCE.endswith("her other hand down at her side")
+    assert S.STANCE_SEATED.endswith("her other hand resting in her lap")
+    assert "both arms raised" in S.NEGATIVE and "arm outstretched" not in S.STANCE   # rule 2 of the module

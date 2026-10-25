@@ -80,6 +80,10 @@ NATURAL_SLIGHT = "her body is just slightly angled, she looks directly at the ca
 NATURAL_QUARTER = "her body turned about 45 degrees toward {her}, her face turned to the camera, she looks directly at the camera"
 ROTATION = ("front", "slight", "quarter", "relaxed")
 ARMS = ("her hands in her pockets", "her arms crossed", "her hands behind her back")
+#: two more for a casual or a work look only - the old sets' hands on hips and
+#: one hand in a pocket read wrong on a date or a night out (Jeremy, 2026-10-25)
+ARMS_EVERYDAY = ("her hands on her hips", "one hand in her pocket")
+ARMS_EVERYDAY_CATEGORIES = ("casual", "work")
 #: pockets only where the outfit has some - a dress or a bodysuit gets the other two
 _POCKETS = re.compile(r"\b(?:jeans|trousers|pants|chinos|cargo\w*|shorts|joggers|sweatpants|overalls"
                       r"|jacket|blazer|coat|hoodie|cardigan)\b", re.I)
@@ -261,9 +265,15 @@ def pose_fields(character: str, slot: dict) -> dict:
         elif fam == "quarter":
             family = side
         else:
-            # relaxed: front or a slight turn, and one of the three arm positions
+            # relaxed: front or a slight turn, and one of the arm positions.
+            # Jeremy, 2026-10-25: "add hands on hips and hand in pocket rolls
+            # only to casual and work outfits, do not add it to any of the date
+            # or fancy/town/workout outfits where it probably doesn't fit well"
             family = rng.choice(("front", f"slight-{side}"))
-            pool = ARMS if _POCKETS.search(slot.get("outfit") or "") else ARMS[1:]
+            pockets = bool(_POCKETS.search(slot.get("outfit") or ""))
+            pool = list(ARMS if pockets else ARMS[1:])
+            if slot.get("category") in ARMS_EVERYDAY_CATEGORIES:
+                pool += [a for a in ARMS_EVERYDAY if pockets or "pocket" not in a]
             arms = rng.choice(pool)
     if family not in TURNS:
         raise ValueError(f"turn must be one of {TURNS}, got {family!r}")
@@ -324,7 +334,10 @@ def pose_fields(character: str, slot: dict) -> dict:
 PROMPT_STYLE = "natural"
 _NATURAL_EXPRESSION = {
     "neutral": "a neutral expression", "closed-lip": "a soft closed-mouth smile",
-    "teeth": "a bright natural smile showing her teeth", "flirty": "a soft flirty smile",
+    # "a broad smile showing her teeth" is the training captions' own phrase
+    # (caption_from_vl); "a bright natural smile showing her teeth" came back
+    # closed-lip 28 of 28 on crystal and on lizzie (Jeremy, 2026-10-25)
+    "teeth": "a broad smile showing her teeth", "flirty": "a soft flirty smile",
 }
 
 

@@ -81,10 +81,14 @@ MIRROR_FRAMING = ("mirror selfie: the picture is her reflection from the waist u
 # stances said "the camera held a little above eye level" - an instruction to
 # draw a device, and slot 21 drew a DSLR. The viewpoint is now described with
 # no object in it: the camera is where the picture is taken FROM.
+# Jeremy, 2026-10-25: "too many come back with both arms up ... ideally selfies
+# have one arm extended and only rarely have both". The outstretched arm stays
+# unnamed (rule 2 above); the OTHER hand is placed, the way the mirror stance
+# already places it, and the negative refuses the second raised arm.
 STANCE = ("she is taking a selfie, shot from a little above eye level and angled slightly "
-          "down toward her")
+          "down toward her, her other hand down at her side")
 STANCE_SEATED = ("she is sitting back comfortably and taking a selfie, shot from a little above "
-                 "eye level")
+                 "eye level, her other hand resting in her lap")
 # And "stands in front of a full-length mirror photographing her reflection"
 # rendered her facing the lens with a mirror BEHIND her showing her back (casey
 # 08 and 10). The picture IS the reflection; say so, and refuse the other
@@ -97,7 +101,7 @@ AVOID = ("No studio lighting, no professional photoshoot look, no third-person c
          "no plain backdrop: this is a casual selfie she took herself, in a real room.")
 #: Appended to the run's negative on every non-mirror slot.
 NEGATIVE = ("phone, smartphone, phone in hand, phone screen, phone frame around the picture, "
-            "camera, DSLR camera, camera in hand")
+            "camera, DSLR camera, camera in hand, both arms raised, both hands up")
 #: Appended on the mirror slots: the mirror is in front of her, not behind.
 MIRROR_NEGATIVE = ("mirror behind her, a second mirror, her back, rear view, two of her, "
                    "seen from behind, full-body")
