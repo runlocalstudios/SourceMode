@@ -207,3 +207,13 @@ def test_a_selfie_places_the_other_hand_and_refuses_a_second_raised_arm():
     assert S.STANCE.endswith("her other hand down at her side")
     assert S.STANCE_SEATED.endswith("her other hand resting in her lap")
     assert "both arms raised" in S.NEGATIVE and "arm outstretched" not in S.STANCE   # rule 2 of the module
+
+
+def test_a_bare_braid_is_rendered_as_one_long_braid_over_one_shoulder():
+    from sourcemode.assets.render import SINGLE_BRAID, one_braid
+
+    assert one_braid("her hair in a braid") == SINGLE_BRAID
+    assert one_braid("Her hair in a braid") == SINGLE_BRAID
+    for kept in ("her hair in a braid over one shoulder", "her hair in twin braids",
+                 "her hair in a long braid", SINGLE_BRAID):
+        assert one_braid(kept) == kept

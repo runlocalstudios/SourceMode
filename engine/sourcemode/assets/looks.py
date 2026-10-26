@@ -629,12 +629,32 @@ def register(*texts: str) -> str:
     return ""
 
 
-def steer(outfit: str, reg: str, rng: random.Random, ban: re.Pattern | None = None) -> str:
+# Jeremy, 2026-10-25, on jaina's "chic but revealing" server: "not everything
+# revealing needs to be 'fabric sheer so that her bra can be seen through' -
+# that should only be for strippers, escorts, etc, or MAYBE in fancy on the
+# town look for revealing / slutty, but not work and not casual, ever for a
+# regular character who is just a little flirty."
+SHEER_CUE = "the fabric sheer enough to show the bra beneath"
+SEX_WORK_RE = re.compile(r"stripper|escort|exotic|pole[- ]danc|burlesque|cam[- ]?girl|sex[- ]work|"
+                         r"lingerie model|strip club|gentlemen'?s club|call girl|courtesan", re.I)
+_NIGHT_OUT_SHEER_RE = re.compile(r"reveal|slutty|provocative|racy|risqu|scandal|skimpy", re.I)
+
+
+def sheer_allowed(cat: str, *texts: str) -> bool:
+    """The see-through cue: a sex-work character in any look, or a fancy-town
+    look whose words say revealing or slutty. Never anyone else."""
+    words = " ".join(t or "" for t in texts)
+    return bool(SEX_WORK_RE.search(words)) or (cat == "fancy_town" and bool(_NIGHT_OUT_SHEER_RE.search(words)))
+
+
+def steer(outfit: str, reg: str, rng: random.Random, ban: re.Pattern | None = None,
+          sheer: bool = False) -> str:
     """One register cue appended to the outfit, chosen from the ones it can
-    carry and her "Never wears" line allows; the outfit unchanged when none fits."""
+    carry and her "Never wears" line allows; the outfit unchanged when none fits.
+    The see-through cue only when `sheer` (see sheer_allowed)."""
     if not reg or not outfit:
         return outfit
-    pool = next(s for n, _, s in REGISTERS if n == reg)
+    pool = [c for c in next(s for n, _, s in REGISTERS if n == reg) if sheer or c[0] != SHEER_CUE]
     fit = [cue for cue, needs, never in pool
            if (not needs or re.search(needs, outfit, re.I)) and not (never and re.search(never, outfit, re.I))
            and not avoids(cue, ban)]
@@ -846,7 +866,8 @@ def _job_looks(job: dict, n: int, colours: list[str], rng: random.Random, game_j
     for i, t in enumerate(tpl[:n]):
         look = with_bottoms(fill(t, base=base, c=cols[i % len(cols)]))
         # her own line stays hers; a template gets its second colour
-        out.append(look if t == "{base}" else steer(pair_colours(look, cols, rng, ban, plain), reg, rng, ban))
+        out.append(look if t == "{base}" else steer(pair_colours(look, cols, rng, ban, plain), reg, rng, ban,
+                                                     sheer=sheer_allowed("work", words, style)))
     while len(out) < n:                       # more looks asked than variants
         out.append(out[len(out) % len(tpl)])
     return out
@@ -1047,7 +1068,10 @@ def draft_looks(character: str, seed: int = 0) -> dict[str, list[dict]]:
             plain = is_plain(guide, rec.get("style", ""), rec.get("palette", ""))
             for i in range(n):
                 look = pair_colours(fill(tpl[i], c=cols[i % len(cols)]), cols, rng, ban, plain)
-                look = accessorise(steer(look, reg, rng, ban), cat, rng, cols, ban, plain)
+                sheer = sheer_allowed(cat, guide, rec.get("style", ""),
+                                      " ".join(j.get("job", "") + " " + j.get("outfit", "")
+                                               for j in rec.get("jobs") or []))
+                look = accessorise(steer(look, reg, rng, ban, sheer), cat, rng, cols, ban, plain)
                 looks.append({"outfit": look, "hair": hair[(i + ci + off) % len(hair)]})
         out[cat] = looks
     return out

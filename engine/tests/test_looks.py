@@ -747,3 +747,24 @@ def test_no_pool_names_a_hem_below_the_knee():
         assert not any(hem.search(t) for t in pool), cat
     for kind, _, pool in L.WORK_KINDS:
         assert not any(hem.search(t) for t in pool), kind
+
+
+def test_the_see_through_cue_is_for_sex_work_and_a_slutty_night_out_only(monkeypatch):
+    """Jeremy, 2026-10-25, on jaina: "fabric sheer so that her bra can be seen
+    through - that should only be for strippers, escorts, etc, or MAYBE in fancy
+    on the town look for revealing / slutty, but not work and not casual"."""
+    def sheer_in(doc, cats=None):
+        return [l["outfit"] for c, ls in doc.items() if cats is None or c in cats
+                for l in ls if L.SHEER_CUE in l["outfit"]]
+
+    for seed in range(12):
+        _record_for(monkeypatch, "chic and sexy, flirty and revealing", job="Server at Bella Notte",
+                    job_outfit="Chic server outfits, a little revealing")
+        assert not sheer_in(L.draft_looks("x", seed), ("casual", "casual_date", "fancy_dining_gallery", "work", "workout"))
+    hits = 0
+    for seed in range(12):
+        _record_for(monkeypatch, "sexy", job="Stripper at the club", job_outfit="Revealing club outfits")
+        hits += len(sheer_in(L.draft_looks("x", seed)))
+    assert hits                                     # a stripper may wear it
+    assert L.sheer_allowed("fancy_town", "slutty night out")
+    assert not L.sheer_allowed("casual", "slutty") and not L.sheer_allowed("work", "revealing")

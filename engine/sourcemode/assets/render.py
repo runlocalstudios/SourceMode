@@ -188,6 +188,16 @@ def drop_footwear(outfit: str) -> str:
 _HEM_DETAIL = re.compile(r"\b(?:flared|flare-leg|bootcut|boot-cut|ankle-length|cuffed)\s+(?=\w)", re.I)
 
 
+#: Jeremy, 2026-10-25, on eve: a bare "her hair in a braid" rendered one side
+#: braided and the other loose. The single braid is named as one, over one shoulder.
+_BARE_BRAID = re.compile(r"\bher hair in a braid\b(?! over)", re.I)
+SINGLE_BRAID = "her hair in a single long braid over one shoulder"
+
+
+def one_braid(hair: str) -> str:
+    return _BARE_BRAID.sub(SINGLE_BRAID, hair or "")
+
+
 def drop_hem_detail(outfit: str) -> str:
     """"olive flared yoga pants" -> "olive yoga pants"."""
     return _HEM_DETAIL.sub("", outfit or "")
@@ -431,7 +441,7 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     if (is_short_haired(character) and is_up_style(slot.get("hair", ""))
             and not is_own_hair(character, slot.get("hair", ""))):
         slot = {**slot, "hair": SHORT_HAIR[int(slot.get("look", 1)) % len(SHORT_HAIR)]}
-    slot = {**slot, "outfit": plain_graphics(slot["outfit"])}
+    slot = {**slot, "outfit": plain_graphics(slot["outfit"]), "hair": one_braid(slot.get("hair", ""))}
     if slot["pose"] == "sitting":
         look = f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. Natural realistic human proportions, correct anatomy."
         return (f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, "
