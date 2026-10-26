@@ -158,11 +158,23 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
         d = root / slot_dirname(slot)
         d.mkdir(exist_ok=True)
         base = seed if seed is not None else seed_for(i)
+        prompt = shot_prompt(character, slot, plan.get("trigger"), backdrop=backdrop)
+        # jojo, 2026-10-26: a redrafted look left last week's re-roll shots (other
+        # seeds, the old outfit) in the folder, and the cutout ranks every shot
+        # there - set them aside so only this look's shots stay in play
+        stale = [p for p in d.glob("shot_*.png") if rendered_prompt(p) not in (None, prompt)]
+        if stale:
+            aside = d / "_superseded"
+            aside.mkdir(exist_ok=True)
+            for p in stale:
+                for f in (p, p.with_suffix(".json")):
+                    if f.exists():
+                        f.replace(aside / f.name)
+            log(f"  {slot['id']}: {len(stale)} shot(s) of an earlier version set aside")
         # a shot re-drawn for its framing sits under its re-draw seed
         s = next((base + REROLL_STRIDE * k for k in range(REROLLS + 1)
                   if (d / f"shot_00_s{base + REROLL_STRIDE * k}.png").exists()), base)
         dest = d / f"shot_00_s{s}.png"
-        prompt = shot_prompt(character, slot, plan.get("trigger"), backdrop=backdrop)
         try:
             if dest.exists() and rendered_prompt(dest) != prompt:
                 # winnie, 2026-10-18: her looks were rewritten off pure white and the

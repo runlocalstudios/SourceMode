@@ -87,6 +87,25 @@ def test_the_pack_renders_every_look_once_on_the_grey_studio_and_sets_edit_rende
     assert len(metas) == 1 and metas[0]["seed"] == 424242 and metas[0]["source"].endswith("shot_00_s424242.png")
 
 
+def test_a_rewritten_look_sets_aside_its_old_reroll_shots_so_the_cutout_never_ranks_them(tmp_path, quiet):
+    # jojo, 2026-10-26: her redrafted pack left last week's redo shots (other
+    # seeds, the old outfits) beside the new ones; shots() took all 34 and place
+    # ranks by score, so an old outfit could win its slot
+    out = tmp_path / "out"
+    client = FakeClient()
+    P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n", log=lambda s: None)
+    d = P.renders_root(out, "amanda") / "casual_01_standing"
+    old = d / "shot_00_s48783.png"
+    Image.new("RGB", (16, 24)).save(old)
+    old.with_suffix(".json").write_text(json.dumps({"prompt": "amanda an old look x", "graph": P.GRAPH}))
+    plan = _plan()
+    plan["categories"]["casual"]["looks"][0]["outfit"] = "a green tee"
+    P.render_pack({}, client, "amanda", plan, out, lora_path="l", negative="n", log=lambda s: None)
+    left = [p.name for p in P.shots(P.renders_root(out, "amanda")) if p.parent == d]
+    assert left == ["shot_00_s7100.png"]
+    assert (d / "_superseded" / "shot_00_s48783.png").is_file()
+
+
 def test_processing_is_due_only_when_every_look_is_kept_and_not_staged_since(tmp_path):
     jr, out = tmp_path / "judge", tmp_path / "out"
     imgs = []
