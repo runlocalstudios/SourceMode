@@ -403,7 +403,9 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
         crop = f"{crop}, {cam}" if cam else crop
     stance = f", {slot['stance']}" if slot.get("stance") else ""
     avoid = f" {slot['avoid']}" if slot.get("avoid") else ""
-    expression = slot.get("expression_natural") or _NATURAL_EXPRESSION[asked["expression"]]
+    from .appearance import expressions  # noqa: PLC0415
+    expression = (slot.get("expression_natural") or expressions(character).get(asked["expression"])
+                  or _NATURAL_EXPRESSION[asked["expression"]])
     from .appearance import hair_unsaid  # noqa: PLC0415
     hair = "" if slot["hair"].strip().lower() in hair_unsaid(character) else f"{slot['hair']}, "
     return (f"{trigger or character}, {app + ', ' if app else ''}{crop}, {body}, {head}{stance}, "

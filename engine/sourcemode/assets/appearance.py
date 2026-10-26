@@ -254,6 +254,15 @@ def pack_camera(character: str) -> dict:
     return (_load()["look"].get((character or "").lower()) or {}).get("pack_camera") or {}
 
 
+def expressions(character: str) -> dict:
+    """Her own words for a planned expression, {"teeth": "...", ...}, or {}.
+    Maya, 2026-10-26: "some of mayas smiles are too over the top" - the
+    shared "a broad smile showing her teeth" was four of her five rejects.
+    Kept out of CONFIRM_FIELDS: it is about the shot, not her description."""
+    rec = _load()["look"].get((character or "").lower()) or {}
+    return {k: v for k, v in (rec.get("expressions") or {}).items() if not k.startswith("_")}
+
+
 def hair_unsaid(character: str) -> set[str]:
     """Hair clauses her prompt leaves out entirely, lower-cased. Jeremy,
     2026-10-22, on cassie's selfies: every "her hair worn loose" came back flat

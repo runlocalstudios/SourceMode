@@ -159,6 +159,16 @@ def test_a_pack_camera_reaches_only_her_pack_prompt(monkeypatch):
     assert "eye level" not in R.natural_prompt("zara", {**slot, "framing_natural": "framed from the chest up"})
 
 
+def test_her_own_words_for_an_expression_replace_the_shared_ones(monkeypatch):
+    from sourcemode.assets import appearance as A
+    monkeypatch.setattr(A, "expressions", lambda c: {"teeth": "a soft smile showing her teeth"} if c == "maya" else {})
+    slot = {"id": "casual_03", "look": 3, "n": 3, "category": "casual", "pose": "standing",
+            "outfit": "a white tee and jeans", "hair": "her hair worn loose"}
+    assert R.pose_fields("zara", slot)["asked"]["expression"] == "teeth"
+    assert "a soft smile showing her teeth" in R.natural_prompt("maya", slot)
+    assert "a broad smile showing her teeth" in R.natural_prompt("zara", slot)
+
+
 def test_an_unsaid_hair_clause_leaves_her_hair_out_of_the_prompt(monkeypatch):
     from sourcemode.assets import appearance as A
     monkeypatch.setattr(A, "hair_unsaid", lambda c: {"her hair worn loose"} if c == "zara" else set())
