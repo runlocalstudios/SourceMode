@@ -177,3 +177,17 @@ def test_the_last_submissive_shot_is_the_ass_up_pose_looking_at_the_camera():
     assert "the crotch of her panties pointed straight at the camera" in p
     assert "looking back over her shoulder into the camera" in p
     assert "panties" in last["outfit"] or "thong" in last["outfit"]
+
+
+def test_a_shot_rendered_from_another_prompt_is_set_aside_to_draw_again(tmp_path):
+    from sourcemode.assets.shoots import set_aside_if_changed
+    dest = tmp_path / "selfie_casual_01.png"
+    dest.write_bytes(b"x")
+    dest.with_suffix(".txt").write_text("wearing a black wrap blouse", encoding="utf-8")
+    assert not set_aside_if_changed(dest, "wearing a black wrap blouse")
+    assert dest.exists()
+    assert set_aside_if_changed(dest, "wearing a cobalt blue cami")
+    assert not dest.exists() and (tmp_path / "_superseded" / "selfie_casual_01.png").is_file()
+    bare = tmp_path / "selfie_casual_02.png"
+    bare.write_bytes(b"x")
+    assert not set_aside_if_changed(bare, "anything") and bare.exists()

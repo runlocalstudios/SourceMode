@@ -40,7 +40,7 @@ from sourcemode.assets.judge import make_set  # noqa: E402
 from sourcemode.assets.lora import resolve_lora  # noqa: E402
 from sourcemode.assets.redo import judge_item  # noqa: E402
 from sourcemode.assets.render import shot_prompt, t2i_workflow  # noqa: E402
-from sourcemode.assets.shoots import plan_path, resolve, total_shots  # noqa: E402
+from sourcemode.assets.shoots import plan_path, resolve, set_aside_if_changed, total_shots  # noqa: E402
 from sourcemode.config import load_config, outputs_dir  # noqa: E402
 from sourcemode.gates.identity import cosine, embed_image  # noqa: E402
 from sourcemode.library import find_set, library_dir, shoot_kind, write_set_json  # noqa: E402
@@ -199,8 +199,10 @@ def run_shoot(sh) -> int:
     for k, slot in enumerate(plan):
         dest = d / f"{slot['id']}.png"
         try:
+            prompt = shot_prompt(CHAR, slot, CHAR, backdrop=slot["setting"])
+            if set_aside_if_changed(dest, prompt):
+                log(f"  {sh.id} {slot['id']}: the prompt changed since it was rendered - drawing it again")
             if not dest.exists():
-                prompt = shot_prompt(CHAR, slot, CHAR, backdrop=slot["setting"])
                 files = client.outputs(client.wait(
                     client.submit(t2i(prompt, SEED + k, f"shoots/{CHAR}/{sh.id}",
                                       negative=slot_negative(slot), extra=extra)),

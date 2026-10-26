@@ -684,6 +684,25 @@ def plan_path(shoot: Shoot, character: str, outputs_root) -> object | None:
     return Path(outputs_root) / shoot.plan_file.format(character=character)
 
 
+def set_aside_if_changed(dest, prompt: str) -> bool:
+    """Move a shot (and its .txt) into `_superseded/` when it was rendered from
+    a different prompt, so the run draws it again. Maya, 2026-10-26: her
+    pack28+selfies run re-used all 24 selfies from 10-23 because the files
+    existed - in her old outfits - and he had nothing new to judge. A shot with
+    no .txt is left alone: nothing says it is stale."""
+    from pathlib import Path  # noqa: PLC0415
+
+    dest = Path(dest)
+    txt = dest.with_suffix(".txt")
+    if not dest.exists() or not txt.is_file() or txt.read_text(encoding="utf-8") == prompt:
+        return False
+    aside = dest.parent / "_superseded"
+    aside.mkdir(exist_ok=True)
+    for f in (dest, txt):
+        f.replace(aside / f.name)
+    return True
+
+
 def estimate_seconds(ids: list[str], s_per_render: float, s_per_shot: float) -> float:
     """One job can mix a 75 s/shot sweep render with a 116 s/shot asset render.
     Charging the whole job at one rate was a 1h15m error on the 112-shot pack."""
