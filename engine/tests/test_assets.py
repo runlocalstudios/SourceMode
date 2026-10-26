@@ -597,3 +597,21 @@ def test_hybrid_on_grey_is_the_learned_matte_snapped():
     m[30:110, 20:60] = 0.996
     out = np.asarray(hybrid_remover(lambda img: m)(Image.fromarray(a)))
     assert (out[:20, :, 3] == 0).all() and (out[40:100, 25:55, 3] == 255).all()
+
+
+def test_hybrid_on_grey_gives_soft_hair_the_hairs_colour_not_the_walls():
+    """iris in the game, 2026-10-25: a grey halo round her hair. A soft strand's
+    rendered colour is part hair, part studio wall; kept as rendered, it lays a
+    light grey rim over whatever the game draws behind her."""
+    from sourcemode.assets.cutout import hybrid_remover
+
+    a = np.full((120, 80, 3), 205, np.uint8)            # the grey studio wall
+    a[30:110, 20:60] = (20, 18, 16)                     # her black hair, solid
+    a[30:110, 16:20] = (110, 110, 108)                  # the soft edge: hair mixed with wall
+    m = np.full((120, 80), 0.015, np.float32)
+    m[30:110, 20:60] = 0.996
+    m[30:110, 16:20] = 0.5
+    out = np.asarray(hybrid_remover(lambda img: m)(Image.fromarray(a)))
+    edge = out[40:100, 16:20]
+    assert (edge[..., 3] > 0).all() and (edge[..., 3] < 255).all()   # still soft
+    assert edge[..., :3].max() <= 30                                  # and hair-dark

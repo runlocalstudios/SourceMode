@@ -409,6 +409,7 @@ SURE_FG, SURE_BG = 0.85, 0.15
 SOFT = 0.95         # BiRefNet under this is a soft edge - hair
 CLASH_PX = 10000    # px of "her" the key would cut before it is a garment, not a gap
 BAND = 6.0          # px a garment rim is despilled, from the real outside only
+EDGE_CORE = 3       # px inside her edge a grey cut takes its edge colour from
 
 
 def backdrop_kind(key: tuple[int, int, int], dev: float, max_dev: float = 18.0) -> str:
@@ -448,7 +449,21 @@ def hybrid_matte(rgb: np.ndarray, key: tuple[int, int, int], kind: str,
     from scipy import ndimage  # noqa: PLC0415
 
     if kind in ("grey", "noisy"):
-        return rgb, np.clip((b - 0.03) / 0.94, 0.0, 1.0), {"override": 0, "clash": False}
+        alpha = np.clip((b - 0.03) / 0.94, 0.0, 1.0)
+        # A soft pixel's colour is part her, part wall. Neutral needs no despill
+        # in hue, but it does in brightness: iris's black hair kept a light grey
+        # rim in the game (2026-10-25). Soft pixels, and the opaque ring just
+        # inside them, take the colour of the nearest pixel of her CORE - solid
+        # and EDGE_CORE px clear of the edge, because the outermost opaque pixels
+        # are part wall too, and copying them only spread the rim outward.
+        out = rgb.copy()
+        solid = b >= 0.98
+        core = ndimage.binary_erosion(solid, iterations=EDGE_CORE)
+        tgt = (alpha > 0) & ~core
+        if tgt.any() and core.any():
+            _, (iy, ix) = ndimage.distance_transform_edt(~core, return_indices=True)
+            out[tgt] = rgb[iy[tgt], ix[tgt]]
+        return out, alpha, {"override": 0, "clash": False}
     ka = key_alpha(rgb, key, kind)
     pure_big = big_components(ka <= 0.0, BIG)
     alpha = np.where(b >= SURE_FG, 1.0, np.where(b <= SURE_BG, 0.0, ka))
