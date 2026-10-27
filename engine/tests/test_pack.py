@@ -334,3 +334,20 @@ def test_the_profile_pick_writes_one_rgb_webp_into_portraits_and_records_which_p
     t = P.thumb(dest, out, "zara", "portrait")
     assert t.is_relative_to(out / "game-assets" / "zara" / "review")
     assert [p.name for p in dest.parent.iterdir()] == ["profile.webp"]
+
+
+def test_pack_negative_is_built_without_duplicates(monkeypatch):
+    seen = {}
+    monkeypatch.setattr("sourcemode.assets.appearance.pack_camera", lambda c: {"negative": "top-down view, profile view"})
+    import sourcemode.assets.render as R
+    monkeypatch.setattr(R, "shot_prompt", lambda *a, **k: "p")
+    monkeypatch.setattr(R, "pose_fields", lambda c, s: {"asked": {"crop": "upper-thigh-up"}})
+    monkeypatch.setattr(R, "t2i_workflow", lambda cfg, prompt, seed, prefix, **kw: seen.setdefault("neg", kw["negative"]) and {})
+    monkeypatch.setattr("sourcemode.assets.adherence.measure", lambda p: {})
+    monkeypatch.setattr("sourcemode.assets.adherence.check", lambda a, g: {"failed": [], "soft": [], "got": {}})
+    monkeypatch.setattr("sourcemode.gates.identity.embed_image", lambda p: None)
+    import tempfile
+    P.render_pack({}, FakeClient(), "jojo", _plan("jojo"), Path(tempfile.mkdtemp()), lora_path="l",
+                  negative="blurry", log=lambda s: None)
+    terms = [t.strip() for t in seen["neg"].split(",")]
+    assert "high angle" in terms and "profile view" in terms and terms.count("top-down view") == 1

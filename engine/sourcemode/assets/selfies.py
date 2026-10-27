@@ -89,6 +89,20 @@ STANCE = ("she is taking a selfie, shot from a little above eye level and angled
           "down toward her, her other hand down at her side")
 STANCE_SEATED = ("she is sitting back comfortably and taking a selfie, shot from a little above "
                  "eye level, her other hand resting in her lap")
+# Jeremy, 2026-10-26: the selfies are "ok, but too consistently top down". Every
+# non-mirror slot said "a little above eye level", so every other one is now shot
+# straight on (`slots` alternates them); the mirror slots are left as they are.
+ABOVE = ("shot from a little above eye level and angled slightly down toward her",
+         "shot from a little above eye level")
+LEVEL = "shot straight on at her eye level"
+
+
+def level(stance: str) -> str:
+    """The same stance, shot straight on instead of from a little above."""
+    for a in ABOVE:
+        if a in stance:
+            return stance.replace(a, LEVEL)
+    return stance
 # And "stands in front of a full-length mirror photographing her reflection"
 # rendered her facing the lens with a mirror BEHIND her showing her back (casey
 # 08 and 10). The picture IS the reflection; say so, and refuse the other
@@ -539,6 +553,9 @@ def slots(looks: dict[str, list[dict]], work: tuple[str, str] = (WORK_FALLBACK, 
     def add(cat: str, look: int, outfit: str, hair: str, setting: str, stance: str,
             framing: str, timing: str | None):
         mirror = stance is STANCE_MIRROR
+        if not mirror:
+            k = sum(1 for o in out if o["shot_type"] == SHOT_TYPE)
+            stance = level(stance) if k % 2 else stance
         out.append({
             "id": f"selfie_{cat}_{look:02d}", "look": len(out) + 1,
             "look_id": f"{cat}_{look:02d}" if cat != "intimate" else None,

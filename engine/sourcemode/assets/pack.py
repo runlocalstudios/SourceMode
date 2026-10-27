@@ -38,6 +38,11 @@ SEED_BASE = 7100              # the per-look seed the Edit pack used too, so the
 STUDIO_BACKDROP = ("soft even studio lighting, a plain light grey seamless studio background "
                    "with nothing else in frame")
 W, H = 1024, 1536
+# Jeremy, 2026-10-26: every pack shot is an eye-level studio portrait, so every
+# pack refuses the high angle that jojo's and sarah's LoRAs drifted into - not
+# only the characters who already showed it. Selfies do not get it: they ask
+# for "a little above eye level" on purpose.
+CAMERA_NEGATIVE = "high angle, shot from above, camera looking down at her, top-down view"
 
 
 def seed_for(index: int) -> int:
@@ -145,8 +150,11 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
     from .render import pose_fields, shot_prompt, t2i_workflow  # noqa: PLC0415
 
     from .appearance import pack_camera  # noqa: PLC0415
-    cam_neg = pack_camera(character).get("negative")
-    negative = f"{negative}, {cam_neg}" if cam_neg else negative
+    have = {t.strip().lower() for t in negative.split(",")}
+    for extra in (CAMERA_NEGATIVE, pack_camera(character).get("negative") or ""):
+        add = [t.strip() for t in extra.split(",") if t.strip() and t.strip().lower() not in have]
+        have |= {t.lower() for t in add}
+        negative = ", ".join([negative, *add]) if add else negative
 
     root = root or renders_root(out_root, character)
     retire_other_renders(root, log)
