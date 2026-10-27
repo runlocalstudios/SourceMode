@@ -22,3 +22,11 @@ def test_a_bed_selfie_rests_on_the_bed_and_refuses_sinking_into_it():
     bed = [s for s in sl if s["shot_type"] == S.SHOT_TYPE and S.BED_RE.search(s["setting"])]
     assert bed and all(S.BED_PLACE in s["stance"] and "sinking into the mattress" in s["negative"] for s in bed)
     assert all(S.BED_PLACE not in s["stance"] for s in sl if s not in bed)
+
+
+def test_a_mirror_selfie_never_asks_for_the_phone_screen():
+    looks = {cat: [{"outfit": "a tee", "hair": "loose"}] * n for cat, n in S.GROUPS}
+    for s in S.slots(looks):
+        if s["shot_type"] != S.SHOT_TYPE:
+            assert "screen" not in s["gaze"] and "back of her phone" in s["gaze"]
+            assert "phone screen" in s["negative"]

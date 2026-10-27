@@ -120,11 +120,15 @@ NEGATIVE = ("phone, smartphone, phone in hand, phone screen, phone frame around 
             "camera, DSLR camera, camera in hand, both arms raised, both hands up")
 #: Appended on the mirror slots: the mirror is in front of her, not behind.
 MIRROR_NEGATIVE = ("mirror behind her, a second mirror, her back, rear view, two of her, "
-                   "seen from behind, full-body, crossed eyes, cross-eyed, eyes looking in different directions")
+                   "seen from behind, full-body, crossed eyes, cross-eyed, eyes looking in different directions, "
+                   "phone screen, picture on the phone screen, a photo inside the photo")
 # Jeremy, 2026-10-26: "common mirror selfie problem is crossed eyes". The shared
 # gaze "she looks directly at the camera" has no single target in a mirror - the
 # lens is in her hand and in the glass - so the mirror slots give her one.
-MIRROR_GAZE = "both of her eyes on the phone screen in the reflection"
+# The first wording, "her eyes on the phone screen in the reflection", drew the
+# screen - the whole selfie inside the selfie (2026-10-27). In a real mirror
+# selfie only the BACK of the phone shows; she looks at her own reflection.
+MIRROR_GAZE = "both of her eyes on her own reflection, only the back of her phone visible"
 # And "common bed selfie problem is the girl's body is essentially 'inside' the
 # mattress": a slot set on a bed places her body on it, and refuses the merge.
 # A bed in the background ("a made bed and a doorway behind her") is not one.
