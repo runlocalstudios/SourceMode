@@ -29,4 +29,4 @@ def test_a_mirror_selfie_never_asks_for_the_phone_screen():
     for s in S.slots(looks):
         if s["shot_type"] != S.SHOT_TYPE:
             assert "screen" not in s["gaze"] and "back of her phone" in s["gaze"]
-            assert "phone screen" in s["negative"]
+            assert "a photo inside the photo" in s["negative"] and "phone" not in s["negative"]

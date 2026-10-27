@@ -71,9 +71,25 @@ def test_a_canned_up_style_is_still_swapped_for_short_hair():
     p = shot_prompt("priya", {"id": "x", "look": 1, "category": "casual", "pose": "standing",
                               "outfit": "a white tee", "hair": "her hair up in a messy bun"}, "priya")
     assert "messy bun" not in p
-    assert any(f", {s}, wearing" in p for s in SHORT_HAIR), p
+    from sourcemode.assets.wardrobe import hair_options
+    assert any(f", {s}, wearing" in p for s in hair_options("priya")), p
 
 
 def test_long_haired_characters_keep_the_shared_rotation():
     assert not is_short_haired("zara")
     assert hair_options("zara") == DEFAULT_HAIR
+
+
+def test_a_short_haired_character_with_her_own_list_never_gets_a_canned_clause(monkeypatch):
+    from sourcemode.assets import wardrobe as W
+    monkeypatch.setattr(W, "is_short_haired", lambda c: c in ("linda", "priya"))
+    monkeypatch.setattr(W, "brief", lambda c: {"hair": ["her short hair neatly styled",
+                                                        "her short hair tousled and messy"]} if c == "linda" else {})
+    own = {"her short hair neatly styled", "her short hair tousled and messy"}
+    for clause in ("her hair worn loose", "her hair tucked behind her ears", "her hair in a high ponytail"):
+        assert W.short_hair("linda", clause, 3) in own
+    assert W.short_hair("linda", "her short hair tousled and messy", 1) == "her short hair tousled and messy"
+    # no list of her own: only an up-style is swapped, as before
+    assert W.short_hair("priya", "her hair worn loose", 2) == "her hair worn loose"
+    assert W.short_hair("priya", "her hair in a messy bun", 2) in W.SHORT_HAIR
+    assert W.short_hair("zara", "her hair in a messy bun", 2) == "her hair in a messy bun"

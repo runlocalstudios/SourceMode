@@ -87,6 +87,25 @@ def hair_options(character: str) -> tuple[str, ...]:
     return DEFAULT_HAIR
 
 
+def short_hair(character: str, clause: str, look: int) -> str:
+    """The hair clause a short-haired character is actually asked for.
+
+    A canned up-style is swapped (priya's bob asked for buns). When he has
+    written her own hair list, EVERY canned clause is swapped for one of his
+    lines - linda, 2026-10-27: "Her hair is VERY short it cannot be tucked
+    behind her ears or swept. It's a pixie cut. It can basically be normal or
+    messy that's about it." His own lines are never touched."""
+    if not is_short_haired(character) or is_own_hair(character, clause):
+        return clause
+    from .appearance import is_up_style  # noqa: PLC0415
+
+    has_own = isinstance(brief(character).get("hair"), list) and bool(brief(character)["hair"])
+    if not (has_own or is_up_style(clause)):
+        return clause
+    opts = hair_options(character)
+    return opts[int(look or 1) % len(opts)]
+
+
 def is_own_hair(character: str, clause: str) -> bool:
     """Is this hair clause one Jeremy wrote into her wardrobe brief himself?
     His lines are final - no rule downstream may swap one for a canned style."""

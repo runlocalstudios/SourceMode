@@ -121,7 +121,7 @@ NEGATIVE = ("phone, smartphone, phone in hand, phone screen, phone frame around 
 #: Appended on the mirror slots: the mirror is in front of her, not behind.
 MIRROR_NEGATIVE = ("mirror behind her, a second mirror, her back, rear view, two of her, "
                    "seen from behind, full-body, crossed eyes, cross-eyed, eyes looking in different directions, "
-                   "phone screen, picture on the phone screen, a photo inside the photo")
+                   "a lit screen facing the viewer, a picture on a screen, a photo inside the photo")
 # Jeremy, 2026-10-26: "common mirror selfie problem is crossed eyes". The shared
 # gaze "she looks directly at the camera" has no single target in a mirror - the
 # lens is in her hand and in the glass - so the mirror slots give her one.

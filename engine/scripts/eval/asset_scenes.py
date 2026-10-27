@@ -68,12 +68,10 @@ def sweep_prompt(trigger: str, look: dict, character: str | None = None) -> str:
     the eval replaces with "a woman" unless --with-description; a look that puts
     the hair up drops its length words, and a canned up-style is swapped for a
     short-haired character, both exactly as the pack builder does."""
-    from sourcemode.assets.wardrobe import SHORT_HAIR, is_own_hair, is_short_haired  # noqa: PLC0415
+    from sourcemode.assets.wardrobe import short_hair  # noqa: PLC0415
 
     character = character or trigger
-    hair = look["hair"]
-    if is_short_haired(character) and _render.is_up_style(hair) and not is_own_hair(character, hair):
-        hair = SHORT_HAIR[int(look.get("look", 1)) % len(SHORT_HAIR)]
+    hair = short_hair(character, look["hair"], look.get("look", 1))
     subject = _render.appearance_clause(character) or "a woman"
     if _render.is_up_style(hair):
         subject = _render.drop_length(subject)
