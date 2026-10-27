@@ -51,6 +51,8 @@ appearance, frame, expression and negative are shared and cannot drift.
 
 from __future__ import annotations
 
+import re
+
 # --- composition, held constant across the pack -------------------------------
 # Jeremy, 2026-10-17: "You shouldn't see the phone in a selfie photo unless it's
 # a mirror selfie." Gabi's pack (2026-10-14) named the phone in every slot -
@@ -118,7 +120,18 @@ NEGATIVE = ("phone, smartphone, phone in hand, phone screen, phone frame around 
             "camera, DSLR camera, camera in hand, both arms raised, both hands up")
 #: Appended on the mirror slots: the mirror is in front of her, not behind.
 MIRROR_NEGATIVE = ("mirror behind her, a second mirror, her back, rear view, two of her, "
-                   "seen from behind, full-body")
+                   "seen from behind, full-body, crossed eyes, cross-eyed, eyes looking in different directions")
+# Jeremy, 2026-10-26: "common mirror selfie problem is crossed eyes". The shared
+# gaze "she looks directly at the camera" has no single target in a mirror - the
+# lens is in her hand and in the glass - so the mirror slots give her one.
+MIRROR_GAZE = "both of her eyes on the phone screen in the reflection"
+# And "common bed selfie problem is the girl's body is essentially 'inside' the
+# mattress": a slot set on a bed places her body on it, and refuses the merge.
+# A bed in the background ("a made bed and a doorway behind her") is not one.
+BED_RE = re.compile(r"(?<![a-z])(bed|beds|mattress|sheets|pillows|covers)(?![a-z])(?![^,]*behind her)", re.I)
+BED_PLACE = "her body resting naturally on the surface of the bed"
+BED_NEGATIVE = ("body sinking into the mattress, body merged into the bed, "
+                "legs disappearing into the bed, missing limbs")
 
 SHOT_TYPE = "selfie"
 
@@ -567,6 +580,11 @@ def slots(looks: dict[str, list[dict]], work: tuple[str, str] = (WORK_FALLBACK, 
             "avoid": AVOID,
             "negative": MIRROR_NEGATIVE if mirror else NEGATIVE,
         })
+        if mirror:
+            out[-1]["gaze"] = MIRROR_GAZE
+        elif BED_RE.search(setting) and "standing" not in setting:
+            out[-1]["stance"] = f"{stance}, {BED_PLACE}"
+            out[-1]["negative"] = f"{NEGATIVE}, {BED_NEGATIVE}"
 
     for cat, n in GROUPS:
         for i in range(n):
