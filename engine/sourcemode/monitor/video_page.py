@@ -166,11 +166,11 @@ function tplHtml(){
     +(t.frames.length?'Render 4 more start frames':'Render 4 start frames')+' for '+SM.esc(who)+'</button>'
     +'<span class=lab>'+(t.aspect==='16:9'?'landscape':'portrait')+', through her LoRA; judged before any video</span></div>'
     +'<div class=row><button class="btn btn-sm" data-act=tstart data-kind=outfit data-id="'+SM.esc(t.id)+'">'
-    +'Render 4 stills of '+SM.esc(who)+' in this outfit</button>'
+    +'Render 4 stills of '+SM.esc(who)+' in the outfit shown in the example video</button>'
     +'<span class=lab>regular photos in the clip\'s outfit and setting; keepers can be animated</span></div>'
     +(t.frames.length?'<div class=frames>'+t.frames.map(f=>'<img loading=lazy src="/video/thumb?w=480&path='
       +encodeURIComponent(f)+'" alt="">').join('')+'</div>':'')
-    +(t.stills.length?'<div class=sum>In the outfit</div><div class="frames stills">'+t.stills.map(f=>'<img loading=lazy src="/video/thumb?w=360&path='
+    +(t.stills.length?'<div class=sum>In the outfit shown in the example video</div><div class="frames stills">'+t.stills.map(f=>'<img loading=lazy src="/video/thumb?w=360&path='
       +encodeURIComponent(f)+'" alt="">').join('')+'</div>':'')
     +'</div>').join('');
 }
