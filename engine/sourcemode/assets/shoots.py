@@ -326,6 +326,146 @@ TOY: tuple[dict, ...] = (
      "gaze": "looking into the camera", "expression_natural": "biting her lower lip"},
 )
 
+# --- office ------------------------------------------------------------------
+# Jeremy, 2026-10-28, from a photo of a private-office doorway: three office
+# shoots in their own group - her at the open door leaning in toward him at his
+# desk, the two of them inside with the door closed, and her on the floor
+# between his legs (a pose pack, so it mixes into any scene with a floor). The
+# office is "more luxurious" than his photo. Two wardrobes: conservative chic,
+# and very revealing professional - the default for all three presets.
+OFFICE_DOOR = ("warm afternoon light, seen from inside a luxurious private executive office: "
+               "she is in its open doorway, a tall dark walnut door with a brushed brass handle "
+               "swung open beside her, the plush carpeted hallway softly blurred behind her")
+OFFICE_IN = ("warm lamplight, inside a luxurious private executive office with the door closed: "
+             "a large dark walnut desk, a black leather executive chair, floor-to-ceiling windows "
+             "with the city skyline at dusk, built-in walnut bookshelves and a cream wool rug")
+
+OFFICE_SLUTTY: tuple[str, ...] = (
+    "a white silk blouse unbuttoned to her navel over a black lace bra, a tight black pencil "
+    "micro skirt and sheer black thigh-high stockings",
+    "a fitted charcoal blazer worn open over a black lace bra, a matching high-waisted micro "
+    "mini skirt and sheer black stockings",
+    "a sheer white chiffon blouse over a black lace bra, a high-waisted black leather pencil "
+    "skirt with a high slit and black stockings",
+    "a tight black wrap dress with a plunging neckline and a thigh-high slit, sheer black stockings",
+    "a cropped white button-up shirt tied under her breasts, a navy pinstripe micro mini skirt "
+    "and sheer black thigh-high stockings",
+    "a black tailored vest buttoned over a lace bralette, a tight red pencil mini skirt and "
+    "sheer black stockings",
+)
+OFFICE_CHIC: tuple[str, ...] = (
+    "a fitted navy blazer over a cream silk blouse, high-waisted navy tailored trousers, small "
+    "gold stud earrings",
+    "a black tailored sheath dress to the knee with cap sleeves, a thin gold necklace",
+    "a camel wool blazer over a black fine-knit turtleneck and a black pencil skirt to the knee",
+    "a white silk button-up blouse tucked into high-waisted charcoal wide-leg trousers, a slim "
+    "gold watch",
+    "a grey fitted knit dress with long sleeves and a belted waist, small pearl earrings",
+    "an ivory tailored jumpsuit with a belted waist and a modest neckline, gold hoop earrings",
+)
+
+_THIGHS = "framed from the thighs up"
+_EYES = "looking straight into the camera"
+DOORWAY: tuple[dict, ...] = (
+    {"stance": "leaning forward into the room with one hand braced on the door frame, her chest "
+               "pushed toward the camera, her cleavage on display", "needs": ("doorway",),
+     "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "leaning one shoulder against the door frame, one hip cocked, a fingertip at her lips",
+     "needs": ("doorway",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "standing in the doorway with both hands high on the door frame above her, leaning "
+               "forward slightly", "needs": ("doorway",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "peeking around the half-open door, one hand on its edge, leaning in toward the camera",
+     "needs": ("doorway",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "leaning forward from the waist with one forearm resting on the door frame, her "
+               "cleavage on display", "needs": ("doorway",), "framing": _THIGHS,
+     "gaze": "looking up into the camera from under her brows"},
+    {"stance": "turning to leave through the doorway, one hand on the door frame",
+     "needs": ("doorway",), "framing": _THIGHS, "facing": "her back three-quarters to the camera",
+     "gaze": "looking back over her shoulder into the camera with a playful smile"},
+    {"stance": "leaning in the doorway with her arms folded under her breasts, pushing them up",
+     "needs": ("doorway",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "one hand on the door frame, the other tugging her neckline down slightly as she "
+               "leans in", "needs": ("doorway",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "pressed against the door frame, back arched and one hip pushed out",
+     "needs": ("doorway",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "leaning in with one hand on the door frame, beckoning with one finger",
+     "needs": ("doorway",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "standing in the doorway holding a folder against her hip, leaning in with a teasing "
+               "smile", "needs": ("doorway",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "leaning forward with both hands on the door frame at waist height, her chest toward "
+               "the camera", "needs": ("doorway",), "framing": _THIGHS,
+     "gaze": "looking into the camera, biting her lower lip"},
+)
+DESK: tuple[dict, ...] = (
+    {"stance": "sitting on the edge of the desk facing the camera, legs crossed, leaning back on "
+               "her hands", "needs": ("desk",), "framing": _FULL, "shot_type": "full-length photo"},
+    {"stance": "leaning forward across the desk on both hands toward the camera, her cleavage on "
+               "display", "needs": ("desk",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "lying back across the desk, propped up on her elbows, one knee raised",
+     "needs": ("desk",), "framing": _FULL, "shot_type": "full-length photo"},
+    {"stance": "standing beside the desk with one hip against it, slowly unbuttoning her top",
+     "needs": ("desk",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "sitting in the leather executive chair with her legs crossed, leaning forward",
+     "needs": ("desk",), "framing": _FULL, "shot_type": "full-length photo"},
+    {"stance": "bent forward over the desk, both forearms flat on it", "needs": ("desk",),
+     "framing": _FULL, "shot_type": "photo from behind", "facing": "her back to the camera",
+     "gaze": "looking back over her shoulder into the camera"},
+    {"stance": "sitting on the desk with her knees apart, hands gripping the edge of the desk",
+     "needs": ("desk",), "framing": _FULL, "shot_type": "full-length photo"},
+    {"stance": "crawling toward the camera on all fours across the desk", "needs": ("desk",),
+     "framing": _FULL, "shot_type": "full-length photo",
+     "gaze": "looking up into the camera from under her brows"},
+    {"stance": "standing with her back against the closed door, one hand behind her on the handle, "
+               "biting her lip", "needs": ("door",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "perched on the arm of the leather chair, leaning toward the camera",
+     "needs": ("desk",), "framing": _FULL, "shot_type": "full-length photo"},
+    {"stance": "standing at the window with the skyline behind her, one hand sliding her hem up "
+               "her thigh", "needs": ("desk",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "standing in front of the desk, slowly pulling her top open", "needs": ("desk",),
+     "framing": _THIGHS, "gaze": _EYES},
+)
+# The viewer is in the shot: seated, his bare knees and boxer briefs at the
+# bottom of the frame, the camera his eyes looking down at her.
+_POV = "point-of-view photo looking down from a man seated in a chair"
+_HIS = ("his bare knees and thighs and his grey boxer briefs visible at the bottom edge of the "
+        "frame, her kneeling figure between his knees in frame")
+_UP = "looking up into the camera"
+BETWEEN_LEGS: tuple[dict, ...] = (
+    {"stance": "kneeling on the floor between his knees, her hands resting on his thighs",
+     "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
+    {"stance": "kneeling on the floor between his knees, hands on his knees, leaning forward, lips "
+               "parted", "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
+    {"stance": "kneeling on the floor between his knees, her hands sliding up his inner thighs",
+     "needs": ("floor",), "shot_type": _POV, "framing": _HIS,
+     "gaze": "looking up into the camera from under her brows"},
+    {"stance": "kneeling up tall between his knees, her chest close to the camera, hands on his thighs",
+     "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
+    {"stance": "sitting back on her heels on the floor between his knees, hands clasped behind her back",
+     "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
+    {"stance": "kneeling between his knees, one hand on his thigh and the other at the waistband of "
+               "his boxer briefs", "needs": ("floor",), "shot_type": _POV, "framing": _HIS,
+     "gaze": _UP, "expression_natural": "biting her lower lip"},
+    {"stance": "kneeling between his knees, resting her cheek against his inner thigh",
+     "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
+    {"stance": "kneeling between his knees, both hands on his thighs", "needs": ("floor",),
+     "shot_type": _POV, "framing": _HIS, "gaze": _UP, "expression_natural": "her mouth open"},
+)
+
+OFFICE: tuple[Shoot, ...] = (
+    Shoot("office_door", "Office doorway", "office", OFFICE_DOOR, OFFICE_SLUTTY, (),
+          pose_slots=DOORWAY, shots=len(DOORWAY),
+          note="At the open door of a luxurious private office, leaning in toward him at his "
+               "desk. Revealing professional by default; the Office scenes in Mix and match "
+               "take the chic wardrobe."),
+    Shoot("office_desk", "Private office, door closed", "office", OFFICE_IN, OFFICE_SLUTTY, (),
+          pose_slots=DESK, shots=len(DESK),
+          note="Inside with the door closed: on the desk, across it, in his chair, against the door."),
+    Shoot("office_pov", "Between his legs (office)", "office", OFFICE_IN, OFFICE_SLUTTY, (),
+          pose_slots=BETWEEN_LEGS, shots=len(BETWEEN_LEGS),
+          note="His point of view from the chair, his legs and boxer briefs in frame, her on the "
+               "floor between his knees. The pose pack mixes into any scene with a floor."),
+)
+
 # Buckets group the tab's checkboxes. Keep each shoot small: the point is that
 # ticking five is an hour, not an afternoon.
 CATALOG: tuple[Shoot, ...] = (
@@ -498,11 +638,12 @@ def _influencer() -> Shoot:
                       "scenes, outfits and hair - so a feed never repeats.")
 
 
-CATALOG = GAME + (_influencer(),) + CATALOG
+CATALOG = GAME + (_influencer(),) + CATALOG + OFFICE
 BY_ID = {s.id: s for s in CATALOG}
-BUCKETS = ("game", "social", "intimate", "swim", "everyday", "night")
+BUCKETS = ("game", "social", "intimate", "swim", "everyday", "night", "office")
 BUCKET_LABEL = {"game": "Game assets", "social": "Social", "intimate": "Intimate",
-                "swim": "Swim", "everyday": "Everyday", "night": "Night out"}
+                "swim": "Swim", "everyday": "Everyday", "night": "Night out",
+                "office": "Office"}
 
 
 # --- mix and match -----------------------------------------------------------
@@ -558,6 +699,8 @@ SCENES: tuple[Scene, ...] = (
     Scene("gym", "Gym", BY_ID["gym"].setting, ("wall", "floor")),
     Scene("pool", "Poolside", BY_ID["pool"].setting, ("floor",)),
     Scene("beach", "Beach", BY_ID["beach_sunset"].setting, ("floor",)),
+    Scene("officedoor", "Office doorway", OFFICE_DOOR, ("doorway", "wall", "floor")),
+    Scene("office", "Private office", OFFICE_IN, ("desk", "door", "wall", "floor")),
 )
 
 WARDROBES: tuple[Wardrobe, ...] = (
@@ -572,6 +715,8 @@ WARDROBES: tuple[Wardrobe, ...] = (
     Wardrobe("gym", "Gym", BY_ID["gym"].outfits),
     Wardrobe("swim", "Swim", BY_ID["pool"].outfits + BY_ID["beach_sunset"].outfits),
     Wardrobe("work", "Work - her job outfit", record="job"),
+    Wardrobe("officeslutty", "Office - very revealing professional", OFFICE_SLUTTY),
+    Wardrobe("officechic", "Office - conservative chic", OFFICE_CHIC),
 )
 
 POSE_PACKS: tuple[PosePack, ...] = (
@@ -581,6 +726,13 @@ POSE_PACKS: tuple[PosePack, ...] = (
              note="The boudoir poses: edge of the bed, kneeling, lying, leaning in."),
     PosePack("submissive", "Submissive", SUBMISSIVE,
              note=f"Kneeling, on the bed, against the wall, bent over. {len(SUBMISSIVE)} poses."),
+    PosePack("doorway", "Leaning in the doorway", DOORWAY,
+             note=f"Leaning in at an open door toward him. Office doorway only. {len(DOORWAY)} poses."),
+    PosePack("desk", "On his desk", DESK,
+             note=f"On the desk, across it, in his chair, against the door. {len(DESK)} poses."),
+    PosePack("betweenlegs", "Between his legs (his POV)", BETWEEN_LEGS,
+             note=f"His legs and boxer briefs in frame, her kneeling between them. Any scene with "
+                  f"a floor. {len(BETWEEN_LEGS)} poses."),
     PosePack("toy", "Torso toy", TOY,
              note=f"In bed with the torso toy, two of each act. {len(TOY)} poses."),
 )
