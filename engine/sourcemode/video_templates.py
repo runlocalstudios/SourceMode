@@ -92,6 +92,17 @@ def start_prompt(template: dict, character: str, partner: str | None = None,
         ". Photorealistic, natural skin texture, sharp focus."
 
 
+def outfit_slot(template: dict, k: int) -> dict:
+    """A regular portrait of her in the template's outfit and setting - not the
+    point-of-view start frame. Jeremy, 2026-10-28: "render 4 stills of her
+    wearing that outfit ... for Mei but it would render the nurse cosplay
+    outfit shown in the video". The same slot shape a shoot renders, so it goes
+    through the one prompt builder and her stills match her other photos."""
+    s = template["start"]
+    return {"id": f"outfit_{k:02d}", "look": k + 1, "category": "video", "pose": "standing",
+            "outfit": s["outfit"], "hair": s.get("hair", "her hair worn loose"), "setting": s["setting"]}
+
+
 def start_negative(template: dict, base: str) -> str:
     extra = template["start"].get("negative", "")
     return f"{base}, {extra}" if extra else base

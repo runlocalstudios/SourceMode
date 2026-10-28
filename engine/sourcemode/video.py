@@ -340,10 +340,12 @@ def s2v_workflow(cfg: dict, *, positive: str, negative: str, image_name: str, au
 
 # --- what the tab shows ---------------------------------------------------------
 
-def keepers(judge_root: Path, character: str, *, limit: int = 60) -> list[dict]:
+def keepers(judge_root: Path, character: str, *, limit: int = 120) -> list[dict]:
     """Her judged keepers, newest first: every item he marked keep in a set
     written for her, that is still on disk. The judge sets are the one record
-    of what he kept, whatever folder the file has since moved to."""
+    of what he kept, whatever folder the file has since moved to. The newest
+    120 by when the file was made (Jeremy, 2026-10-28: 60 is not enough "when
+    I'm generating a TON of pics of characters")."""
     out: list[dict] = []
     sets_dir = judge_root / "sets"
     for sp in sorted(sets_dir.glob("*.json")) if sets_dir.is_dir() else []:

@@ -91,6 +91,8 @@ OWN_CSS = r"""
 .tpl video{width:100%;max-width:420px;aspect-ratio:16/9;background:#000;border-radius:var(--r1)}
 .tpl textarea{font-family:var(--mono);font-size:14px;min-height:120px}
 .frames{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--s2);margin-top:var(--s2)}
+.frames.stills{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+.frames.stills img{aspect-ratio:2/3}
 .frames img{width:100%;object-fit:contain;background:#000;aspect-ratio:16/9;border-radius:var(--r1);border:1px solid var(--g4)}
 """
 
@@ -163,7 +165,12 @@ function tplHtml(){
     +'<div class=row><button class="btn btn-primary btn-sm" data-act=tstart data-id="'+SM.esc(t.id)+'">'
     +(t.frames.length?'Render 4 more start frames':'Render 4 start frames')+' for '+SM.esc(who)+'</button>'
     +'<span class=lab>'+(t.aspect==='16:9'?'landscape':'portrait')+', through her LoRA; judged before any video</span></div>'
+    +'<div class=row><button class="btn btn-sm" data-act=tstart data-kind=outfit data-id="'+SM.esc(t.id)+'">'
+    +'Render 4 stills of '+SM.esc(who)+' in this outfit</button>'
+    +'<span class=lab>regular photos in the clip\'s outfit and setting; keepers can be animated</span></div>'
     +(t.frames.length?'<div class=frames>'+t.frames.map(f=>'<img loading=lazy src="/video/thumb?w=480&path='
+      +encodeURIComponent(f)+'" alt="">').join('')+'</div>':'')
+    +(t.stills.length?'<div class=sum>In the outfit</div><div class="frames stills">'+t.stills.map(f=>'<img loading=lazy src="/video/thumb?w=360&path='
       +encodeURIComponent(f)+'" alt="">').join('')+'</div>':'')
     +'</div>').join('');
 }
@@ -301,7 +308,7 @@ document.addEventListener('click',async e=>{
       } else {
         const sel=document.querySelector('select[data-tpartner="'+id+'"]');
         const r=await SM.postJSON('/video/templates/'+encodeURIComponent(id)+'/start',
-          {character:who, partner:sel?sel.value:'', n:4});
+          {character:who, partner:sel?sel.value:'', n:4, kind:tb.dataset.kind||'start'});
         SM.toast('queued as '+r.queued,{label:'Open the queue',run:()=>SM.nav('gpu')}); SM.recount();
       }
     }catch(err){ SM.toast(err.message); }
@@ -452,15 +459,17 @@ def video_router(cfg: dict):
             raise HTTPException(400, "bad character")
         out = []
         for t in VT.all_templates():
-            frames = []
+            frames, stills = [], []
             if c:
                 for d in sorted((library_dir(cfg) / c).glob(f"*_video_{t['id']}-start")):
                     frames += [str(p) for p in sorted(d.glob("start_*.png"))]
+                for d in sorted((library_dir(cfg) / c).glob(f"*_video_{t['id']}-outfit")):
+                    stills += [str(p) for p in sorted(d.glob("outfit_*.png"))]
             out.append({"id": t["id"], "name": t["name"], "summary": t.get("summary", ""),
                         "cast": int(t.get("cast", 1)), "seconds": t.get("seconds"),
                         "aspect": t.get("aspect", "16:9"), "script": t.get("script", ""),
                         "has_source": (ENGINE_ROOT.parent / t.get("source", "")).is_file(),
-                        "frames": frames})
+                        "frames": frames, "stills": stills})
         return out
 
     @r.get("/video/template-clip")
@@ -499,20 +508,24 @@ def video_router(cfg: dict):
         partner = str(body.get("partner") or "").strip().lower()
         if not c or not resolve_lora(cfg, c):
             raise HTTPException(409, f"no approved LoRA for {c or 'nobody'}")
-        if int(t.get("cast", 1)) > 1 and not partner:
+        if int(t.get("cast", 1)) > 1 and not partner and body.get("kind") != "outfit":
             raise HTTPException(400, f"{t['name']} has two women - choose the second")
         n = max(1, min(8, int(body.get("n") or 4)))
+        outfit = body.get("kind") == "outfit"
         py = ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"
         cmd = [str(py), str(ENGINE_ROOT / "scripts" / "video" / "start_frames.py"), tid, c, "--n", str(n)]
-        if partner:
+        if outfit:
+            cmd.append("--outfit")
+        elif partner:
             cmd += ["--with", partner]
         out = outputs_dir(cfg)
         bad = preflight({"cmd": cmd, "cwd": str(ENGINE_ROOT)}, out)
         if bad:
             raise HTTPException(409, "would fail at once: " + "; ".join(bad))
         doc = q.load(q.queue_path(out))
-        job = q.add(doc, kind="video", label=f"{c}:{tid}:start", cmd=cmd, cwd=str(ENGINE_ROOT),
-                    note=f"{n} start frames for {t['name']}, for review - from the video page")
+        what = "outfit stills" if outfit else "start frames"
+        job = q.add(doc, kind="video", label=f"{c}:{tid}:{'outfit' if outfit else 'start'}", cmd=cmd,
+                    cwd=str(ENGINE_ROOT), note=f"{n} {what} for {t['name']}, for review - from the video page")
         q.save(q.queue_path(out), doc)
         return {"queued": job["id"]}
 

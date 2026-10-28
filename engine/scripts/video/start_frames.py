@@ -1,6 +1,11 @@
 """Render a video template's start frames for one character, for review.
 
-    python scripts/video/start_frames.py <template> <character> [--with <partner>] [--n 4]
+    python scripts/video/start_frames.py <template> <character> [--with <partner>] [--n 4] [--outfit]
+
+`--outfit` renders regular portrait stills of her in the template's outfit and
+setting instead (2:3, the shoot's own framing), into <template>-outfit and the
+judge set `video_<character>_<template>_outfit`. Those keepers are stills the
+Video tab can animate like any other.
 
 At the source's aspect (landscape or portrait) through her LoRA, N seeds, into
 library/<character>/<date>_video_<template>-start/ and a judge set
@@ -27,6 +32,7 @@ from sourcemode.library import find_set, write_set_json
 from sourcemode.pose.native import NEGATIVE
 from sourcemode.render.client import ComfyUIClient
 
+OUTFIT = "--outfit" in sys.argv
 POS = [a for a in sys.argv[1:] if not a.startswith("--")]
 ARG = {a: sys.argv[sys.argv.index(a) + 1] for a in ("--with", "--n") if a in sys.argv}
 POS = [p for p in POS if p not in ARG.values()]
@@ -49,42 +55,53 @@ def log(s: str) -> None:
         f.write(line + chr(10))
 
 
-if int(tpl.get("cast", 1)) > 1 and not PARTNER:
+if int(tpl.get("cast", 1)) > 1 and not PARTNER and not OUTFIT:
     raise SystemExit(f"{TID} has two women - name the second with --with <character>")
 lora = resolve_lora(cfg, CHAR)
 if not lora:
     raise SystemExit(f"no approved LoRA for {CHAR}")
-prompt = VT.start_prompt(tpl, CHAR, PARTNER)
-W, H = VT.size_for(tpl)
+if OUTFIT:
+    from sourcemode.assets.render import shot_prompt
+    PARTNER = None
+    W, H = 1024, 1536
+else:
+    prompt = VT.start_prompt(tpl, CHAR, PARTNER)
+    W, H = VT.size_for(tpl)
 neg = VT.start_negative(tpl, NEGATIVE + (", " + appearance_negative(CHAR) if appearance_negative(CHAR) else ""))
-name = f"{TID}-start"
+part = "outfit" if OUTFIT else "start"
+name = f"{TID}-{part}"
 d = find_set(cfg, CHAR, "video", name, create=True)
-set_id = f"video_{CHAR}_{TID}_start"
+set_id = f"video_{CHAR}_{TID}_{part}"
 write_set_json(d, character=CHAR, kind="video", name=name, date=d.name[:10], judge_sets=[set_id])
-log(f"{CHAR}: {N} start frames for '{tpl['name']}'{' with ' + PARTNER if PARTNER else ''} -> {d}")
+log(f"{CHAR}: {N} {'outfit stills' if OUTFIT else 'start frames'} for '{tpl['name']}'"
+    f"{' with ' + PARTNER if PARTNER else ''} -> {d}")
 
 client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
 items = []
 for k in range(N):
     seed = VT.START_SEED + k * 1000
-    dest = d / f"start_{k:02d}.png"
+    if OUTFIT:
+        slot = VT.outfit_slot(tpl, k)
+        prompt = shot_prompt(CHAR, slot, CHAR, backdrop=slot["setting"])
+    dest = d / f"{part}_{k:02d}.png"
     if set_aside_if_changed(dest, prompt):
-        log(f"  start_{k:02d}: the template changed - drawing it again")
+        log(f"  {dest.stem}: the template changed - drawing it again")
     if not dest.exists():
         wf = t2i_workflow(cfg, prompt, seed, f"video/{CHAR}/{TID}", lora_path=lora["path"],
                           negative=neg, width=W, height=H)
         files = client.outputs(client.wait(client.submit(wf), timeout_s=3600))
         if not files:
-            log(f"  start_{k:02d}: no output")
+            log(f"  {dest.stem}: no output")
             continue
         client.fetch(files[0], dest)
         dest.with_suffix(".txt").write_text(prompt, encoding="utf-8")
-        log(f"  start_{k:02d}: seed {seed}")
-    items.append({"id": f"start_{k:02d}", "path": str(dest), "arm": TID, "group": str(k)})
+        log(f"  {dest.stem}: seed {seed}")
+    items.append({"id": dest.stem, "path": str(dest), "arm": TID, "group": str(k)})
 
 if not items:
     raise SystemExit("rendered nothing - refusing to report success")
-make_set(OUT / "judge", set_id, f"{CHAR.title()} - {tpl['name']} start frames", items,
-         question="Is this a start frame worth animating? K = yes, X = no.", priority=5,
+make_set(OUT / "judge", set_id, f"{CHAR.title()} - {tpl['name']} {'outfit' if OUTFIT else 'start frames'}",
+         items, question=("Is this her, in that outfit? K = yes, X = no." if OUTFIT
+                          else "Is this a start frame worth animating? K = yes, X = no."), priority=5,
          meta={"character": CHAR, "video_template": TID, "renders_dir": str(d)})
 log(f"STARTFRAMESDONE {CHAR} {len(items)} in judge set {set_id}")

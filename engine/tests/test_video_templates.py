@@ -40,3 +40,19 @@ def test_a_start_frame_renders_at_its_sources_aspect():
     assert VT.size_for(VT.load("velvet_lounge")) == (1664, 928)
     assert VT.size_for(VT.load("desk_toy")) == (1024, 1536)
     assert VT.size_for(VT.load("harness_tease")) == (1024, 1536)
+
+
+def test_an_outfit_still_is_a_regular_portrait_in_the_clips_outfit_and_setting():
+    from sourcemode.assets.render import shot_prompt
+    t = VT.load("house_call")
+    slot = VT.outfit_slot(t, 0)
+    p = shot_prompt("mei", slot, "mei", backdrop=slot["setting"])
+    assert "white nurse mini dress with red trim" in p and "white modern open-plan home" in p
+    assert "point-of-view" not in p and "boxer" not in p      # not the start frame's composition
+    assert "a standing portrait picture" in p
+
+
+def test_the_video_tab_shows_her_newest_120_keepers():
+    import inspect
+    from sourcemode import video as V
+    assert inspect.signature(V.keepers).parameters["limit"].default == 120
