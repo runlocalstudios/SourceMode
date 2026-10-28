@@ -23,6 +23,8 @@ existing asset or to generate a new T2I then animate?" and, on this tab,
     GET  /video/template-clip ?id=        a template's source clip (devassets only)
     POST /video/templates/{id}/script     his edit of what she says
     POST /video/templates/{id}/start      queue N start frames for her, for review
+    POST /video/templates/{id}/render     queue the video: her kept start frame, the
+                                          template's legs, optionally its script voiced
 
 Templates (2026-10-28): a reference clip made into something any character can
 be run through - see `sourcemode.video_templates`. The start frames are judged
@@ -92,6 +94,8 @@ OWN_CSS = r"""
 .tpl textarea{font-family:var(--mono);font-size:14px;min-height:120px}
 .frames{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--s2);margin-top:var(--s2)}
 .frames.stills{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+.frames.pick img{cursor:pointer;border:2px solid transparent}
+.frames.pick img.on{border-color:var(--act-hi);box-shadow:0 0 0 2px var(--act)}
 .frames.stills img{aspect-ratio:2/3}
 .frames img{width:100%;object-fit:contain;background:#000;aspect-ratio:16/9;border-radius:var(--r1);border:1px solid var(--g4)}
 """
@@ -121,7 +125,7 @@ let st={src:'keeper', keeper:null, outfit:'', hair:'', setting:'', framing:'wais
    shows small tiles which can be made medium or large" - the picker is folded
    behind the chosen still, and its tiles come in three sizes */
 let pickOpen=false, tileSize='s';
-let tpls=[], partner={};
+let tpls=[], partner={}, tsel={}, tvoice={};
 try{ tileSize=localStorage.getItem('videoTile')||'s'; }catch(e){}
 
 async function load(){
@@ -148,6 +152,19 @@ async function loadTemplates(){
   catch(e){ SM.set($('tpls'),null,'<div class=errbox><b>Templates</b>'+SM.esc(e.message)+'</div>'); return; }
   SM.set($('tpls'),null,tplHtml());
 }
+function videoHtml(t){
+  if(!t.kept.length) return '<div class=sum>Keep a start frame on the Judge tab and the Render video button appears here.</div>';
+  if(!tsel[t.id] || !t.kept.includes(tsel[t.id])) tsel[t.id]=t.kept[0];
+  const voice=t.has_voice && tvoice[t.id]!==false;
+  return '<div class=sum><b>Render the video</b> - from the start frame you pick, the template\'s '+t.legs
+    +' legs chained, about '+t.seconds+' s.</div>'
+    +'<div class="frames pick">'+t.kept.map(f=>'<img loading=lazy data-tvstart="'+SM.esc(t.id)+'" data-path="'
+      +SM.esc(f)+'" class="'+(f===tsel[t.id]?'on':'')+'" src="/video/thumb?w=480&path='+encodeURIComponent(f)+'" alt="">').join('')+'</div>'
+    +'<label class=row><input type=checkbox data-tvoice="'+SM.esc(t.id)+'"'+(voice?' checked':'')+(t.has_voice?'':' disabled')+'> '
+    +(t.has_voice?'Speak the script in her voice (not lip-synced)':'Silent - she has no voice yet (Characters tab)')+'</label>'
+    +'<div class=row><button class="btn btn-primary" data-act=trender data-id="'+SM.esc(t.id)+'">Render the video for '
+    +SM.esc(who)+' &mdash; about '+SM.dur(t.video_s)+'</button></div>';
+}
 function tplHtml(){
   if(!tpls.length) return '<div class=card><div class=card-sub>No templates yet.</div></div>';
   const others=cat.characters.filter(x=>x.character!==who);
@@ -170,6 +187,7 @@ function tplHtml(){
     +'<span class=lab>regular photos in the clip\'s outfit and setting; keepers can be animated</span></div>'
     +(t.frames.length?'<div class=frames>'+t.frames.map(f=>'<img loading=lazy src="/video/thumb?w=480&path='
       +encodeURIComponent(f)+'" alt="">').join('')+'</div>':'')
+    +videoHtml(t)
     +(t.stills.length?'<div class=sum>In the outfit shown in the example video</div><div class="frames stills">'+t.stills.map(f=>'<img loading=lazy src="/video/thumb?w=360&path='
       +encodeURIComponent(f)+'" alt="">').join('')+'</div>':'')
     +'</div>').join('');
@@ -286,6 +304,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   const tp=e.target.closest('select[data-tpartner]'); if(tp){ partner[tp.dataset.tpartner]=tp.value; return; }
+  const tv=e.target.closest('input[data-tvoice]'); if(tv){ tvoice[tv.dataset.tvoice]=tv.checked; return; }
   const f=e.target.closest('select[data-f]'); if(!f) return;
   st[f.dataset.f]=f.value;
 });
@@ -297,6 +316,18 @@ document.addEventListener('click',async e=>{
     const v=s.dataset.v;
     if(s.dataset.seg==='tile'){ tileSize=v; try{ localStorage.setItem('videoTile',v); }catch(e){} draw(); return; }
     st[s.dataset.seg]=isNaN(+v)?v:+v; draw(); return; }
+  const ts=e.target.closest('[data-tvstart]');
+  if(ts){ tsel[ts.dataset.tvstart]=ts.dataset.path; SM.set($('tpls'),null,tplHtml()); return; }
+  const tr=e.target.closest('[data-act=trender]');
+  if(tr){
+    const id=tr.dataset.id, t=tpls.find(x=>x.id===id); tr.disabled=true;
+    try{
+      const r=await SM.postJSON('/video/templates/'+encodeURIComponent(id)+'/render',
+        {character:who, start:tsel[id], voice:t.has_voice && tvoice[id]!==false, takes:1});
+      SM.toast('queued as '+r.queued,{label:'Open the queue',run:()=>SM.nav('gpu')}); SM.recount();
+    }catch(err){ SM.toast(err.message); }
+    tr.disabled=false; return;
+  }
   const tb=e.target.closest('[data-act=tsave],[data-act=tstart]');
   if(tb){
     const id=tb.dataset.id; tb.disabled=true;
@@ -452,24 +483,33 @@ def video_router(cfg: dict):
 
     @r.get("/video/templates")
     def _templates(character: str = "") -> list[dict]:
+        import json  # noqa: PLC0415
+
         from .. import video_templates as VT  # noqa: PLC0415
+        from ..voice import record as VR  # noqa: PLC0415
 
         c = character.strip().lower()
         if any(x in c for x in ("/", "\\", "..")):
             raise HTTPException(400, "bad character")
         out = []
         for t in VT.all_templates():
-            frames, stills = [], []
+            frames, stills, kept = [], [], []
             if c:
+                vp = judge_root(cfg) / "verdicts" / f"video_{c}_{t['id']}_start.json"
+                verdicts = json.loads(vp.read_text(encoding="utf-8")) if vp.is_file() else {}
                 for d in sorted((library_dir(cfg) / c).glob(f"*_video_{t['id']}-start")):
                     frames += [str(p) for p in sorted(d.glob("start_*.png"))]
+                    kept += [str(p) for p in sorted(d.glob("start_*.png")) if verdicts.get(p.stem) == "keep"]
                 for d in sorted((library_dir(cfg) / c).glob(f"*_video_{t['id']}-outfit")):
                     stills += [str(p) for p in sorted(d.glob("outfit_*.png"))]
             out.append({"id": t["id"], "name": t["name"], "summary": t.get("summary", ""),
                         "cast": int(t.get("cast", 1)), "seconds": t.get("seconds"),
                         "aspect": t.get("aspect", "16:9"), "script": t.get("script", ""),
                         "has_source": (ENGINE_ROOT.parent / t.get("source", "")).is_file(),
-                        "frames": frames, "stills": stills})
+                        "frames": frames, "stills": stills, "kept": kept,
+                        "legs": len(t.get("legs") or []),
+                        "video_s": V.QUALITIES["medium"][1] * float(t.get("seconds") or 0),
+                        "has_voice": bool(c and (VR.get(c) or {}).get("reference"))})
         return out
 
     @r.get("/video/template-clip")
@@ -526,6 +566,45 @@ def video_router(cfg: dict):
         what = "outfit stills" if outfit else "start frames"
         job = q.add(doc, kind="video", label=f"{c}:{tid}:{'outfit' if outfit else 'start'}", cmd=cmd,
                     cwd=str(ENGINE_ROOT), note=f"{n} {what} for {t['name']}, for review - from the video page")
+        q.save(q.queue_path(out), doc)
+        return {"queued": job["id"]}
+
+    @r.post("/video/templates/{tid}/render")
+    def _template_render(tid: str, body: dict = Body(default={})) -> dict:
+        import json  # noqa: PLC0415
+        import time  # noqa: PLC0415
+
+        from .. import video_templates as VT  # noqa: PLC0415
+        from ..gpu import queue as q  # noqa: PLC0415
+        from ..gpu.preflight import preflight  # noqa: PLC0415
+        from ..voice import record as VR  # noqa: PLC0415
+
+        try:
+            t = VT.load(tid)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(404, str(exc)) from exc
+        c = str(body.get("character", "")).strip().lower()
+        if not c or any(x in c for x in ("/", "\\", "..")):
+            raise HTTPException(400, "a character is required")
+        start = _inside(str(body.get("start") or ""), [library_dir(cfg) / c])
+        voice = bool(body.get("voice"))
+        if voice and not (VR.get(c) or {}).get("reference"):
+            raise HTTPException(409, f"{c} has no voice yet - set one on the Characters tab, or untick the voice")
+        takes = max(1, min(4, int(body.get("takes") or 1)))
+        out = outputs_dir(cfg)
+        sp = out / "video-specs" / f"{c}_{tid}_{time.strftime('%Y%m%d-%H%M%S')}.json"
+        sp.parent.mkdir(parents=True, exist_ok=True)
+        sp.write_text(json.dumps({"template": tid, "character": c, "start": str(start), "takes": takes,
+                                  "quality": "medium", "voice": voice}, indent=1), encoding="utf-8")
+        py = ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"
+        cmd = [str(py), str(ENGINE_ROOT / "scripts" / "video" / "run_template_video.py"), str(sp)]
+        bad = preflight({"cmd": cmd, "cwd": str(ENGINE_ROOT)}, out)
+        if bad:
+            raise HTTPException(409, "would fail at once: " + "; ".join(bad))
+        doc = q.load(q.queue_path(out))
+        job = q.add(doc, kind="video", label=f"{c}:{tid}:video", cmd=cmd, cwd=str(ENGINE_ROOT),
+                    note=f"{t['name']}: {len(t['legs'])} legs, {t['seconds']} s, {takes} take(s)"
+                         f"{', voiced' if voice else ''} - from the video page")
         q.save(q.queue_path(out), doc)
         return {"queued": job["id"]}
 

@@ -82,6 +82,15 @@ class VideoSpec:
     #         {"kind": "still", "outfit": ..., "hair": ..., "setting": ..., "framing": "waist"}
     source: dict = field(default_factory=dict)
     seed: int = 0
+    # A video template's run (2026-10-28): one motion line PER LEG, in order,
+    # instead of one line for every leg; its own camera clause in place of
+    # PACING; its own additions to the negative; and the frame size its source
+    # was shot at. Empty keeps the single-motion behaviour above.
+    legs: list = field(default_factory=list)
+    leg_suffix: str = ""
+    negative_extra: str = ""
+    size: list = field(default_factory=list)
+    template: str = ""
 
     @classmethod
     def from_dict(cls, d: dict) -> "VideoSpec":
@@ -95,8 +104,10 @@ def validate(spec: VideoSpec, *, leg_cap_s: float, max_seconds: float = 30.0) ->
     c = (spec.character or "").strip().lower()
     if not c or any(x in c for x in ("/", "\\", "..")):
         p.append("a character is required")
-    if not (spec.motion or "").strip():
+    if not (spec.motion or "").strip() and not spec.legs:
         p.append("say what happens - the motion line is empty")
+    if spec.legs and len(spec.legs) * leg_cap_s < float(spec.seconds) - 1e-6:
+        p.append(f"{len(spec.legs)} legs cannot cover {spec.seconds:g} s at {leg_cap_s:g} s a leg")
     if not (0.5 <= float(spec.seconds) <= max_seconds):
         p.append(f"length must be between 0.5 and {max_seconds:g} seconds")
     if spec.quality not in QUALITIES:
@@ -125,6 +136,12 @@ def legs_for(seconds: float, leg_cap_s: float) -> list[float]:
     seconds = float(seconds)
     n = max(1, math.ceil(seconds / leg_cap_s - 1e-9))
     return [round(seconds / n, 2)] * n
+
+
+def legs_for_template(seconds: float, n: int) -> list[float]:
+    """A template's legs: its own count, the length shared equally - each leg
+    carries its own motion line, so the count is the template's, not the cap's."""
+    return [round(float(seconds) / n, 2)] * n
 
 
 def leg_cap_seconds(cfg: dict) -> float:
@@ -248,21 +265,26 @@ def render_take(cfg: dict, client, spec: VideoSpec, source_png: Path, out_dir: P
     v = cfg["video"]
     fps = int(v["fps"])
     ff = ffmpeg_exe(cfg)
-    legs = legs_for(spec.seconds, leg_cap_seconds(cfg))
+    legs = (legs_for_template(spec.seconds, len(spec.legs)) if spec.legs
+            else legs_for(spec.seconds, leg_cap_seconds(cfg)))
     if len(legs) > 1 and not ff:
         raise RuntimeError("a chained clip needs ffmpeg and there is none on this machine")
-    width, height = int(v["width"]), int(v["height"])
+    width, height = (int(spec.size[0]), int(spec.size[1])) if spec.size else (int(v["width"]), int(v["height"]))
+    negative = f"{NEGATIVE}, {spec.negative_extra}" if spec.negative_extra else NEGATIVE
+    pacing = spec.leg_suffix or PACING
     leg_dir = out_dir / "_legs"
     start = source_png
     leg_files: list[Path] = []
     record = {"take": take, "seed": seed, "legs": [], "fps": fps, "width": width, "height": height,
-              "quality": spec.quality, "motion": spec.motion, "pacing": PACING}
+              "quality": spec.quality, "motion": spec.motion, "pacing": pacing,
+              "template": spec.template}
     for i, secs in enumerate(legs, start=1):
         t0 = time.monotonic()
         uploaded = client.upload_image(start)
-        positive = f"{spec.motion.strip().rstrip('.')}. {PACING}."
+        motion = spec.legs[i - 1] if spec.legs else spec.motion
+        positive = f"{motion.strip().rstrip('.')}. {pacing}."
         wf, settings = build_video_workflow(
-            cfg, spec.character, positive=positive, negative=NEGATIVE, image_name=uploaded,
+            cfg, spec.character, positive=positive, negative=negative, image_name=uploaded,
             seed=seed + i, render_pass=spec.quality, duration_s=secs, width=width, height=height)
         files = client.outputs(client.wait(client.submit(wf), timeout_s=4 * 3600))
         clip = video_output(files)
@@ -275,7 +297,7 @@ def render_take(cfg: dict, client, spec: VideoSpec, source_png: Path, out_dir: P
             leg_path = leg_dir / f"take_{take:02d}_leg_{i:02d}.mp4"
         client.fetch(clip, leg_path)
         leg_files.append(leg_path)
-        record["legs"].append({"leg": i, "seconds": secs, "frames": settings["LENGTH"],
+        record["legs"].append({"leg": i, "seconds": secs, "frames": settings["LENGTH"], "prompt": positive,
                                "seed": seed + i, "file": str(leg_path),
                                "render_s": round(time.monotonic() - t0, 1)})
         log(f"  take {take} leg {i}/{len(legs)}: {settings['LENGTH']} frames in "
@@ -294,6 +316,47 @@ def render_take(cfg: dict, client, spec: VideoSpec, source_png: Path, out_dir: P
     record["seconds"] = round(total / fps, 2)
     final.with_suffix(".json").write_text(json.dumps(record, indent=1), encoding="utf-8")
     return record
+
+
+# --- a template's voice track ---------------------------------------------------
+
+def script_beats(script: str) -> list[tuple[float, str]]:
+    """The template script as (start seconds, words). A line reads
+    "[12-14s] You feel better already." - the start is where the words begin in
+    the clip. A line with no time follows the one before by three seconds."""
+    import re  # noqa: PLC0415
+
+    out: list[tuple[float, str]] = []
+    for line in (script or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        m = re.match(r"^\[\s*(\d+(?:\.\d+)?)\s*(?:-\s*\d+(?:\.\d+)?)?\s*s?\s*\]\s*(.+)$", line)
+        if m:
+            out.append((float(m.group(1)), m.group(2).strip()))
+        else:
+            out.append(((out[-1][0] + 3.0) if out else 0.0, line))
+    return out
+
+
+def voice_mux_args(video: Path, lines: list[tuple[float, Path]], dest: Path, *, ffmpeg: str,
+                   seconds: float) -> list[str]:
+    """One ffmpeg pass laying each spoken line at its start time under the clip.
+    The picture is copied untouched; the audio is padded or cut to exactly the
+    clip's `seconds` (an endless pad with -shortest never ends when the picture
+    is stream-copied - measured, it hung)."""
+    args = [ffmpeg, "-y", "-loglevel", "error", "-i", str(video)]
+    for _t, wav in lines:
+        args += ["-i", str(wav)]
+    parts = []
+    for i, (t, _wav) in enumerate(lines, start=1):
+        ms = int(round(t * 1000))
+        parts.append(f"[{i}:a]adelay={ms}|{ms}[a{i}]")
+    mix = "".join(f"[a{i}]" for i in range(1, len(lines) + 1))
+    parts.append(f"{mix}amix=inputs={len(lines)}:normalize=0:dropout_transition=0,"
+                 f"apad=whole_dur={seconds:.3f},atrim=0:{seconds:.3f}[aout]")
+    return args + ["-filter_complex", ";".join(parts), "-map", "0:v", "-map", "[aout]",
+                   "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", str(dest)]
 
 
 # --- speech: the still talks ---------------------------------------------------------
@@ -391,6 +454,8 @@ def clips(library: Path, character: str) -> list[dict]:
         # a set from before this tab (jojo's September clips) has no spec and no
         # take_ files: every mp4 in it is a clip, and it is done
         files = sorted(d.glob("take_*.mp4")) if spec else sorted(d.glob("*.mp4"))
+        if not spec and not files:
+            continue    # a template's start frames or outfit stills - stills, not clips
         for mp4 in files:
             rec = {}
             if mp4.with_suffix(".json").is_file():
