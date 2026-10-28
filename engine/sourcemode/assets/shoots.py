@@ -340,9 +340,12 @@ TOY: tuple[dict, ...] = (
 OFFICE_DOOR = ("warm afternoon light, seen from inside a luxurious private executive office: "
                "she is in its open doorway, a tall dark walnut door with a brushed brass handle "
                "swung open beside her, the plush carpeted hallway softly blurred behind her")
+# No chair in the scene: Amanda's between-legs set, 2026-10-28, put an empty
+# leather executive chair BEHIND her in all 14 shots, so she read as sitting in
+# it rather than kneeling at his feet. The desk poses that use his chair say so.
 OFFICE_IN = ("warm lamplight, inside a luxurious private executive office with the door closed: "
-             "a large dark walnut desk, a black leather executive chair, floor-to-ceiling windows "
-             "with the city skyline at dusk, built-in walnut bookshelves and a cream wool rug")
+             "a large dark walnut desk, floor-to-ceiling windows with the city skyline at dusk, "
+             "built-in walnut bookshelves and a cream wool rug")
 
 OFFICE_SLUTTY: tuple[str, ...] = (
     "a white silk blouse unbuttoned to her navel over a black lace bra, a tight black pencil "
@@ -448,14 +451,18 @@ DESK: tuple[dict, ...] = (
 # Now: his shorts are dark navy and named as the MAN's, said once, in the
 # composition; the framing puts her head and upper body between his thighs,
 # close; and each slot refuses shorts on her and the far, full-length shot.
-_POV = "point-of-view photo from the eyes of a man sitting in a leather office chair, looking down at her"
+# Amanda, 2026-10-28, after the first fix: still upright a body-length away with
+# her knees and stockings in frame. Her legs are now out of frame by the framing
+# and the negative, which leaves the model only the close shot.
+_POV = "close point-of-view photo looking down from the eyes of a seated man"
 _HIS = ("the man's own bare thighs spread wide along both sides of the bottom of the frame, the man "
-        "wearing dark navy boxer shorts at the very bottom edge; she is close between his knees, her "
-        "head and upper body filling the middle of the frame")
+        "wearing dark navy boxer shorts at the very bottom edge; she is right between his thighs, so "
+        "close that only her head, shoulders and chest are in frame, her legs out of frame below")
 _UP = "looking up into the camera"
 # No "boxer shorts" here, even as "on the woman": a negative is read as a bag of
 # words and would take his shorts out too. His are navy; hers are refused by colour.
-_NOT = "grey shorts, grey underwear, grey panties, far away, distant, her whole body in frame, standing"
+_NOT = ("grey shorts, grey underwear, grey panties, far away, distant, her whole body in frame, "
+        "standing, her knees, her legs, stockings in frame, office chair behind her, sitting in a chair")
 BETWEEN_LEGS: tuple[dict, ...] = tuple({**x, "needs": ("floor",), "shot_type": _POV, "framing": _HIS,
                                         "negative": _NOT} for x in (
     {"stance": "kneeling right between his spread knees, close enough to touch, her hands resting on the "

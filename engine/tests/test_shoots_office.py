@@ -60,3 +60,10 @@ def test_no_pose_asks_for_a_lip_bite_or_puts_a_second_mouth_in_its_gaze():
         text = " ".join(str(p.get(k, "")) for k in ("stance", "gaze", "expression_natural"))
         assert "biting" not in text.lower(), p["stance"]
         assert "smile" not in p.get("gaze", ""), p["gaze"]
+
+
+def test_the_office_scene_draws_no_chair_behind_her_and_she_is_shot_close():
+    assert "chair" not in S.OFFICE_IN
+    for slot in S.BY_ID["office_pov"].plan(character="nadia"):
+        assert "chair" not in slot["shot_type"] and "legs out of frame" in slot["framing"]
+        assert "her knees" in slot["negative"] and "office chair behind her" in slot["negative"]
