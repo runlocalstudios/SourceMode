@@ -77,11 +77,15 @@ class Shoot:
     # path - the lock is what survives a prune of the staging folders.
     loras: tuple[tuple[str, float], ...] = ()
 
-    def plan(self, seed: int = 0, character: str | None = None) -> list[dict]:
+    def plan(self, seed: int = 0, character: str | None = None,
+             outfit: str | None = None) -> list[dict]:
         """The shot list: outfit x pose walked in step, hair rotating under them.
 
         Deterministic, so re-running a shoot reproduces it and a judge verdict
         keyed to a shot id still means the same picture.
+
+        `outfit` puts every shot in that one outfit - the set's own roll
+        (`set_outfit`), so the shoot reads as one shoot.
 
         `character` swaps in HER hair vocabulary where she has one. Tess wears
         box braids in every frame she was trained on, and the shared rotation
@@ -109,8 +113,8 @@ class Shoot:
                     "pose": "standing", "shoot": self.id,
                     # a pose may say what garment it needs ("panties|thong");
                     # the first outfit in the wardrobe that has it, else the rotation
-                    "outfit": next((o for o in outfits if p.get("wants") and re.search(p["wants"], o)),
-                                   outfits[i % len(outfits)]),
+                    "outfit": outfit or next((o for o in outfits if p.get("wants") and re.search(p["wants"], o)),
+                                             outfits[i % len(outfits)]),
                     "hair": hair[i % len(hair)],
                     "stance": p["stance"],
                     "framing": p.get("framing", self.framing),
@@ -126,7 +130,7 @@ class Shoot:
             out.append({
                 "id": f"{self.id}_{i:02d}", "look": i + 1, "category": self.bucket,
                 "pose": "standing", "shoot": self.id,
-                "outfit": outfits[i % len(outfits)],
+                "outfit": outfit or outfits[i % len(outfits)],
                 "hair": hair[i % len(hair)],
                 "stance": self.poses[i % len(self.poses)],
                 "framing": self.framing,
@@ -859,6 +863,47 @@ def plan_path(shoot: Shoot, character: str, outputs_root) -> object | None:
     if not shoot.plan_file:
         return None
     return Path(outputs_root) / shoot.plan_file.format(character=character)
+
+
+def rolls_one_outfit(shoot: Shoot) -> bool:
+    """Does this shoot wear one outfit across the set? Every authored shoot that
+    rotates outfits does; the packs, the selfies and the influencer batches
+    carry their own per-shot looks and do not."""
+    return (shoot.kind == "shoot" and shoot.make is None and shoot.per_character is None
+            and not shoot.explicit)
+
+
+def set_outfit(shoot: Shoot, folder, character: str, *, roll: bool = True, rng=None) -> str | None:
+    """The one outfit this set is shot in. Jeremy, 2026-10-28: "I'd like the
+    outfits to sort of be randomly rolled, but once rolled, I'd like each of
+    these sets to have the same outfit prompted ... so that there's more
+    likelihood that these look like a coherent set and aren't just a bunch of
+    one-off photos."
+
+    Rolled once from the shoot's outfits and written into the set's set.json,
+    so a re-run and a redo of one rejected shot wear the same thing. `roll`
+    False only reads it (a redo never rolls). None for a shoot that does not
+    roll, or when nothing is rolled yet and `roll` is False."""
+    import json  # noqa: PLC0415
+    import random  # noqa: PLC0415
+    from pathlib import Path  # noqa: PLC0415
+
+    if not rolls_one_outfit(shoot):
+        return None
+    sj = Path(folder) / "set.json"
+    doc = json.loads(sj.read_text(encoding="utf-8")) if sj.is_file() else {}
+    if doc.get("outfit"):
+        return str(doc["outfit"])
+    if not roll:
+        return None
+    outfits = (wardrobe_outfits(shoot.wardrobe, character) if shoot.wardrobe else ()) or shoot.outfits
+    if not outfits:
+        return None
+    pick = (rng or random.SystemRandom()).choice(list(outfits))
+    doc["outfit"] = pick
+    Path(folder).mkdir(parents=True, exist_ok=True)
+    sj.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    return pick
 
 
 def set_aside_if_changed(dest, prompt: str) -> bool:

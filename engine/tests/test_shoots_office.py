@@ -28,3 +28,22 @@ def test_his_shorts_are_named_as_his_and_hers_are_refused_without_naming_his():
         assert "grey" not in slot["framing"] and "boxer" not in slot["negative"]
         assert "grey shorts" in slot["negative"] and "far away" in slot["negative"]
         assert "whole" not in slot["framing"]       # the camera stays close
+
+
+def test_a_set_rolls_one_outfit_once_and_every_shot_wears_it(tmp_path):
+    import random
+    sh = S.BY_ID["office_pov"]
+    first = S.set_outfit(sh, tmp_path, "nadia", rng=random.Random(3))
+    assert first in S.OFFICE_SLUTTY
+    # a re-run reads the roll back rather than rolling again
+    assert S.set_outfit(sh, tmp_path, "nadia", rng=random.Random(99)) == first
+    plan = sh.plan(character="nadia", outfit=first)
+    assert {s["outfit"] for s in plan} == {first}
+
+
+def test_a_redo_never_rolls_and_the_packs_never_roll(tmp_path):
+    assert S.set_outfit(S.BY_ID["office_pov"], tmp_path, "nadia", roll=False) is None
+    assert not (tmp_path / "set.json").exists()
+    for sid in ("pack28", "selfies", "influencer"):
+        assert not S.rolls_one_outfit(S.BY_ID[sid])
+    assert S.rolls_one_outfit(S.combo("office-officechic-desk"))

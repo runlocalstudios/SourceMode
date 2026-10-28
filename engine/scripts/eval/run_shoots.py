@@ -40,7 +40,7 @@ from sourcemode.assets.judge import make_set  # noqa: E402
 from sourcemode.assets.lora import resolve_lora  # noqa: E402
 from sourcemode.assets.redo import judge_item  # noqa: E402
 from sourcemode.assets.render import shot_prompt, t2i_workflow  # noqa: E402
-from sourcemode.assets.shoots import plan_path, resolve, set_aside_if_changed, total_shots  # noqa: E402
+from sourcemode.assets.shoots import plan_path, resolve, set_aside_if_changed, set_outfit, total_shots  # noqa: E402
 from sourcemode.config import load_config, outputs_dir  # noqa: E402
 from sourcemode.gates.identity import cosine, embed_image  # noqa: E402
 from sourcemode.library import find_set, library_dir, shoot_kind, write_set_json  # noqa: E402
@@ -190,7 +190,11 @@ def run_shoot(sh) -> int:
     if extra:
         log(f"  {sh.id}: stacked under hers: " + ", ".join(f"{p} x{s}" for p, s in extra))
     items, n = [], 0
-    plan = sh.plan(character=CHAR)
+    # one outfit across the set, rolled once and kept in its set.json
+    outfit = set_outfit(sh, d, CHAR)
+    if outfit:
+        log(f"  {sh.id}: the whole set wears {outfit}")
+    plan = sh.plan(character=CHAR, outfit=outfit)
     if sh.id == "selfies":
         # the game reads which look each selfie wears and when it was taken
         from sourcemode.assets.selfies import manifest  # noqa: PLC0415
