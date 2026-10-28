@@ -465,6 +465,12 @@ button.chip{min-height:32px;cursor:pointer}
   font:var(--t-body);font-weight:600}
 .actbar .chips{margin:0;flex:none}
 .actbar .over{flex-basis:100%;font:var(--t-small);color:var(--you-ink)}
+/* Jeremy, 2026-10-28: on a phone "the warning language is massive and takes up
+   like half of the screen" - the bar floats, so every wrapped line of it sat on
+   the captions. One line each; the full text is in the report and the title. */
+@media (max-width:1039px){
+  .actbar .over{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
 /* On a monitor the rail is already always visible, so nothing needs to float. */
 @media (min-width:1040px){
   .actbar{position:static;left:auto;right:auto;bottom:auto;box-shadow:var(--e1);

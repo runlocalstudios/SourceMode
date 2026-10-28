@@ -105,7 +105,8 @@ def test_the_preset_is_in_the_intimate_bucket_and_the_tab_gets_the_three_lists()
     intimate = next(b for b in S.buckets() if b["bucket"] == "intimate")
     assert "submissive" in [s["id"] for s in intimate["shoots"]]
     m = S.mix()
-    assert {x["id"] for x in m["poses"]} == {"standing", "bedroom", "submissive", "toy"}
+    assert {x["id"] for x in m["poses"]} == {"standing", "bedroom", "submissive", "toy",
+                                          "doorway", "desk", "betweenlegs"}
     sub = next(x for x in m["poses"] if x["id"] == "submissive")
     assert sub["n"] == 21 and sub["needs"] == ["bed", "floor", "wall"]
     assert next(w for w in m["wardrobes"] if w["id"] == "work")["record"] == "job"

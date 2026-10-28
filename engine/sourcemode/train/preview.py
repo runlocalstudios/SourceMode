@@ -1224,9 +1224,8 @@ function bar(){
        : '<button class="btn btn-primary" data-act=approve data-v=1>'+SM.esc(label)
          +'</button><button class="btn" data-act=approve data-v=0>Reject</button>')
     +(over.length&&!a.approved
-       ? '<span class=over>Approving over '+over.length+' finding'
-         +(over.length>1?'s':'')+' ('+over.join(' and ')+') — a gate annotates,'
-         +' it does not block.</span>'
+       ? '<span class=over title="A gate annotates; it does not block.">Approving over '
+         +over.join(' and ')+' findings</span>'
        : '')
     +appearanceNote()
     +'</div>');
@@ -1240,9 +1239,10 @@ function appearanceNote(){
   for(const m of (ap.missing||[])) bits.push('MISSING '+m.split(' - ')[0]);
   for(const w of (ap.warnings||[])) bits.push(w.split(' - ')[0]);
   if(!bits.length) return '';
-  return '<span class=over>'+(ap.ok?'Appearance record: ':'Appearance record INCOMPLETE - ')
-    +SM.esc(bits.join(' · '))+(ap.ok?'':'. The sweep after training will render her from'
-    +' the trigger alone; add it to characters/appearance.json first')+'.</span>';
+  const full=(ap.ok?'':'The sweep after training will render her from the trigger alone; '
+    +'add it to characters/appearance.json first. ')+bits.join(' · ');
+  return '<span class=over title="'+SM.esc(full)+'">'+(ap.ok?'Appearance: ':'Appearance incomplete: ')
+    +SM.esc(bits.join(' · '))+'</span>';
 }
 const ordinal=n=>n+(['th','st','nd','rd'][(n%100-20)%10]||['th','st','nd','rd'][n%100]||'th');
 

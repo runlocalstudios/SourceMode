@@ -24,9 +24,8 @@ What the shell adds beyond the tab strip:
 - **Hidden frames stop polling.** `{t:'hidden'}` stops that frame's timer;
   `{t:'shown'}` fires one immediate load. Three frames used to poll forever,
   including the two you were not looking at.
-- **`chrome:'immersive'`** lets the judge page ask for the screen: the bar is
-  hidden entirely and the tab strip collapses to a 20px grab strip, rather than
-  a 100vh stage being compressed by 56px.
+- **`chrome:'immersive'`** lets the judge page ask for the screen: the bottom bar
+  is hidden. The tab strip stays, slimmer on touch screens (2026-10-28).
 
 The frame protocol is versioned. `sm:1` means a phone holding a frame cached
 across a monitor restart posts or receives a shape the other side ignores
@@ -55,6 +54,11 @@ body{display:flex;flex-direction:column;background:var(--g0)}
   align-items:center;justify-content:center;gap:3px;white-space:nowrap;
   -webkit-tap-highlight-color:transparent}
 @media (max-width:420px){#tabs button{font-size:12px;letter-spacing:-.01em}}
+/* Jeremy, 2026-10-28: "for mobile and iPad, make the top bar a little skinnier,
+   but don't hide it." Touch screens of any width get the slimmer strip. */
+@media (pointer:coarse),(max-width:1366px) and (hover:none){
+  #tabs button{min-height:34px;padding:2px}
+}
 #tabs button.on{color:var(--g9);border-bottom-color:var(--act);background:var(--g2)}
 #tabs .n{min-width:18px;padding:0 5px;border-radius:var(--rp);font:700 11px/1.5 var(--font);
   font-weight:700;background:var(--g4);color:var(--g8);visibility:hidden}
@@ -76,12 +80,8 @@ body{display:flex;flex-direction:column;background:var(--g0)}
 /* IMMERSIVE: the judge page asks for the screen and gets it. The bottom bar is
    removed rather than compressing a 100vh stage by 56px. */
 body[data-chrome=immersive] #nowwrap{display:none}
-body[data-chrome=immersive] #tabs{height:var(--grab);min-height:var(--grab);
-  overflow:hidden;padding-top:0}
-body[data-chrome=immersive] #tabs button{min-height:var(--grab);font-size:0;
-  border-bottom:0}
-body[data-chrome=immersive] #tabs .n{display:none}
-body[data-chrome=immersive] #tabs button.on{background:var(--g4)}
+/* The tab strip is never collapsed any more (2026-10-28: "It doesn't really
+   need to be hidden"); immersive only drops the bottom bar. */
 """
 
 BODY = """
@@ -168,9 +168,6 @@ document.addEventListener('keydown',e=>{
   }catch(err){}
 });
 $('tabs').addEventListener('click',e=>{
-  if(document.body.dataset.chrome==='immersive'){
-    document.body.dataset.chrome='normal'; return;   /* the grab strip */
-  }
   const b=e.target.closest('button[data-tab]'); if(b) show(b.dataset.tab);
 });
 window.addEventListener('message',e=>{
