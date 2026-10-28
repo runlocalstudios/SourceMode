@@ -2,7 +2,7 @@
 
     python scripts/video/start_frames.py <template> <character> [--with <partner>] [--n 4]
 
-Landscape (the sources are 16:9) through her LoRA, N seeds, into
+At the source's aspect (landscape or portrait) through her LoRA, N seeds, into
 library/<character>/<date>_video_<template>-start/ and a judge set
 `video_<character>_<template>_start`. The still carries her identity into
 every leg - Wan takes no character LoRA - so it is judged before any video
@@ -55,6 +55,7 @@ lora = resolve_lora(cfg, CHAR)
 if not lora:
     raise SystemExit(f"no approved LoRA for {CHAR}")
 prompt = VT.start_prompt(tpl, CHAR, PARTNER)
+W, H = VT.size_for(tpl)
 neg = VT.start_negative(tpl, NEGATIVE + (", " + appearance_negative(CHAR) if appearance_negative(CHAR) else ""))
 name = f"{TID}-start"
 d = find_set(cfg, CHAR, "video", name, create=True)
@@ -71,7 +72,7 @@ for k in range(N):
         log(f"  start_{k:02d}: the template changed - drawing it again")
     if not dest.exists():
         wf = t2i_workflow(cfg, prompt, seed, f"video/{CHAR}/{TID}", lora_path=lora["path"],
-                          negative=neg, width=VT.WIDTH, height=VT.HEIGHT)
+                          negative=neg, width=W, height=H)
         files = client.outputs(client.wait(client.submit(wf), timeout_s=3600))
         if not files:
             log(f"  start_{k:02d}: no output")

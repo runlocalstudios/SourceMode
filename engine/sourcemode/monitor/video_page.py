@@ -91,7 +91,7 @@ OWN_CSS = r"""
 .tpl video{width:100%;max-width:420px;aspect-ratio:16/9;background:#000;border-radius:var(--r1)}
 .tpl textarea{font-family:var(--mono);font-size:14px;min-height:120px}
 .frames{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--s2);margin-top:var(--s2)}
-.frames img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:var(--r1);border:1px solid var(--g4)}
+.frames img{width:100%;object-fit:contain;background:#000;aspect-ratio:16/9;border-radius:var(--r1);border:1px solid var(--g4)}
 """
 
 BODY = """
@@ -162,7 +162,7 @@ function tplHtml(){
         +SM.esc(o.who)+'</option>').join('')+'</select></label>':'')
     +'<div class=row><button class="btn btn-primary btn-sm" data-act=tstart data-id="'+SM.esc(t.id)+'">'
     +(t.frames.length?'Render 4 more start frames':'Render 4 start frames')+' for '+SM.esc(who)+'</button>'
-    +'<span class=lab>landscape, through her LoRA; judged before any video</span></div>'
+    +'<span class=lab>'+(t.aspect==='16:9'?'landscape':'portrait')+', through her LoRA; judged before any video</span></div>'
     +(t.frames.length?'<div class=frames>'+t.frames.map(f=>'<img loading=lazy src="/video/thumb?w=480&path='
       +encodeURIComponent(f)+'" alt="">').join('')+'</div>':'')
     +'</div>').join('');

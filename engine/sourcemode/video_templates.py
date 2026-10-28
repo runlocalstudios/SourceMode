@@ -31,8 +31,14 @@ from .config import ENGINE_ROOT
 
 TEMPLATES_DIR = ENGINE_ROOT.parent / "video-templates"
 ID_RE = re.compile(r"^[a-z0-9_]+$")
-#: Qwen-Image's own 16:9 bucket - the sources are 1280x720
-WIDTH, HEIGHT = 1664, 928
+#: start-frame size by the source's aspect: Qwen-Image's own 16:9 bucket for the
+#: landscape clips (1280x720), the training bucket for the portrait ones (784x1168)
+SIZES = {"16:9": (1664, 928), "2:3": (1024, 1536)}
+WIDTH, HEIGHT = SIZES["16:9"]
+
+
+def size_for(template: dict) -> tuple[int, int]:
+    return SIZES.get(template.get("aspect", "16:9"), SIZES["16:9"])
 START_SEED = 5100
 
 

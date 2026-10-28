@@ -34,3 +34,9 @@ def test_the_start_prompt_carries_her_the_outfit_and_the_partner(monkeypatch):
     assert "lilac satin slip mini dress" in p and p.endswith("sharp focus.")
     duo = VT.start_prompt(VT.load("club_duo"), "nadia", "kiki")
     assert "a young woman with shoulder-length brown hair a few steps behind her" in duo
+
+
+def test_a_start_frame_renders_at_its_sources_aspect():
+    assert VT.size_for(VT.load("velvet_lounge")) == (1664, 928)
+    assert VT.size_for(VT.load("desk_toy")) == (1024, 1536)
+    assert VT.size_for(VT.load("harness_tease")) == (1024, 1536)

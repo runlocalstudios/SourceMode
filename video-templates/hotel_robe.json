@@ -1,0 +1,26 @@
+{
+ "name": "Hotel Robe",
+ "source": "devassets/video examples/grok_64cf0a24.mp4",
+ "source_url": "https://grok.com/imagine/post/64cf0a24-d47f-42f1-b98c-ae8c66801dcf",
+ "cast": 1,
+ "seconds": 15,
+ "aspect": "16:9",
+ "summary": "Landscape, one continuous shot in a warm luxury hotel room. In an open satin robe, topless, with a lace thong and stockings, she walks toward the camera, plays with her hair, turns to show her back, reaches out to him and opens the robe wide.",
+ "start": {
+  "composition": "a wide photo at standing eye level, she stands a few steps away in the middle of the room facing the camera, her whole body in frame, smiling at him",
+  "outfit": "an open champagne satin robe falling off her shoulders, topless, an ivory lace thong with a matching garter belt and sheer ivory stockings",
+  "hair": "her hair worn loose",
+  "setting": "warm lamplight, in a luxury hotel suite with a made king bed, wood-panelled walls, a leather armchair and soft sconces",
+  "negative": "a man, high angle"
+ },
+ "legs": [
+  "she walks slowly toward the camera, smiling, the robe slipping off her shoulders",
+  "she lifts her hands and runs them through her hair, swaying her hips",
+  "she turns to look back over her shoulder at the camera, the robe sliding down her back",
+  "she turns back and reaches one hand out toward the camera, then leans forward with a smile",
+  "she takes the edges of the robe and opens it wide, holding eye contact"
+ ],
+ "leg_suffix": "handheld camera at standing eye level, gentle natural sway, continuous shot, no cuts, smooth natural motion",
+ "video_negative": "camera cut, scene change, morphing, face change, extra fingers, distorted hands, flicker, different person",
+ "script": "[0-2s] Hello, darling.\n[3-4s] Like what you see?\n[4-11s] So good.\n[11-13s] Your turn."
+}
