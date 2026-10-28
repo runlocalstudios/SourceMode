@@ -400,29 +400,34 @@ DOORWAY: tuple[dict, ...] = (
                "the camera", "needs": ("doorway",), "framing": _THIGHS,
      "gaze": "looking into the camera, biting her lower lip"},
 )
+# Jeremy, 2026-10-28, on Nadia's desk set: "a little too distant, and the facial
+# identity is not rendering well because the face pixels are too small". The
+# full-length desk shots put her face at a fraction of the frame; the closest
+# framing that still shows the desk under her is knees up.
+_CLOSE = "framed from the knees up, the camera close to her"
 DESK: tuple[dict, ...] = (
     {"stance": "sitting on the edge of the desk facing the camera, legs crossed, leaning back on "
-               "her hands", "needs": ("desk",), "framing": _FULL, "shot_type": "full-length photo"},
+               "her hands", "needs": ("desk",), "framing": _CLOSE, "shot_type": "photo"},
     {"stance": "leaning forward across the desk on both hands toward the camera, her cleavage on "
                "display", "needs": ("desk",), "framing": _THIGHS, "gaze": _EYES},
     {"stance": "lying back across the desk, propped up on her elbows, one knee raised",
-     "needs": ("desk",), "framing": _FULL, "shot_type": "full-length photo"},
+     "needs": ("desk",), "framing": _CLOSE, "shot_type": "photo"},
     {"stance": "standing beside the desk with one hip against it, slowly unbuttoning her top",
      "needs": ("desk",), "framing": _THIGHS, "gaze": _EYES},
     {"stance": "sitting in the leather executive chair with her legs crossed, leaning forward",
-     "needs": ("desk",), "framing": _FULL, "shot_type": "full-length photo"},
+     "needs": ("desk",), "framing": _CLOSE, "shot_type": "photo"},
     {"stance": "bent forward over the desk, both forearms flat on it", "needs": ("desk",),
-     "framing": _FULL, "shot_type": "photo from behind", "facing": "her back to the camera",
+     "framing": _CLOSE, "shot_type": "photo from behind", "facing": "her back to the camera",
      "gaze": "looking back over her shoulder into the camera"},
     {"stance": "sitting on the desk with her knees apart, hands gripping the edge of the desk",
-     "needs": ("desk",), "framing": _FULL, "shot_type": "full-length photo"},
+     "needs": ("desk",), "framing": _CLOSE, "shot_type": "photo"},
     {"stance": "crawling toward the camera on all fours across the desk", "needs": ("desk",),
-     "framing": _FULL, "shot_type": "full-length photo",
+     "framing": _CLOSE, "shot_type": "photo",
      "gaze": "looking up into the camera from under her brows"},
     {"stance": "standing with her back against the closed door, one hand behind her on the handle, "
                "biting her lip", "needs": ("door",), "framing": _THIGHS, "gaze": _EYES},
     {"stance": "perched on the arm of the leather chair, leaning toward the camera",
-     "needs": ("desk",), "framing": _FULL, "shot_type": "full-length photo"},
+     "needs": ("desk",), "framing": _CLOSE, "shot_type": "photo"},
     {"stance": "standing at the window with the skyline behind her, one hand sliding her hem up "
                "her thigh", "needs": ("desk",), "framing": _THIGHS, "gaze": _EYES},
     {"stance": "standing in front of the desk, slowly pulling her top open", "needs": ("desk",),

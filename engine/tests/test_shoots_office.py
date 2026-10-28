@@ -47,3 +47,8 @@ def test_a_redo_never_rolls_and_the_packs_never_roll(tmp_path):
     for sid in ("pack28", "selfies", "influencer"):
         assert not S.rolls_one_outfit(S.BY_ID[sid])
     assert S.rolls_one_outfit(S.combo("office-officechic-desk"))
+
+
+def test_no_desk_shot_is_full_length_any_more():
+    for p in S.DESK:
+        assert "whole body" not in p["framing"] and "full-length" not in p.get("shot_type", "")
