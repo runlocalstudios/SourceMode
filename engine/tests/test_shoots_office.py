@@ -52,3 +52,11 @@ def test_a_redo_never_rolls_and_the_packs_never_roll(tmp_path):
 def test_no_desk_shot_is_full_length_any_more():
     for p in S.DESK:
         assert "whole body" not in p["framing"] and "full-length" not in p.get("shot_type", "")
+
+
+def test_no_pose_asks_for_a_lip_bite_or_puts_a_second_mouth_in_its_gaze():
+    packs = (S.DOORWAY, S.DESK, S.BETWEEN_LEGS, S.SUBMISSIVE, S.TOY)
+    for p in (x for pack in packs for x in pack):
+        text = " ".join(str(p.get(k, "")) for k in ("stance", "gaze", "expression_natural"))
+        assert "biting" not in text.lower(), p["stance"]
+        assert "smile" not in p.get("gaze", ""), p["gaze"]

@@ -327,7 +327,7 @@ TOY: tuple[dict, ...] = (
      "gaze": "looking down at the dildo", "expression_natural": "lips parted, eyes heavy"},
     {"stance": f"squatting over {_TOY} lying on its back on the bed with its hips nearest the camera, her feet flat on the mattress and her knees wide, hovering with the tip of the dildo just below her vagina, not touching her, {_PULLED}, her hands on her knees",
      "needs": ("bed",), "framing": _FULL, "shot_type": _FOOT_LOW, "facing": "facing the camera",
-     "gaze": "looking into the camera", "expression_natural": "biting her lower lip"},
+     "gaze": "looking into the camera", "expression_natural": "a teasing closed-mouth smile"},
 )
 
 # --- office ------------------------------------------------------------------
@@ -369,6 +369,11 @@ OFFICE_CHIC: tuple[str, ...] = (
 )
 
 _THIGHS = "framed from the thighs up"
+# Jeremy, 2026-10-28: "weird ai artifacts on her lips/mouth". Every one was a
+# "biting her lip" pose - Qwen draws a lumpy tongue pushed through her teeth -
+# and each also got the shared expression on top ("biting her lip, a neutral
+# expression"), two mouths in one prompt. No pose asks for a lip bite; a pose
+# that wants a look sets expression_natural, which replaces the shared one.
 _EYES = "looking straight into the camera"
 DOORWAY: tuple[dict, ...] = (
     {"stance": "leaning forward into the room with one hand braced on the door frame, her chest "
@@ -385,7 +390,7 @@ DOORWAY: tuple[dict, ...] = (
      "gaze": "looking up into the camera from under her brows"},
     {"stance": "turning to leave through the doorway, one hand on the door frame",
      "needs": ("doorway",), "framing": _THIGHS, "facing": "her back three-quarters to the camera",
-     "gaze": "looking back over her shoulder into the camera with a playful smile"},
+     "gaze": "looking back over her shoulder into the camera", "expression_natural": "a playful smile"},
     {"stance": "leaning in the doorway with her arms folded under her breasts, pushing them up",
      "needs": ("doorway",), "framing": _THIGHS, "gaze": _EYES},
     {"stance": "one hand on the door frame, the other tugging her neckline down slightly as she "
@@ -398,7 +403,7 @@ DOORWAY: tuple[dict, ...] = (
                "smile", "needs": ("doorway",), "framing": _THIGHS, "gaze": _EYES},
     {"stance": "leaning forward with both hands on the door frame at waist height, her chest toward "
                "the camera", "needs": ("doorway",), "framing": _THIGHS,
-     "gaze": "looking into the camera, biting her lower lip"},
+     "gaze": "looking into the camera", "expression_natural": "a teasing closed-mouth smile"},
 )
 # Jeremy, 2026-10-28, on Nadia's desk set: "a little too distant, and the facial
 # identity is not rendering well because the face pixels are too small". The
@@ -424,8 +429,8 @@ DESK: tuple[dict, ...] = (
     {"stance": "crawling toward the camera on all fours across the desk", "needs": ("desk",),
      "framing": _CLOSE, "shot_type": "photo",
      "gaze": "looking up into the camera from under her brows"},
-    {"stance": "standing with her back against the closed door, one hand behind her on the handle, "
-               "biting her lip", "needs": ("door",), "framing": _THIGHS, "gaze": _EYES},
+    {"stance": "standing with her back against the closed door, one hand behind her on the handle", "needs": ("door",), "framing": _THIGHS, "gaze": _EYES,
+     "expression_natural": "a teasing closed-mouth smile"},
     {"stance": "perched on the arm of the leather chair, leaning toward the camera",
      "needs": ("desk",), "framing": _CLOSE, "shot_type": "photo"},
     {"stance": "standing at the window with the skyline behind her, one hand sliding her hem up "
@@ -463,7 +468,7 @@ BETWEEN_LEGS: tuple[dict, ...] = tuple({**x, "needs": ("floor",), "shot_type": _
      "gaze": _UP},
     {"stance": "sitting back on her heels between his knees, her hands clasped behind her back", "gaze": _UP},
     {"stance": "kneeling between his knees, one hand on his thigh and the other tugging at the waistband "
-               "of the man's boxer shorts", "gaze": _UP, "expression_natural": "biting her lower lip"},
+               "of the man's boxer shorts", "gaze": _UP, "expression_natural": "a teasing closed-mouth smile"},
     {"stance": "kneeling between his knees, resting her cheek on the inside of his thigh", "gaze": _UP},
     {"stance": "kneeling between his knees, both hands on his thighs", "gaze": _UP,
      "expression_natural": "her mouth open"},
@@ -477,7 +482,7 @@ BETWEEN_LEGS: tuple[dict, ...] = tuple({**x, "needs": ("floor",), "shot_type": _
     {"stance": "leaning in low between his thighs, her face inches from his crotch at the bottom centre "
                "of the frame", "gaze": _UP, "expression_natural": "her mouth open"},
     {"stance": "kneeling between his knees, both of her thumbs hooked into the waistband of the man's "
-               "boxer shorts", "gaze": _UP, "expression_natural": "biting her lower lip"},
+               "boxer shorts", "gaze": _UP, "expression_natural": "a teasing closed-mouth smile"},
     {"stance": "kneeling between his knees, her fingers slipped inside the waistband of the man's boxer "
                "shorts, starting to pull them down his thighs",
      "gaze": "looking up into the camera from under her brows", "expression_natural": "a sly smile"},
