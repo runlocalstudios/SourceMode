@@ -449,6 +449,27 @@ BETWEEN_LEGS: tuple[dict, ...] = (
      "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
     {"stance": "kneeling between his knees, both hands on his thighs", "needs": ("floor",),
      "shot_type": _POV, "framing": _HIS, "gaze": _UP, "expression_natural": "her mouth open"},
+    # Jeremy, 2026-10-28: "a few shots with her face near his crotch, a few with
+    # her hands in the waistband of his underwear"
+    {"stance": "kneeling between his knees, her face close to the front of his boxer briefs, "
+               "her hands on his thighs", "needs": ("floor",), "shot_type": _POV, "framing": _HIS,
+     "gaze": _UP, "expression_natural": "lips parted"},
+    {"stance": "kneeling between his knees, her cheek almost touching the front of his boxer "
+               "briefs", "needs": ("floor",), "shot_type": _POV, "framing": _HIS,
+     "gaze": "looking up into the camera from under her brows", "expression_natural": "a teasing smile"},
+    {"stance": "kneeling between his knees, leaning in with her face just above his crotch, her "
+               "breath on the front of his boxer briefs", "needs": ("floor",), "shot_type": _POV,
+     "framing": _HIS, "gaze": _UP, "expression_natural": "her mouth open"},
+    {"stance": "kneeling between his knees, both thumbs hooked into the waistband of his boxer "
+               "briefs", "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP,
+     "expression_natural": "biting her lower lip"},
+    {"stance": "kneeling between his knees, her fingers slipped inside the waistband of his boxer "
+               "briefs, starting to pull it down", "needs": ("floor",), "shot_type": _POV,
+     "framing": _HIS, "gaze": "looking up into the camera from under her brows",
+     "expression_natural": "a sly smile"},
+    {"stance": "kneeling up between his knees, one hand tugging at the waistband of his boxer "
+               "briefs, her face close to his stomach", "needs": ("floor",), "shot_type": _POV,
+     "framing": _HIS, "gaze": _UP, "expression_natural": "lips parted"},
 )
 
 OFFICE: tuple[Shoot, ...] = (
