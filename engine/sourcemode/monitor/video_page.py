@@ -19,6 +19,14 @@ existing asset or to generate a new T2I then animate?" and, on this tab,
     GET  /video/thumb        ?path=       a keeper, web-sized (library and outputs only)
     GET  /video/file         ?path=       a clip or still (library only)
     POST /video/queue        the spec -> ONE queued job
+    GET  /video/templates    ?character=  the video templates, with her start frames
+    GET  /video/template-clip ?id=        a template's source clip (devassets only)
+    POST /video/templates/{id}/script     his edit of what she says
+    POST /video/templates/{id}/start      queue N start frames for her, for review
+
+Templates (2026-10-28): a reference clip made into something any character can
+be run through - see `sourcemode.video_templates`. The start frames are judged
+before any video time; the script is his to edit and every future render reads it.
 """
 
 from __future__ import annotations
@@ -76,6 +84,14 @@ OWN_CSS = r"""
 .picks li{display:flex;justify-content:space-between;gap:var(--s3);
   padding:var(--s2) 0;border-top:1px solid var(--g3);font:var(--t-meta);color:var(--g7)}
 .picks li b{color:var(--g9);font-variant-numeric:tabular-nums}
+.tpl{padding:var(--s3);margin-bottom:var(--s3);background:var(--g1);border:1px solid var(--g3);
+  border-radius:var(--r2)}
+.tpl b.nm{display:block;font:var(--t-lead);color:var(--g9)}
+.tpl .sum{font:var(--t-small);color:var(--g7);margin:2px 0 var(--s2)}
+.tpl video{width:100%;max-width:420px;aspect-ratio:16/9;background:#000;border-radius:var(--r1)}
+.tpl textarea{font-family:var(--mono);font-size:14px;min-height:120px}
+.frames{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:var(--s2);margin-top:var(--s2)}
+.frames img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:var(--r1);border:1px solid var(--g4)}
 """
 
 BODY = """
@@ -83,6 +99,8 @@ BODY = """
   <div class=col-main>
     <h2>Character</h2>
     <div class=who id=who></div>
+    <h2>Video templates</h2>
+    <div id=tpls></div>
     <h2>Her clips</h2>
     <div id=clips></div>
     <div id=form></div>
@@ -101,6 +119,7 @@ let st={src:'keeper', keeper:null, outfit:'', hair:'', setting:'', framing:'wais
    shows small tiles which can be made medium or large" - the picker is folded
    behind the chosen still, and its tiles come in three sizes */
 let pickOpen=false, tileSize='s';
+let tpls=[], partner={};
 try{ tileSize=localStorage.getItem('videoTile')||'s'; }catch(e){}
 
 async function load(){
@@ -119,6 +138,34 @@ async function pick(c){
   catch(e){ SM.toast(e.message); }
   if(keepers.length && !st.keeper) st.keeper=keepers[0].path;
   draw();
+  loadTemplates();
+}
+async function loadTemplates(){
+  if(!who) return;
+  try{ tpls=await SM.getJSON('/video/templates?character='+encodeURIComponent(who)); }
+  catch(e){ SM.set($('tpls'),null,'<div class=errbox><b>Templates</b>'+SM.esc(e.message)+'</div>'); return; }
+  SM.set($('tpls'),null,tplHtml());
+}
+function tplHtml(){
+  if(!tpls.length) return '<div class=card><div class=card-sub>No templates yet.</div></div>';
+  const others=cat.characters.filter(x=>x.character!==who);
+  return tpls.map(t=>'<div class=tpl data-tpl="'+SM.esc(t.id)+'"><b class=nm>'+SM.esc(t.name)+'</b>'
+    +'<div class=sum>'+SM.esc(t.summary)+' '+t.seconds+' s, '+SM.esc(t.aspect)+'.</div>'
+    +(t.has_source?'<video controls playsinline preload=metadata src="/video/template-clip?id='
+      +encodeURIComponent(t.id)+'"></video>':'')
+    +'<label class=field><span>What she says - one beat per line, [start-end s] then the words.'
+    +' Saved into the template; every future render speaks these.</span>'
+    +'<textarea data-tscript="'+SM.esc(t.id)+'">'+SM.esc(t.script||'')+'</textarea></label>'
+    +'<div class=row><button class="btn btn-sm" data-act=tsave data-id="'+SM.esc(t.id)+'">Save script</button></div>'
+    +(t.cast>1?'<label class=field><span>The second woman</span><select data-tpartner="'+SM.esc(t.id)+'">'
+      +others.map(o=>'<option value="'+SM.esc(o.character)+'"'+(partner[t.id]===o.character?' selected':'')+'>'
+        +SM.esc(o.who)+'</option>').join('')+'</select></label>':'')
+    +'<div class=row><button class="btn btn-primary btn-sm" data-act=tstart data-id="'+SM.esc(t.id)+'">'
+    +(t.frames.length?'Render 4 more start frames':'Render 4 start frames')+' for '+SM.esc(who)+'</button>'
+    +'<span class=lab>landscape, through her LoRA; judged before any video</span></div>'
+    +(t.frames.length?'<div class=frames>'+t.frames.map(f=>'<img loading=lazy src="/video/thumb?w=480&path='
+      +encodeURIComponent(f)+'" alt="">').join('')+'</div>':'')
+    +'</div>').join('');
 }
 async function refreshClips(){
   if(!who) return;
@@ -231,6 +278,7 @@ document.addEventListener('input',e=>{
   const c=cat.characters.find(x=>x.character===who); if(c) rail(c);
 });
 document.addEventListener('change',e=>{
+  const tp=e.target.closest('select[data-tpartner]'); if(tp){ partner[tp.dataset.tpartner]=tp.value; return; }
   const f=e.target.closest('select[data-f]'); if(!f) return;
   st[f.dataset.f]=f.value;
 });
@@ -242,6 +290,23 @@ document.addEventListener('click',async e=>{
     const v=s.dataset.v;
     if(s.dataset.seg==='tile'){ tileSize=v; try{ localStorage.setItem('videoTile',v); }catch(e){} draw(); return; }
     st[s.dataset.seg]=isNaN(+v)?v:+v; draw(); return; }
+  const tb=e.target.closest('[data-act=tsave],[data-act=tstart]');
+  if(tb){
+    const id=tb.dataset.id; tb.disabled=true;
+    try{
+      if(tb.dataset.act==='tsave'){
+        const ta=document.querySelector('textarea[data-tscript="'+id+'"]');
+        await SM.postJSON('/video/templates/'+encodeURIComponent(id)+'/script',{script:ta.value});
+        SM.toast('script saved - the next render speaks it');
+      } else {
+        const sel=document.querySelector('select[data-tpartner="'+id+'"]');
+        const r=await SM.postJSON('/video/templates/'+encodeURIComponent(id)+'/start',
+          {character:who, partner:sel?sel.value:'', n:4});
+        SM.toast('queued as '+r.queued,{label:'Open the queue',run:()=>SM.nav('gpu')}); SM.recount();
+      }
+    }catch(err){ SM.toast(err.message); }
+    tb.disabled=false; return;
+  }
   const m=e.target.closest('[data-motion]');
   if(m){ st.motion=m.dataset.motion; draw(); return; }
   const b=e.target.closest('[data-act]'); if(!b) return;
@@ -377,5 +442,78 @@ def video_router(cfg: dict):
                     note=f"{spec.takes} take(s) x {spec.seconds:g}s, {spec.quality}, from the video page")
         q.save(q.queue_path(out), doc)
         return {"queued": job["id"], "spec": str(sp)}
+
+    @r.get("/video/templates")
+    def _templates(character: str = "") -> list[dict]:
+        from .. import video_templates as VT  # noqa: PLC0415
+
+        c = character.strip().lower()
+        if any(x in c for x in ("/", "\\", "..")):
+            raise HTTPException(400, "bad character")
+        out = []
+        for t in VT.all_templates():
+            frames = []
+            if c:
+                for d in sorted((library_dir(cfg) / c).glob(f"*_video_{t['id']}-start")):
+                    frames += [str(p) for p in sorted(d.glob("start_*.png"))]
+            out.append({"id": t["id"], "name": t["name"], "summary": t.get("summary", ""),
+                        "cast": int(t.get("cast", 1)), "seconds": t.get("seconds"),
+                        "aspect": t.get("aspect", "16:9"), "script": t.get("script", ""),
+                        "has_source": (ENGINE_ROOT.parent / t.get("source", "")).is_file(),
+                        "frames": frames})
+        return out
+
+    @r.get("/video/template-clip")
+    def _template_clip(id: str):
+        from .. import video_templates as VT  # noqa: PLC0415
+
+        try:
+            t = VT.load(id)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(404) from exc
+        p = _inside(str(ENGINE_ROOT.parent / t.get("source", "")), [ENGINE_ROOT.parent / "devassets"])
+        return FileResponse(p, media_type="video/mp4")
+
+    @r.post("/video/templates/{tid}/script")
+    def _template_script(tid: str, body: dict = Body(default={})) -> dict:
+        from .. import video_templates as VT  # noqa: PLC0415
+
+        try:
+            t = VT.save_script(tid, str(body.get("script") or ""))
+        except (KeyError, ValueError, FileNotFoundError) as exc:
+            raise HTTPException(404, str(exc)) from exc
+        return {"id": tid, "script": t["script"]}
+
+    @r.post("/video/templates/{tid}/start")
+    def _template_start(tid: str, body: dict = Body(default={})) -> dict:
+        from .. import video_templates as VT  # noqa: PLC0415
+        from ..assets.lora import resolve_lora  # noqa: PLC0415
+        from ..gpu import queue as q  # noqa: PLC0415
+        from ..gpu.preflight import preflight  # noqa: PLC0415
+
+        try:
+            t = VT.load(tid)
+        except (KeyError, ValueError) as exc:
+            raise HTTPException(404, str(exc)) from exc
+        c = str(body.get("character", "")).strip().lower()
+        partner = str(body.get("partner") or "").strip().lower()
+        if not c or not resolve_lora(cfg, c):
+            raise HTTPException(409, f"no approved LoRA for {c or 'nobody'}")
+        if int(t.get("cast", 1)) > 1 and not partner:
+            raise HTTPException(400, f"{t['name']} has two women - choose the second")
+        n = max(1, min(8, int(body.get("n") or 4)))
+        py = ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"
+        cmd = [str(py), str(ENGINE_ROOT / "scripts" / "video" / "start_frames.py"), tid, c, "--n", str(n)]
+        if partner:
+            cmd += ["--with", partner]
+        out = outputs_dir(cfg)
+        bad = preflight({"cmd": cmd, "cwd": str(ENGINE_ROOT)}, out)
+        if bad:
+            raise HTTPException(409, "would fail at once: " + "; ".join(bad))
+        doc = q.load(q.queue_path(out))
+        job = q.add(doc, kind="video", label=f"{c}:{tid}:start", cmd=cmd, cwd=str(ENGINE_ROOT),
+                    note=f"{n} start frames for {t['name']}, for review - from the video page")
+        q.save(q.queue_path(out), doc)
+        return {"queued": job["id"]}
 
     return r

@@ -1,0 +1,26 @@
+{
+ "name": "House Call",
+ "source": "devassets/video examples/grok_64fcc7c9.mp4",
+ "source_url": "https://grok.com/imagine/post/64fcc7c9-4e82-4454-ac6a-5fbf987ffc50",
+ "cast": 1,
+ "seconds": 25,
+ "aspect": "16:9",
+ "summary": "One continuous shot from his seat in a bright white home. A nurse walks in, kneels between his legs, rubs his thighs and teases close to his shorts, talking softly the whole time.",
+ "start": {
+  "composition": "a wide point-of-view photo from a man seated low on a sofa, his bare knees and thighs and his light grey shorts spread toward the camera at the bottom edge of the frame, she stands a few steps away facing the camera, her whole body in frame, smiling at him",
+  "outfit": "a fitted white nurse mini dress with red trim and a zip front pulled down to show her cleavage",
+  "hair": "her hair worn loose",
+  "setting": "bright airy daylight, in a white modern open-plan home with pale oak floors and a white kitchen behind her",
+  "negative": "his face, a second man, extra legs, high angle"
+ },
+ "legs": [
+  "she walks toward the camera, smiling, and blows a little kiss",
+  "she kneels between his legs and rests her hands on his thighs, talking up at him",
+  "she leans in close to his shorts, tongue out playfully, looking up into the camera",
+  "she sits back and rubs her hands slowly up and down his thighs",
+  "she leans in again with a soft knowing smile, holding eye contact"
+ ],
+ "leg_suffix": "handheld point of view from a man seated on a sofa, his knees and thighs fixed at the bottom of the frame, continuous shot, no cuts, smooth natural motion",
+ "video_negative": "camera cut, scene change, morphing, face change, extra fingers, distorted hands, flicker, different person, his face",
+ "script": "[1-6s] Hi. You look tense. Let me help with that.\n[7-9s] Just relax for me.\n[11-12s] Yes.\n[12-14s] You feel better already.\n[22-25s] I told you I'd take really good care of you."
+}

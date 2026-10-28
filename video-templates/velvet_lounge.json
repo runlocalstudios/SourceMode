@@ -1,0 +1,26 @@
+{
+ "name": "Velvet Lounge",
+ "source": "devassets/video examples/grok_475895e9.mp4",
+ "source_url": "https://grok.com/imagine/post/475895e9-3ec3-484f-b1bb-011380c71107",
+ "cast": 1,
+ "seconds": 25,
+ "aspect": "16:9",
+ "summary": "One continuous shot from his seat on a sofa. She walks toward him across a dim luxe lounge, kneels between his legs and runs her hands over his thighs and shorts, talking up at him the whole time.",
+ "start": {
+  "composition": "a wide point-of-view photo from a man seated low on a sofa, his bare knees and thighs and his light grey shorts spread toward the camera at the bottom edge of the frame, she stands a few steps away facing the camera, her whole body in frame, smiling at him",
+  "outfit": "a lilac satin slip mini dress with thin straps",
+  "hair": "her hair worn loose",
+  "setting": "warm dim amber light, in a luxurious lounge with tufted taupe velvet armchairs, dark panelled walls and glowing brass table lamps",
+  "negative": "his face, a second man, extra legs, high angle"
+ },
+ "legs": [
+  "she walks slowly toward the camera, smiling, her eyes on the lens",
+  "she stops in front of him, leans forward with her hands on her knees, then lowers herself to her knees between his legs",
+  "kneeling between his legs, she rests her hands on his thighs and talks up at him",
+  "her hands slide slowly up his thighs and over the front of his shorts, a teasing smile",
+  "she leans in closer, still rubbing slowly, holding eye contact"
+ ],
+ "leg_suffix": "handheld point of view from a man seated on a sofa, his knees and thighs fixed at the bottom of the frame, continuous shot, no cuts, smooth natural motion",
+ "video_negative": "camera cut, scene change, morphing, face change, extra fingers, distorted hands, flicker, different person, his face",
+ "script": "[0-4s] Hi there. You like?\n[4-10s] So close... feel good?\n[10-17s] You like that?\n[17-25s] So hard already. I can feel it."
+}
