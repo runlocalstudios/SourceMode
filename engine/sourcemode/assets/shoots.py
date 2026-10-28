@@ -474,27 +474,20 @@ BETWEEN_LEGS: tuple[dict, ...] = tuple({**x, "needs": ("floor",), "shot_type": _
     {"stance": "kneeling up tall between his knees, her chest close to the camera, her hands on his thighs",
      "gaze": _UP},
     {"stance": "sitting back on her heels between his knees, her hands clasped behind her back", "gaze": _UP},
-    {"stance": "kneeling between his knees, one hand on his thigh and the other tugging at the waistband "
-               "of the man's boxer shorts", "gaze": _UP, "expression_natural": "a teasing closed-mouth smile"},
+    # the fourth waistband pose had the same fault (Nadia _05: the shorts on her)
+    {"stance": "kneeling between his knees, one hand on his thigh and the other resting on his knee",
+     "gaze": _UP, "expression_natural": "a teasing closed-mouth smile"},
     {"stance": "kneeling between his knees, resting her cheek on the inside of his thigh", "gaze": _UP},
     {"stance": "kneeling between his knees, both hands on his thighs", "gaze": _UP,
      "expression_natural": "her mouth open"},
-    # Jeremy, 2026-10-28: "a few shots with her face near his crotch, a few with
-    # her hands in the waistband of his underwear"
-    {"stance": "leaning in between his thighs, her face just above the front of the man's boxer shorts at "
-               "the bottom centre of the frame, her hands on his thighs", "gaze": _UP,
-     "expression_natural": "lips parted"},
-    {"stance": "leaning in between his thighs, her cheek almost touching the front of the man's boxer shorts",
-     "gaze": "looking up into the camera from under her brows", "expression_natural": "a teasing smile"},
-    {"stance": "leaning in low between his thighs, her face inches from his crotch at the bottom centre "
-               "of the frame", "gaze": _UP, "expression_natural": "her mouth open"},
-    {"stance": "kneeling between his knees, both of her thumbs hooked into the waistband of the man's "
-               "boxer shorts", "gaze": _UP, "expression_natural": "a teasing closed-mouth smile"},
-    {"stance": "kneeling between his knees, her fingers slipped inside the waistband of the man's boxer "
-               "shorts, starting to pull them down his thighs",
-     "gaze": "looking up into the camera from under her brows", "expression_natural": "a sly smile"},
-    {"stance": "kneeling up between his knees, one hand tugging at the waistband of the man's boxer "
-               "shorts, her face close to his stomach", "gaze": _UP, "expression_natural": "lips parted"},
+    # The six close poses - three with her face near his crotch, three with her
+    # hands in his waistband (Jeremy, 2026-10-28) - are out for now. Qwen will not
+    # put her close to the camera from his point of view: across three rewordings
+    # she knelt a body-length away in every shot, so a hand "in the waistband of
+    # the man's boxer shorts" could not reach his and she was given the shorts
+    # (3 of 4 waistband shots on Nadia's third run), and a face "near his
+    # crotch" drew a man's face instead. Back when a pose reference (ControlNet
+    # depth) can place her; the words cannot.
 ))
 
 OFFICE: tuple[Shoot, ...] = (
