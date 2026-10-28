@@ -153,11 +153,11 @@ async function loadTemplates(){
   SM.set($('tpls'),null,tplHtml());
 }
 function videoHtml(t){
-  if(!t.kept.length) return '<div class=sum>Keep a start frame on the Judge tab and the Render video button appears here.</div>';
+  if(!t.kept.length) return '<div class=sum>Keep a start frame or an outfit still on the Judge tab and the Render video button appears here.</div>';
   if(!tsel[t.id] || !t.kept.includes(tsel[t.id])) tsel[t.id]=t.kept[0];
   const voice=t.has_voice && tvoice[t.id]!==false;
   return '<div class=sum><b>Render the video</b> - from the start frame you pick, the template\'s '+t.legs
-    +' legs chained, about '+t.seconds+' s.</div>'
+    +' legs chained, about '+t.seconds+' s. Start frames are composed for the legs; an outfit still works, less exactly.</div>'
     +'<div class="frames pick">'+t.kept.map(f=>'<img loading=lazy data-tvstart="'+SM.esc(t.id)+'" data-path="'
       +SM.esc(f)+'" class="'+(f===tsel[t.id]?'on':'')+'" src="/video/thumb?w=480&path='+encodeURIComponent(f)+'" alt="">').join('')+'</div>'
     +'<label class=row><input type=checkbox data-tvoice="'+SM.esc(t.id)+'"'+(voice?' checked':'')+(t.has_voice?'':' disabled')+'> '
@@ -376,7 +376,7 @@ def video_router(cfg: dict):
 
     from ..assets.judge import judge_root  # noqa: PLC0415
     from ..config import ENGINE_ROOT, outputs_dir  # noqa: PLC0415
-    from ..library import library_dir  # noqa: PLC0415
+    from ..library import find_set, library_dir  # noqa: PLC0415
     from .. import video as V  # noqa: PLC0415
 
     r = APIRouter()
@@ -497,11 +497,19 @@ def video_router(cfg: dict):
             if c:
                 vp = judge_root(cfg) / "verdicts" / f"video_{c}_{t['id']}_start.json"
                 verdicts = json.loads(vp.read_text(encoding="utf-8")) if vp.is_file() else {}
-                for d in sorted((library_dir(cfg) / c).glob(f"*_video_{t['id']}-start")):
-                    frames += [str(p) for p in sorted(d.glob("start_*.png"))]
-                    kept += [str(p) for p in sorted(d.glob("start_*.png")) if verdicts.get(p.stem) == "keep"]
-                for d in sorted((library_dir(cfg) / c).glob(f"*_video_{t['id']}-outfit")):
-                    stills += [str(p) for p in sorted(d.glob("outfit_*.png"))]
+                # find_set, never a glob: the library writes desk_toy-start as
+                # desk-toy-start, and a glob on the id found nothing (2026-10-28)
+                d = find_set(cfg, c, "video", f"{t['id']}-start")
+                frames += [str(p) for p in sorted(d.glob("start_*.png"))] if d.is_dir() else []
+                kept += [p for p in frames if verdicts.get(Path(p).stem) == "keep"]
+                d = find_set(cfg, c, "video", f"{t['id']}-outfit")
+                stills += [str(p) for p in sorted(d.glob("outfit_*.png"))] if d.is_dir() else []
+                # a kept outfit still can start the video too (2026-10-28: Nadia and
+                # Mei rendered only outfit stills) - after the start frames, which
+                # are composed for the legs and come first
+                op = judge_root(cfg) / "verdicts" / f"video_{c}_{t['id']}_outfit.json"
+                ov = json.loads(op.read_text(encoding="utf-8")) if op.is_file() else {}
+                kept += [p for p in stills if ov.get(Path(p).stem) == "keep"]
             out.append({"id": t["id"], "name": t["name"], "summary": t.get("summary", ""),
                         "cast": int(t.get("cast", 1)), "seconds": t.get("seconds"),
                         "aspect": t.get("aspect", "16:9"), "script": t.get("script", ""),
