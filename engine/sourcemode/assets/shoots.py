@@ -118,8 +118,8 @@ class Shoot:
                     # full-length poses show her feet, and the lingerie sets
                     # end in stockings, which drop_footwear would strip
                     "shoes": True,
-                    **{k: p[k] for k in ("facing", "gaze", "shot_type", "expression_natural")
-                       if k in p},
+                    **{k: p[k] for k in ("facing", "gaze", "shot_type", "expression_natural",
+                                         "negative") if k in p},
                 })
             return out
         for i in range(self.shots):
@@ -424,53 +424,57 @@ DESK: tuple[dict, ...] = (
     {"stance": "standing in front of the desk, slowly pulling her top open", "needs": ("desk",),
      "framing": _THIGHS, "gaze": _EYES},
 )
-# The viewer is in the shot: seated, his bare knees and boxer briefs at the
+# The viewer is in the shot: seated, his bare thighs and boxer shorts at the
 # bottom of the frame, the camera his eyes looking down at her.
-_POV = "point-of-view photo looking down from a man seated in a chair"
-_HIS = ("his bare knees and thighs and his grey boxer briefs visible at the bottom edge of the "
-        "frame, her kneeling figure between his knees in frame")
+# Nadia's first run, 2026-10-28: 13 of 28 shots put HIS grey boxer briefs on
+# HER, under her skirt or lingerie - "his grey boxer briefs" sat next to her
+# outfit and grey is a lingerie colour. And every shot had her kneeling upright
+# a body-length away: the framing said "her kneeling figure in frame", so the
+# camera backed off to fit all of her, and the close poses never happened.
+# Now: his shorts are dark navy and named as the MAN's, said once, in the
+# composition; the framing puts her head and upper body between his thighs,
+# close; and each slot refuses shorts on her and the far, full-length shot.
+_POV = "point-of-view photo from the eyes of a man sitting in a leather office chair, looking down at her"
+_HIS = ("the man's own bare thighs spread wide along both sides of the bottom of the frame, the man "
+        "wearing dark navy boxer shorts at the very bottom edge; she is close between his knees, her "
+        "head and upper body filling the middle of the frame")
 _UP = "looking up into the camera"
-BETWEEN_LEGS: tuple[dict, ...] = (
-    {"stance": "kneeling on the floor between his knees, her hands resting on his thighs",
-     "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
-    {"stance": "kneeling on the floor between his knees, hands on his knees, leaning forward, lips "
-               "parted", "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
-    {"stance": "kneeling on the floor between his knees, her hands sliding up his inner thighs",
-     "needs": ("floor",), "shot_type": _POV, "framing": _HIS,
+# No "boxer shorts" here, even as "on the woman": a negative is read as a bag of
+# words and would take his shorts out too. His are navy; hers are refused by colour.
+_NOT = "grey shorts, grey underwear, grey panties, far away, distant, her whole body in frame, standing"
+BETWEEN_LEGS: tuple[dict, ...] = tuple({**x, "needs": ("floor",), "shot_type": _POV, "framing": _HIS,
+                                        "negative": _NOT} for x in (
+    {"stance": "kneeling right between his spread knees, close enough to touch, her hands resting on the "
+               "tops of his thighs", "gaze": _UP},
+    {"stance": "kneeling between his spread knees, leaning forward with her hands on his knees, lips parted",
+     "gaze": _UP},
+    {"stance": "kneeling between his knees, her hands sliding up the insides of his thighs toward the camera",
      "gaze": "looking up into the camera from under her brows"},
-    {"stance": "kneeling up tall between his knees, her chest close to the camera, hands on his thighs",
-     "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
-    {"stance": "sitting back on her heels on the floor between his knees, hands clasped behind her back",
-     "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
-    {"stance": "kneeling between his knees, one hand on his thigh and the other at the waistband of "
-               "his boxer briefs", "needs": ("floor",), "shot_type": _POV, "framing": _HIS,
-     "gaze": _UP, "expression_natural": "biting her lower lip"},
-    {"stance": "kneeling between his knees, resting her cheek against his inner thigh",
-     "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP},
-    {"stance": "kneeling between his knees, both hands on his thighs", "needs": ("floor",),
-     "shot_type": _POV, "framing": _HIS, "gaze": _UP, "expression_natural": "her mouth open"},
+    {"stance": "kneeling up tall between his knees, her chest close to the camera, her hands on his thighs",
+     "gaze": _UP},
+    {"stance": "sitting back on her heels between his knees, her hands clasped behind her back", "gaze": _UP},
+    {"stance": "kneeling between his knees, one hand on his thigh and the other tugging at the waistband "
+               "of the man's boxer shorts", "gaze": _UP, "expression_natural": "biting her lower lip"},
+    {"stance": "kneeling between his knees, resting her cheek on the inside of his thigh", "gaze": _UP},
+    {"stance": "kneeling between his knees, both hands on his thighs", "gaze": _UP,
+     "expression_natural": "her mouth open"},
     # Jeremy, 2026-10-28: "a few shots with her face near his crotch, a few with
     # her hands in the waistband of his underwear"
-    {"stance": "kneeling between his knees, her face close to the front of his boxer briefs, "
-               "her hands on his thighs", "needs": ("floor",), "shot_type": _POV, "framing": _HIS,
-     "gaze": _UP, "expression_natural": "lips parted"},
-    {"stance": "kneeling between his knees, her cheek almost touching the front of his boxer "
-               "briefs", "needs": ("floor",), "shot_type": _POV, "framing": _HIS,
+    {"stance": "leaning in between his thighs, her face just above the front of the man's boxer shorts at "
+               "the bottom centre of the frame, her hands on his thighs", "gaze": _UP,
+     "expression_natural": "lips parted"},
+    {"stance": "leaning in between his thighs, her cheek almost touching the front of the man's boxer shorts",
      "gaze": "looking up into the camera from under her brows", "expression_natural": "a teasing smile"},
-    {"stance": "kneeling between his knees, leaning in with her face just above his crotch, her "
-               "breath on the front of his boxer briefs", "needs": ("floor",), "shot_type": _POV,
-     "framing": _HIS, "gaze": _UP, "expression_natural": "her mouth open"},
-    {"stance": "kneeling between his knees, both thumbs hooked into the waistband of his boxer "
-               "briefs", "needs": ("floor",), "shot_type": _POV, "framing": _HIS, "gaze": _UP,
-     "expression_natural": "biting her lower lip"},
-    {"stance": "kneeling between his knees, her fingers slipped inside the waistband of his boxer "
-               "briefs, starting to pull it down", "needs": ("floor",), "shot_type": _POV,
-     "framing": _HIS, "gaze": "looking up into the camera from under her brows",
-     "expression_natural": "a sly smile"},
-    {"stance": "kneeling up between his knees, one hand tugging at the waistband of his boxer "
-               "briefs, her face close to his stomach", "needs": ("floor",), "shot_type": _POV,
-     "framing": _HIS, "gaze": _UP, "expression_natural": "lips parted"},
-)
+    {"stance": "leaning in low between his thighs, her face inches from his crotch at the bottom centre "
+               "of the frame", "gaze": _UP, "expression_natural": "her mouth open"},
+    {"stance": "kneeling between his knees, both of her thumbs hooked into the waistband of the man's "
+               "boxer shorts", "gaze": _UP, "expression_natural": "biting her lower lip"},
+    {"stance": "kneeling between his knees, her fingers slipped inside the waistband of the man's boxer "
+               "shorts, starting to pull them down his thighs",
+     "gaze": "looking up into the camera from under her brows", "expression_natural": "a sly smile"},
+    {"stance": "kneeling up between his knees, one hand tugging at the waistband of the man's boxer "
+               "shorts, her face close to his stomach", "gaze": _UP, "expression_natural": "lips parted"},
+))
 
 OFFICE: tuple[Shoot, ...] = (
     Shoot("office_door", "Office doorway", "office", OFFICE_DOOR, OFFICE_SLUTTY, (),

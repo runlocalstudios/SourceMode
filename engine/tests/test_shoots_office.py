@@ -19,4 +19,12 @@ def test_the_office_pieces_mix_and_their_poses_only_go_where_they_make_sense():
 
 def test_between_his_legs_puts_his_legs_in_frame_and_her_between_them():
     for slot in S.BY_ID["office_pov"].plan(character="nadia"):
-        assert "boxer briefs" in slot["framing"] and "between his knees" in slot["stance"]
+        assert "boxer shorts" in slot["framing"] and ("between his" in slot["stance"])
+
+
+def test_his_shorts_are_named_as_his_and_hers_are_refused_without_naming_his():
+    for slot in S.BY_ID["office_pov"].plan(character="nadia"):
+        assert "the man wearing dark navy boxer shorts" in slot["framing"]
+        assert "grey" not in slot["framing"] and "boxer" not in slot["negative"]
+        assert "grey shorts" in slot["negative"] and "far away" in slot["negative"]
+        assert "whole" not in slot["framing"]       # the camera stays close
