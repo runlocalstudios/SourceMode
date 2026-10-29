@@ -240,3 +240,29 @@ def test_speech_frames_cover_the_line_and_the_s2v_graph_carries_the_voice(tmp_pa
     assert by["CreateVideo"]["inputs"]["audio"] == ["70", 0] and by["CreateVideo"]["inputs"]["fps"] == 16.0
     assert by["KSampler"]["inputs"]["seed"] == 8100 and by["KSampler"]["inputs"]["steps"] == 20
     assert settings["CFG"] == 6.0
+
+
+def test_an_end_image_makes_a_first_last_frame_leg(tmp_path: Path):
+    from sourcemode.render.passes import build_video_workflow
+
+    cfg = _cfg(tmp_path)
+    wf, s = build_video_workflow(cfg, "nadia", positive="p", negative="n", image_name="a.png",
+                                 end_image_name="b.png", seed=1, render_pass="medium", duration_s=5)
+    flf = [v for v in wf.values() if v.get("class_type") == "WanFirstLastFrameToVideo"]
+    assert len(flf) == 1 and s["END_IMAGE"] == "b.png"
+    images = {k: v["inputs"]["image"] for k, v in wf.items() if v.get("class_type") == "LoadImage"}
+    assert images[flf[0]["inputs"]["start_image"][0]] == "a.png"
+    assert images[flf[0]["inputs"]["end_image"][0]] == "b.png"
+    wf, _ = build_video_workflow(cfg, "nadia", positive="p", negative="n", image_name="a.png",
+                                 seed=1, render_pass="medium", duration_s=5)
+    assert any(v.get("class_type") == "WanImageToVideo" for v in wf.values())
+
+
+def test_every_story_names_photos_it_has():
+    import glob
+    for f in glob.glob(str(Path(__file__).resolve().parents[2] / "video-stories" / "*.json")):
+        st = json.loads(Path(f).read_text(encoding="utf-8"))
+        for s in st["segments"]:
+            assert s["start"] in st["photos"] and (not s.get("end") or s["end"] in st["photos"]), f
+            assert 1 <= float(s["seconds"]) <= 5, f
+        assert V.script_beats(st.get("script", "")), f

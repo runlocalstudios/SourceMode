@@ -50,8 +50,12 @@ def build_video_workflow(
     duration_s: float = 5.0,
     width: int | None = None,
     height: int | None = None,
+    end_image_name: str = "",
 ) -> tuple[dict, dict]:
-    """Return (workflow_nodes, settings_used) for the Wan 2.2 I2V two-stage template."""
+    """Return (workflow_nodes, settings_used) for the Wan 2.2 I2V two-stage template.
+
+    With `end_image_name` the leg also LANDS on a fixed frame (wan22_flf2v,
+    core WanFirstLastFrameToVideo) - a story leg between two of his photos."""
     preset = cfg["render"][render_pass]
     models = cfg["models"]
     video = cfg["video"]
@@ -110,7 +114,9 @@ def build_video_workflow(
     }
     from ..config import workflows_dir  # noqa: PLC0415
 
-    template = load_template(workflows_dir(cfg), "wan22_i2v")
+    if end_image_name:
+        settings["END_IMAGE"] = end_image_name
+    template = load_template(workflows_dir(cfg), "wan22_flf2v" if end_image_name else "wan22_i2v")
     return prune_placeholder_loras(substitute(template, settings)), settings
 
 
