@@ -46,9 +46,10 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden}
 body{display:flex;flex-direction:column;background:var(--g0)}
 #tabs{display:flex;flex:none;background:var(--g1);border-bottom:1px solid var(--g3);
   padding-top:var(--safe-t);transition:transform var(--m-base) var(--ease)}
-/* Six tabs on a phone, no scrolling. Jeremy, 2026-10-14: "The nav bar buttons
+/* Seven tabs on a phone, no scrolling (Gallery added 2026-10-29, the long
+   names cut to Train and Char to make room). Jeremy, 2026-10-14: "The nav bar buttons
    need to be smaller to fit on a cell phone screen without scrolling." */
-#tabs button{flex:1;min-width:0;min-height:44px;padding:var(--s1) 2px;background:none;
+#tabs button{flex:1;min-width:0;min-height:40px;padding:var(--s1) 2px;background:none;
   border:0;border-bottom:2px solid transparent;color:var(--g7);
   font:600 13px/1.2 var(--font);cursor:pointer;display:flex;
   align-items:center;justify-content:center;gap:3px;white-space:nowrap;
@@ -91,13 +92,15 @@ BODY = """
   <button id=t_judge role=tab aria-selected=false data-tab=judge>
     Judge<span class=n id=n_judge></span></button>
   <button id=t_dataset role=tab aria-selected=false data-tab=dataset>
-    Training<span class=n id=n_dataset></span></button>
+    Train<span class=n id=n_dataset></span></button>
   <button id=t_characters role=tab aria-selected=false data-tab=characters>
-    Characters<span class=n id=n_characters></span></button>
+    Char<span class=n id=n_characters></span></button>
   <button id=t_shoots role=tab aria-selected=false data-tab=shoots>
     Shoots<span class=n id=n_shoots></span></button>
   <button id=t_video role=tab aria-selected=false data-tab=video>
     Video<span class=n id=n_video></span></button>
+  <button id=t_gallery role=tab aria-selected=false data-tab=gallery>
+    Gallery<span class=n id=n_gallery></span></button>
 </div>
 
 <iframe id=p_gpu class="pane on" src="/queue" title="GPU"></iframe>
@@ -106,6 +109,7 @@ BODY = """
 <iframe id=p_shoots class=pane title="Shoots"></iframe>
 <iframe id=p_characters class=pane title="Characters"></iframe>
 <iframe id=p_video class=pane title="Video"></iframe>
+<iframe id=p_gallery class=pane title="Gallery"></iframe>
 
 <div id=nowwrap>
   <button id=nowbar aria-label="what the card is doing">
@@ -119,7 +123,7 @@ BODY = """
 
 OWN_JS = r"""
 const $=id=>document.getElementById(id);
-const SRC={gpu:'/queue',judge:'/judge',dataset:'/dataset',shoots:'/shoots',characters:'/characters',video:'/video'};
+const SRC={gpu:'/queue',judge:'/judge',dataset:'/dataset',shoots:'/shoots',characters:'/characters',video:'/video',gallery:'/gallery'};
 /* The phone's browser chrome carries the worst state in the house. The colours
    come from the stylesheet, so the hub holds no hex literal of its own. */
 const TINT={stop:'stop-bg',you:'you-bg',live:'live-bg',unknown:'unk-bg',idle:'g0'};
