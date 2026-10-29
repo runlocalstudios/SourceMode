@@ -66,6 +66,31 @@ def test_stitch_drops_the_seam_frame_of_every_leg_after_the_first(tmp_path: Path
     assert "concat=n=3:v=1:a=0[out]" in fc and args[-1].endswith("out.mp4") and "-r" in args
     assert V.video_output([{"filename": "x.png"}, {"filename": "take.mp4", "type": "output"}])["filename"] == "take.mp4"
     assert V.video_output([{"filename": "x.png"}]) is None
+    # a leg handed off before its end is cut there
+    fc = V.stitch_args(legs[:2], tmp_path / "o.mp4", 24, ffmpeg="ffmpeg", keep=[115, None])
+    fc = fc[fc.index("-filter_complex") + 1]
+    assert fc.startswith("[0:v]select='lt(n,115)',setpts=N/FRAME_RATE/TB[v0];[1:v]select='gte(n,1)',")
+
+
+def test_the_handoff_is_the_sharpest_of_the_last_frames(tmp_path: Path):
+    import shutil
+    import subprocess
+
+    import numpy as np
+
+    ff = V.ffmpeg_exe({"video": {}}) or shutil.which("ffmpeg")
+    if not ff:
+        pytest.skip("no ffmpeg")
+    d = tmp_path / "f"; d.mkdir()
+    rng = np.random.default_rng(0)
+    for i in range(24):   # one sharp frame, 3 from the end, among flat ones
+        a = rng.integers(0, 255, (64, 64, 3), dtype=np.uint8) if i == 20 else np.full((64, 64, 3), 128, np.uint8)
+        Image.fromarray(a).save(d / f"{i:03d}.png")
+    clip = tmp_path / "c.mp4"
+    subprocess.run([ff, "-y", "-loglevel", "error", "-framerate", "24", "-i", str(d / "%03d.png"),
+                    "-c:v", "libx264", "-qp", "0", "-pix_fmt", "yuv444p", str(clip)], check=True)
+    assert V.sharpest_tail_frame(clip, tmp_path / "h.png", ffmpeg=ff) == 3
+    assert (tmp_path / "h.png").is_file()
 
 
 class FakeClient:
@@ -102,13 +127,13 @@ def test_a_chained_take_runs_each_leg_from_the_matched_last_frame(tmp_path: Path
     cfg = _cfg(tmp_path)
     monkeypatch.setattr(V, "ffmpeg_exe", lambda cfg=None: "ffmpeg")
     calls = {"extract": [], "match": [], "stitch": []}
-    def fake_extract(video, dest, *, ffmpeg, run=None):
-        calls["extract"].append(video.name); Image.new("RGB", (64, 80)).save(dest)
+    def fake_extract(video, dest, *, ffmpeg, n=8, run=None):
+        calls["extract"].append(video.name); Image.new("RGB", (64, 80)).save(dest); return 0
     def fake_match(frame, ref, dest):
         calls["match"].append((frame.name, ref.name)); Image.new("RGB", (64, 80)).save(dest)
-    def fake_stitch(legs, dest, fps, *, ffmpeg, run=None):
+    def fake_stitch(legs, dest, fps, *, ffmpeg, keep=None, run=None):
         calls["stitch"].append([l.name for l in legs]); dest.write_bytes(b"final")
-    monkeypatch.setattr(V, "extract_last_frame", fake_extract)
+    monkeypatch.setattr(V, "sharpest_tail_frame", fake_extract)
     monkeypatch.setattr(V, "color_match", fake_match)
     monkeypatch.setattr(V, "stitch", fake_stitch)
     src = tmp_path / "source.png"; Image.new("RGB", (64, 80)).save(src)

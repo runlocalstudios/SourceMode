@@ -207,6 +207,38 @@ def extract_last_frame(video: Path, dest: Path, *, ffmpeg: str, run=subprocess.r
         raise RuntimeError(f"ffmpeg produced no last frame from {video}")
 
 
+#: how many of a leg's final frames compete to start the next leg
+HANDOFF_FRAMES = 8
+
+
+def sharpest_tail_frame(video: Path, dest: Path, *, ffmpeg: str, n: int = HANDOFF_FRAMES,
+                        run=subprocess.run) -> int:
+    """The sharpest of the leg's last `n` frames, written to `dest`; returns how
+    many frames come AFTER it, which the stitch then cuts from the leg.
+
+    Jeremy, 2026-10-29: "we need the model to move slowly so that she doesn't get
+    blurry". Measured that day on six template takes: her face's sharpness falls
+    mid-gesture (jojo's harness tease to 127 from 282), and the literal last
+    frame is wherever the motion happened to be - often mid-blur. The next leg
+    redraws her from that frame, so the blur is inherited. Variance of the
+    Laplacian is the sharpness score."""
+    import shutil as _sh  # noqa: PLC0415
+    import tempfile  # noqa: PLC0415
+
+    import cv2  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory() as td:
+        run([ffmpeg, "-y", "-loglevel", "error", "-sseof", "-1", "-i", str(video),
+             str(Path(td) / "f_%03d.png")], check=True, capture_output=True, text=True)
+        frames = sorted(Path(td).glob("f_*.png"))[-n:]
+        if not frames:
+            raise RuntimeError(f"ffmpeg produced no frames from the end of {video}")
+        scores = [cv2.Laplacian(cv2.imread(str(f), cv2.IMREAD_GRAYSCALE), cv2.CV_64F).var() for f in frames]
+        best = max(range(len(frames)), key=lambda i: (scores[i], i))   # a tie goes to the later frame
+        _sh.copyfile(frames[best], dest)
+        return len(frames) - 1 - best
+
+
 def color_match(frame: Path, reference: Path, dest: Path) -> None:
     """LAB mean/std transfer of `frame` toward `reference`. The anchor is always
     the ORIGINAL source, never the previous leg: leg-to-leg matching still lets
@@ -227,15 +259,20 @@ def color_match(frame: Path, reference: Path, dest: Path) -> None:
     cv2.imwrite(str(dest), np.clip(bgr * 255.0, 0, 255).astype(np.uint8))
 
 
-def stitch_args(legs: list[Path], dest: Path, fps: int, *, ffmpeg: str) -> list[str]:
+def stitch_args(legs: list[Path], dest: Path, fps: int, *, ffmpeg: str,
+                keep: list[int | None] | None = None) -> list[str]:
     """One ffmpeg pass: drop frame 0 of every leg after the first (it is the
-    previous leg's last frame again - keeping it stutters at each seam)."""
+    previous leg's handoff frame again - keeping it stutters at each seam).
+    `keep[i]` is how many frames of leg i to keep: a leg is cut right after the
+    frame that started the next one (`sharpest_tail_frame`)."""
     args = [ffmpeg, "-y", "-loglevel", "error"]
     for leg in legs:
         args += ["-i", str(leg)]
+    keep = keep or [None] * len(legs)
     parts = []
     for i in range(len(legs)):
-        sel = "null" if i == 0 else "select='gte(n,1)',setpts=N/FRAME_RATE/TB"
+        conds = ([] if i == 0 else ["gte(n,1)"]) + ([f"lt(n,{keep[i]})"] if keep[i] else [])
+        sel = ("select='" + "*".join(conds) + "',setpts=N/FRAME_RATE/TB") if conds else "null"
         parts.append(f"[{i}:v]{sel}[v{i}]")
     chain = "".join(f"[v{i}]" for i in range(len(legs)))
     parts.append(f"{chain}concat=n={len(legs)}:v=1:a=0[out]")
@@ -243,8 +280,9 @@ def stitch_args(legs: list[Path], dest: Path, fps: int, *, ffmpeg: str) -> list[
                    "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", "-r", str(fps), str(dest)]
 
 
-def stitch(legs: list[Path], dest: Path, fps: int, *, ffmpeg: str, run=subprocess.run) -> None:
-    run(stitch_args(legs, dest, fps, ffmpeg=ffmpeg), check=True, capture_output=True, text=True)
+def stitch(legs: list[Path], dest: Path, fps: int, *, ffmpeg: str, keep: list[int | None] | None = None,
+           run=subprocess.run) -> None:
+    run(stitch_args(legs, dest, fps, ffmpeg=ffmpeg, keep=keep), check=True, capture_output=True, text=True)
 
 
 def video_output(files: list[dict]) -> dict | None:
@@ -305,13 +343,17 @@ def render_take(cfg: dict, client, spec: VideoSpec, source_png: Path, out_dir: P
         if i < len(legs):
             raw = leg_dir / f"take_{take:02d}_leg_{i:02d}_last.png"
             matched = leg_dir / f"take_{take:02d}_leg_{i + 1:02d}_start.png"
-            extract_last_frame(leg_path, raw, ffmpeg=ff)
+            dropped = sharpest_tail_frame(leg_path, raw, ffmpeg=ff)
+            record["legs"][-1]["dropped"] = dropped
+            if dropped:
+                log(f"  take {take} leg {i}: handing off {dropped} frame(s) before the end - the sharpest")
             color_match(raw, source_png, matched)
             start = matched
     final = out_dir / f"take_{take:02d}.mp4"
+    keep = [lg["frames"] - lg["dropped"] if lg.get("dropped") else None for lg in record["legs"]]
     if len(leg_files) > 1:
-        stitch(leg_files, final, fps, ffmpeg=ff)
-    total = sum(lg["frames"] for lg in record["legs"]) - (len(leg_files) - 1)
+        stitch(leg_files, final, fps, ffmpeg=ff, keep=keep)
+    total = sum(lg["frames"] - lg.get("dropped", 0) for lg in record["legs"]) - (len(leg_files) - 1)
     record["file"] = str(final)
     record["seconds"] = round(total / fps, 2)
     final.with_suffix(".json").write_text(json.dumps(record, indent=1), encoding="utf-8")
