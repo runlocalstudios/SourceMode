@@ -1,0 +1,193 @@
+{
+ "name": "cheer_joi_v3",
+ "character": "nadia",
+ "summary": "Cheerleader JOI, second pass, 2 minutes. Jeremy, 2026-10-29: the first take cut from photo to photo and the talk track was rushed; this one is one continuous recording - every segment animates FROM one photo TO the next (or holds on it), so she walks, turns, sits, kneels and never cuts. Standing teases with a skirt lift at the bed, seated, then kneeling for the instructions and a countdown spoken one number per line. Left out: 001 and 004 (no tights), 007 and 019 (her face away), 010, 011 (a chair in no other shot), 017, 018.",
+ "size": [
+  960,
+  1440
+ ],
+ "quality": "medium",
+ "seed": 29200,
+ "voice": true,
+ "voice_pace": {
+  "exaggeration": 0.5,
+  "cfg_weight": 0.3
+ },
+ "suffix": "steady camera, continuous shot, she moves slowly and gently, small smooth movements",
+ "negative": "fast motion, motion blur, camera cut, scene change, morphing, face change, different person",
+ "photos": {
+  "arms_crossed": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_003_2610292.png",
+  "ponytail": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_006_2610292.png",
+  "walk_laugh": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_002_2610292.png",
+  "look_back": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_005_2610292.png",
+  "lean_bed": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_008_2610292.png",
+  "seated": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_009_2610292.png",
+  "chin_hand": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_014_2610292.png",
+  "relaxed": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_012_2610292.png",
+  "reverse": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_013_2610292.png",
+  "kneel": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_015_2610292.png",
+  "kneel_hair": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_020_2610292.png",
+  "kneel_side": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_016_2610292.png"
+ },
+ "segments": [
+  {
+   "start": "arms_crossed",
+   "end": "arms_crossed",
+   "seconds": 5,
+   "motion": "standing with her arms crossed, she slowly looks the viewer up and down with a playful smirk, tilts her head and settles back into the same pose"
+  },
+  {
+   "start": "arms_crossed",
+   "end": "ponytail",
+   "seconds": 5,
+   "motion": "she uncrosses her arms, takes two slow steps toward the doorway and raises one hand to play with her ponytail, smiling at the viewer, the camera slowly following her"
+  },
+  {
+   "start": "ponytail",
+   "end": "ponytail",
+   "seconds": 5,
+   "motion": "she slowly runs her fingers through her ponytail and draws it over her shoulder, swaying her hips gently from side to side, her eyes on the viewer"
+  },
+  {
+   "start": "ponytail",
+   "end": "walk_laugh",
+   "seconds": 5,
+   "motion": "she lets her hair go, turns to her side with a soft laugh and lets her hand fall to the hem of her skirt"
+  },
+  {
+   "start": "walk_laugh",
+   "end": "look_back",
+   "seconds": 5,
+   "motion": "laughing softly, she walks slowly to the bed, turns her back to the viewer, rests one hand on the bed and looks back over her shoulder, the camera slowly following her"
+  },
+  {
+   "start": "look_back",
+   "end": "look_back",
+   "seconds": 5,
+   "motion": "looking back over her shoulder, she slowly lifts the back hem of her pleated skirt with one hand to show off her round bottom in white tights, holds it there, then lets the skirt fall"
+  },
+  {
+   "start": "look_back",
+   "end": "look_back",
+   "seconds": 5,
+   "motion": "looking back over her shoulder, she slowly sways her hips from side to side and arches her back, smiling at the viewer, then holds still"
+  },
+  {
+   "start": "look_back",
+   "end": "lean_bed",
+   "seconds": 5,
+   "motion": "she slowly turns around to face the viewer, clasps her hands behind her back and leans against the edge of the bed with a teasing smile"
+  },
+  {
+   "start": "lean_bed",
+   "end": "lean_bed",
+   "seconds": 5,
+   "motion": "leaning against the bed with her hands behind her, she slowly leans toward the camera, bites her lip, then eases back"
+  },
+  {
+   "start": "lean_bed",
+   "end": "seated",
+   "seconds": 5,
+   "motion": "she slowly sits down on the edge of the bed, smooths her skirt over her thighs and rests her hands on her knees, her eyes on the viewer"
+  },
+  {
+   "start": "seated",
+   "end": "seated",
+   "seconds": 5,
+   "motion": "sitting on the edge of the bed, she slowly slides her hands up her thighs to the hem of her skirt and back down to her knees, holding eye contact, talking softly"
+  },
+  {
+   "start": "seated",
+   "end": "chin_hand",
+   "seconds": 5,
+   "motion": "she slowly leans forward, rests her elbow on her knee and her chin in her hand, close to the camera, a knowing smile"
+  },
+  {
+   "start": "chin_hand",
+   "end": "chin_hand",
+   "seconds": 5,
+   "motion": "her chin resting on her hand, she talks softly to the viewer with slow nods and a slow smile, then bites her lip"
+  },
+  {
+   "start": "chin_hand",
+   "end": "relaxed",
+   "seconds": 5,
+   "motion": "she slowly sits back and leans on her hands behind her on the bed, her legs together, a relaxed teasing smile"
+  },
+  {
+   "start": "relaxed",
+   "end": "reverse",
+   "seconds": 5,
+   "motion": "she slowly turns away from the viewer, drawing her legs up onto the bed, and looks back over her shoulder with a smile"
+  },
+  {
+   "start": "reverse",
+   "end": "kneel",
+   "seconds": 5,
+   "motion": "she slowly rises up onto her knees on the bed and turns to face the viewer, resting her hands on her thighs, the camera slowly following her"
+  },
+  {
+   "start": "kneel",
+   "end": "kneel",
+   "seconds": 5,
+   "motion": "kneeling upright on the bed, she talks to the viewer with a commanding smile, slowly tilting her head"
+  },
+  {
+   "start": "kneel",
+   "end": "kneel",
+   "seconds": 5,
+   "motion": "kneeling on the bed, she slowly runs her hands up her waist, over her chest and back down to her thighs, never looking away from the viewer"
+  },
+  {
+   "start": "kneel",
+   "end": "kneel_hair",
+   "seconds": 5,
+   "motion": "kneeling on the bed, she slowly turns a little to her right and lifts one hand to run her fingers through her hair, smiling at the viewer"
+  },
+  {
+   "start": "kneel_hair",
+   "end": "kneel_hair",
+   "seconds": 5,
+   "motion": "kneeling with one hand in her hair, she slowly twirls a lock around her fingers and bites her lip, her eyes locked on the viewer"
+  },
+  {
+   "start": "kneel_hair",
+   "end": "kneel_side",
+   "seconds": 5,
+   "motion": "she slowly lowers herself to sit on her hip with her legs tucked to the side, leaning on one hand, smiling at the viewer"
+  },
+  {
+   "start": "kneel_side",
+   "end": "kneel_side",
+   "seconds": 5,
+   "motion": "sitting on her hip and leaning on one hand, she slowly leans toward the camera, talking softly, a slow smile"
+  },
+  {
+   "start": "kneel_side",
+   "end": "kneel",
+   "seconds": 5,
+   "motion": "she slowly rises back up onto her knees facing the viewer, her hands on her thighs, talking to the viewer"
+  },
+  {
+   "start": "kneel",
+   "end": "kneel",
+   "seconds": 5,
+   "motion": "kneeling upright on the bed, she counts down softly with a slow smile, her eyes on the viewer, then closes her eyes and smiles"
+  }
+ ],
+ "script": "[1s] So... you've been watching me practice, haven't you?\n[7s] Don't pretend. I can see you staring.\n[12s] You like my little skirt? I wore it just for you.\n[18s] Mm... I know exactly what you want to see.\n[26s] Go on... look. Take your time.\n[32s] You can't take your eyes off me, can you?\n[39s] Good. Keep looking.\n[45s] Come a little closer. I want to see you.\n[52s] You're already hard for me, aren't you?\n[58s] Take it out for me. Slowly.\n[64s] Good boy. Now stroke it for me... nice and slow.\n[71s] Eyes on me. Only me.\n[77s] Don't you dare look away.\n[83s] That's it... just like that.\n[88s] A little faster now. I want to watch you.\n[92.5s] You're close, aren't you? Not yet. Not until I say.\n[98s] I'm going to count you down.\n[101s] Ten...\n[103s] Nine...\n[105s] Eight... you're doing so good.\n[108s] Seven...\n[110s] Six...\n[112s] Five... almost there.\n[114.5s] Four... three...\n[116.5s] Two... one... cum for me.",
+ "plate": "arms_crossed",
+ "key_poses": {
+  "ponytail": "she stands beside the bed facing the camera, one hand raised to play with her ponytail, smiling at the camera",
+  "walk_laugh": "she stands at the foot of the bed turned to her side mid-step, laughing softly, arms relaxed",
+  "look_back": "she stands with her back to the camera, one hand resting on the bed, looking back over her shoulder at the camera",
+  "lean_bed": "she stands beside the bed leaning on one hand on the mattress, hips to the side, smiling at the camera",
+  "seated": "she sits on the edge of the bed facing the camera, knees together, hands resting on her thighs, smiling",
+  "chin_hand": "she sits on the edge of the bed, one elbow on her knee and her chin resting in that hand, smiling at the camera",
+  "relaxed": "she sits on the bed with her legs out to one side, leaning on one hand, looking down with a soft smile",
+  "reverse": "she sits on the edge of the bed with her back to the camera, looking back over her shoulder at the camera",
+  "kneel": "she kneels on the bed facing the camera, sitting back on her heels, hands resting on her thighs, smiling",
+  "kneel_hair": "she kneels on the bed sitting back on her heels, one hand drawing her ponytail forward over her shoulder, smiling at the camera",
+  "kneel_side": "she kneels on the bed turned to her side, one hand on the mattress, looking at the camera over her shoulder"
+ }
+}
