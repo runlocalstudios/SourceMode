@@ -150,15 +150,16 @@ function drawBanners(){
       +'<span class=why>Last line at '+SM.esc((n.log_last_line_at||'').slice(11,19))
       +'. The process is still alive, so the card is held and nothing else will start.'
       +'</span></span>'
-      +'<button class="btn" data-act="log" data-id="'+SM.esc(n.job_id)+'">Log tail</button>'
+      +'<button class="btn" data-act="log" data-id="'+SM.esc(n.job_id)+'">Show log</button>'
       +'<button class="btn" data-act="pause">Hold the rest of the queue</button></div>');
   for(const j of state.jobs) if(j.status==='failed')
     out.push('<div class="banner stop"><span class=msg><b>'+SM.esc(j.who)+' failed.</b>'
       +'<span class=why>'+SM.esc(j.state.why)+'. Requeueing brings it back held, so'
       +' nothing starts until you say so.</span></span>'
-      +'<button class="btn" data-act="log" data-id="'+SM.esc(j.id)+'">Log tail</button>'
+      +'<button class="btn" data-act="log" data-id="'+SM.esc(j.id)+'">Show log</button>'
       +'<button class="btn btn-primary" data-act="requeue" data-id="'+SM.esc(j.id)
-      +'">Requeue (held)</button></div>');
+      +'">Requeue (held)</button>'
+      +'<button class="btn" data-act="dismiss" data-id="'+SM.esc(j.id)+'">Dismiss</button></div>');
   SM.set($('banners'),null,out.join(''));
 }
 
@@ -191,7 +192,7 @@ function drawNow(){
        +'"><i style="width:'+Math.round(n.progress*100)+'%"></i></div>':'')
     +stats()
     +'<div class=card-foot><button class="btn btn-ghost" data-act="log" data-id="'
-    +SM.esc(n.job_id)+'">Log tail</button>'
+    +SM.esc(n.job_id)+'">Show log</button>'
     +(n.log_age_s!=null
        ? '<span class="age'+(n.ageing?' stale':'')+'">log last moved '
          +SM.dur(n.log_age_s)+' ago</span>'
@@ -267,7 +268,7 @@ function jobRow(el,j,i,n){
 }
 function acts(j,i,n){
   if(j.status==='running')
-    return '<button class="btn btn-ghost" data-act="log" data-id="'+SM.esc(j.id)+'">Log tail</button>';
+    return '<button class="btn btn-ghost" data-act="log" data-id="'+SM.esc(j.id)+'">Show log</button>';
   let h='';
   if(j.state.status==='you'&&j.blocked_reason)
     h+='<button class="btn btn-primary" data-go-tab="dataset" data-ref="'+SM.esc(j.label)
@@ -400,6 +401,7 @@ const ACTS={
   'up':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/move',{position:+b.dataset.pos-1}),
   'down':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/move',{position:+b.dataset.pos+1}),
   'requeue':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/requeue'),
+  'dismiss':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/dismiss'),
   'restore':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/restore'),
   'purge':b=>confirm('Delete '+b.dataset.who+' ('+b.dataset.id+') for good?'+SM.NL+SM.NL
      +'It leaves the file and cannot be restored.')
@@ -1518,7 +1520,9 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
 
     jobs, removed, by_id = [], [], {j["id"]: j for j in doc["jobs"]}
     for j in doc["jobs"]:
-        if j["status"] in ("done", "cancelled"):
+        # a dismissed failure is one he (or the session that caused it) has
+        # dealt with - off the page, still in the file and the log
+        if j["status"] in ("done", "cancelled") or (j["status"] == "failed" and j.get("dismissed")):
             if j["status"] == "cancelled":
                 removed.append({"id": j["id"], "kind": j["kind"], "label": j["label"],
                                 "who": character_of(j["label"]).replace("_", " ").title(),
@@ -2365,6 +2369,20 @@ def queue_router(cfg: dict, status=None):
         doc = q.load(p)
         try:
             q.restore(doc, job_id)
+        except KeyError as exc:
+            raise HTTPException(404, f"no job {job_id}") from exc
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+        q.save(p, doc)
+        return queue_state(cfg)
+
+    @router.post("/queue/job/{job_id}/dismiss")
+    def dismiss(job_id: str) -> dict:
+        """A failed job he has dealt with leaves the page; the record and log stay."""
+        p = path()
+        doc = q.load(p)
+        try:
+            q.dismiss(doc, job_id)
         except KeyError as exc:
             raise HTTPException(404, f"no job {job_id}") from exc
         except ValueError as exc:

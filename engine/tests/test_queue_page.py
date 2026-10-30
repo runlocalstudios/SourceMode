@@ -596,3 +596,23 @@ def test_the_card_says_over_the_usual_instead_of_zero_left(cfg, tmp_path, monkey
     now = QP.now_card(jobs, {"sampled_at": 0, "training": {}}, cfg)
     assert now["eta_s"] is None
     assert now["progress_line"].startswith("running 2h 00m, 1h 00m over the usual")
+
+
+def test_a_dismissed_failure_leaves_the_page_but_not_the_file(client, tmp_path):
+    """Jeremy, 2026-10-30: "can you remove the failed warning from the queue?"
+    A failed job he has dealt with is dismissed: no banner, no row, the record
+    and its log untouched. Only a failed job can be."""
+    doc = _queue(tmp_path, "zara_v2", "marisol_v2")
+    path = q.queue_path(tmp_path)
+    failed, queued = doc["jobs"][0]["id"], doc["jobs"][1]["id"]
+    q.mark_running(doc, failed, 1, "log")
+    q.mark_finished(doc, failed, 1)
+    q.save(path, doc)
+    assert [j["id"] for j in client.get("/queue/state").json()["jobs"]] == [failed, queued]
+
+    assert client.post(f"/queue/job/{queued}/dismiss").status_code == 409
+    r = client.post(f"/queue/job/{failed}/dismiss")
+    assert r.status_code == 200
+    assert [j["id"] for j in r.json()["jobs"]] == [queued]
+    assert q.find(q.load(path), failed)["status"] == "failed"
+    assert client.post("/queue/job/j999/dismiss").status_code == 404

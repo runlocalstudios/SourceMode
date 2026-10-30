@@ -229,6 +229,22 @@ def purge(doc: dict, job_id: str) -> dict:
     return job
 
 
+def dismiss(doc: dict, job_id: str) -> dict:
+    """Take a failed job off the page: the record and its log stay, the banner
+    and the row go. Jeremy, 2026-10-30, after a job of a session's failed on
+    import and was re-queued fixed: "can you remove the failed warning from
+    the queue? ... when these error messages pop up and you fix them, can you
+    please just take care of them?" Only a failed job can be dismissed; a
+    queued or running one is cancelled or left alone."""
+    job = find(doc, job_id)
+    if job is None:
+        raise KeyError(job_id)
+    if job["status"] != "failed":
+        raise ValueError(f"{job_id} is {job['status']} - only a failed job can be dismissed")
+    job["dismissed"] = now()
+    return job
+
+
 def head(doc: dict, lane: str = "gpu") -> dict | None:
     """The first job of the lane that is queued and not held - the next one to
     run, and the one the lane's runner WAITS on. It never looks past it: order

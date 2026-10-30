@@ -368,3 +368,18 @@ def test_a_colon_in_the_label_does_not_make_an_alternate_data_stream():
     assert log_name({"id": "j107", "label": "gigi:influencer"}) == "gpu-j107-gigi_influencer.log"
     assert log_name({"id": "j9", "label": 'a<b>c"d/e\\f|g?h*'}) == "gpu-j9-a_b_c_d_e_f_g_h_.log"
     assert log_name({"id": "j110", "label": "mei:boudoir+club"}) == "gpu-j110-mei_boudoir+club.log"
+
+
+def test_only_a_failed_job_can_be_dismissed(tmp_path):
+    doc = q.empty()
+    queued = _add(doc, "zara_v2")
+    with pytest.raises(ValueError):
+        q.dismiss(doc, queued["id"])
+    failed = _add(doc, "marisol_v2")
+    q.mark_running(doc, failed["id"], 7, "log")
+    q.mark_finished(doc, failed["id"], 1)
+    q.dismiss(doc, failed["id"])
+    assert q.find(doc, failed["id"])["status"] == "failed", "the record stays"
+    assert q.find(doc, failed["id"])["dismissed"]
+    with pytest.raises(KeyError):
+        q.dismiss(doc, "j999")

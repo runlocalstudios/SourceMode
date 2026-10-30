@@ -860,7 +860,7 @@ def gpu_list(all_jobs: bool = typer.Option(False, "--all", help="Include finishe
         rprint("card busy: " + ", ".join(f"PID {h['pid']} ({h['pattern']})" for h in held))
     nxt = q.head(doc)
     for i, j in enumerate(doc["jobs"]):
-        if not all_jobs and j["status"] in ("done", "cancelled"):
+        if not all_jobs and (j["status"] in ("done", "cancelled") or j.get("dismissed")):
             continue
         marks = []
         if q.lane_of(j) == "cpu":
@@ -915,6 +915,22 @@ def gpu_cancel(job_id: str):
         raise typer.Exit(1) from exc
     q.save(path, doc)
     rprint(f"cancelled {job['id']} {job['label']}")
+
+
+@gpu_app.command("dismiss")
+def gpu_dismiss(job_id: str):
+    """Take a failed job off the page once it is dealt with. The record and its log stay."""
+    from .gpu import queue as q  # noqa: PLC0415
+
+    out, path = _gpu_paths()
+    doc = q.load(path)
+    try:
+        job = q.dismiss(doc, job_id)
+    except (KeyError, ValueError) as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    q.save(path, doc)
+    rprint(f"dismissed {job['id']} {job['label']}")
 
 
 @gpu_app.command("restart")
