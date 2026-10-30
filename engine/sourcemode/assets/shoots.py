@@ -161,7 +161,7 @@ LINGERIE: tuple[str, ...] = (
 # like that SHOULD look pretty much the same every time) so that we can do all
 # the different poses that i want to be aligned with the chat - kneeling,
 # spreading legs, bending over, sitting on the player's lap, crawling toward
-# the player". The game's lingerie gift (`intimate/lingerie_01.webp`, a full
+# the player" - then, 2026-10-29: "kill the sitting on lap poses". The game's lingerie gift (`intimate/lingerie_01.webp`, a full
 # scene, no cutout) becomes a set of poses in ONE outfit, so a chat can show
 # her move rather than one picture. Every pose carries a `tag` the game can
 # key a chat moment to.
@@ -525,8 +525,6 @@ BETWEEN_LEGS: tuple[dict, ...] = tuple({**x, "needs": ("floor",), "shot_type": _
 # The lingerie gift's poses (lingerie_set above); after the office section for
 # the framing and gaze lines it shares with it.
 _KNEES = "framed from the knees up, the camera close to her"
-_LAP = ("close point-of-view photo from the eyes of a man sitting on the edge of the bed, his bare "
-        "thighs in dark navy boxer shorts at the bottom of the frame")
 LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "standing", "stance": "standing at the foot of the bed facing the camera, one hand on her hip, "
                                   "the other hand touching her bra strap",
@@ -568,22 +566,6 @@ LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "presenting", "stance": "kneeling up tall on the bed, hands clasped behind her head, chest "
                                     "pushed forward",
      "needs": ("bed",), "framing": _KNEES, "shot_type": "photo", "gaze": _EYES},
-    # His lap, from his eyes. The office POV sets (2026-10-28) put her a
-    # body-length away however the words asked; straddling his lap gives the
-    # model no distance to retreat to. His shorts are named as his and hers
-    # are refused by colour, the lesson of Nadia's first between-legs run.
-    {"tag": "on_lap", "stance": "straddling the man's lap, sitting on his thighs facing him with her knees "
-                                "on the mattress either side of him, her hands on his shoulders, her chest "
-                                "close to the camera",
-     "needs": ("bed",), "framing": "her face, chest and hips in frame, her knees at the edges of the frame",
-     "shot_type": _LAP, "gaze": "looking down into the camera", "expression_natural": "lips parted",
-     "negative": "grey shorts, grey underwear, far away, distant, her whole body in frame, standing, "
-                 "a second woman, the man's face"},
-    {"tag": "on_lap_back", "stance": "sitting on the man's lap with her back to him, leaning back "
-                                     "against his chest, her legs apart over his knees",
-     "needs": ("bed",), "framing": "her body from her thighs up in frame, close",
-     "shot_type": _LAP, "gaze": "looking back over her shoulder into the camera",
-     "negative": "grey shorts, grey underwear, far away, distant, standing, a second woman, the man's face"},
 )
 
 OFFICE: tuple[Shoot, ...] = (
@@ -764,7 +746,7 @@ GAME: tuple[Shoot, ...] = (
           pose_slots=LINGERIE_PACK, shots=len(LINGERIE_PACK), wardrobe="intimatewear",
           note=f"{len(LINGERIE_PACK)} poses in ONE lingerie set - hers from her Intimate line, "
                "else satin in her colour with a white band - for the lingerie gift's chat: "
-               "standing, kneeling, legs spread, bent over, crawling, on his lap. Full scenes, "
+               "standing, kneeling, legs spread, bent over, crawling. Full scenes, "
                "no cutout. Each pose carries a tag for the game."),
 )
 
@@ -879,7 +861,7 @@ POSE_PACKS: tuple[PosePack, ...] = (
              note=f"In bed with the torso toy, two of each act. {len(TOY)} poses."),
     PosePack("lingeriepack", "Lingerie gift (chat poses)", LINGERIE_PACK,
              note=f"The lingerie gift's chat poses: standing, kneeling, legs spread, bent over, "
-                  f"crawling, on his lap. {len(LINGERIE_PACK)} poses."),
+                  f"crawling. {len(LINGERIE_PACK)} poses."),
 )
 
 SCENE_BY_ID = {s.id: s for s in SCENES}

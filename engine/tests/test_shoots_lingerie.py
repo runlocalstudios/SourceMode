@@ -30,7 +30,7 @@ def test_every_pose_carries_a_tag_the_game_can_key_on_and_the_set_is_one_outfit(
     monkeypatch.setattr(W, "editable", lambda c: {"outfits": {"intimate": "Black satin"}})
     tags = [p["tag"] for p in S.LINGERIE_PACK]
     assert len(tags) == len(set(tags))
-    for want in ("kneeling", "legs_spread", "bent_over", "crawling", "on_lap"):
+    for want in ("kneeling", "legs_spread", "bent_over", "crawling"):
         assert want in tags
     sh = S.BY_ID["lingerie"]
     first = S.set_outfit(sh, tmp_path, "sienna", rng=random.Random(1))
@@ -42,10 +42,9 @@ def test_every_pose_carries_a_tag_the_game_can_key_on_and_the_set_is_one_outfit(
         assert s["shoes"] and s["framing"]
 
 
-def test_the_lap_poses_name_his_shorts_as_his_and_refuse_them_on_her():
-    for p in (x for x in S.LINGERIE_PACK if x["tag"].startswith("on_lap")):
-        assert "dark navy boxer shorts" in p["shot_type"] and "the man" in p["stance"]
-        assert "grey" in p["negative"] and "boxer" not in p["negative"]
+def test_no_pose_puts_her_on_his_lap():
+    # Jeremy, 2026-10-29: "kill the sitting on lap poses"
+    assert not [p for p in S.LINGERIE_PACK if "lap" in p["tag"] or "the man" in p["stance"]]
 
 
 def test_the_lingerie_poses_mix_into_any_scene_with_a_bed_and_floor():
