@@ -30,7 +30,7 @@ def test_every_pose_carries_a_tag_the_game_can_key_on_and_the_set_is_one_outfit(
     monkeypatch.setattr(W, "editable", lambda c: {"outfits": {"intimate": "Black satin"}})
     tags = [p["tag"] for p in S.LINGERIE_PACK]
     assert len(tags) == len(set(tags))
-    for want in ("kneeling", "legs_spread", "bent_over", "crawling"):
+    for want in ("kneeling", "spreadwide", "bendingover", "crawling"):
         assert want in tags
     sh = S.BY_ID["lingerie"]
     first = S.set_outfit(sh, tmp_path, "sienna", rng=random.Random(1))

@@ -308,6 +308,43 @@ def assets_plan(
         rprint(f"  [yellow]{blank} looks have no outfit/hair yet[/yellow] — fill them in before `assets render`")
 
 
+@assets_app.command("lingerie")
+def assets_lingerie(
+    character: str = typer.Argument(..., help="Character id as the game knows it."),
+    ship: bool = typer.Option(False, "--ship", help="Copy the staged files into the game repo. Your approval; nothing else writes there."),
+    game_root: Path = typer.Option(None, "--game-root", help="The game repo (default: the one the Characters tab ships to)."),
+):
+    """Stage her kept Lingerie-pack shots as the game's intimate art; --ship copies them in.
+
+    Writes outputs/game-assets/<char>/intimate/: lingerie_01.webp (the base the wardrobe
+    button checks for) and <char>_lingerie_<pose>.webp per kept pose, which the chat
+    switches to on "kneel", "crawl", "spread your legs"... plus the characterAppearance.js
+    line the base file needs."""
+    from .assets import intimate as I  # noqa: PLC0415
+    from .assets.looks import GAME_ROOT  # noqa: PLC0415
+    from .config import outputs_dir  # noqa: PLC0415
+
+    cfg = load_config()
+    out = outputs_dir(cfg)
+    try:
+        rec = I.stage(cfg, out, character)
+    except ValueError as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise typer.Exit(1) from exc
+    rprint(f"staged {len(rec['files'])} files for [cyan]{character}[/cyan] in {I.staging_dir(out, character)}")
+    rprint(f"  poses: {', '.join(rec['poses'])}; base from {rec['base_from']}")
+    rprint("  characterAppearance.js needs:\n" + rec["registration"])
+    if ship:
+        try:
+            s = I.ship(out, character, game_root or GAME_ROOT)
+        except ValueError as exc:
+            rprint(f"[red]{exc}[/red]")
+            raise typer.Exit(1) from exc
+        rprint(f"shipped {len(s['files'])} files ({s['overwrote']} overwritten) -> {s['to']}")
+    else:
+        rprint("  not shipped: add --ship to copy them into the game")
+
+
 @assets_app.command("render")
 def assets_render(
     plan: Path = typer.Option(..., "--plan"),
