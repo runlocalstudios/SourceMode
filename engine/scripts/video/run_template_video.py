@@ -54,8 +54,8 @@ def log(s: str) -> None:
 start = Path(req["start"])
 if not start.is_file():
     raise SystemExit(f"the start frame is not on disk: {start}")
-# Wan's landscape bucket for the 16:9 sources; the portrait ones use the tab's own
-size = [1280, 720] if tpl.get("aspect", "16:9") == "16:9" else []
+# the video is the still's aspect, pixel for pixel scaled - never a crop of it
+size = list(VT.video_size_for(start))
 spec = VideoSpec(character=CHAR, motion=tpl.get("summary", ""), seconds=float(tpl["seconds"]),
                  quality=req.get("quality", "medium"), takes=int(req.get("takes", 1)),
                  name=tpl["id"], source={"kind": "keeper", "path": str(start)},
@@ -90,8 +90,7 @@ log(f"{CHAR}: '{tpl['name']}' - {len(spec.legs)} legs, {spec.seconds:g}s, {spec.
 src_png = d / "source_src.png"
 shutil.copyfile(start, src_png)
 source_png = d / "source.png"
-w, h = (size if size else (int(cfg["video"]["width"]), int(cfg["video"]["height"])))
-normalize_source(src_png, source_png, w, h)
+normalize_source(src_png, source_png, size[0], size[1])
 
 # the voice first: it is CPU work, and a script that will not speak should fail
 # before an hour of legs, not after

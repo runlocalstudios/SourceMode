@@ -42,6 +42,19 @@ def test_a_start_frame_renders_at_its_sources_aspect():
     assert VT.size_for(VT.load("harness_tease")) == (1024, 1536)
 
 
+def test_the_video_is_the_stills_aspect_never_a_crop_of_it(tmp_path):
+    # 2026-10-29: a 2:3 outfit still started a 16:9 template and was cropped to
+    # 1280x720; the 2:3 start frames were cropped to the 4:5 config frame
+    from PIL import Image
+    for name, wh in (("start.png", (1664, 928)), ("outfit.png", (1024, 1536)), ("odd.png", (1000, 1300))):
+        Image.new("RGB", wh).save(tmp_path / name)
+    assert VT.video_size_for(tmp_path / "start.png") == (1280, 720)
+    assert VT.video_size_for(tmp_path / "outfit.png") == (960, 1440)
+    assert VT.video_size_for(tmp_path / "odd.png") == (960, 1440)
+    for w, h in VT.VIDEO_SIZES.values():
+        assert w % 16 == 0 and h % 16 == 0
+
+
 def test_an_outfit_still_is_a_regular_portrait_in_the_clips_outfit_and_setting():
     from sourcemode.assets.render import shot_prompt
     t = VT.load("house_call")

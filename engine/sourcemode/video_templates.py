@@ -32,13 +32,32 @@ from .config import ENGINE_ROOT
 TEMPLATES_DIR = ENGINE_ROOT.parent / "video-templates"
 ID_RE = re.compile(r"^[a-z0-9_]+$")
 #: start-frame size by the source's aspect: Qwen-Image's own 16:9 bucket for the
-#: landscape clips (1280x720), the training bucket for the portrait ones (784x1168)
+#: landscape clips, the training bucket for the portrait ones - her face keeps
+#: its pixels, and the still comes DOWN to the video size at the same aspect
 SIZES = {"16:9": (1664, 928), "2:3": (1024, 1536)}
 WIDTH, HEIGHT = SIZES["16:9"]
+#: the Wan frame for each aspect. Jeremy, 2026-10-29: "The video template pics
+#: need to be the same pixels as the video - the 2:3 tall pics do not properly
+#: generate the 16:9 videos": a 2:3 outfit still cropped to 1280x720 kept the
+#: middle 40% of her, and the 2:3 start frames lost a sixth to the 4:5 config
+#: frame. The video takes the still's aspect, so nothing is cut away.
+VIDEO_SIZES = {"16:9": (1280, 720), "2:3": (960, 1440)}
 
 
 def size_for(template: dict) -> tuple[int, int]:
     return SIZES.get(template.get("aspect", "16:9"), SIZES["16:9"])
+
+
+def video_size_for(still: Path) -> tuple[int, int]:
+    """The Wan frame nearest the still's own aspect: a landscape start frame
+    renders 1280x720, a portrait start frame or outfit still 960x1440."""
+    from PIL import Image  # noqa: PLC0415
+
+    with Image.open(still) as img:
+        ratio = img.width / img.height
+    return min(VIDEO_SIZES.values(), key=lambda wh: abs(wh[0] / wh[1] - ratio))
+
+
 START_SEED = 5100
 
 
