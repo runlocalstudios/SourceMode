@@ -19,11 +19,12 @@ from sourcemode.assets.shoots import (
     BY_ID, CATALOG, buckets, estimate_seconds, plan_path, resolve, total_shots)
 
 
-def test_game_assets_group_is_first_and_holds_exactly_the_two_packs():
+def test_game_assets_group_is_first_and_holds_the_packs():
     bs = buckets()
     assert bs[0]["bucket"] == "game"
     assert bs[0]["label"] == "Game assets"
-    assert [s["id"] for s in bs[0]["shoots"]] == ["pack28", "selfies"]
+    # 2026-10-29: the lingerie gift pack joined the two shipped packs
+    assert [s["id"] for s in bs[0]["shoots"]] == ["pack28", "selfies", "lingerie"]
 
 
 def test_the_wardrobe_pack_is_one_shot_per_look_not_four():

@@ -123,7 +123,7 @@ class Shoot:
                     # end in stockings, which drop_footwear would strip
                     "shoes": True,
                     **{k: p[k] for k in ("facing", "gaze", "shot_type", "expression_natural",
-                                         "negative") if k in p},
+                                         "negative", "tag") if k in p},
                 })
             return out
         for i in range(self.shots):
@@ -152,6 +152,38 @@ LINGERIE: tuple[str, ...] = (
     "a burgundy lace bodysuit with garter straps clipped to sheer black stockings",
     "a sheer black mesh bra and panties with a garter belt and back-seamed black stockings",
 )
+
+# --- the lingerie gift pack ---------------------------------------------------
+# Jeremy, 2026-10-29: "draft a pack that will generate the assets we need for
+# the girls' lingerie packs. These need to be well-described single outfit
+# prompts, ideally without a ton of detail (lacy lingerie looks different in
+# every shot, satin or cloth lingerie with a 0.5 inch white band or something
+# like that SHOULD look pretty much the same every time) so that we can do all
+# the different poses that i want to be aligned with the chat - kneeling,
+# spreading legs, bending over, sitting on the player's lap, crawling toward
+# the player". The game's lingerie gift (`intimate/lingerie_01.webp`, a full
+# scene, no cutout) becomes a set of poses in ONE outfit, so a chat can show
+# her move rather than one picture. Every pose carries a `tag` the game can
+# key a chat moment to.
+#
+# The outfit is HERS and it is one line: her Intimate wardrobe line when it
+# names a single garment, else satin in her intimate colour (black when she
+# names none), edged with the white band. Satin, never lace: lace redraws
+# itself every shot.
+LINGERIE_DEFAULT = ("a {c} satin bra and matching high-cut satin panties, each edged with a thin white "
+                    "satin band")
+
+
+def lingerie_set(character: str) -> str:
+    from .looks import GARMENT_RE, _colours_in, is_brief  # noqa: PLC0415
+    from .wardrobe import editable  # noqa: PLC0415
+
+    line = str((editable(character).get("outfits") or {}).get("intimate") or "").strip()
+    if line and GARMENT_RE.search(line) and not is_brief(line):
+        return line
+    colours = _colours_in(line)
+    return LINGERIE_DEFAULT.format(c=colours[0] if colours else "black")
+
 
 # The submissive pose set, in Jeremy's order (2026-10-12), then the five added
 # at his "any others you would add?". `needs` is what the scene must have for
@@ -490,6 +522,70 @@ BETWEEN_LEGS: tuple[dict, ...] = tuple({**x, "needs": ("floor",), "shot_type": _
     # depth) can place her; the words cannot.
 ))
 
+# The lingerie gift's poses (lingerie_set above); after the office section for
+# the framing and gaze lines it shares with it.
+_KNEES = "framed from the knees up, the camera close to her"
+_LAP = ("close point-of-view photo from the eyes of a man sitting on the edge of the bed, his bare "
+        "thighs in dark navy boxer shorts at the bottom of the frame")
+LINGERIE_PACK: tuple[dict, ...] = (
+    {"tag": "standing", "stance": "standing at the foot of the bed facing the camera, one hand on her hip, "
+                                  "the other hand touching her bra strap",
+     "needs": ("bed",), "framing": _KNEES, "gaze": _EYES},
+    {"tag": "strap_down", "stance": "standing beside the bed, slipping one bra strap off her shoulder",
+     "needs": ("bed",), "framing": _KNEES, "gaze": _EYES,
+     "expression_natural": "a teasing closed-mouth smile"},
+    {"tag": "kneeling", "stance": "kneeling on the floor at the foot of the bed, sitting back on her heels, "
+                                  "hands resting on her thighs",
+     "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo",
+     "gaze": "her face tilted up toward the camera, looking up into the lens"},
+    {"tag": "kneeling_hands_back", "stance": "kneeling on the floor, sitting back on her heels, wrists "
+                                             "crossed behind her back, chest forward",
+     "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo",
+     "gaze": "looking up into the camera"},
+    {"tag": "legs_spread", "stance": "sitting on the edge of the bed with her legs spread wide, hands on "
+                                     "her knees",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
+    {"tag": "legs_spread_lying", "stance": "lying back on the bed propped up on her elbows, her knees up "
+                                           "and apart with her feet flat on the mattress, nearest the camera",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo from the foot of the bed",
+     "gaze": "looking down the bed into the camera", "expression_natural": "lips parted"},
+    {"tag": "bent_over", "stance": "bent forward over the bed, hands flat on the mattress, hips pushed "
+                                   "back toward the camera",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
+     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
+    {"tag": "all_fours", "stance": "on all fours on the bed, back arched",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
+     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
+    {"tag": "crawling", "stance": "crawling toward the camera on all fours across the bed",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
+     "gaze": "looking up into the camera from under her brows"},
+    {"tag": "hips_up", "stance": "face down on the bed with her knees tucked under her and her hips raised "
+                                 "high, her ass and the crotch of her panties pointed straight at the camera",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind, low, level with the bed",
+     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
+    {"tag": "lying_side", "stance": "lying on her side on the bed, propped on one elbow, legs together",
+     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
+    {"tag": "presenting", "stance": "kneeling up tall on the bed, hands clasped behind her head, chest "
+                                    "pushed forward",
+     "needs": ("bed",), "framing": _KNEES, "shot_type": "photo", "gaze": _EYES},
+    # His lap, from his eyes. The office POV sets (2026-10-28) put her a
+    # body-length away however the words asked; straddling his lap gives the
+    # model no distance to retreat to. His shorts are named as his and hers
+    # are refused by colour, the lesson of Nadia's first between-legs run.
+    {"tag": "on_lap", "stance": "straddling the man's lap, sitting on his thighs facing him with her knees "
+                                "on the mattress either side of him, her hands on his shoulders, her chest "
+                                "close to the camera",
+     "needs": ("bed",), "framing": "her face, chest and hips in frame, her knees at the edges of the frame",
+     "shot_type": _LAP, "gaze": "looking down into the camera", "expression_natural": "lips parted",
+     "negative": "grey shorts, grey underwear, far away, distant, her whole body in frame, standing, "
+                 "a second woman, the man's face"},
+    {"tag": "on_lap_back", "stance": "sitting on the man's lap with her back to him, leaning back "
+                                     "against his chest, her legs apart over his knees",
+     "needs": ("bed",), "framing": "her body from her thighs up in frame, close",
+     "shot_type": _LAP, "gaze": "looking back over her shoulder into the camera",
+     "negative": "grey shorts, grey underwear, far away, distant, standing, a second woman, the man's face"},
+)
+
 OFFICE: tuple[Shoot, ...] = (
     Shoot("office_door", "Office doorway", "office", OFFICE_DOOR, OFFICE_SLUTTY, (),
           pose_slots=DOORWAY, shots=len(DOORWAY),
@@ -664,6 +760,12 @@ GAME: tuple[Shoot, ...] = (
                "they are re-rolled in one job. Needs a wardrobe plan on disk "
                "first: the outfits are a decision, not a default."),
     _selfie_pack(),
+    Shoot("lingerie", "Lingerie pack (the gift)", "game", BEDROOM, (), (),
+          pose_slots=LINGERIE_PACK, shots=len(LINGERIE_PACK), wardrobe="intimatewear",
+          note=f"{len(LINGERIE_PACK)} poses in ONE lingerie set - hers from her Intimate line, "
+               "else satin in her colour with a white band - for the lingerie gift's chat: "
+               "standing, kneeling, legs spread, bent over, crawling, on his lap. Full scenes, "
+               "no cutout. Each pose carries a tag for the game."),
 )
 
 def _influencer() -> Shoot:
@@ -754,6 +856,7 @@ WARDROBES: tuple[Wardrobe, ...] = (
     Wardrobe("gym", "Gym", BY_ID["gym"].outfits),
     Wardrobe("swim", "Swim", BY_ID["pool"].outfits + BY_ID["beach_sunset"].outfits),
     Wardrobe("work", "Work - her job outfit", record="job"),
+    Wardrobe("intimatewear", "Her lingerie set - one outfit", record="intimate"),
     Wardrobe("officeslutty", "Office - very revealing professional", OFFICE_SLUTTY),
     Wardrobe("officechic", "Office - conservative chic", OFFICE_CHIC),
 )
@@ -774,6 +877,9 @@ POSE_PACKS: tuple[PosePack, ...] = (
                   f"a floor. {len(BETWEEN_LEGS)} poses."),
     PosePack("toy", "Torso toy", TOY,
              note=f"In bed with the torso toy, two of each act. {len(TOY)} poses."),
+    PosePack("lingeriepack", "Lingerie gift (chat poses)", LINGERIE_PACK,
+             note=f"The lingerie gift's chat poses: standing, kneeling, legs spread, bent over, "
+                  f"crawling, on his lap. {len(LINGERIE_PACK)} poses."),
 )
 
 SCENE_BY_ID = {s.id: s for s in SCENES}
@@ -793,6 +899,8 @@ def wardrobe_outfits(wardrobe_id: str, character: str) -> tuple[str, ...]:
         from .looks import work_outfits  # noqa: PLC0415
 
         return work_outfits(character)
+    if w.record == "intimate":
+        return (lingerie_set(character),)
     return w.outfits
 
 
