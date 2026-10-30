@@ -23,6 +23,11 @@ Arms (Qwen-Image-Edit 2511 unless said; image 1 is the subject):
   text_lora  the text arm with her locked T2I LoRA loaded in the Edit graph
              and her trigger in the instruction. The notes say T2I LoRAs do
              not carry into Edit; nobody here measured it, so this does.
+  room_empty the room arm against an EMPTY plate: the plate is first edited
+             once to remove her (plate_empty.png), because with her still in
+             it the room arm sometimes took the plate woman's arms-crossed
+             pose instead of his photo's. Jeremy, 2026-10-30: "room is likely
+             the best bet to keep her and conform the room behind."
   face3      image 1 = plate, image 2 = his photo of the pose, image 3 = her
              face reference. Three-image Edit, identity from a dedicated face.
   video      Wan 2.2 I2V from the plate, 81 frames, the pose as the motion;
@@ -59,7 +64,7 @@ from sourcemode.render.workflow import load_template, prune_placeholder_loras, s
 from sourcemode.video import NEGATIVE as VIDEO_NEGATIVE
 from sourcemode.video import ffmpeg_exe, sharpest_tail_frame, video_output
 
-ALL_ARMS = ("text", "ref", "room", "text_lora", "face3", "video")
+ALL_ARMS = ("text", "ref", "room", "room_empty", "text_lora", "face3", "video")
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 DRY = "--dry-run" in sys.argv
 ARMS = tuple(next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--arms=")), ALL_ARMS))
@@ -71,6 +76,9 @@ CHAR = story["character"].lower()
 LOG = outputs_dir(cfg) / "logs" / f"video_{CHAR}.log"
 NEGATIVE = ("different room, different furniture, different camera angle, different lighting, "
             "different outfit, different woman, extra people, text, watermark, blurry, deformed hands")
+# seed slot per arm: the first six keep the seeds of the 2026-10-30 run, and
+# room_empty shares room's so the two differ only by the plate
+SEED_SLOT = {"text": 0, "ref": 1, "room": 2, "room_empty": 2, "text_lora": 3, "face3": 4, "video": 5}
 VIDEO_FRAMES = 81          # the length the 14B model was trained on
 TAIL = 16                  # frames that compete to be the key
 
@@ -97,11 +105,15 @@ def instruction(arm: str, pose: str) -> str:
         return (f"Keep the bedroom, the furniture, the camera position and the lighting of image 1 and her "
                 f"cheerleader outfit. Her face is exactly the face in image 3. Pose her like the woman in image 2: "
                 f"{pose}. Ignore the rooms in image 2 and image 3. Photorealistic.")
-    if arm == "room":
+    if arm in ("room", "room_empty"):
         return ("Keep the woman of image 1 exactly as she is: her face, her hair, her outfit, her pose and where "
                 "she is in the frame. Replace only the room around her with the bedroom of image 2 - the same bed, "
                 "pink tufted headboard, bedding, rug, nightstand, lamp, window and soft daylight - seen from image 1's "
                 "camera angle, so the room fits her pose. Photorealistic, nothing else changes.")
+    if arm == "empty":
+        return ("Remove the woman completely. Show the same bedroom with nobody in it: the same bed, pink tufted "
+                "headboard, bedding, rug, nightstand, lamp, window and soft daylight, the same camera position "
+                "and framing. Fill in what was behind her naturally. Photorealistic, nothing else changes.")
     return f"{pose}. steady camera, continuous shot, she moves slowly and gently"   # video
 
 
@@ -159,18 +171,35 @@ log(f"{CHAR}: keys for '{story['name']}' - plate {plate_key}, {len(keys)} keys x
 record = json.loads((d / "keys.json").read_text(encoding="utf-8")) if (d / "keys.json").is_file() else {}
 record.update(plate=plate_key)
 record.setdefault("keys", {})
+base = base_seed = int(story.get("seed") or 7100)
 if not DRY:
     client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
     plate_name = client.upload_image(photos[plate_key])
     face_name = client.upload_image(Path(face_ref)) if "face3" in ARMS else ""
-base = int(story.get("seed") or 7100)
+    empty_name = ""
+    if "room_empty" in ARMS:
+        empty = d / "plate_empty.png"
+        if not empty.is_file():
+            t0 = time.monotonic()
+            wf, _settings = build_edit_workflow(cfg, CHAR, instruction=instruction("empty", ""),
+                                                negative="woman, person, people, girl, body, figure, text, watermark, blurry",
+                                                image_name=plate_name, seed=base_seed - 1,
+                                                render_pass=story.get("quality", "medium"),
+                                                filename_prefix=f"sourcemode/{CHAR}_keys")
+            files = client.outputs(client.wait(client.submit(wf), timeout_s=3600))
+            if not files:
+                raise SystemExit("empty plate: ComfyUI returned no image")
+            client.fetch(files[0], empty)
+            log(f"  empty plate: {time.monotonic() - t0:.0f}s -> {empty}")
+        record["plate_empty"] = str(empty)
+        empty_name = client.upload_image(empty)
 for i, k in enumerate(keys, 1):
-    for j, arm in enumerate(ALL_ARMS):
+    for arm in ALL_ARMS:
         if arm not in ARMS:
             continue
         out = d / f"{k}_{arm}.png"
         text = instruction(arm, poses[k])
-        seed = base + i * 10 + j
+        seed = base + i * 10 + SEED_SLOT[arm]
         record["keys"].setdefault(k, {})[arm] = {"file": str(out), "instruction": text, "seed": seed}
         if DRY:
             log(f"  {k}/{arm}: {text}")
@@ -199,8 +228,8 @@ for i, k in enumerate(keys, 1):
                 raise SystemExit(f"{k}/{arm}: ComfyUI returned no image")
             client.fetch(files[0], out)
         else:
-            if arm == "room":
-                image, ref = client.upload_image(photos[k]), plate_name
+            if arm in ("room", "room_empty"):
+                image, ref = client.upload_image(photos[k]), (plate_name if arm == "room" else empty_name)
             else:
                 image, ref = plate_name, (client.upload_image(photos[k]) if arm == "ref" else None)
             wf, _settings = build_edit_workflow(cfg, CHAR, instruction=text, negative=NEGATIVE, image_name=image,
