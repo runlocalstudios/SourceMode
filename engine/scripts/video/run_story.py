@@ -15,8 +15,11 @@ motion takes it). A segment that starts on the photo the previous one ended on
 continues it seamlessly; any other start is a hard cut, as a film edit.
 
 Resumable: a segment already on disk is kept, so deleting one file and
-re-queueing re-renders only that segment. Jeremy, 2026-10-29: "your goal is to
-output a video for me that is a masterpiece".
+re-queueing re-renders only that segment - which also means a new VERSION of a
+story needs a new `name` (cheer_joi_v2), or it inherits the old segments.
+Jeremy, 2026-10-29: "your goal is to output a video for me that is a masterpiece".
+`voice_pace` {exaggeration, cfg_weight} slows or lifts the voice for the whole
+script; a countdown is written one number per timed line so the gaps are real.
 
 Output: library/<character>/<date>_video_<name>/take_01.mp4, segments in _legs/.
 """
@@ -93,10 +96,14 @@ if voice_ref:
     vdir.mkdir(exist_ok=True)
     (vdir / "lines.json").write_text(json.dumps([t for _s, t in beats], ensure_ascii=False), encoding="utf-8")
     uv = shutil.which("uv") or "uv"
+    # Jeremy, 2026-10-29: "the talk track is a little rushed at times, the cum
+    # countdown is horribly rushed" - a story may set its own pace: Chatterbox's
+    # cfg_weight lower than the 0.4 default speaks slower and more deliberately
+    pace = story.get("voice_pace") or {}
     cmd = [uv, "run", "--isolated", "--with", "chatterbox-tts", "--with", "setuptools<81", "--with", "soundfile",
            "python", str(ENGINE_ROOT / "scripts" / "voice" / "say_script.py"), str(voice_ref), str(vdir),
-           str(vdir / "lines.json")]
-    log(f"  voicing {len(beats)} lines")
+           str(vdir / "lines.json"), str(pace.get("exaggeration", 0.5)), str(pace.get("cfg_weight", 0.4))]
+    log(f"  voicing {len(beats)} lines (exaggeration {pace.get('exaggeration', 0.5)}, cfg_weight {pace.get('cfg_weight', 0.4)})")
     r = subprocess.run(cmd, cwd=str(ENGINE_ROOT), capture_output=True, text=True)
     if r.returncode:
         raise SystemExit(f"the voice track failed: {(r.stderr or r.stdout)[-600:]}")
