@@ -190,8 +190,12 @@ _HEM_DETAIL = re.compile(r"\b(?:flared|flare-leg|bootcut|boot-cut|ankle-length|c
 
 #: Jeremy, 2026-10-25, on eve: a bare "her hair in a braid" rendered one side
 #: braided and the other loose. The single braid is named as one, over one shoulder.
-_BARE_BRAID = re.compile(r"\bher hair in a braid\b(?! over)", re.I)
-SINGLE_BRAID = "her hair in a single long braid over one shoulder"
+#: Jeremy, 2026-10-31, on dianna's selfies: "a single long braid over one
+#: shoulder" still came back braided on one side and down on the other, over
+#: and over, at selfie distance. Both sides are now named as going into it.
+_BARE_BRAID = re.compile(r"\bher hair in (?:a braid\b(?! over)|a single long braid over one shoulder\b)", re.I)
+SINGLE_BRAID = ("all of her hair, both sides, gathered into one single long braid "
+                "over one shoulder, no hair left loose")
 
 
 def one_braid(hair: str) -> str:

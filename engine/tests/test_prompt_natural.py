@@ -224,6 +224,7 @@ def test_a_bare_braid_is_rendered_as_one_long_braid_over_one_shoulder():
 
     assert one_braid("her hair in a braid") == SINGLE_BRAID
     assert one_braid("Her hair in a braid") == SINGLE_BRAID
+    assert one_braid("Her hair in a single long braid over one shoulder") == SINGLE_BRAID
     for kept in ("her hair in a braid over one shoulder", "her hair in twin braids",
                  "her hair in a long braid", SINGLE_BRAID):
         assert one_braid(kept) == kept
