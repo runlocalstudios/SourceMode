@@ -1,0 +1,54 @@
+{
+ "name": "cheer_joi_v3_test_pose",
+ "character": "nadia",
+ "summary": "v3 test 2 of 2, POSED: kneeling on the bed - a free leg talking, a leg landing back on the same key, then a small change of pose to kneel_hair. Checks that a held pose moves like a person and not a still, and her face over a free leg.",
+ "size": [
+  960,
+  1440
+ ],
+ "quality": "medium",
+ "seed": 31826,
+ "voice": false,
+ "voice_pace": {
+  "exaggeration": 0.5,
+  "cfg_weight": 0.3
+ },
+ "suffix": "one continuous shot, smooth natural motion, she moves slowly and gently, small smooth movements",
+ "negative": "fast motion, motion blur, camera cut, scene change, morphing, face change, different person",
+ "photos": {
+  "arms_crossed": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_003_2610292.png",
+  "ponytail": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/ponytail_room_empty.png",
+  "walk_laugh": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/walk_laugh_room_empty.png",
+  "look_back": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/look_back_room_empty.png",
+  "lean_bed": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/lean_bed_room_empty.png",
+  "seated": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/seated_room_empty.png",
+  "chin_hand": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/chin_hand_room_empty.png",
+  "relaxed": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/relaxed_room_empty.png",
+  "reverse": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/reverse_room_empty.png",
+  "kneel": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/kneel_room_empty.png",
+  "kneel_hair": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/kneel_hair_room_empty.png",
+  "kneel_side": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/kneel_side_room_empty.png"
+ },
+ "plate": "arms_crossed",
+ "fps": 16,
+ "chain": true,
+ "color_ramp": true,
+ "segments": [
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "kneeling on the bed, she talks to the viewer with a commanding smile, slowly tilting her head",
+   "start": "kneel"
+  },
+  {
+   "end": "kneel",
+   "seconds": 5.06,
+   "motion": "kneeling on the bed, she slowly runs her hands up her waist, over her chest and back down to her thighs, never looking away from the viewer"
+  },
+  {
+   "end": "kneel_hair",
+   "seconds": 5.06,
+   "motion": "kneeling on the bed, she slowly draws her ponytail forward over her shoulder with one hand, smiling at the viewer"
+  }
+ ]
+}

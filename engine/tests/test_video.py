@@ -266,3 +266,26 @@ def test_every_story_names_photos_it_has():
             assert s["start"] in st["photos"] and (not s.get("end") or s["end"] in st["photos"]), f
             assert 1 <= float(s["seconds"]) <= 5, f
         assert V.script_beats(st.get("script", "")), f
+
+
+def test_ramp_correct_removes_a_brightness_pulse_and_lands_on_the_end_key():
+    """cheer_joi_v2's legs brightened +5..+13 then snapped at the next photo."""
+    import cv2
+    import numpy as np
+
+    rng = np.random.default_rng(1)
+    base = rng.integers(60, 160, (32, 32, 3)).astype(np.float32)
+    start, end = base.astype(np.uint8), np.clip(base + 20, 0, 255).astype(np.uint8)
+    # a leg that drifts 30 levels brighter than the blend by its middle
+    frames = [np.clip(base + 20 * t + 30 * np.sin(np.pi * t), 0, 255).astype(np.uint8)
+              for t in np.linspace(0, 1, 9)]
+
+    def L(img):
+        return cv2.cvtColor(img.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)[:, :, 0].mean()
+
+    out = V.ramp_correct(frames, start, end)
+    want = [L(start) + (L(end) - L(start)) * t for t in np.linspace(0, 1, 9)]
+    assert max(abs(L(f) - w) for f, w in zip(out, want)) < 0.5
+    assert abs(L(out[-1]) - L(end)) < 0.5 and abs(L(out[0]) - L(start)) < 0.5
+    # the uncorrected leg really did pulse
+    assert max(abs(L(f) - w) for f, w in zip(frames, want)) > 5

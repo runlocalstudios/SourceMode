@@ -148,7 +148,9 @@ def edit3_workflow(instr: str, seed: int, image1: str, image2: str, image3: str)
     return prune_placeholder_loras(wf)
 
 
-photos = {k: Path(v) for k, v in story["photos"].items()}
+# once the keys are chosen the story's `photos` point at them, and his
+# originals move to `key_sources` - the keys are always made from his originals
+photos = {k: Path(v) for k, v in (story.get("key_sources") or story["photos"]).items()}
 plate_key = story["plate"]
 poses = story["key_poses"]
 problems = [f"photo {k} is not on disk: {p}" for k, p in photos.items() if not p.is_file()]
@@ -177,7 +179,9 @@ log(f"{CHAR}: keys for '{story['name']}' - plate {plate_key}, {len(keys)} keys x
 record = json.loads((d / "keys.json").read_text(encoding="utf-8")) if (d / "keys.json").is_file() else {}
 record.update(plate=plate_key)
 record.setdefault("keys", {})
-base = base_seed = int(story.get("seed") or 7100)
+# the keys' own seed: the story's video seed changes per take, and the keys
+# made at the old one must keep their recorded seeds
+base = base_seed = int(story.get("keys_seed") or story.get("seed") or 7100)
 if not DRY:
     client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
     plate_name = client.upload_image(photos[plate_key])
@@ -298,6 +302,9 @@ if not DRY:
             if vals:
                 means.append(f"{arm} {sum(vals) / len(vals):.3f} (n={len(vals)})")
         log(f"  face vs {Path(face_ref).name}: " + "; ".join(means))
+if DRY:   # a dry run lists what it would do and writes nothing
+    log("dry run - keys.json and sheet.jpg untouched")
+    raise SystemExit(0)
 (d / "keys.json").write_text(json.dumps(record, indent=1, ensure_ascii=False), encoding="utf-8")
 
 # the sheet he asked for: his photo beside every arm on disk, the plate on top

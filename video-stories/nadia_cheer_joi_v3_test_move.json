@@ -1,0 +1,54 @@
+{
+ "name": "cheer_joi_v3_test_move",
+ "character": "nadia",
+ "summary": "v3 test 1 of 2, MOVEMENT: she walks from the doorway side to the bed and turns (two legs landing on keys, the camera following), then a free leg lifting her skirt. Checks the room holding while the camera moves, the seams, the light and the speed.",
+ "size": [
+  960,
+  1440
+ ],
+ "quality": "medium",
+ "seed": 31826,
+ "voice": false,
+ "voice_pace": {
+  "exaggeration": 0.5,
+  "cfg_weight": 0.3
+ },
+ "suffix": "one continuous shot, smooth natural motion, she moves slowly and gently, small smooth movements",
+ "negative": "fast motion, motion blur, camera cut, scene change, morphing, face change, different person",
+ "photos": {
+  "arms_crossed": "C:/Epic Games/Files/cnc info/codex/output/2026-10-29_nadia_20_2/nadia_003_2610292.png",
+  "ponytail": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/ponytail_room_empty.png",
+  "walk_laugh": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/walk_laugh_room_empty.png",
+  "look_back": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/look_back_room_empty.png",
+  "lean_bed": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/lean_bed_room_empty.png",
+  "seated": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/seated_room_empty.png",
+  "chin_hand": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/chin_hand_room_empty.png",
+  "relaxed": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/relaxed_room_empty.png",
+  "reverse": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/reverse_room_empty.png",
+  "kneel": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/kneel_room_empty.png",
+  "kneel_hair": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/kneel_hair_room_empty.png",
+  "kneel_side": "C:/dev/SourceMode/library/nadia/2026-10-30_video_cheer-joi-v3-keys/kneel_side_room_empty.png"
+ },
+ "plate": "arms_crossed",
+ "fps": 16,
+ "chain": true,
+ "color_ramp": true,
+ "segments": [
+  {
+   "end": "walk_laugh",
+   "seconds": 5.06,
+   "motion": "she lets her hair go, turns to her side mid-step with a soft laugh, her arms relaxed, the camera slowly following her",
+   "start": "ponytail"
+  },
+  {
+   "end": "look_back",
+   "seconds": 5.06,
+   "motion": "laughing softly, she walks slowly to the bed, turns her back to the viewer, rests one hand on the bed and looks back over her shoulder, the camera slowly following her"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "looking back over her shoulder, she slowly lifts the back hem of her pleated skirt with one hand to show off her round bottom in white tights, holds it there, then lets the skirt fall"
+  }
+ ]
+}

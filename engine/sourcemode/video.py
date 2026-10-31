@@ -259,6 +259,71 @@ def color_match(frame: Path, reference: Path, dest: Path) -> None:
     cv2.imwrite(str(dest), np.clip(bgr * 255.0, 0, 255).astype(np.uint8))
 
 
+def _lab_stats(lab):
+    """Per-channel (mean, std) of a float LAB image, shape (3, 2)."""
+    import numpy as np  # noqa: PLC0415
+
+    return np.array([[lab[:, :, c].mean(), lab[:, :, c].std()] for c in range(3)])
+
+
+def ramp_correct(frames: list, start_ref, end_ref) -> list:
+    """Each BGR uint8 frame's LAB mean/std moved to a straight blend from
+    `start_ref`'s stats (frame 0) to `end_ref`'s (the last frame).
+
+    Measured on cheer_joi_v2 (2026-10-30): every FLF2V leg brightened by +5 to
+    +13 luminance across its length and then snapped back at the next photo -
+    the "weird flashes" Jeremy saw. The leg is anchored to real images at both
+    ends, so the blend between their stats is what the light should do; a
+    frame that strays from it is pulled back. A free leg passes its start as
+    both refs and holds the light level."""
+    import cv2  # noqa: PLC0415
+    import numpy as np  # noqa: PLC0415
+
+    def lab(img):
+        return cv2.cvtColor(img.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
+
+    a, b = _lab_stats(lab(start_ref)), _lab_stats(lab(end_ref))
+    n = len(frames)
+    out = []
+    for i, f in enumerate(frames):
+        t = i / (n - 1) if n > 1 else 0.0
+        target = a + (b - a) * t
+        fl = lab(f)
+        st = _lab_stats(fl)
+        for c in range(3):
+            fl[:, :, c] = (fl[:, :, c] - st[c, 0]) * (target[c, 1] / max(st[c, 1], 1e-6)) + target[c, 0]
+        bgr = cv2.cvtColor(fl, cv2.COLOR_LAB2BGR)
+        out.append(np.clip(bgr * 255.0 + 0.5, 0, 255).astype(np.uint8))
+    return out
+
+
+def color_ramp(video: Path, start_ref: Path, end_ref: Path, dest: Path, *, fps: int, ffmpeg: str,
+               run=subprocess.run) -> int:
+    """`ramp_correct` over every frame of `video`, re-encoded to `dest`.
+    Returns the frame count."""
+    import tempfile  # noqa: PLC0415
+
+    import cv2  # noqa: PLC0415
+
+    with tempfile.TemporaryDirectory() as td:
+        src, out = Path(td) / "in", Path(td) / "out"
+        src.mkdir(), out.mkdir()
+        run([ffmpeg, "-y", "-loglevel", "error", "-i", str(video), str(src / "f_%04d.png")],
+            check=True, capture_output=True, text=True)
+        names = sorted(src.glob("f_*.png"))
+        if not names:
+            raise RuntimeError(f"ffmpeg produced no frames from {video}")
+        frames = [cv2.imread(str(p)) for p in names]
+        h, w = frames[0].shape[:2]
+        refs = [cv2.resize(cv2.imread(str(r)), (w, h), interpolation=cv2.INTER_AREA) for r in (start_ref, end_ref)]
+        for p, f in zip(names, ramp_correct(frames, *refs)):
+            cv2.imwrite(str(out / p.name), f)
+        run([ffmpeg, "-y", "-loglevel", "error", "-framerate", str(fps), "-i", str(out / "f_%04d.png"),
+             "-c:v", "libx264", "-crf", "14", "-pix_fmt", "yuv420p", str(dest)],
+            check=True, capture_output=True, text=True)
+        return len(names)
+
+
 def stitch_args(legs: list[Path], dest: Path, fps: int, *, ffmpeg: str,
                 keep: list[int | None] | None = None) -> list[str]:
     """One ffmpeg pass: drop frame 0 of every leg after the first (it is the
