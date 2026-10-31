@@ -192,14 +192,23 @@ _HEM_DETAIL = re.compile(r"\b(?:flared|flare-leg|bootcut|boot-cut|ankle-length|c
 #: braided and the other loose. The single braid is named as one, over one shoulder.
 #: Jeremy, 2026-10-31, on dianna's selfies: "a single long braid over one
 #: shoulder" still came back braided on one side and down on the other, over
-#: and over, at selfie distance. Both sides are now named as going into it.
-_BARE_BRAID = re.compile(r"\bher hair in (?:a braid\b(?! over)|a single long braid over one shoulder\b)", re.I)
+#: and over, at selfie distance, and tracy's the same. Both sides are now named
+#: as going into it - for EVERY one-braid phrasing ("a long braid", "a long
+#: voluminous braid with a bow scrunchy", ...), keeping his words for the braid
+#: itself. Twin braids, box braids and taylor's mohawk braid are left alone.
+_BARE_BRAID = re.compile(r"\bher hair in a braid\b(?! over)", re.I)
 SINGLE_BRAID = ("all of her hair, both sides, gathered into one single long braid "
                 "over one shoulder, no hair left loose")
+_ONE_BRAID = re.compile(r"\bher hair in an? ((?:[\w-]+ ){0,5}?braid)\b(?!s|ed)(.*)$", re.I)
 
 
 def one_braid(hair: str) -> str:
-    return _BARE_BRAID.sub(SINGLE_BRAID, hair or "")
+    hair = _BARE_BRAID.sub(SINGLE_BRAID, hair or "")
+    m = _ONE_BRAID.search(hair)
+    if not m or "mohawk" in m.group(1).lower():
+        return hair
+    rest = m.group(2).rstrip()
+    return hair[:m.start()] + f"all of her hair, both sides, gathered into one {m.group(1)}{rest}, no hair left loose"
 
 
 def drop_hem_detail(outfit: str) -> str:
