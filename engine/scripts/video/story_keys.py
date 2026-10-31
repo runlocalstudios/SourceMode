@@ -67,6 +67,12 @@ from sourcemode.video import ffmpeg_exe, sharpest_tail_frame, video_output
 ALL_ARMS = ("text", "ref", "room", "room_empty", "text_lora", "face3", "video")
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 DRY = "--dry-run" in sys.argv
+# --reroll=N --keys=a,b: N more tries per key at fresh random seeds, written to
+# _tries/<key>_<arm>_s<seed>.png beside the kept still, which is not touched -
+# he picks by eye. Image arms only. Jeremy, 2026-10-30, on relaxed/room_empty
+# (face 0.17 where the rest held 0.44-0.68): "reroll relaxed to see if we can improve it."
+REROLL = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--reroll=")), 0))
+ONLY = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--keys=")), None)
 ARMS = tuple(next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--arms=")), ALL_ARMS))
 if not ARGS or any(a not in ALL_ARMS for a in ARMS):
     raise SystemExit(__doc__)
@@ -193,6 +199,48 @@ if not DRY:
             log(f"  empty plate: {time.monotonic() - t0:.0f}s -> {empty}")
         record["plate_empty"] = str(empty)
         empty_name = client.upload_image(empty)
+def render_still(k: str, arm: str, text: str, seed: int, out: Path) -> None:
+    """One image arm (every arm but video) for key k into out."""
+    if arm == "face3":
+        wf = edit3_workflow(text, seed, plate_name, client.upload_image(photos[k]), face_name)
+    else:
+        if arm in ("room", "room_empty"):
+            image, ref = client.upload_image(photos[k]), (plate_name if arm == "room" else empty_name)
+        else:
+            image, ref = plate_name, (client.upload_image(photos[k]) if arm == "ref" else None)
+        wf, _settings = build_edit_workflow(cfg, CHAR, instruction=text, negative=NEGATIVE, image_name=image,
+                                            image_lora=lora["path"] if arm == "text_lora" else "",
+                                            seed=seed, render_pass=story.get("quality", "medium"),
+                                            filename_prefix=f"sourcemode/{CHAR}_keys", ref_image_name=ref)
+    files = client.outputs(client.wait(client.submit(wf), timeout_s=3600))
+    if not files:
+        raise SystemExit(f"{k}/{arm}: ComfyUI returned no image")
+    client.fetch(files[0], out)
+
+
+if REROLL:
+    if "video" in ARMS or not ONLY or any(k not in keys for k in ONLY):
+        raise SystemExit("--reroll needs --keys= from this story and image arms only")
+    import random  # noqa: PLC0415
+    tries = d / "_tries"
+    tries.mkdir(exist_ok=True)
+    ref_emb = embed_image(Path(face_ref)) if (face_ref and not DRY) else None
+    for k in ONLY:
+        for arm in ARMS:
+            for t in range(REROLL):
+                seed = random.randrange(1, 2**31)
+                out = tries / f"{k}_{arm}_s{seed}.png"
+                if DRY:
+                    log(f"  reroll {k}/{arm} try {t + 1}: seed {seed}")
+                    continue
+                t0 = time.monotonic()
+                render_still(k, arm, instruction(arm, poses[k]), seed, out)
+                e = embed_image(out) if ref_emb is not None else None
+                face = round(cosine(ref_emb, e), 3) if e is not None else None
+                log(f"  reroll {k}/{arm} try {t + 1}/{REROLL} seed {seed}: face {face} ({time.monotonic() - t0:.0f}s)")
+    log(f"KEYSDONE reroll {ONLY} x {ARMS} x {REROLL} -> {tries}")
+    raise SystemExit(0)
+
 for i, k in enumerate(keys, 1):
     for arm in ALL_ARMS:
         if arm not in ARMS:
@@ -221,25 +269,8 @@ for i, k in enumerate(keys, 1):
                 client.fetch(vid, clip)
             dropped = sharpest_tail_frame(clip, out, ffmpeg=ff, n=TAIL)
             record["keys"][k][arm]["frames_before_end"] = dropped
-        elif arm == "face3":
-            wf = edit3_workflow(text, seed, plate_name, client.upload_image(photos[k]), face_name)
-            files = client.outputs(client.wait(client.submit(wf), timeout_s=3600))
-            if not files:
-                raise SystemExit(f"{k}/{arm}: ComfyUI returned no image")
-            client.fetch(files[0], out)
         else:
-            if arm in ("room", "room_empty"):
-                image, ref = client.upload_image(photos[k]), (plate_name if arm == "room" else empty_name)
-            else:
-                image, ref = plate_name, (client.upload_image(photos[k]) if arm == "ref" else None)
-            wf, _settings = build_edit_workflow(cfg, CHAR, instruction=text, negative=NEGATIVE, image_name=image,
-                                                image_lora=lora["path"] if arm == "text_lora" else "",
-                                                seed=seed, render_pass=story.get("quality", "medium"),
-                                                filename_prefix=f"sourcemode/{CHAR}_keys", ref_image_name=ref)
-            files = client.outputs(client.wait(client.submit(wf), timeout_s=3600))
-            if not files:
-                raise SystemExit(f"{k}/{arm}: ComfyUI returned no image")
-            client.fetch(files[0], out)
+            render_still(k, arm, text, seed, out)
         log(f"  {k}/{arm} ({i}/{len(keys)}): {time.monotonic() - t0:.0f}s")
 
 # her face, scored: his photo and every arm on disk against the reference
