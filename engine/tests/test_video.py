@@ -262,10 +262,17 @@ def test_every_story_names_photos_it_has():
     import glob
     for f in glob.glob(str(Path(__file__).resolve().parents[2] / "video-stories" / "*.json")):
         st = json.loads(Path(f).read_text(encoding="utf-8"))
-        for s in st["segments"]:
-            assert s["start"] in st["photos"] and (not s.get("end") or s["end"] in st["photos"]), f
-            assert 1 <= float(s["seconds"]) <= 5, f
-        assert V.script_beats(st.get("script", "")), f
+        for i, s in enumerate(st["segments"]):
+            # a chained leg after the first starts on the previous leg's last frame
+            if i == 0 or not st.get("chain"):
+                assert s["start"] in st["photos"], f
+            assert not s.get("end") or s["end"] in st["photos"], f
+            # 5.06 s at 16 fps is the model's 81 frames
+            assert 1 <= float(s["seconds"]) <= 5.1, f
+            if st.get("chain") and i:
+                assert s.get("end") or st["segments"][i - 1].get("end"), f"{f}: two free legs in a row at {i + 1}"
+        if st.get("voice"):
+            assert V.script_beats(st.get("script", "")), f
 
 
 def test_ramp_correct_removes_a_brightness_pulse_and_lands_on_the_end_key():
