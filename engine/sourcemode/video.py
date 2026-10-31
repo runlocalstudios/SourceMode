@@ -543,12 +543,21 @@ def keepers(judge_root: Path, character: str, *, limit: int = 120) -> list[dict]
     return uniq[:limit]
 
 
+def is_working_set(name: str) -> bool:
+    """A video set that is working material, not a video to watch: a story's
+    key stills (story_keys, whose Wan arm leaves 3 s clips) and its short test
+    renders. Jeremy, 2026-10-31: "We can keep the full 1 minute and 2 minute
+    videos in the gallery, but all the other short, like 3 second legs, I
+    don't want to see in there." The files stay on disk."""
+    return name.endswith("-keys") or "-test-" in name
+
+
 def clips(library: Path, character: str) -> list[dict]:
     """Her video sets, newest first, with every take that finished."""
     home = library / character
     out = []
     for d in sorted(home.glob("*_video_*"), reverse=True) if home.is_dir() else []:
-        if not d.is_dir():
+        if not d.is_dir() or is_working_set(d.name):
             continue
         spec = {}
         sp = d / "spec.json"

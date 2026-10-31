@@ -296,3 +296,16 @@ def test_ramp_correct_removes_a_brightness_pulse_and_lands_on_the_end_key():
     assert abs(L(out[-1]) - L(end)) < 0.5 and abs(L(out[0]) - L(start)) < 0.5
     # the uncorrected leg really did pulse
     assert max(abs(L(f) - w) for f, w in zip(frames, want)) > 5
+
+
+def test_key_stills_and_test_renders_stay_out_of_the_clip_list(tmp_path: Path):
+    home = tmp_path / "nadia"
+    for name in ("2026-10-30_video_cheer-joi-v3-keys", "2026-10-31_video_cheer-joi-v3-test-move",
+                 "2026-10-29_video_cheer-joi-v2"):
+        (home / name).mkdir(parents=True)
+    (home / "2026-10-30_video_cheer-joi-v3-keys" / "kneel_video.mp4").write_bytes(b"x")
+    (home / "2026-10-31_video_cheer-joi-v3-test-move" / "spec.json").write_text("{}", encoding="utf-8")
+    (home / "2026-10-31_video_cheer-joi-v3-test-move" / "take_01.mp4").write_bytes(b"x")
+    (home / "2026-10-29_video_cheer-joi-v2" / "spec.json").write_text("{}", encoding="utf-8")
+    (home / "2026-10-29_video_cheer-joi-v2" / "take_01.mp4").write_bytes(b"x")
+    assert [s["name"] for s in V.clips(tmp_path, "nadia")] == ["2026-10-29_video_cheer-joi-v2"]
