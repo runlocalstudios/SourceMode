@@ -1,0 +1,19 @@
+{
+ "_comment": [
+  "Her reference clip, chosen on the Characters tab. Chatterbox clones from it zero-shot; S2V and every voice job read it from here."
+ ],
+ "amanda": {
+  "reference": "C:\\dev\\SourceMode\\library\\amanda\\2026-10-14_voice_warm-playful\\take_03.wav",
+  "description": "A young woman with a warm, slightly breathy voice speaks at a relaxed, unhurried pace with a playful lilt. Her pitch is moderately high. The recording is of very high quality, with the speaker's voice sounding clear and very close up.",
+  "model": "parler-tts/parler-tts-mini-v1",
+  "seed": 1400,
+  "chosen_at": "2026-10-14T21:40:23+00:00"
+ },
+ "nadia": {
+  "reference": "C:\\dev\\SourceMode\\library\\nadia\\2026-10-27_voice_reference\\reference.wav",
+  "description": "her own recorded voice, from devassets/audioextract.m4a",
+  "model": "",
+  "seed": null,
+  "chosen_at": "2026-10-28T00:23:42+00:00"
+ }
+}

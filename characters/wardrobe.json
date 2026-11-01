@@ -18,39 +18,89 @@
  ],
  "ash": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. Waitress at Obsidian.",
-  "style": "edgy downtown party girl - denim, leather, cropped knits, sheer black tights, chunky boots",
+  "style": "edgy downtown party girl - denim, leather, cropped knits, sheer black tights, chunky boots; shapes: cropped tops over high-waisted denim shorts and micro skirts; cropped moto jackets; bare midriff is normal for her",
   "palette": "black and denim blue as the base, with one hot accent per look - cobalt, burnt orange, red",
-  "silhouettes": "cropped tops over high-waisted denim shorts and micro skirts; cropped moto jackets; bare midriff is normal for her",
-  "work": "Obsidian waitress: a short black shirt-dress uniform with white piping, black tights, black ankle boots",
-  "workout": "bright sports bra and leggings, the same loud-accent rule",
-  "avoid": "nothing prim or preppy - she is the opposite of wholesome"
+  "avoid": "nothing prim or preppy - she is the opposite of wholesome",
+  "outfits": {
+   "workout": "bright sports bra and leggings, exposed midriff",
+   "dressy": "glitzy glam, head turning style",
+   "night_out": "extremely tight, extremely flashy",
+   "date": "bright colors, short skirts, tight tops paired with a chic jacket or other pairing",
+   "home": "comfy but sexy",
+   "intimate": "patterns, silk, lace"
+  },
+  "jobs": [
+   {
+    "job": "Waitress at Obsidian night club",
+    "places": [],
+    "outfit": "Obsidian waitress: a short black shirt-dress uniform with white piping, black tights, black ankle boots"
+   }
+  ]
  },
  "cindy": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. Executive assistant at Meridian Commons; her systemPrompt says fashion is a serious passion and her wardrobe 'pushes office convention'.",
-  "style": "polished and expensive - elevated tailoring, silk, one piece of gold hardware per look",
+  "style": "polished and expensive - elevated tailoring, silk, one piece of gold hardware per look; shapes: blazers over a bodysuit or silk shirt; high-waisted dark denim; one-shoulder and asymmetric dresses; always nipped at the waist",
   "palette": "camel, cream, rust and black; warm neutrals against her platinum-blonde hair",
-  "silhouettes": "blazers over a bodysuit or silk shirt; high-waisted dark denim; one-shoulder and asymmetric dresses; always nipped at the waist",
-  "work": "executive assistant: a tailored blazer with a short pencil skirt or tapered trousers and a silk shirt - office convention pushed, not broken",
-  "workout": "matching seamless set, neutral tones, nothing branded or loud",
-  "avoid": "anything sloppy or unconsidered - she would not leave the house in it"
+  "avoid": "anything sloppy or unconsidered - she would not leave the house in it",
+  "outfits": {
+   "workout": "matching seamless set, neutral tones, nothing branded or loud"
+  },
+  "jobs": [
+   {
+    "job": "Executive assistant",
+    "places": [],
+    "outfit": "a tailored blazer with a short pencil skirt or tapered trousers and a silk shirt - office convention pushed, not broken"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "Her hair up in space buns",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails",
+   "her hair in a long centered twist braid with little bows at every other braid"
+  ]
  },
  "gabi": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. 20, Latina, 'confident heat and she knows exactly what she has'.",
-  "style": "young and body-conscious - simple pieces worn tight, club-ready after dark",
-  "palette": "black, white and red; occasional electric blue sequin",
-  "silhouettes": "cropped tee or bralette with high-waisted jeans, skater skirts, platform boots; short and fitted throughout",
-  "work": "club/stage wear: sequin and satin bralettes with high-waisted black trousers or micro skirts, platform boots",
-  "workout": "sports bra and bike shorts, bare midriff",
-  "avoid": "nothing fussy or layered - her look is one or two pieces, worn well"
+  "style": "young and showoffy - simple pieces worn tight, club-ready after dark; shapes: cropped tee or bralette with high-waisted jeans, skater skirts, platform boots; short and fitted throughout",
+  "palette": "black, white, light gray and red; occasional electric blue sequin",
+  "avoid": "nothing fussy or layered - her look is one or two pieces, worn well",
+  "outfits": {
+   "workout": "sports bra and bike shorts, bare midriff"
+  },
+  "jobs": [
+   {
+    "job": "Singer in a rock band",
+    "places": [],
+    "outfit": "club/stage wear: sequin and satin bralettes with high-waisted black trousers or micro skirts, platform boots"
+   }
+  ]
  },
  "jojo": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. Head bartender at Obsidian; 'certain she outranks you'.",
-  "style": "minimal and controlled - clean lines, no pattern, nothing that looks like it was tried too hard",
+  "style": "minimal and controlled - clean lines, no pattern, nothing that looks like it was tried too hard; shapes: ribbed tanks and bodycon knits; high-waisted denim shorts and short skirts; tailored waistcoats",
   "palette": "cream, bone, black and indigo denim. Almost no colour",
-  "silhouettes": "ribbed tanks and bodycon knits; high-waisted denim shorts and short skirts; tailored waistcoats",
-  "work": "Obsidian head bartender: a fitted black waistcoat over a white tee with tailored black trousers",
-  "workout": "black or bone set, minimal, no print",
-  "avoid": "busy prints and bright colour - they read as trying, which she never does"
+  "avoid": "busy prints and bright colour - they read as trying, which she never does",
+  "outfits": {
+   "workout": "black or bone set, minimal, no print"
+  },
+  "jobs": [
+   {
+    "job": "Head bartender at Obsidian night club",
+    "places": [],
+    "outfit": "a fitted black waistcoat over a sky blue tee with tailored white trousers"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair pulled back off her neck",
+   "her hair worn down with high, tight pigtails",
+   "her hair worn down and with wavy loose curls"
+  ]
  },
  "keiko": {
   "_note": "DRAFT 2026-10-04 from her shipped 12 (she has 12, not 28 - the pack is incomplete). 18, freshman, works two days at her mother's Lumen Salon.",
@@ -63,79 +113,1072 @@
  },
  "kimmy": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. TWO LIVES and they must stay visibly separate: Grace Community Church on Sunday mornings, The Chill Trap in the evenings.",
-  "style": "two distinct registers - wholesome daytime (gingham, peter-pan collars, fit-and-flare) and sleek night (velvet and black bodycon)",
+  "style": "two distinct registers - wholesome daytime (gingham, peter-pan collars, fit-and-flare) and sleek night (velvet and black bodycon); shapes: day: fit-and-flare skirts, collared bodices, covered shoulders. night: long-sleeve velvet and jersey minis, high necklines but tight",
   "palette": "daytime cream, navy gingham, soft blue; night pure black",
-  "silhouettes": "day: fit-and-flare skirts, collared bodices, covered shoulders. night: long-sleeve velvet and jersey minis, high necklines but tight",
-  "work": "The Chill Trap, evenings: black long-sleeve bodycon mini, covered but close-fitting",
-  "workout": "plain pastel set, modest cut",
-  "avoid": "do not blend the two registers into one - a church look with a club neckline misses the whole character"
+  "avoid": "do not blend the two registers into one - a church look with a club neckline misses the whole character",
+  "outfits": {
+   "workout": "plain pastel set, modest cut"
+  },
+  "jobs": [
+   {
+    "job": "Exotic dancer",
+    "places": [],
+    "outfit": "The Chill Trap, evenings: black long-sleeve bodycon mini, covered but close-fitting"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails",
+   "her hair in a low ponytail with a big bow",
+   "her hair in a long voluminous braid"
+  ]
  },
  "maya": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. Her turquoise hair underlayer shows against dark tops, which is why her palette runs dark.",
-  "style": "grown-up and earthy - suede, wool, relaxed tailoring, nothing juvenile",
-  "palette": "chocolate brown, rust, cream and black",
-  "silhouettes": "cropped jackets over a fitted cami; high-waisted wide trousers; one-shoulder ruched evening dresses",
-  "work": "relaxed professional: a cream wrap blouse with rust or brown high-waisted trousers",
-  "workout": "muted two-piece set, brown or black",
-  "avoid": "pastels and anything girlish - she reads mid-twenties and composed"
+  "style": "grown-up and earthy - suede, wool, relaxed tailoring, nothing juvenile; shapes: cropped jackets over a fitted cami; high-waisted wide trousers; one-shoulder ruched evening dresses",
+  "palette": "neutral tones, paired with vivid colors",
+  "avoid": "pastels and anything girlish - she reads mid-twenties and composed, olive, brown, tweed",
+  "outfits": {
+   "workout": "two piece sets with zip up track jackets"
+  },
+  "jobs": [
+   {
+    "job": "Painter and exhibit manager at the Vale Contemporary",
+    "places": [],
+    "outfit": "relaxed professional: a cream wrap blouse with high-waisted black or charcoal wide-leg trousers"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair worn loose and down paired with two high ponytails",
+   "Her hair in a long voluminous braid",
+   "Her hair in a low ponytail",
+   "her hair worn down with loose curls throughout"
+  ]
  },
  "priya": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. She wears her black-framed glasses in EVERY look - that belongs in her appearance clause, not the wardrobe.",
-  "style": "office-polished with a soft edge - knitwear, tailoring, clean necklines",
-  "palette": "black, charcoal, taupe and camel, with cobalt blue as the single evening accent",
-  "silhouettes": "blazers over a square-neck bodysuit; high-waisted trousers and dark jeans; off-the-shoulder bodycon for evening",
-  "work": "professional office: black blazer with tailored trousers over a fitted cream top",
-  "workout": "plain black or charcoal set",
-  "avoid": "nothing that fights the bob - no high collars swallowing her jawline"
+  "style": "office-polished with low-cut tops - tailoring, clean necklines; shapes: sleeveless blouses, bodysuits; chic trousers and attention grabbing skirts; off-the-shoulder dresses and snug bodysuits for evening",
+  "palette": "black, charcoal, taupe and camel, with a single colorful evening accent",
+  "avoid": "nothing that fights the bob - no high collars swallowing her jawline",
+  "outfits": {
+   "workout": "plain white or charcoal set"
+  },
+  "jobs": [
+   {
+    "job": "Data analyst",
+    "places": [],
+    "outfit": "Chic professional outfits that are a little too revealing"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "Her hair in short pigtails",
+   "her hair in a low short ponytail",
+   "her hair down in a chin-length bob but with high-tight-pigtails",
+   "her hair half-up held with a clip"
+  ]
  },
  "priyanka": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. Teaching assistant at Chill Coast University.",
-  "style": "campus-sweet and modest - cardigans, pleated skirts, small florals",
+  "style": "campus-sweet and sexy - vneck tops, pleated skirts, small florals; shapes: fitted crop tee with low-rise jeans; cardigan over a blouse with a pleated mini; floral sundresses; off-shoulder and chic glam for evening",
   "palette": "teal, soft pink, grey and cream",
-  "silhouettes": "fitted crop tee with high-waisted jeans; cardigan over a blouse with a pleated mini; floral sundresses; one-shoulder for evening",
-  "work": "university teaching assistant: a cardigan over a tie-neck blouse with a grey pleated skirt",
-  "workout": "simple set in soft colours",
-  "avoid": "nothing overtly sexy in casual or work - evening is where she turns it up"
+  "avoid": "Mildly sexy in casual or work - evening is where she turns it up",
+  "outfits": {
+   "workout": "simple set in soft colours"
+  },
+  "jobs": [
+   {
+    "job": "university teaching assistant",
+    "places": [],
+    "outfit": "Preppy outfits with a sexy flair"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair in pigtails",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails"
+  ]
  },
  "sandra": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. 38, single mother, volunteers at Grace Community Church. Her shipped wardrobe is noticeably more covered than anyone else's and that is on purpose.",
-  "style": "quiet, grown-up and covered - long sleeves on almost everything, nothing cut low or short",
+  "style": "quiet, grown-up and covered - long sleeves on almost everything, nothing cut low or short; shapes: long-sleeve knit midi dresses, boat necks, relaxed jumpers with straight jeans, wrap tops",
   "palette": "cream, forest green, navy and black - colours that sit well against copper hair",
-  "silhouettes": "long-sleeve knit midi dresses, boat necks, relaxed jumpers with straight jeans, wrap tops",
-  "work": "church volunteer: a modest long-sleeve dress or a jumper with straight-leg jeans",
-  "workout": "full-coverage leggings and a loose long-sleeve top",
-  "avoid": "crop tops, micro skirts, plunging necklines, bare midriff - none of it is her, in any category"
+  "avoid": "crop tops, micro skirts, plunging necklines, bare midriff - none of it is her, in any category",
+  "outfits": {
+   "workout": "full-coverage leggings and a loose long-sleeve top"
+  },
+  "jobs": [
+   {
+    "job": "Church volunteer at Grace Community Church",
+    "places": [],
+    "outfit": "a modest long-sleeve dress or a jumper with straight-leg jeans"
+   }
+  ]
  },
  "trina": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. Works at Vale Contemporary in the Hill district - a gallery, so her work look IS her fashion look.",
-  "style": "gallery glamour - sharp tailoring over something slinky, expensive and deliberate",
+  "style": "gallery glamour - sharp tailoring over something slinky, expensive and deliberate; shapes: blazers over strapless or ruched minis; silk shirts with wide trousers; ribbed knit dresses that follow the figure",
   "palette": "black, camel, cream and chocolate; no print anywhere",
-  "silhouettes": "blazers over strapless or ruched minis; silk shirts with wide trousers; ribbed knit dresses that follow the figure",
-  "work": "contemporary art gallery: a tailored blazer with a silk shirt and trousers, or over a black mini",
-  "workout": "matching set in black or camel, nothing branded",
-  "avoid": "print, pastel and anything casual enough to read as off-duty - she is never off-duty"
+  "avoid": "print, pastel and anything casual enough to read as off-duty - she is never off-duty",
+  "outfits": {
+   "workout": "matching set in black or camel, nothing branded"
+  },
+  "jobs": [
+   {
+    "job": "Gallery manager at Vale Contemporary art gallery",
+    "places": [],
+    "outfit": "A tailored blazer with a silk shirt and trousers, or over a black mini"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with loose wavy curls",
+   "Her hair in a single long voluminous braid",
+   "Her hair tucked back behind her ears with barrettes on both sides which match her outfit"
+  ]
  },
  "tess": {
   "_note": "Jeremy, 2026-10-04: the braids are part of the character and are named nowhere - the LoRA supplies them. What this list does is keep the word 'loose' out of her prompts, because the shared rotation opens with 'her hair worn loose' and that is the one thing a box-braided character must never be asked for.",
+  "style": "clean and simple, nothing that competes with the braids",
+  "palette": "cream, denim, olive and black",
+  "avoid": "revealing clothes",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Librarian",
+    "places": [],
+    "outfit": "Chic business casual"
+   }
+  ],
   "hair": [
    "her hair hanging down her back",
    "her hair gathered into a high ponytail",
    "her hair pulled over one shoulder",
    "her hair piled into a bun at the crown",
    "her hair half pinned back",
-   "her hair tied back off her face"
-  ],
-  "style": "clean and simple, nothing that competes with the braids",
-  "palette": "cream, denim, olive and black",
-  "avoid": "no hair clause that says 'loose' or 'down and flowing' - it fights what she actually has"
+   "her hair tied back off her face",
+   "her hair gathered into two high ponytails (one on each side of her head)"
+  ]
  },
  "cassie": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. Sells drink to bars and restaurants on evening calls; teaches yoga at Ironline Studio a few mornings a week.",
-  "style": "soft preppy - ribbed knits, cardigans, cord and denim, tailoring for work",
-  "palette": "oatmeal, pale blue, camel and black",
-  "silhouettes": "fitted knit tops with straight jeans or a cord mini; blazer over a satin cami; nothing severe",
-  "work": "drinks sales rep on evening calls: a black blazer and tailored trousers over a satin cami - presentable in a bar, not an office",
-  "workout": "yoga instructor, so this is real kit: a supportive crop and leggings she could actually teach a class in",
-  "avoid": "nothing clubby - her evenings are work, not a night out"
+  "style": "soft preppy",
+  "palette": "neutral colors, varied shades of blues and greens, and some black",
+  "avoid": "Clubby outfits",
+  "outfits": {
+   "workout": "yoga outfit"
+  },
+  "jobs": [
+   {
+    "job": "Liquor sales rep",
+    "places": [],
+    "outfit": "Chic tailored blazers over slightly revealing blouses"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails with matching bows and barrettes",
+   "her hair partially curled throughout in loose curls"
+  ]
+ },
+ "amanda": {
+  "style": "luxury chic",
+  "avoid": "denim, cargo shorts, cargo pants",
+  "outfits": {
+   "everyday": "chic and elegant",
+   "dressy": "showy and glamorous",
+   "night_out": "head-turning luxury chic",
+   "date": "slutty"
+  },
+  "jobs": [
+   {
+    "job": "Outcall escort",
+    "places": [],
+    "outfit": "lingerie and bondage gear"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "sienna": {
+  "style": "High end expensive but extremely revealing",
+  "palette": "Purple, sky blue, iridescent navy blue",
+  "outfits": {
+   "everyday": "Skirts, short shorts, tube tops and halters, rompers",
+   "dressy": "Elegant low cut dresses",
+   "night_out": "Attention grabbing trendy slutty chic",
+   "date": "Escort style outfits",
+   "home": "Cutoff cotton hoodies with short shorts, tied-off shirts, booty shorts",
+   "intimate": "Black satin"
+  },
+  "jobs": [
+   {
+    "job": "Exotic dancer",
+    "places": [],
+    "outfit": "Ravishing outfits accentuating her breasts and hourglass figure"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair worn down with high, tight pigtails",
+   "Her hair worn loose with wavy curls throughout",
+   "Her hair in twin braids"
+  ]
+ },
+ "aya": {
+  "style": "Trendy and revealing summer wear",
+  "palette": "Dark colors with vivid highlight accent colors",
+  "outfits": {
+   "everyday": "Can’t believe she’s wearing that in public!",
+   "date": "Flaunting her “assets”"
+  },
+  "jobs": [
+   {
+    "job": "Massage therapist",
+    "places": [],
+    "outfit": "Sexy silk robes and skirt+shirt combos that would arouse her make clients"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "Her hair in a long braid",
+   "her hair worn down with high, tight pigtails",
+   "Her hair in a long centered braid"
+  ]
+ },
+ "gigi": {
+  "style": "Sexy girl next door",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Bar waitress",
+    "places": [],
+    "outfit": "Flirty shorts and tight shirts"
+   },
+   {
+    "job": "Yoga instructor",
+    "places": [],
+    "outfit": "Yoga pants and sports bra"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair in twin braids",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "vera": {
+  "_note": "Created on the new-character form, 2026-10-15",
+  "style": "fashionable like fashion nova",
+  "palette": "vivid colors and dark grays and blacks",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "college student",
+    "places": [],
+    "outfit": "Very slutty outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "Her hair in pigtails",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "nisha": {
+  "style": "well dressed in modern trends",
+  "palette": "subdued tones",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "nurse",
+    "places": [],
+    "outfit": "slightly revealing nurse scrubs"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "Her hair in a low ponytail"
+  ]
+ },
+ "winnie": {
+  "style": "Revealing and playful",
+  "palette": "White with primary colors",
+  "outfits": {
+   "intimate": "Satin lingerie with garter sets, the colors vary"
+  },
+  "jobs": [
+   {
+    "job": "Cosplay influencer",
+    "places": [],
+    "outfit": "Very sexy cosplay outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair in pigtails",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "hannah": {
+  "style": "playful but revealing, with a very upscale vibe",
+  "palette": "pastels and vivid colors, as well as white or gray t-shirts with vivid graphics (never trademarked or real characters or groups on her shirts)",
+  "avoid": "denim",
+  "outfits": {
+   "dressy": "skirt and blouse combo, or trendy flowy slacks with a stunning top",
+   "night_out": "skirt and cutoff halter top with choker, or a glamorous minidress"
+  },
+  "jobs": [
+   {
+    "job": "Owner of Gal Gaming",
+    "places": [],
+    "outfit": "unassuming colorful outfits that are a bit revealing and playful"
+   }
+  ]
+ },
+ "cici": {
+  "style": "Overdressed",
+  "palette": "Earth tones mixed with dark tones",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Cocktail server at a high end gentleman’s club",
+    "places": [],
+    "outfit": "Very sexy dresses, rompers and skirt & blouse combos"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "gwen": {
+  "style": "Well-dressed, understated",
+  "avoid": "Bright vivid colors",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Cashier at the grocery store",
+    "places": [],
+    "outfit": "Wearing a Copperleaf Grocery uniform: dark olive green (#50503F) apron over a warm cream (#E5D3B1) polo.  Small embroidered “COPPERLEAF” lettering in Optima Bold–style uppercase, slightly spaced, warm cream (#E5D3B1), with a leaf-green logo (#94A96E) above it."
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up"
+  ]
+ },
+ "kasia": {
+  "style": "Elegant and sexy",
+  "avoid": "Denim, cargo pants, cargo shorts, oversized tee worn as a dress",
+  "outfits": {
+   "everyday": "Chic professional looks",
+   "workout": "Tracksuits",
+   "dressy": "Midriff tops and short skirts, short dresses",
+   "night_out": "Sexy tomboy",
+   "date": "Revealing outfits",
+   "home": "Silk and satin"
+  },
+  "jobs": [
+   {
+    "job": "Nurse at the hospital",
+    "places": [],
+    "outfit": "Nurse scrubs"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up"
+  ]
+ },
+ "sarah": {
+  "style": "e-girl",
+  "palette": "dark tones mixed with neutral tones",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Cashier at the record store",
+    "places": [],
+    "outfit": "trendy, sexy alternative e-girl outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair straightened",
+   "her hair in pigtails"
+  ]
+ },
+ "aura": {
+  "style": "trendy and overdressed",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Owner of Le Chic boutique",
+    "places": [],
+    "outfit": "Unique, luxury boutique outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair in a low ponytail",
+   "her hair straightened",
+   "her hair in a tight bun"
+  ]
+ },
+ "bianca": {
+  "avoid": "cargo pants, cargo shorts, oversized clothes",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Cashier at Threads clothing store",
+    "places": [],
+    "outfit": "chic trendy upscale outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "bri": {
+  "style": "college girl who loves to show off",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "webcam model",
+    "places": [],
+    "outfit": "slutty outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair worn down with high, tight pigtails",
+   "Her hair worn up in space buns",
+   "Her hair in a long voluminous braid"
+  ]
+ },
+ "daisy": {
+  "style": "overdressed but revealing",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Server and escort at the Founder's luxury club",
+    "places": [],
+    "outfit": "skimpy but luxury outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair in pigtails",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "maddie": {
+  "style": "revealing",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Cashier at Gal Gaming",
+    "places": [],
+    "outfit": "Cutesy casual outfits with either a kawaii theme, gaming theme or anime theme"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "Her hair worn in space buns",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "dianna": {
+  "_note": "Created on the new-character form, 2026-10-21",
+  "style": "Revealing",
+  "palette": "navy blue, forest green, salmon, beige",
+  "avoid": "jeans, cargo pants, cargo shorts, denim",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Nurse at Chill General",
+    "places": [],
+    "outfit": "Revealing low-cut nursing scrubs revealing cleavage, very short matching nursing scrub shorts"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails",
+   "Her hair worn down in loose wavy curls",
+   "Her hair in a single long braid over one shoulder"
+  ]
+ },
+ "taylor": {
+  "_note": "Created on the new-character form, 2026-10-21",
+  "style": "baddie",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "social media influencer",
+    "places": [],
+    "outfit": "baddie outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair in a thick voluminous mohawk-styled braid, braided down the center of her head and extended down her back",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "casey": {
+  "style": "Conservative",
+  "palette": "Neutral and pastel colors",
+  "outfits": {
+   "workout": "Long pants and track jackets",
+   "dressy": "Dresses with a blazer or shawl covering her shoulders and arms"
+  },
+  "jobs": [
+   {
+    "job": "Barista at a cheap coffee shop",
+    "places": [],
+    "outfit": "Casual outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn in a low ponytail"
+  ]
+ },
+ "cat": {
+  "style": "Classy and luxurious, nouveau riche",
+  "outfits": {
+   "dressy": "Dresses with elaborate addons like a short fur coat or vest, a huge bow in her hair, high shoulder pads - only one accent per outfit",
+   "night_out": "Rich baddie",
+   "date": "Luxury comfort, but very sexy"
+  },
+  "jobs": [
+   {
+    "job": "Entrepreneur and owner of a nightclub and spa",
+    "places": [],
+    "outfit": "Extreme luxury, high class"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair in a long braid combined with thin ribbons",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair in a low ponytail",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "crystal": {
+  "style": "Shabby chic",
+  "palette": "dark tones, grays, blacks",
+  "avoid": "dresses",
+  "outfits": {
+   "dressy": "skirt and blouse combo with a chic half-blazer",
+   "night_out": "full-leg sleeveless bodysuits, elaborate trendy outfits",
+   "home": "oversized sweatshirt with short cotton shorts"
+  },
+  "jobs": [
+   {
+    "job": "Cashier at Threads clothing store",
+    "places": [],
+    "outfit": "Aspiring fashionista but on a shoestring budget"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair pinned back in a bun",
+   "her hair in twin braids",
+   "her hair worn down with loose curls throughout"
+  ]
+ },
+ "lena": {
+  "outfits": {
+   "everyday": "Girl next door, simple outfits, snug jeans and comfy tops",
+   "dressy": "Tailored slacks with elegant blouses",
+   "night_out": "Inexpensive but nice dresses",
+   "date": "Form-fitting Cotton dresses, summer dresses with floral patterns, skirts with midriff tops"
+  },
+  "jobs": [
+   {
+    "job": "Cashier at Copperleaf grocery store",
+    "places": [],
+    "outfit": "Wearing a Copperleaf Grocery uniform: dark olive green (#50503F) apron over a warm cream (#E5D3B1) polo.  Small embroidered “COPPERLEAF” lettering in Optima Bold–style uppercase, slightly spaced, warm cream (#E5D3B1), with a leaf-green logo (#94A96E) above it."
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair in a long voluminous braid with a bow scrunchy",
+   "her hair up in a messy bun",
+   "her hair pinned half-up with a large clip",
+   "her hair worn down with high, tight pigtails"
+  ]
+ },
+ "lizzie": {
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Baker",
+    "places": [],
+    "outfit": "Casual outfit with a baking apron"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair tucked behind her ears",
+   "her hair in a low ponytail",
+   "her hair half-up",
+   "Her hair slightly curled at the ends"
+  ]
+ },
+ "mei": {
+  "style": "trendy",
+  "palette": "vivid colors, colorful patterns",
+  "avoid": "denim, jeans, jean shorts, cargo pants, cargo shorts, denim jacket, jean jacket, denim skirt",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Property Manager at the Willow Apartments",
+    "places": [],
+    "outfit": "Fashionable skirt and blouse combos, professional dresses"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails",
+   "Her hair worn loose with wavy curls at the ends"
+  ]
+ },
+ "marisol": {
+  "style": "revealing, fashion nova style",
+  "palette": "Pastels, bright colors",
+  "avoid": "denim, denim skirt, jeans, jean shorts, cargo pants, cargo shorts",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Exotic Dancer at the Chill Trap",
+    "places": [],
+    "outfit": "Sexy Lingerie and garter sets paired with short satin robes, slutty dresses, alluring skirt and halter top combos"
+   },
+   {
+    "job": "Waitress at the Sandbar",
+    "places": [],
+    "outfit": "Slutty beach wear"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails",
+   "Her hair worn down with the ends slightly curled"
+  ]
+ },
+ "eden": {
+  "_note": "Created on the new-character form, 2026-10-23",
+  "style": "Slutty real estate agent",
+  "palette": "Vivid colors",
+  "avoid": "Denim, jeans, jean shorts, cargo pants, cargo shorts",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Luxury real estate agent",
+    "places": [],
+    "outfit": "Revealing, sexy sleeveless dress with colorful patterns with detached full-arm matching armsleeves that go from her wrist to above her elbow"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn loose with wavy and slightly curled ends wearing barrettes which match her outfit",
+   "her hair worn down with high, tight pigtails with bow scrunchies"
+  ]
+ },
+ "sunny": {
+  "style": "chic",
+  "palette": "primary colors, earthy tones, one key accent in each outfit",
+  "avoid": "slutty or revealing outfits",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "barista at Midtown Roasters",
+    "places": [],
+    "outfit": "Casual preppy outfits with a barista apron"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails",
+   "her hair in a low ponytail",
+   "her hair straightened"
+  ]
+ },
+ "elsa": {
+  "style": "relaxed, casual",
+  "palette": "blues, whites, grays",
+  "avoid": "revealing outfits",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Cashier at the Big Kahuna",
+    "places": [],
+    "outfit": "Big Kahuna Burger uniform: short black skirt with pockets holding a few pens with a Big Kahuna Burger vneck tshirt, the shirt shows the company logo, BIG KAHUNA in white capital letters with a dark ocean blue slightly shaded border with the word BURGER in the next line below centered in a yellow-orange bright font accompanied by an orange colorful cartoon tiki mask mascot"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair in a low ponytail",
+   "her hair in a long braid"
+  ]
+ },
+ "iris": {
+  "style": "preppy, casual",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Cashier at Big Kahuna Burger",
+    "places": [
+     "fastFood"
+    ],
+    "outfit": "Big Kahuna Burger uniform: short black skirt with pockets holding a few pens with a Big Kahuna Burger vneck tshirt, the shirt shows the company logo, BIG KAHUNA in white capital letters with a dark ocean blue slightly shaded border with the word BURGER in the next line below centered in a yellow-orange bright font accompanied by an orange colorful cartoon tiki mask mascot"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails",
+   "her hair styled with wavy curls"
+  ]
+ },
+ "zara": {
+  "style": "sexy girl next door",
+  "palette": "primary colors, white & gray accents",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "exotic dancer at the Chill Trap",
+    "places": [],
+    "outfit": "sexy stripper outfits which play on asian and cosplay themes"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair pulled up into space buns",
+   "her hair worn down with high, tight pigtails",
+   "her hair straightened",
+   "her hair in a low ponytail"
+  ]
+ },
+ "vivienne": {
+  "style": "chic luxury",
+  "palette": "vivid colors, primary colors, grays",
+  "avoid": "denim, jeans",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "exotic dancer at the Chill Trap",
+    "places": [],
+    "outfit": "revealing trendy outfits with chokers"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair worn down with high, tight pigtails",
+   "her hair pulled up neatly into two space buns",
+   "her hair worn down with wavy curls througout"
+  ]
+ },
+ "eve": {
+  "style": "overdressed, professional, chic",
+  "palette": "primary colors, pastels, neutral tones",
+  "avoid": "denim, leather, jeans, jean shorts",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Real Estate Agent at Meridian Residences",
+    "places": [],
+    "outfit": "Classy professional outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair in a low ponytail",
+   "her hair in twin braids",
+   "her hair styled with wavy loose curls"
+  ]
+ },
+ "geena": {
+  "style": "revealing, glamorous",
+  "palette": "vivid colors with earthy tone accents",
+  "avoid": "anything plain",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "exotic dancer at the Chill Trap",
+    "places": [],
+    "outfit": "revealing dresses"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair in a long braid",
+   "her hair worn down with high, tight pigtails",
+   "her hair worn down with wavy loose curls"
+  ]
+ },
+ "jaina": {
+  "style": "chic and sexy",
+  "palette": "jewel tones, showy accents",
+  "avoid": "plain clothes",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Server at Bella Notte",
+    "places": [],
+    "outfit": "Chic server outfits, a little revealing"
+   },
+   {
+    "job": "Owner of Jaina's Jewelry stall at the Union Market Hall",
+    "places": [],
+    "outfit": "Casual clothes"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair in a single long braid over one shoulder",
+   "her hair worn down with high, tight pigtails",
+   "her hair worn wavy"
+  ]
+ },
+ "jordan": {
+  "style": "chic, comfortable",
+  "palette": "neutral tones, dark tones",
+  "avoid": "she prefers simplicity - she never wears anything overly complex",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Personal Trainer at Ironline Gym",
+    "places": [],
+    "outfit": "Trendy workout outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair wavy with loose curls throughout",
+   "her hair in a low ponytail"
+  ]
+ },
+ "gloria": {
+  "style": "chic, very french",
+  "avoid": "denim, jeans, jean shorts, cargo pants, cargo shorts",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Server at La Maison",
+    "places": [],
+    "outfit": "Chic professional serving outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair straightened",
+   "her hair in a low ponytail",
+   "her hair in a long single braid over one shoulder"
+  ]
+ },
+ "raven": {
+  "style": "Sexy alt-goth outfits",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Store associate at After Dark adult shop",
+    "places": [],
+    "outfit": ""
+   }
+  ]
+ },
+ "rivera": {
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Police officer at CCPD Precinct",
+    "places": [],
+    "outfit": ""
+   }
+  ]
+ },
+ "linda": {
+  "_note": "Created on the new-character form, 2026-10-27",
+  "style": "chic and flirty but not too revealing",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Bar server at Founders",
+    "places": [],
+    "outfit": "chic flirty outfits"
+   }
+  ],
+  "hair": [
+   "her short hair neatly styled",
+   "her short hair tousled and messy",
+   "her short hair neatly styled wearing an alice band"
+  ]
+ },
+ "nadia": {
+  "_note": "Created on the new-character form, 2026-10-27",
+  "style": "Luxury, revealing",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Escort",
+    "places": [],
+    "outfit": "luxurious and very revealing outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails",
+   "Her hair worn down with loose waves"
+  ]
+ },
+ "kiki": {
+  "style": "overdressed but very sexy",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Bar server and escort at Founders Club",
+    "places": [],
+    "outfit": "Sexy but impeccable outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair worn loose with an alice band",
+   "her hair parted in the center",
+   "her hair in a low short ponytail",
+   "her hair worn loose with barrettes on both sides matching her outfit"
+  ]
+ },
+ "val": {
+  "outfits": {},
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "Her hair in a low ponytail",
+   "Her hair fully up in space buns",
+   "Her hair tucked behind both ears with barrettes on both sides which match her outfit"
+  ]
+ },
+ "tracy": {
+  "style": "Trendy, revealing",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Real estate agent at Meridian Residential",
+    "places": [],
+    "outfit": "Professional outfits with shirts that show off her massive breasts"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair worn down with high, tight pigtails",
+   "her hair in a single long braid over one shoulder"
+  ]
  }
 }
