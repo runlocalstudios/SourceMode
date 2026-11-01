@@ -88,3 +88,15 @@ def test_the_kneeling_pair_looks_down_from_beside_her_and_differs_only_in_her_he
     assert {f: k1[f] for f in ("stance", "framing", "shot_type")} == {f: k2[f] for f in ("stance", "framing", "shot_type")}
     assert "tilted back" in k2["gaze"] and "tilted back" not in k1["gaze"]
     assert "mouth open" in k2["expression_natural"] and "closed-lip" in k1["expression_natural"]
+
+
+def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angle():
+    # Jeremy, 2026-11-01: "The bend over and spread poses are supposed to be
+    # with her back to the viewer"; bendingover2 sat back on her heels in 13 of
+    # 13 while its stance said "kneeling"
+    by = {p["tag"]: p for p in S.LINGERIE_PACK}
+    for t in ("bendingover", "bendingover2", "spreadwide", "standingspread"):
+        assert by[t]["facing"] == "her back to the camera", t
+    assert "level with the floor" in by["bendingover"]["stance"]
+    assert "kneel" not in by["bendingover2"]["stance"] and "hips raised high" in by["bendingover2"]["stance"]
+    assert "facing the camera" in by["showfeet"]["stance"]

@@ -549,6 +549,7 @@ CHAT_POSES = ("standing", "sitting", "kneeling", "crawling", "lyingdown", "lying
 # raised pointing finger in every set, and he: "Just get rid of that one."
 _FLOOR = ("floor",)
 _KNEEL_BESIDE = "kneeling on the floor right beside the camera, sitting back on her heels, hands resting on her thighs"
+_HEAD_TO_FEET = "her whole body in frame, from her head down to her feet"
 _KNEEL_FACING = "her body facing the camera"
 _DOWN_SHOT = "high-angle photo looking straight down"
 _LOOKING_DOWN = ("taken from a standing man's eye height right beside her, the camera pointing steeply down at "
@@ -578,10 +579,11 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING,
      "gaze": "her head tilted back a little, her face turned up toward the camera, looking up into the lens",
      "expression_natural": "her mouth open"},
-    {"tag": "spreadwide", "stance": "standing with her feet planted very wide apart, bent forward at the "
-                                    "waist, hands on her thighs, hips pushed back toward the camera",
-     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo from behind",
-     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
+    {"tag": "spreadwide", "stance": "standing with her legs straight and her feet planted very wide apart, "
+                                    "bent forward at the waist, her hands flat on the floor between her feet, "
+                                    "her hips pushed back toward the camera",
+     "needs": _FLOOR, "framing": _HEAD_TO_FEET, "shot_type": "full-length photo from behind",
+     "facing": "her back to the camera", "gaze": "looking back at the camera from between her legs"},
     # Jeremy, 2026-11-01, of the old spreadwide: "I actually really like [it].
     # But that would be more like show me your feet or something in terms of
     # the name." The game has no showfeet chat pose yet.
@@ -594,13 +596,21 @@ LINGERIE_PACK: tuple[dict, ...] = (
                                      "apart with her feet flat on the floor, nearest the camera",
      "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo from by her feet",
      "gaze": "looking down her body into the camera", "expression_natural": "lips parted"},
-    {"tag": "bendingover", "stance": "standing bent forward at the waist, hands on her knees, hips pushed "
-                                     "back toward the camera",
-     "needs": _FLOOR, "framing": _FULL, "shot_type": "photo from behind",
+    # Jeremy, 2026-11-01: "when they say X, the girl does X." The first take
+    # of each (13 sets) came back wrong: "bent forward at the waist, hands on
+    # her knees" stood her nearly upright cropped at the knees, and "kneeling
+    # ... chest down low and her hips raised high" sat her back on her heels
+    # in all 13 - "kneeling" wins over the rest of the sentence. So the torso
+    # angle is named outright and the knees-down pose never says kneeling.
+    {"tag": "bendingover", "stance": "standing with her legs straight and her feet together, bent forward at "
+                                     "the waist until her back is level with the floor, her hands on her "
+                                     "knees, her hips pushed back toward the camera",
+     "needs": _FLOOR, "framing": _HEAD_TO_FEET, "shot_type": "full-length photo from behind",
      "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
-    {"tag": "bendingover2", "stance": "kneeling on the floor with her chest down low and her hips raised "
-                                      "high, her ass and the crotch of her panties pointed straight at the "
-                                      "camera",
+    {"tag": "bendingover2", "stance": "down on her knees and forearms on the floor, her forearms flat on the "
+                                      "floor, her chest pressed down to the floor, her thighs straight up "
+                                      "and down, her hips raised high above her knees, her ass and the crotch "
+                                      "of her panties pointed straight at the camera",
      "needs": _FLOOR, "framing": _FULL, "shot_type": "photo from behind, low, level with the floor",
      "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
     {"tag": "crawling", "stance": "crawling toward the camera on all fours on the floor",
