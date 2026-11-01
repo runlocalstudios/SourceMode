@@ -550,6 +550,11 @@ CHAT_POSES = ("standing", "sitting", "kneeling", "crawling", "lyingdown", "lying
 _FLOOR = ("floor",)
 _KNEEL_BESIDE = "kneeling on the floor right beside the camera, sitting back on her heels, hands resting on her thighs"
 _HEAD_TO_FEET = "her whole body in frame, from her head down to her feet"
+# Jeremy, 2026-11-01: "it's important that the girl is looking directly at
+# the viewer. Diane's photos are like looking off into space" - "looking up
+# into the lens" rolled her eyes up past it in both.
+_KNEEL_EYES = ("her face turned up toward the camera, her eyes looking directly into the lens, "
+               "direct eye contact with the viewer")
 _KNEEL_FACING = "her body facing the camera"
 _DOWN_SHOT = "high-angle photo looking straight down"
 _LOOKING_DOWN = ("taken from a standing man's eye height right beside her, the camera pointing steeply down at "
@@ -583,11 +588,11 @@ LINGERIE_PACK: tuple[dict, ...] = (
     # little and her mouth open. The old pair was a full-length shot from
     # "slightly above", a photographer a few steps away.
     {"tag": "kneeling", "stance": _KNEEL_BESIDE, "needs": _FLOOR, "framing": _LOOKING_DOWN,
-     "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING, "gaze": "her face turned up toward the camera, looking up into the lens",
+     "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING, "gaze": _KNEEL_EYES,
      "expression_natural": "a soft, closed-lip expression"},
     {"tag": "kneeling2", "stance": _KNEEL_BESIDE, "needs": _FLOOR, "framing": _LOOKING_DOWN,
      "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING,
-     "gaze": "her head tilted back a little, her face turned up toward the camera, looking up into the lens",
+     "gaze": "her head tilted back a little, " + _KNEEL_EYES,
      "expression_natural": "her mouth open"},
     {"tag": "spreadwide", "stance": "standing with her legs straight and her feet planted very wide apart, "
                                     "bent forward at the waist, her hands flat on the floor between her feet, "

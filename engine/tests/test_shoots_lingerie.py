@@ -109,3 +109,10 @@ def test_sitting_cannot_be_read_as_kneeling():
     # and "Crystal's is the perfect example": side-saddle, bottom on the floor
     assert "kneel" not in sit["stance"]
     assert "side-saddle" in sit["stance"] and "bottom resting on the floor" in sit["stance"]
+
+
+def test_both_kneeling_poses_hold_eye_contact():
+    # Jeremy, 2026-11-01: "it's important that the girl is looking directly at the viewer"
+    for t in ("kneeling", "kneeling2"):
+        g = next(p for p in S.LINGERIE_PACK if p["tag"] == t)["gaze"]
+        assert "direct eye contact with the viewer" in g and "looking up into the lens" not in g
