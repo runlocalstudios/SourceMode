@@ -98,5 +98,6 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     for t in ("bendingover", "bendingover2", "spreadwide", "standingspread"):
         assert by[t]["facing"] == "her back to the camera", t
     assert "level with the floor" in by["bendingover"]["stance"]
+    assert "twice as wide as her shoulders" in by["standingspread"]["stance"] and "feet" in by["standingspread"]["framing"]
     assert "kneel" not in by["bendingover2"]["stance"] and "hips raised high" in by["bendingover2"]["stance"]
     assert "facing the camera" in by["showfeet"]["stance"]

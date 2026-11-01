@@ -560,8 +560,12 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "needs": _FLOOR, "framing": _KNEES, "gaze": _EYES},
     # Jeremy, 2026-11-01: "The bend over and spread poses are supposed to be
     # with her back to the viewer."
-    {"tag": "standingspread", "stance": "standing with her feet planted wide apart, hands on her hips",
-     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo from behind",
+    # and of the first takes (13 of 13 hands on hips, feet hip-width, most
+    # cropped at the thighs): "always just a girl standing up straight." The
+    # stance says how wide against her shoulders and the frame takes her feet.
+    {"tag": "standingspread", "stance": "standing with her legs spread wide apart, her feet twice as wide as "
+                                        "her shoulders, legs straight, hands on her hips",
+     "needs": _FLOOR, "framing": _HEAD_TO_FEET, "shot_type": "full-length photo from behind",
      "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
     {"tag": "sitting", "stance": "sitting on the floor with her knees together and bent to one side, "
                                  "leaning on one hand",
