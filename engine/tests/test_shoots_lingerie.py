@@ -76,3 +76,15 @@ def test_loose_hair_keeps_her_own_words_when_her_list_has_no_plain_loose(monkeyp
 def test_the_lingerie_poses_mix_into_any_scene_with_a_floor():
     assert S.combo_problem("bedroom-intimatewear-lingeriepack", "nadia") is None
     assert S.combo_problem("darkwall-intimatewear-lingeriepack", "nadia") is None
+
+
+def test_the_kneeling_pair_looks_down_from_beside_her_and_differs_only_in_her_head():
+    # Jeremy, 2026-11-01: standing right next to her as she kneels, looking
+    # down; the same pose again with her head tilted back and her mouth open
+    k1, k2 = (next(p for p in S.LINGERIE_PACK if p["tag"] == t) for t in ("kneeling", "kneeling2"))
+    for k in (k1, k2):
+        assert "beside" in k["stance"] and "steeply down" in k["framing"] and "standing" in k["framing"]
+        assert "whole kneeling figure" not in k["framing"]
+    assert {f: k1[f] for f in ("stance", "framing", "shot_type")} == {f: k2[f] for f in ("stance", "framing", "shot_type")}
+    assert "tilted back" in k2["gaze"] and "tilted back" not in k1["gaze"]
+    assert "mouth open" in k2["expression_natural"] and "closed-lip" in k1["expression_natural"]

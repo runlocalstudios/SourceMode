@@ -540,7 +540,7 @@ _KNEES = "framed from the knees up, the camera close to her"
 # the player's body in frame and are left out - Jeremy, 2026-10-29: "kill the
 # sitting on lap poses".
 CHAT_POSES = ("standing", "sitting", "kneeling", "crawling", "lyingdown", "lyingspread",
-              "standingspread", "spreadwide", "bendingover", "comehere", "smoochie", "after")
+              "standingspread", "spreadwide", "showfeet", "bendingover", "comehere", "smoochie", "after")
 # Jeremy, 2026-11-01: "They are cutout sets so should not be placed in a
 # bedroom." Every pose is on the bare studio floor with nothing to sit, lean or
 # lie on - whatever she touches would be cut out with her - so the bed, the
@@ -548,25 +548,45 @@ CHAT_POSES = ("standing", "sitting", "kneeling", "crawling", "lyingdown", "lying
 # "comehere" went the same day - "beckoning with one finger" rendered a
 # raised pointing finger in every set, and he: "Just get rid of that one."
 _FLOOR = ("floor",)
+_KNEEL_BESIDE = "kneeling on the floor right beside the camera, sitting back on her heels, hands resting on her thighs"
+_KNEEL_FACING = "her body facing the camera"
+_DOWN_SHOT = "high-angle photo looking straight down"
+_LOOKING_DOWN = ("taken from a standing man's eye height right beside her, the camera pointing steeply down at "
+                 "her, her upturned face nearest the lens and her body foreshortened below it")
 LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "standing", "stance": "standing facing the camera, one hand on her hip, the other hand touching "
                                   "her bra strap",
      "needs": _FLOOR, "framing": _KNEES, "gaze": _EYES},
+    # Jeremy, 2026-11-01: "The bend over and spread poses are supposed to be
+    # with her back to the viewer."
     {"tag": "standingspread", "stance": "standing with her feet planted wide apart, hands on her hips",
-     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo from behind",
+     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
     {"tag": "sitting", "stance": "sitting on the floor with her knees together and bent to one side, "
                                  "leaning on one hand",
      "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
-    {"tag": "kneeling", "stance": "kneeling on the floor, sitting back on her heels, hands resting on her "
-                                  "thighs",
-     "needs": _FLOOR, "framing": _KNEEL, "shot_type": "full-length photo",
-     "gaze": "her face tilted up toward the camera, looking up into the lens"},
-    {"tag": "kneeling2", "stance": "kneeling on the floor, sitting back on her heels, wrists crossed behind "
-                                   "her back, chest forward",
-     "needs": _FLOOR, "framing": _KNEEL, "shot_type": "full-length photo",
-     "gaze": "looking up into the camera"},
-    {"tag": "spreadwide", "stance": "sitting on the floor leaning back on her hands, her knees up and spread "
-                                    "wide, facing the camera",
+    # Jeremy, 2026-11-01: "the viewer [is] standing right next to the girl while
+    # she is kneeling. It would be like if you were standing next to a girl
+    # kissing her, and then she kneeled down and you looked down." One pose
+    # just looking up; the second the exact same pose, her head tilted back a
+    # little and her mouth open. The old pair was a full-length shot from
+    # "slightly above", a photographer a few steps away.
+    {"tag": "kneeling", "stance": _KNEEL_BESIDE, "needs": _FLOOR, "framing": _LOOKING_DOWN,
+     "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING, "gaze": "her face turned up toward the camera, looking up into the lens",
+     "expression_natural": "a soft, closed-lip expression"},
+    {"tag": "kneeling2", "stance": _KNEEL_BESIDE, "needs": _FLOOR, "framing": _LOOKING_DOWN,
+     "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING,
+     "gaze": "her head tilted back a little, her face turned up toward the camera, looking up into the lens",
+     "expression_natural": "her mouth open"},
+    {"tag": "spreadwide", "stance": "standing with her feet planted very wide apart, bent forward at the "
+                                    "waist, hands on her thighs, hips pushed back toward the camera",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo from behind",
+     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
+    # Jeremy, 2026-11-01, of the old spreadwide: "I actually really like [it].
+    # But that would be more like show me your feet or something in terms of
+    # the name." The game has no showfeet chat pose yet.
+    {"tag": "showfeet", "stance": "sitting on the floor leaning back on her hands, her knees up and spread "
+                                  "wide, facing the camera",
      "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
     {"tag": "lyingdown", "stance": "lying on her side on the floor, propped on one elbow, legs together",
      "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
