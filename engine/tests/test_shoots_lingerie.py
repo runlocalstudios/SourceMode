@@ -116,3 +116,9 @@ def test_both_kneeling_poses_hold_eye_contact():
     for t in ("kneeling", "kneeling2"):
         g = next(p for p in S.LINGERIE_PACK if p["tag"] == t)["gaze"]
         assert "direct eye contact with the viewer" in g and "looking up into the lens" not in g
+
+
+def test_after_places_both_arms():
+    # Jeremy, 2026-11-01: "both missing a friggin' arm"
+    st = next(p for p in S.LINGERIE_PACK if p["tag"] == "after")["stance"]
+    assert "other arm" in st and "both arms in view" in st

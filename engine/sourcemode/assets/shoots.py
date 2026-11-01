@@ -638,7 +638,11 @@ LINGERIE_PACK: tuple[dict, ...] = (
                                   "puckered for a kiss",
      "needs": _FLOOR, "framing": "her face and shoulders filling the frame, close", "shot_type": "photo",
      "gaze": "her eyes closed", "expression_natural": "her lips puckered for a kiss"},
-    {"tag": "after", "stance": "lying on her back on the floor, one arm above her head, catching her breath",
+    # Jeremy, 2026-11-01: diane's and dianna's were "both missing a friggin'
+    # arm" - only the raised arm was named, so the other was simply not drawn.
+    {"tag": "after", "stance": "lying on her back on the floor, one arm bent above her head, her other arm "
+                               "resting on the floor along her side with her hand by her hip, both arms in "
+                               "view, catching her breath",
      "needs": _FLOOR, "framing": "her body from the thighs up in frame", "shot_type": "photo from above",
      "gaze": "looking up into the camera", "expression_natural": "a satisfied smile, eyes heavy"},
 )
