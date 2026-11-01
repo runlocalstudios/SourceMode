@@ -100,9 +100,12 @@ def _packs(char: str, outputs: Path | None, judge_root: Path | None) -> dict:
             looks = "draft"
     # cut and staged, not yet copied into the game by his approval
     awaiting = bool(staged and not staged.get("shipped"))
+    from ..assets import intimate as I  # noqa: PLC0415
     from ..assets.selfies import pack_state  # noqa: PLC0415
 
+    li = I.read_staged(outputs, char) if outputs else None
     return {"shipped": shipped, "shoots": shoots, "plan": plan, "awaiting": awaiting,
+            "lingerie_awaiting": bool(li and not li.get("shipped")),
             "looks": looks, "looks_at": looks_at, "selfies": pack_state(char)}
 
 
@@ -122,6 +125,8 @@ def todo(row: dict) -> list[str]:
         # eden had her plan and her 28 renders; it only ever meant the game
         # repo has no outfit files for her yet
         out.append("NOT IN GAME")
+    if row["packs"].get("lingerie_awaiting"):
+        out.append("APPROVE LINGERIE")
     # Jeremy, 2026-10-23: since the selfies wear her approved looks he could
     # not tell who still has no 28-look plan, and whose selfies predate it.
     p = row["packs"]
@@ -653,6 +658,60 @@ async function looksAct(b){
   }catch(err){ SM.toast(err.message); b.disabled=false; dirty(); }
 }
 
+/* The lingerie pack's cutouts. Jeremy, 2026-11-01: "We will need the approval
+   and pipeline to move the approved cutouts into the game." Every pose kept in
+   the judge queues the cutout; it lands here, every file ticked, and Approve
+   copies the ticked ones into the game's intimate folder. */
+async function loadLingerie(){
+  for(const el of document.querySelectorAll('[data-lingerie]')){
+    try{ drawLingerie(el, await SM.getJSON('/characters/'+encodeURIComponent(el.dataset.lingerie)+'/lingerie')); }
+    catch(e){ el.hidden=true; }
+  }
+}
+function liLabel(k,n){ return 'Approve &mdash; copy '+(k===n?n+' files':k+' of '+n+' files')+' into the game'; }
+function drawLingerie(el,st){
+  const s=st.staged, c=st.character;
+  el.hidden=!s||!!s.shipped;
+  if(el.hidden){ el.innerHTML=''; return; }
+  const files=Object.keys(s.files||{}), fl=s.flagged||{};
+  let h='<h5>Lingerie pack &mdash; ship to the game <span class=cov>'+(s.cutout?'cut out ':'staged ')+SM.esc(SM.ago(s.at))+' &middot; awaiting your approval</span></h5>';
+  h+='<div class=sub>'+s.poses.length+' poses from '+SM.esc((s.set||'').split(/[\\/]/).pop())
+    +' &middot; lingerie_01 is her '+SM.esc(s.base_from)+' pose'
+    +(Object.keys(fl).length?' &middot; '+Object.keys(fl).length+' flagged by the alpha report':'')
+    +'. Untick any to leave it out.</div>';
+  h+='<div class=row><button class="btn btn-primary" data-act=li_ship data-n="'+files.length+'">'+liLabel(files.length,files.length)+'</button>'
+    +'<button class="btn btn-ghost" data-act=li_discard>Discard this staging</button></div>';
+  h+='<div class=pairs>'+files.map(f=>'<label class="tile ltile on" data-file="'+SM.esc(f)+'"><input type=checkbox checked>'
+    +'<span class=who>'+SM.esc(f.replace(/\.webp$/,'').replace(c+'_lingerie_',''))+(fl[f]?' &middot; '+SM.esc(fl[f].join(', ')):'')+'</span>'
+    +'<img loading=lazy src="/characters/'+encodeURIComponent(c)+'/lingerie/look?file='+encodeURIComponent(f)+'" alt=""></label>').join('')+'</div>';
+  h+='<div class=sub>The game also needs <code>'+SM.esc(s.registration||'')+'</code> in characterAppearance.js.</div>';
+  el.innerHTML=h;
+}
+function liKeep(box){ return [...box.querySelectorAll('.ltile input:checked')].map(i=>i.closest('.ltile').dataset.file); }
+function liTick(inp){
+  const t=inp.closest('.ltile'), box=t.closest('[data-lingerie]');
+  t.classList.toggle('on',inp.checked);
+  const b=box.querySelector('[data-act=li_ship]');
+  b.innerHTML=liLabel(liKeep(box).length,+b.dataset.n);
+}
+async function lingerieAct(b){
+  const box=b.closest('[data-lingerie]'), c=box.dataset.lingerie, u='/characters/'+encodeURIComponent(c)+'/lingerie';
+  b.disabled=true;
+  try{
+    if(b.dataset.act==='li_ship'){
+      const keep=liKeep(box), all=+b.dataset.n;
+      if(!keep.length){ SM.toast('tick at least one, or discard the staging'); b.disabled=false; return; }
+      if(!confirm('Copy '+keep.length+' lingerie cutouts into the game for '+c+'? This writes into the game repo.')){ b.disabled=false; return; }
+      const r=await SM.postJSON(u+'/ship', keep.length===all?{}:{keep});
+      SM.toast(c+': '+r.files.length+' lingerie files copied into the game'+(r.overwrote?', '+r.overwrote+' overwritten':''));
+    } else if(b.dataset.act==='li_discard'){
+      if(!confirm('Discard this lingerie staging for '+c+'? The cutouts stay on disk; nothing in the game changes.')){ b.disabled=false; return; }
+      await SM.postJSON(u+'/discard',{});
+    }
+    drawLingerie(box, await SM.getJSON(u));
+  }catch(err){ SM.toast(err.message); b.disabled=false; }
+}
+
 function draw(){
   drawPicker();
   const open=recs.filter(r=>!r.confirmed).length;
@@ -666,17 +725,20 @@ function draw(){
       +(r.confirmed?'<span class=age>confirmed '+SM.esc(SM.ago(r.confirmed_at))+'</span>':'')+'</div>'
       /* Jeremy, 2026-10-21: "scrolling all the way to the bottom to do that makes
          no sense" - the staged pack, its sheets and its approval sit at the top */
-      +(one?'<div class="sec ship" data-ship hidden></div>':'')
+      +(one?'<div class="sec ship" data-ship hidden></div>'
+            +'<div class="sec ship" data-lingerie="'+SM.esc(r.character)+'" hidden></div>':'')
       +appearance(r)+(one?profile(r):'')
     +'</div>').join(''));
   for(const t of document.querySelectorAll('.lk textarea')) fit(t);
   baseline($('list'));
   loadLooks();
+  loadLingerie();
   loadVoice();
 }
 /* the whole text visible at once - no inner scrolling to read what she is */
 function fit(t){ t.style.height='auto'; t.style.height=(t.scrollHeight+2)+'px'; }
 document.addEventListener('change',e=>{
+  if(e.target.closest('.ltile')) return liTick(e.target);
   if(e.target.closest('.tile')) tileTick(e.target);
   else if(e.target.name&&e.target.name.startsWith('pf_')) pfTick(e.target);
 });
@@ -711,6 +773,7 @@ document.addEventListener('click',async e=>{
   if(b.dataset.act==='newchar'){ location.href='/character'; return; }
   if(b.dataset.act==='sweep'){ SM.nav('judge',b.dataset.set); return; }
   if(b.dataset.act.startsWith('lk_')) return looksAct(b);
+  if(b.dataset.act.startsWith('li_')) return lingerieAct(b);
   if(b.dataset.act.startsWith('vc_')) return voiceAct(b);
   const card=b.closest('.lk'); if(!card) return;
   const c=card.dataset.c, val=k=>card.querySelector('[data-k='+k+']').value;
@@ -856,6 +919,43 @@ def appearance_router(cfg: dict):
         from ..assets import looks as L  # noqa: PLC0415
 
         return {"discarded": L.discard_staging(cfg, _char(char))}
+
+    # --- the lingerie pack's cutouts -----------------------------------------
+    # Jeremy, 2026-11-01: "We will need the approval and pipeline to move the
+    # approved cutouts into the game." Same shape as pack/ship: tiles, ticks,
+    # one approval that copies into the game's intimate folder.
+    @r.get("/characters/{char}/lingerie")
+    def _lingerie(char: str) -> dict:
+        from ..assets import intimate as I  # noqa: PLC0415
+
+        return {"character": _char(char), "staged": I.read_staged(outputs_dir(cfg), _char(char))}
+
+    @r.get("/characters/{char}/lingerie/look")
+    def _lingerie_look(char: str, file: str):
+        from ..assets import intimate as I  # noqa: PLC0415
+
+        p = I.tile(outputs_dir(cfg), _char(char), file)
+        if p is None:
+            raise HTTPException(404)
+        return FileResponse(p, media_type="image/webp")
+
+    @r.post("/characters/{char}/lingerie/ship")
+    def _lingerie_ship(char: str, body: dict | None = Body(None)) -> dict:
+        """`{keep: [files]}` ships only the ticked files; no body ships them all."""
+        from ..assets import intimate as I  # noqa: PLC0415
+        from ..assets.looks import GAME_ROOT  # noqa: PLC0415
+
+        keep = (body or {}).get("keep")
+        try:
+            return I.ship(outputs_dir(cfg), _char(char), GAME_ROOT, None if keep is None else [str(x) for x in keep])
+        except ValueError as e:
+            raise HTTPException(409, str(e)) from e
+
+    @r.post("/characters/{char}/lingerie/discard")
+    def _lingerie_discard(char: str) -> dict:
+        from ..assets import intimate as I  # noqa: PLC0415
+
+        return {"discarded": I.discard(outputs_dir(cfg), _char(char))}
 
     # --- the profile portrait ------------------------------------------------
     @r.get("/characters/{char}/portrait")

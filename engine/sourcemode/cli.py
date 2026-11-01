@@ -314,35 +314,48 @@ def assets_lingerie(
     ship: bool = typer.Option(False, "--ship", help="Copy the staged files into the game repo. Your approval; nothing else writes there."),
     game_root: Path = typer.Option(None, "--game-root", help="The game repo (default: the one the Characters tab ships to)."),
 ):
-    """Stage her kept Lingerie-pack shots as the game's intimate art; --ship copies them in.
+    """Queue the cutout + staging of her kept Lingerie-pack shots; --ship copies the staging in.
 
-    Writes outputs/game-assets/<char>/intimate/: lingerie_01.webp (the base the wardrobe
-    button checks for) and <char>_lingerie_<pose>.webp per kept pose, which the chat
-    switches to on "kneel", "crawl", "spread your legs"... plus the characterAppearance.js
-    line the base file needs."""
+    Staging (a CPU-lane queue job - the matte loads a model) writes
+    outputs/game-assets/<char>/intimate/: lingerie_01.webp (the base the wardrobe
+    button checks for) and <char>_lingerie_<pose>.webp per kept pose, cut out, which
+    the chat switches to on "kneel", "crawl", "spread your legs"... plus the
+    characterAppearance.js line the base file needs. It queues itself once every pose
+    is kept; the Characters tab approves it."""
     from .assets import intimate as I  # noqa: PLC0415
     from .assets.looks import GAME_ROOT  # noqa: PLC0415
-    from .config import outputs_dir  # noqa: PLC0415
+    from .config import ENGINE_ROOT, outputs_dir  # noqa: PLC0415
+    from .gpu import queue as q  # noqa: PLC0415
 
     cfg = load_config()
     out = outputs_dir(cfg)
-    try:
-        rec = I.stage(cfg, out, character)
-    except ValueError as exc:
-        rprint(f"[red]{exc}[/red]")
-        raise typer.Exit(1) from exc
-    rprint(f"staged {len(rec['files'])} files for [cyan]{character}[/cyan] in {I.staging_dir(out, character)}")
-    rprint(f"  poses: {', '.join(rec['poses'])}; base from {rec['base_from']}")
-    rprint("  characterAppearance.js needs:\n" + rec["registration"])
+    c = character.lower()
     if ship:
+        st = I.read_staged(out, c)
+        if st:
+            rprint(f"staged {len(st['files'])} files for [cyan]{c}[/cyan]; poses: {', '.join(st['poses'])}")
+            rprint("  characterAppearance.js needs:\n" + st["registration"])
         try:
-            s = I.ship(out, character, game_root or GAME_ROOT)
+            s = I.ship(out, c, game_root or GAME_ROOT)
         except ValueError as exc:
             rprint(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
         rprint(f"shipped {len(s['files'])} files ({s['overwrote']} overwritten) -> {s['to']}")
-    else:
-        rprint("  not shipped: add --ship to copy them into the game")
+        return
+    if not I.keepers(cfg, c):
+        rprint(f"[red]no kept lingerie shots for {c} - render the Lingerie pack and judge it first[/red]")
+        raise typer.Exit(1)
+    qp = q.queue_path(out)
+    doc = q.load(qp)
+    if q.duplicate_of(doc, "process", f"{c}:lingerie"):
+        rprint(f"already queued for {c}")
+        return
+    job = q.add(doc, kind="process", label=f"{c}:lingerie", cwd=str(ENGINE_ROOT), lane="cpu",
+                cmd=[str(ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"),
+                     str(ENGINE_ROOT / "scripts" / "eval" / "process_lingerie.py"), c],
+                note="lingerie cutout + staging; approve on the Characters tab")
+    q.save(qp, doc)
+    rprint(f"queued {job['id']} - cutout + staging of {c}'s lingerie keepers; approve on the Characters tab")
 
 
 @assets_app.command("render")

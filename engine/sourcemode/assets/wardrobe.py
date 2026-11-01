@@ -87,6 +87,23 @@ def hair_options(character: str) -> tuple[str, ...]:
     return DEFAULT_HAIR
 
 
+LOOSE = "her hair worn loose"
+_LOOSE = re.compile(r"\b(?:loose|down)\b", re.I)
+
+
+def loose_hair(character: str) -> str:
+    """Her hair down, in her own words where she has them. Jeremy, 2026-11-01,
+    on the lingerie pack: "The hair should just be loose for all these photos
+    since I'll only have one set of these for each character." The plain line
+    when her list has it, else her first line that says loose or down (tess:
+    "her hair hanging down her back"), else her first line (linda's pixie cut
+    has no loose)."""
+    opts = hair_options(character)
+    if any(o.strip().lower() == LOOSE for o in opts):
+        return LOOSE
+    return next((o for o in opts if _LOOSE.search(o)), opts[0] if opts else LOOSE)
+
+
 def short_hair(character: str, clause: str, look: int) -> str:
     """The hair clause a short-haired character is actually asked for.
 

@@ -15,11 +15,14 @@ chillafterdark 2026-10-29):
   file under assets/characters by its stem, wherever it sits). They go in the
   same intimate folder.
 
-Two steps, like the wardrobe pack: `stage` writes the WebPs and a record
-under outputs/game-assets/<char>/intimate/ and never touches the game;
-`ship` copies the staged files into the game repo and is his call - the
-Characters-tab approval and `ship_portrait` were the only writers before it,
-and this one runs only from `sourcemode assets lingerie <char> --ship`.
+Two steps, like the wardrobe pack. Jeremy, 2026-11-01: "They are cutout sets
+... We will need the approval and pipeline to move the approved cutouts into
+the game." So: every pose kept in the judge -> ONE CPU-lane job
+(`scripts/eval/process_lingerie.py`) cuts the keepers out with the pack's
+matte and `stage`s them as RGBA WebPs with a record under
+outputs/game-assets/<char>/intimate/, never touching the game -> he approves
+on the Characters tab (or `sourcemode assets lingerie <char> --ship`), and
+`ship` copies the ticked files into the game repo.
 """
 
 from __future__ import annotations
@@ -32,7 +35,6 @@ from pathlib import Path
 SHOOT = "lingerie"
 OUTFIT = "lingerie"
 BASE_FILE = "lingerie_01.webp"
-QUALITY = 88          # the game's own convert-assets-webp.mjs setting
 
 
 def keepers(cfg: dict, character: str) -> list[dict]:
@@ -82,12 +84,34 @@ def registration(character: str) -> str:
             "{ minRelationship: 80, weight: 40 }),")
 
 
-def stage(cfg: dict, out_root: Path, character: str) -> dict:
-    """Write her keepers as the game's files under outputs - RGB WebP at the
-    render's own size, one per pose by its chat name, and the standing one
-    (else the first) again as the base file - with a record and the
-    registration line. Replaces an earlier staging; never touches the game."""
-    from PIL import Image  # noqa: PLC0415
+def process_due(judge_root: Path, out_root: Path, set_id: str) -> str | None:
+    """Why a lingerie set should be cut out and staged now - or None. Every
+    pose kept, and nothing staged since the last verdict changed: the pack's
+    rule (pack.process_due), for the lingerie shoot's judge set."""
+    from .judge import load_set, load_verdicts  # noqa: PLC0415
+
+    s = load_set(judge_root, set_id)
+    if not s or (s.get("meta") or {}).get("shoot") != SHOOT:
+        return None
+    v = load_verdicts(judge_root, set_id)
+    ids = [it["id"] for it in s["items"]]
+    if not ids or any(v.get(i) != "keep" for i in ids):
+        return None
+    st = read_staged(out_root, s["meta"]["character"])
+    vp = judge_root / "verdicts" / f"{set_id}.json"
+    if st and st.get("verdicts_mtime") and vp.is_file() and st["verdicts_mtime"] >= vp.stat().st_mtime - 1:
+        return None
+    return f"all {len(ids)} poses kept"
+
+
+def stage(cfg: dict, out_root: Path, character: str, *, remover=None, log=print) -> dict:
+    """Cut her keepers out - the pack's hybrid matte on the game canvas - and
+    write them as the game's files under outputs: an RGBA WebP per pose by its
+    chat name, and the standing one (else the first) again as the base file,
+    with a record and the registration line. Replaces an earlier staging;
+    never touches the game. Loads the matte model: run it from the queue."""
+    from .cutout import cutout_batch, hybrid_remover  # noqa: PLC0415
+    from .judge import judge_root  # noqa: PLC0415
 
     c = character.lower()
     kept = keepers(cfg, c)
@@ -97,25 +121,63 @@ def stage(cfg: dict, out_root: Path, character: str) -> dict:
     if d.is_dir():
         shutil.rmtree(d)
     d.mkdir(parents=True)
+    size = tuple((cfg.get("assets") or {}).get("game_size", (1024, 1536)))
+    cuts = cutout_batch([k["path"] for k in kept], d / "_cutouts", remover=remover or hybrid_remover(),
+                        model="hybrid", size=size, webp=True, log=log)
     files: dict[str, str] = {}
+    flagged: dict[str, list] = {}
 
-    def put(name: str, src: Path) -> None:
-        im = Image.open(src).convert("RGB")
-        tmp = d / (name + ".tmp")
-        im.save(tmp, "WEBP", quality=QUALITY)
-        tmp.replace(d / name)
-        files[name] = str(src)
+    def put(name: str, k: dict, cut: dict) -> None:
+        shutil.copy2(cut["outputs"]["webp"], d / name)
+        files[name] = str(k["path"])
+        if cut["report"]["flags"]:
+            flagged[name] = cut["report"]["flags"]
 
-    for k in kept:
-        put(chat_name(c, k["tag"]), k["path"])
-    base = next((k for k in kept if k["tag"] == "standing"), kept[0])
-    put(BASE_FILE, base["path"])
+    for k, cut in zip(kept, cuts):
+        put(chat_name(c, k["tag"]), k, cut)
+    bi = next((i for i, k in enumerate(kept) if k["tag"] == "standing"), 0)
+    put(BASE_FILE, kept[bi], cuts[bi])
     (d / "registration.js").write_text(registration(c) + "\n", encoding="utf-8")
+    vp = judge_root(cfg) / "verdicts" / f"shoot_{c}_{SHOOT}.json"
     rec = {"at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime()), "character": c,
-           "set": str(kept[0]["path"].parent), "files": files, "base_from": base["tag"],
-           "poses": [k["tag"] for k in kept], "registration": registration(c)}
+           "set": str(kept[0]["path"].parent), "files": files, "base_from": kept[bi]["tag"],
+           "poses": [k["tag"] for k in kept], "flagged": flagged, "cutout": True,
+           "verdicts_mtime": vp.stat().st_mtime if vp.is_file() else None,
+           "registration": registration(c)}
     record_path(out_root, c).write_text(json.dumps(rec, indent=1), encoding="utf-8")
     return rec
+
+
+def tile(out_root: Path, character: str, name: str, width: int = 360) -> Path | None:
+    """A small RGBA WebP of one staged file for the Characters tab, cached
+    beside the staging (never in the game)."""
+    from PIL import Image  # noqa: PLC0415
+
+    st = read_staged(out_root, character)
+    if not st or name not in (st.get("files") or {}):
+        return None
+    src = staging_dir(out_root, character) / name
+    if not src.is_file():
+        return None
+    cache = staging_dir(out_root, character) / "_thumbs" / f"{src.stem}_{width}.webp"
+    if cache.is_file() and cache.stat().st_mtime >= src.stat().st_mtime:
+        return cache
+    im = Image.open(src).convert("RGBA")
+    im.thumbnail((width, width * 2))
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    tmp = cache.with_suffix(".tmp")
+    im.save(tmp, "WEBP", quality=80)
+    tmp.replace(cache)
+    return cache
+
+
+def discard(out_root: Path, character: str) -> bool:
+    """Drop the staging record; the files stay on disk, nothing in the game changes."""
+    p = record_path(out_root, character)
+    if not p.is_file():
+        return False
+    p.unlink()
+    return True
 
 
 def ship(out_root: Path, character: str, game_root: Path, keep: list[str] | None = None) -> dict:

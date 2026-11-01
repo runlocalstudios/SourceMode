@@ -1971,18 +1971,27 @@ def queue_process_if_ready(cfg: dict, set_id: str) -> dict | None:
     from ..config import ENGINE_ROOT, outputs_dir  # noqa: PLC0415
     from ..gpu import queue as q  # noqa: PLC0415
 
+    from ..assets import intimate as I  # noqa: PLC0415
+
     out = outputs_dir(cfg)
     why = P.process_due(judge_root(cfg), out, set_id)
+    # the lingerie pack is cut out the same way since 2026-11-01, by its own script
+    lingerie = not why and I.process_due(judge_root(cfg), out, set_id)
+    why = why or lingerie
     if not why:
         return None
     c = (load_set(judge_root(cfg), set_id) or {}).get("meta", {}).get("character")
     if not c:
         return None
+    label = f"{c}:lingerie" if lingerie else c
     qp = q.queue_path(out)
     doc = q.load(qp)
-    if q.duplicate_of(doc, "process", c):
+    if q.duplicate_of(doc, "process", label):
         return None
-    job = q.add(doc, kind="process", label=c, cmd=process_command(cfg, c, set_id), cwd=str(ENGINE_ROOT),
+    cmd = ([str(ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"),
+            str(ENGINE_ROOT / "scripts" / "eval" / "process_lingerie.py"), c]
+           if lingerie else process_command(cfg, c, set_id))
+    job = q.add(doc, kind="process", label=label, cmd=cmd, cwd=str(ENGINE_ROOT),
                 lane="cpu", note=f"cutout + staging of {set_id}: {why}; approve on the Characters tab")
     q.save(qp, doc)
     return job

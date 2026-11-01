@@ -23,6 +23,9 @@ def _world(tmp_path, monkeypatch, keep=("standing", "kneeling", "crawling")):
     (judge / "verdicts" / "shoot_nadia_lingerie.json").write_text(json.dumps(verdicts), encoding="utf-8")
     monkeypatch.setattr(L, "library_dir", lambda cfg: lib)
     monkeypatch.setattr(J, "judge_root", lambda cfg: judge)
+    # never the real matte in a test: BiRefNet is a model load
+    import sourcemode.assets.cutout as C
+    monkeypatch.setattr(C, "hybrid_remover", lambda: (lambda im: im.convert("RGBA")))
     return tmp_path / "outputs", tmp_path / "game"
 
 
@@ -49,7 +52,7 @@ def test_staging_writes_the_chat_names_and_the_base_file_and_never_the_game(tmp_
     assert names == sorted(["nadia_lingerie_standing.webp", "nadia_lingerie_kneeling.webp",
                             "nadia_lingerie_crawling.webp", "lingerie_01.webp"])
     assert rec["base_from"] == "standing" and rec["poses"] == ["standing", "kneeling", "crawling"]
-    assert Image.open(d / "lingerie_01.webp").mode == "RGB"
+    assert Image.open(d / "lingerie_01.webp").mode == "RGBA"           # a cutout since 2026-11-01
     assert "organized('nadia', 'lingerie', 'intimate/lingerie_01.webp', ['intimate']" in \
         (d / "registration.js").read_text(encoding="utf-8")
     assert not game.exists()
@@ -89,3 +92,34 @@ def test_every_lingerie_tag_is_a_chat_pose_the_game_detects_or_a_numbered_take_o
         assert re.sub(r"\d+$", "", p["tag"]) in S.CHAT_POSES, p["tag"]
     assert {"kneeling", "crawling", "bendingover", "spreadwide", "lyingspread", "standingspread"} <= \
         {p["tag"] for p in S.LINGERIE_PACK}
+
+
+def test_a_set_with_every_pose_kept_is_due_once_and_not_again_after_staging(tmp_path, monkeypatch):
+    out, _ = _world(tmp_path, monkeypatch, keep=tuple(p["tag"] for p in S.LINGERIE_PACK))
+    judge = tmp_path / "judge"
+    plan = S.BY_ID["lingerie"].plan(character="nadia", outfit="x")
+    (judge / "sets").mkdir(parents=True)
+    (judge / "sets" / "shoot_nadia_lingerie.json").write_text(json.dumps(
+        {"meta": {"character": "nadia", "shoot": "lingerie"}, "items": [{"id": s["id"]} for s in plan]}),
+        encoding="utf-8")
+    assert I.process_due(judge, out, "shoot_nadia_lingerie")
+    I.stage({}, out, "nadia")
+    assert I.process_due(judge, out, "shoot_nadia_lingerie") is None
+
+
+def test_one_reject_means_not_due(tmp_path, monkeypatch):
+    out, _ = _world(tmp_path, monkeypatch)
+    judge = tmp_path / "judge"
+    plan = S.BY_ID["lingerie"].plan(character="nadia", outfit="x")
+    (judge / "sets").mkdir(parents=True)
+    (judge / "sets" / "shoot_nadia_lingerie.json").write_text(json.dumps(
+        {"meta": {"character": "nadia", "shoot": "lingerie"}, "items": [{"id": s["id"]} for s in plan]}),
+        encoding="utf-8")
+    assert I.process_due(judge, out, "shoot_nadia_lingerie") is None
+
+
+def test_discard_drops_the_record_and_leaves_the_files(tmp_path, monkeypatch):
+    out, _ = _world(tmp_path, monkeypatch)
+    I.stage({}, out, "nadia")
+    assert I.discard(out, "nadia") and I.read_staged(out, "nadia") is None
+    assert (I.staging_dir(out, "nadia") / "lingerie_01.webp").is_file()

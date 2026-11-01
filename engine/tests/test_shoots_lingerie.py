@@ -47,7 +47,32 @@ def test_no_pose_puts_her_on_his_lap():
     assert not [p for p in S.LINGERIE_PACK if "lap" in p["tag"] or "the man" in p["stance"]]
 
 
-def test_the_lingerie_poses_mix_into_any_scene_with_a_bed_and_floor():
+def test_the_lingerie_pack_is_a_cutout_set_on_the_studio_floor_with_her_hair_loose():
+    # Jeremy, 2026-11-01: "They are cutout sets so should not be placed in a
+    # bedroom" and "The hair should just be loose for all these photos"
+    from sourcemode.assets.pack import STUDIO_BACKDROP
+    sh = S.BY_ID["lingerie"]
+    assert sh.setting == STUDIO_BACKDROP
+    for p in S.LINGERIE_PACK:
+        assert p["needs"] == ("floor",), p["tag"]
+        words = " ".join(str(v) for v in p.values()).lower()
+        for prop in ("bed", "mattress", "pillow", "sheets", "wall", "chair"):
+            assert prop not in words, (p["tag"], prop)
+    assert {s["hair"] for s in sh.plan(character="nadia", outfit="x")} == {"her hair worn loose"}
+    assert sh.plan(outfit="x")[0]["hair"] == "her hair worn loose"
+
+
+def test_loose_hair_keeps_her_own_words_when_her_list_has_no_plain_loose(monkeypatch):
+    import sourcemode.assets.wardrobe as W
+    lists = {"tess": ("her hair in box braids up in a bun", "her hair hanging down her back"),
+             "linda": ("her short hair neatly styled", "her short hair tousled and messy"),
+             "zara": ("her hair worn down with high, tight pigtails", "her hair worn loose")}
+    monkeypatch.setattr(W, "hair_options", lambda c: lists[c])
+    assert W.loose_hair("tess") == "her hair hanging down her back"
+    assert W.loose_hair("linda") == "her short hair neatly styled"
+    assert W.loose_hair("zara") == "her hair worn loose"
+
+
+def test_the_lingerie_poses_mix_into_any_scene_with_a_floor():
     assert S.combo_problem("bedroom-intimatewear-lingeriepack", "nadia") is None
-    assert S.combo_problem("hotel-intimatewear-lingeriepack", "nadia") is None
-    assert "bed" in S.combo_problem("darkwall-intimatewear-lingeriepack", "nadia")
+    assert S.combo_problem("darkwall-intimatewear-lingeriepack", "nadia") is None

@@ -26,6 +26,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from .pack import STUDIO_BACKDROP
 from .selfies import MIRROR_FRAMING
 
 
@@ -76,6 +77,10 @@ class Shoot:
     # with the torso toy's LoRA (Jeremy, 2026-10-17). A lock id, never a file
     # path - the lock is what survives a prune of the staging folders.
     loras: tuple[tuple[str, float], ...] = ()
+    # One hair clause for every shot - her hair down, in her words
+    # (wardrobe.loose_hair) - instead of the rotation. The lingerie pack is
+    # one set per character, so it shows her one way.
+    loose_hair: bool = False
 
     def plan(self, seed: int = 0, character: str | None = None,
              outfit: str | None = None) -> list[dict]:
@@ -91,7 +96,7 @@ class Shoot:
         box braids in every frame she was trained on, and the shared rotation
         would have asked her for loose hair on a quarter of every shoot.
         """
-        from .wardrobe import hair_options  # noqa: PLC0415
+        from .wardrobe import hair_options, loose_hair  # noqa: PLC0415
 
         if self.make is not None:
             return self.make(character or "", self.batch or 1)
@@ -102,6 +107,8 @@ class Shoot:
                 {**x, "hair": hair_options(character)[i % len(hair_options(character))]}
                 for i, x in enumerate(self.explicit)]
         hair = hair_options(character) if character else self.hair
+        if self.loose_hair:
+            hair = (loose_hair(character) if character else self.hair[0],)
         outfits = self.outfits
         if self.wardrobe:
             outfits = wardrobe_outfits(self.wardrobe, character or "") or self.outfits
@@ -161,8 +168,8 @@ LINGERIE: tuple[str, ...] = (
 # like that SHOULD look pretty much the same every time) so that we can do all
 # the different poses that i want to be aligned with the chat - kneeling,
 # spreading legs, bending over, sitting on the player's lap, crawling toward
-# the player" - then, 2026-10-29: "kill the sitting on lap poses". The game's lingerie gift (`intimate/lingerie_01.webp`, a full
-# scene, no cutout) becomes a set of poses in ONE outfit, so a chat can show
+# the player" - then, 2026-10-29: "kill the sitting on lap poses". The game's lingerie gift (`intimate/lingerie_01.webp`,
+# a cutout since 2026-11-01) becomes a set of poses in ONE outfit, so a chat can show
 # her move rather than one picture. Every pose carries a `tag` the game can
 # key a chat moment to.
 #
@@ -534,59 +541,61 @@ _KNEES = "framed from the knees up, the camera close to her"
 # sitting on lap poses".
 CHAT_POSES = ("standing", "sitting", "kneeling", "crawling", "lyingdown", "lyingspread",
               "standingspread", "spreadwide", "bendingover", "comehere", "smoochie", "after")
+# Jeremy, 2026-11-01: "They are cutout sets so should not be placed in a
+# bedroom." Every pose is on the bare studio floor with nothing to sit, lean or
+# lie on - whatever she touches would be cut out with her - so the bed, the
+# mattress and the pillows went, and each pose says where her weight is.
+_FLOOR = ("floor",)
 LINGERIE_PACK: tuple[dict, ...] = (
-    {"tag": "standing", "stance": "standing at the foot of the bed facing the camera, one hand on her hip, "
-                                  "the other hand touching her bra strap",
-     "needs": ("bed",), "framing": _KNEES, "gaze": _EYES},
-    {"tag": "comehere", "stance": "walking toward the camera from the foot of the bed, beckoning with one "
-                                  "finger",
-     "needs": ("bed",), "framing": _KNEES, "gaze": _EYES,
+    {"tag": "standing", "stance": "standing facing the camera, one hand on her hip, the other hand touching "
+                                  "her bra strap",
+     "needs": _FLOOR, "framing": _KNEES, "gaze": _EYES},
+    {"tag": "comehere", "stance": "walking toward the camera, beckoning with one finger",
+     "needs": _FLOOR, "framing": _KNEES, "gaze": _EYES,
      "expression_natural": "a teasing closed-mouth smile"},
-    {"tag": "standingspread", "stance": "standing at the foot of the bed with her feet planted wide apart, "
-                                        "hands on her hips",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
-    {"tag": "sitting", "stance": "sitting on the edge of the bed, knees together, hands on the mattress "
-                                 "beside her, leaning forward a little",
-     "needs": ("bed",), "framing": _KNEES, "shot_type": "photo", "gaze": _EYES},
-    {"tag": "kneeling", "stance": "kneeling on the floor at the foot of the bed, sitting back on her heels, "
-                                  "hands resting on her thighs",
-     "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo",
+    {"tag": "standingspread", "stance": "standing with her feet planted wide apart, hands on her hips",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
+    {"tag": "sitting", "stance": "sitting on the floor with her knees together and bent to one side, "
+                                 "leaning on one hand",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
+    {"tag": "kneeling", "stance": "kneeling on the floor, sitting back on her heels, hands resting on her "
+                                  "thighs",
+     "needs": _FLOOR, "framing": _KNEEL, "shot_type": "full-length photo",
      "gaze": "her face tilted up toward the camera, looking up into the lens"},
     {"tag": "kneeling2", "stance": "kneeling on the floor, sitting back on her heels, wrists crossed behind "
                                    "her back, chest forward",
-     "needs": ("floor",), "framing": _KNEEL, "shot_type": "full-length photo",
+     "needs": _FLOOR, "framing": _KNEEL, "shot_type": "full-length photo",
      "gaze": "looking up into the camera"},
-    {"tag": "spreadwide", "stance": "sitting on the edge of the bed with her legs spread wide, hands on "
-                                    "her knees",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
-    {"tag": "lyingdown", "stance": "lying on her side on the bed, propped on one elbow, legs together",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
-    {"tag": "lyingspread", "stance": "lying back on the bed propped up on her elbows, her knees up and "
-                                     "apart with her feet flat on the mattress, nearest the camera",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo from the foot of the bed",
-     "gaze": "looking down the bed into the camera", "expression_natural": "lips parted"},
-    {"tag": "bendingover", "stance": "bent forward over the bed, hands flat on the mattress, hips pushed "
+    {"tag": "spreadwide", "stance": "sitting on the floor leaning back on her hands, her knees up and spread "
+                                    "wide, facing the camera",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
+    {"tag": "lyingdown", "stance": "lying on her side on the floor, propped on one elbow, legs together",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
+    {"tag": "lyingspread", "stance": "lying back on the floor propped up on her elbows, her knees up and "
+                                     "apart with her feet flat on the floor, nearest the camera",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo from by her feet",
+     "gaze": "looking down her body into the camera", "expression_natural": "lips parted"},
+    {"tag": "bendingover", "stance": "standing bent forward at the waist, hands on her knees, hips pushed "
                                      "back toward the camera",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "photo from behind",
      "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
-    {"tag": "bendingover2", "stance": "face down on the bed with her knees tucked under her and her hips "
-                                      "raised high, her ass and the crotch of her panties pointed straight "
-                                      "at the camera",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind, low, level with the bed",
+    {"tag": "bendingover2", "stance": "kneeling on the floor with her chest down low and her hips raised "
+                                      "high, her ass and the crotch of her panties pointed straight at the "
+                                      "camera",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "photo from behind, low, level with the floor",
      "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
-    {"tag": "crawling", "stance": "crawling toward the camera on all fours across the bed",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "full-length photo",
+    {"tag": "crawling", "stance": "crawling toward the camera on all fours on the floor",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo",
      "gaze": "looking up into the camera from under her brows"},
-    {"tag": "crawling2", "stance": "on all fours on the bed, back arched",
-     "needs": ("bed",), "framing": _FULL, "shot_type": "photo from behind",
+    {"tag": "crawling2", "stance": "on all fours on the floor, back arched",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "photo from behind",
      "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
-    {"tag": "smoochie", "stance": "leaning in close to the camera on her knees on the bed, lips puckered "
-                                  "for a kiss",
-     "needs": ("bed",), "framing": "her face and shoulders filling the frame, close", "shot_type": "photo",
+    {"tag": "smoochie", "stance": "kneeling up on the floor and leaning in close to the camera, lips "
+                                  "puckered for a kiss",
+     "needs": _FLOOR, "framing": "her face and shoulders filling the frame, close", "shot_type": "photo",
      "gaze": "her eyes closed", "expression_natural": "her lips puckered for a kiss"},
-    {"tag": "after", "stance": "lying back against the pillows, her hair spread out, one arm above her "
-                               "head, catching her breath",
-     "needs": ("bed",), "framing": "her body from the thighs up in frame", "shot_type": "photo from above",
+    {"tag": "after", "stance": "lying on her back on the floor, one arm above her head, catching her breath",
+     "needs": _FLOOR, "framing": "her body from the thighs up in frame", "shot_type": "photo from above",
      "gaze": "looking up into the camera", "expression_natural": "a satisfied smile, eyes heavy"},
 )
 
@@ -764,12 +773,14 @@ GAME: tuple[Shoot, ...] = (
                "they are re-rolled in one job. Needs a wardrobe plan on disk "
                "first: the outfits are a decision, not a default."),
     _selfie_pack(),
-    Shoot("lingerie", "Lingerie pack (the gift)", "game", BEDROOM, (), (),
+    Shoot("lingerie", "Lingerie pack (the gift)", "game", STUDIO_BACKDROP, (), (),
           pose_slots=LINGERIE_PACK, shots=len(LINGERIE_PACK), wardrobe="intimatewear",
+          loose_hair=True,
           note=f"{len(LINGERIE_PACK)} poses in ONE lingerie set - hers from her Intimate line, "
                "else satin in her colour with a white band - for the lingerie gift's chat: "
-               "standing, kneeling, legs spread, bent over, crawling. Full scenes, "
-               "no cutout. Each pose is tagged with the game's own chat pose name."),
+               "standing, kneeling, legs spread, bent over, crawling. Grey studio, hair loose, "
+               "cut out once every pose is kept, then approved on the Characters tab. "
+               "Each pose is tagged with the game's own chat pose name."),
 )
 
 def _influencer() -> Shoot:
