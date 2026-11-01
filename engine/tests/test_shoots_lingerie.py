@@ -106,5 +106,6 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
 def test_sitting_cannot_be_read_as_kneeling():
     # Jeremy, 2026-11-01: "The sitting prompt is also always the girl kneeling."
     sit = next(p for p in S.LINGERIE_PACK if p["tag"] == "sitting")
-    assert "kneel" not in sit["stance"] and "bent" not in sit["stance"]
-    assert "legs stretched straight out" in sit["stance"]
+    # and "Crystal's is the perfect example": side-saddle, bottom on the floor
+    assert "kneel" not in sit["stance"]
+    assert "side-saddle" in sit["stance"] and "bottom resting on the floor" in sit["stance"]

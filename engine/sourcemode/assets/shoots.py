@@ -569,9 +569,12 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
     # Jeremy, 2026-11-01: "The sitting prompt is also always the girl
     # kneeling." "Knees together and bent to one side" drew kneeling or legs
-    # folded under her in most of 14; legs straight out in front cannot be.
-    {"tag": "sitting", "stance": "sitting on her bottom on the floor, her legs stretched straight out in front "
-                                 "of her with her ankles crossed, leaning back on her hands",
+    # folded under her in most of 14. Then: "Crystal's is the perfect example
+    # of what sitting is supposed to be like" - side-saddle, her hip and
+    # bottom on the floor, both legs swept out to one side, not under her.
+    {"tag": "sitting", "stance": "sitting side-saddle on the floor, her hip and bottom resting on the floor, "
+                                 "both legs bent and swept out to one side beside her, not under her, "
+                                 "leaning on one straight arm, her other hand resting on her thigh",
      "needs": _FLOOR, "framing": _HEAD_TO_FEET, "shot_type": "full-length photo", "gaze": _EYES},
     # Jeremy, 2026-11-01: "the viewer [is] standing right next to the girl while
     # she is kneeling. It would be like if you were standing next to a girl
