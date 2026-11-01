@@ -174,7 +174,10 @@ def judge_item(slot: dict, path: Path, *, kind: str, character: str, source: str
     the slot. The slot is rebuilt from the catalog or the plan at redo time, so
     a fixed prompt reaches the retry instead of a snapshot of the old one.
     """
-    return {"id": slot["id"], "path": path, "arm": arm or slot.get("tone") or source,
-            "group": str(slot.get("look", slot["id"])), "score": score,
+    row = {"id": slot["id"], "path": path, "arm": arm or slot.get("tone") or source,
+           "group": str(slot.get("look", slot["id"])), "score": score,
             "redo": {"kind": kind, "character": character, "source": source,
                      "slot_id": slot["id"], "seed": int(seed), "attempt": int(attempt)}}
+    if slot.get("tag"):
+        row["label"] = slot["tag"]        # the pose name (kneeling2), shown on the judge page
+    return row

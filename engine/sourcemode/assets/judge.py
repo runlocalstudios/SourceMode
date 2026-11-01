@@ -318,10 +318,16 @@ def set_payload(root: Path, set_id: str) -> dict | None:
         return None
     here = {it["id"] for it in s["items"] if Path(it["path"]).is_file()}
     pending = [i for i in s["order"] if i not in here]
+    labels = shot_labels(s)
+    # Jeremy, 2026-11-01: "for the game asset pack, I would like the review to
+    # go in order. So 1 through 7 of the casual day, then 1 through 4 of the
+    # workout". A pack or shoot is production, not a blind comparison - its
+    # shots go in plan order. Sweeps and A/Bs keep their blind shuffle.
+    order = [it["id"] for it in s["items"]] if labels else s["order"]
     out = {"id": s["id"], "title": s["title"], "question": s.get("question", ""),
            "mode": s.get("mode", "single"),
            "has_reference": bool(s.get("reference")),
-           "items": [{"id": i} for i in s["order"] if i in here],
+           "items": [{"id": i, **({"label": labels[i]} if labels else {})} for i in order if i in here],
            "pending": len(pending),
            "verdicts": {k: v for k, v in load_verdicts(root, set_id).items() if k in here}}
     if out["mode"] == "pair":
@@ -329,6 +335,33 @@ def set_payload(root: Path, set_id: str) -> dict | None:
         rows = pair_rows(s)
         out["pairs"] = [p for p in rows if p["left"] in here and p["right"] in here]
         out["pending"] = len(rows) - len(out["pairs"])
+    return out
+
+
+def shot_labels(doc: dict) -> dict[str, str]:
+    """Which shot each item is, for a set of re-rollable shots (every item
+    carries `redo`): the pose name a shoot wrote (`label`), else "casual 3 of
+    7" for a pack look. Empty for anything else - an epoch sweep or an A/B
+    must not say which arm it is showing.
+
+    Jeremy, 2026-11-01: "when I'm reviewing them, I don't actually know which
+    one is which ... display in very small print, probably at the top right,
+    the actual shot."
+    """
+    items = doc.get("items") or []
+    if not items or not all(it.get("redo") for it in items):
+        return {}
+    per_arm: dict[str, int] = {}
+    for it in items:
+        per_arm[it["arm"]] = per_arm.get(it["arm"], 0) + 1
+    out = {}
+    for it in items:
+        if it.get("label"):
+            out[it["id"]] = str(it["label"])
+        elif it["redo"].get("kind") == "pack" and str(it.get("group", "")).isdigit():
+            out[it["id"]] = f"{it['arm'].replace('_', ' ')} {int(it['group'])} of {per_arm[it['arm']]}"
+        else:
+            out[it["id"]] = it["id"].replace("_", " ")
     return out
 
 
@@ -700,6 +733,8 @@ body .toast .btn{min-height:24px;padding:0 10px}
   border:1px solid var(--g4);border-radius:var(--rp)}
 /* #results is a SIBLING of #stage, not a child: a tap on the results screen
    must never reach the stage's verdict handler. */
+#shot{position:fixed;top:calc(var(--s2) + env(safe-area-inset-top,0px));right:var(--s3);z-index:15;
+  font-size:11px;letter-spacing:.02em;color:var(--g6);pointer-events:none}
 #results{position:fixed;inset:0;z-index:20;background:var(--g0);
   overflow:auto;display:none}
 #results.on{display:block}
@@ -750,6 +785,7 @@ BODY = """
   <img id=ref class=c0 draggable=false
        alt="reference photo" aria-label="reference photo: tap to move, hold to compare" hidden>
 </div>
+<div id=shot aria-label="which shot this is"></div>
 <div id=pair hidden>
   <div class="side l"><img id=pL alt="left candidate" draggable=false>
     <button class=pk data-side=left aria-label="the left one is better">&#10003;</button></div>
@@ -869,6 +905,7 @@ function layout(){
   for(const id of ['yes','no']) $(id).style.visibility=pair?'hidden':'';
 }
 async function showPair(){
+  $('shot').textContent='';
   $('results').classList.remove('on');
   for(const id of ['pick','hair']) $(id).style.visibility='';
   layout();
@@ -956,6 +993,7 @@ async function show(){
   $('results').classList.remove('on');
   for(const id of ['yes','no','pick','hair']) $(id).style.visibility='';
   const it=cur.items[idx];
+  $('shot').textContent=it.label||'';
   const back=$('img'+(front==='A'?'B':'A')), fore=$('img'+front);
   back.dataset.big='';
   back.src=fileUrl(cur.id,it.id);
@@ -1170,7 +1208,7 @@ function hideStage(){
   $('ref').hidden=true;
 }
 async function results(){
-  hideStage();
+  hideStage(); $('shot').textContent='';
   const box=$('results'); box.classList.add('on');
   if(pending){ try{ await pending; }catch(e){} }   /* the last verdict must be on disk before we count */
   let board=null;

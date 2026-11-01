@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 
 import pytest
+
+from sourcemode.assets import judge as J
 from PIL import Image
 
 from sourcemode.assets.judge import (
@@ -247,3 +249,31 @@ def test_router_takes_a_pair_pick(tmp_path: Path):
     assert c.post("/judge/set/pair_x/pair", json={"group": r0["group"], "winner": "x"}).status_code == 400
     assert c.post("/judge/set/pair_x/pair", json={"group": "zz", "winner": None}).status_code == 404
     assert c.post("/judge/set/pair_x/pair", json={"group": r0["group"], "clear": True}).json() == {}
+
+
+def test_a_pack_or_shoot_goes_in_plan_order_with_its_shot_named(tmp_path):
+    # Jeremy, 2026-11-01: "1 through 7 of the casual day, then 1 through 4 of
+    # the workout" and the actual shot in small print at the top right
+    imgs = []
+    for n in range(4):
+        f = tmp_path / f"{n}.png"; f.write_bytes(b"x" * (n + 1)); imgs.append(f)
+    redo = {"kind": "pack", "source": "p.json", "slot_id": "", "seed": 0, "attempt": 0}
+    items = [{"id": f"casual_0{i}", "path": imgs[i - 1], "arm": "casual", "group": str(i), "redo": redo}
+             for i in (1, 2, 3)]
+    items.append({"id": "lingerie_00", "path": imgs[3], "arm": "x", "group": "1", "label": "kneeling2",
+                  "redo": {**redo, "kind": "shoot"}})
+    J.make_set(tmp_path, "pack_x", "t", items, seed=7)
+    out = J.set_payload(tmp_path, "pack_x")
+    assert [it["id"] for it in out["items"]] == ["casual_01", "casual_02", "casual_03", "lingerie_00"]
+    assert [it["label"] for it in out["items"]] == ["casual 1 of 3", "casual 2 of 3", "casual 3 of 3", "kneeling2"]
+
+
+def test_a_blind_set_names_nothing_and_keeps_its_shuffle(tmp_path):
+    items = []
+    for n in range(6):
+        f = tmp_path / f"{n}.png"; f.write_bytes(b"x" * (n + 1))
+        items.append({"id": f"ep{n}", "path": f, "arm": f"epoch {n}", "group": "0"})
+    J.make_set(tmp_path, "dense_x", "t", items, seed=3)
+    out = J.set_payload(tmp_path, "dense_x")
+    assert all("label" not in it for it in out["items"])
+    assert [it["id"] for it in out["items"]] == J.load_set(tmp_path, "dense_x")["order"]
