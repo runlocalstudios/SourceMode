@@ -726,6 +726,10 @@ body .toast .btn{min-height:24px;padding:0 10px}
   touch-action:manipulation;cursor:pointer;
   transition:transform var(--m-fast) var(--ease)}
 .tap:active{transform:scale(.9)}
+/* Jeremy, 2026-11-01: the "kept · Undo" toast covered which picture it was -
+   on this page it sits at the very bottom, between the X and the check. */
+body .toast{bottom:calc(18px + var(--safe-b) + (var(--thumb) - var(--tap)) / 2);
+  max-width:calc(100vw - 2 * var(--thumb) - 52px);white-space:nowrap}
 #no{left:18px;background:var(--stop-bg);border-color:var(--stop-line);color:var(--stop-ink)}
 #yes{right:18px;background:var(--done-bg);border-color:var(--done-line);color:var(--done-ink)}
 #hint{position:fixed;z-index:13;left:50%;transform:translateX(-50%);
