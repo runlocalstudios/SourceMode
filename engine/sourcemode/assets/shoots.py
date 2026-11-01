@@ -614,15 +614,21 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING,
      "gaze": "her head tilted back a little, " + _KNEEL_EYES,
      "expression_natural": "her mouth open", "negative": _DOWN_NOT},
-    # 3 of 3 stood upright with "bent forward at the waist, hands flat on the
-    # floor" - the fold is named as the yoga pose and her head goes below her hips
-    {"tag": "spreadwide", "stance": "her feet planted very wide apart, legs straight, her torso folded down "
-                                    "between her legs so her head hangs below her hips, both palms flat on the "
-                                    "floor between her feet, her hips the highest point of her body",
+    # Jeremy, 2026-11-01, of the forward fold: "bent over too much ... they
+    # shouldn't be touching the floor. It should be like they're standing next
+    # to a bed with hands resting on the bed and looking back." The pack is a
+    # cutout on a grey studio with no props, so her hands rest where the edge
+    # of a bed would be - on her thighs just above her knees.
+    {"tag": "spreadwide", "stance": "her feet planted wide apart, legs straight, leaning forward from the hips "
+                                    "with her back flat and angled down toward the floor, her straight arms "
+                                    "reaching down with both hands resting on her thighs just above her knees, "
+                                    "her bottom pushed back toward the camera",
      "needs": _FLOOR, "framing": _HEAD_TO_FEET,
-     "shot_type": "full-length photo from behind of her standing in a wide-legged forward fold",
-     "facing": "her back to the camera", "gaze": "her face upside down between her legs, looking back at the camera",
-     "negative": _UPRIGHT},
+     "shot_type": "full-length photo from behind of her standing with her legs apart, leaning forward with her "
+                  "hands on her knees",
+     "facing": "her back to the camera, seen from behind and slightly to one side",
+     "gaze": "her head turned to look back over her shoulder into the camera",
+     "negative": _UPRIGHT + ", hands on the floor, touching the floor, forward fold, head below her hips"},
     # Jeremy, 2026-11-01, of the first spreadwide: "I actually really like [it].
     # But that would be more like show me your feet." That prompt never showed
     # feet (0 of 16); the old lyingspread prompt put her soles to the camera in
@@ -638,19 +644,25 @@ LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "lyingspread", "stance": "her back, shoulders and head resting flat on the floor, her arms out at "
                                      "her sides, her knees bent up and spread wide apart, the soles of her feet "
                                      "flat on the floor nearest the camera",
-     "needs": _FLOOR, "framing": _HEAD_TO_FEET,
+     # Jeremy, 2026-11-01: "their head is on the bottom of the pic like they
+     # are upside down" - the frame now says which end is which.
+     "needs": _FLOOR, "framing": "her whole body in frame, her head at the top of the frame and her feet at "
+                                 "the bottom of the frame",
      "shot_type": "high-angle photo from above her feet of her lying flat on her back on the floor",
      "gaze": "lifting her chin to look down her body into the camera", "expression_natural": "lips parted",
-     "negative": "sitting up, sitting upright, propped up on her elbows, lying on her stomach"},
-    # 16 of 16 stood nearly upright with "bent forward at the waist ... back
-    # level with the floor"
-    {"tag": "bendingover", "stance": "her legs straight and her feet together, her torso folded forward and "
-                                     "down until her chest is against her thighs, her fingertips touching her "
-                                     "toes, her hips the highest point of her body, pushed back toward the camera",
+     "negative": "sitting up, sitting upright, propped up on her elbows, lying on her stomach, upside down, "
+                 "her head at the bottom of the frame"},
+    # Jeremy, 2026-11-01, of "touching her toes": "a slight bend to show off
+    # her ass" - a slight bend at the hips, back arched, bottom pushed out.
+    {"tag": "bendingover", "stance": "her legs straight and her feet together, bending slightly forward at the "
+                                     "hips, her lower back arched, her ass pushed out toward the camera, her "
+                                     "hands resting on the fronts of her thighs",
      "needs": _FLOOR, "framing": _HEAD_TO_FEET,
-     "shot_type": "full-length photo from behind of her bent over touching her toes",
+     "shot_type": "full-length photo from behind of her bending slightly forward, showing off her ass",
      "facing": "her back to the camera, seen from behind and slightly to one side",
-     "gaze": "her face turned toward the camera beside her knees, looking at it", "negative": _UPRIGHT},
+     "gaze": "her head turned to look back over her shoulder into the camera",
+     "negative": "touching her toes, forward fold, hands on the floor, chest against her thighs, "
+                 "standing up straight"},
     # 16 of 16 sat back on their heels, eden too with "knees and forearms,
     # chest pressed to the floor"
     {"tag": "bendingover2", "stance": "her knees on the floor hip-width apart with her thighs vertical, her "
@@ -666,14 +678,19 @@ LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "crawling", "stance": "crawling toward the camera on all fours on the floor",
      "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo",
      "gaze": "looking up into the camera from under her brows"},
-    # 16 of 16 sat back on their heels with "on all fours, back arched"
-    {"tag": "crawling2", "stance": "her arms straight and vertical with her palms flat on the floor under her "
-                                   "shoulders, her knees under her hips with her thighs vertical, her bottom "
-                                   "raised well off her heels, her back arched down so her hips are pushed up",
-     "needs": _FLOOR, "framing": _FULL,
-     "shot_type": "full-length photo from behind of her on her hands and knees on the floor",
-     "facing": "her back to the camera", "gaze": "her head turned to look back at the camera over her shoulder",
-     "negative": _SITS_BACK},
+    # 16 of 16 sat back on their heels with "on all fours, back arched", and
+    # eve's and gabi's still did with "from behind ... thighs vertical" -
+    # Jeremy: "just kneeling viewed from behind". Straight from behind the
+    # model draws her torso upright; a side-rear view and the yoga name
+    # ("tabletop position") put her back level with the floor.
+    {"tag": "crawling2", "stance": "on all fours in tabletop position, her torso horizontal and parallel to "
+                                   "the floor, her arms straight with her palms flat on the floor under her "
+                                   "shoulders, her knees under her hips, her bottom up and well away from her "
+                                   "heels, her back arched down so her hips are pushed up",
+     "needs": _FLOOR, "framing": "her whole body in frame from the side, head to toes, her back level with the floor",
+     "shot_type": "full-length photo from behind and to one side of her on her hands and knees on the floor",
+     "facing": "her back and side to the camera", "gaze": "her head turned to look back at the camera over her shoulder",
+     "negative": _SITS_BACK + ", hands on her thighs, sitting on her feet"},
     {"tag": "smoochie", "stance": "kneeling up on the floor and leaning in close to the camera, lips "
                                   "puckered for a kiss",
      "needs": _FLOOR, "framing": "her face and shoulders filling the frame, close", "shot_type": "photo",

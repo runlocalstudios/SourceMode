@@ -98,7 +98,10 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     by = {p["tag"]: p for p in S.LINGERIE_PACK}
     for t in ("bendingover", "bendingover2", "spreadwide", "standingspread"):
         assert by[t]["facing"].startswith("her back to the camera"), t
-    assert "touching her toes" in by["bendingover"]["shot_type"]
+    assert "slightly forward" in by["bendingover"]["shot_type"]
+    assert "touching her toes" in by["bendingover"]["negative"]
+    assert "touching the floor" in by["spreadwide"]["negative"]
+    assert "head at the top of the frame" in by["lyingspread"]["framing"]
     assert "upside-down V" in by["standingspread"]["stance"] and "feet" in by["standingspread"]["framing"]
     assert "kneel" not in by["bendingover2"]["stance"] and "highest point" in by["bendingover2"]["stance"]
     assert "face-down, ass-up" in by["bendingover2"]["shot_type"] and "on her heels" in by["bendingover2"]["negative"]
