@@ -83,7 +83,8 @@ def test_the_kneeling_pair_looks_down_from_beside_her_and_differs_only_in_her_he
     # down; the same pose again with her head tilted back and her mouth open
     k1, k2 = (next(p for p in S.LINGERIE_PACK if p["tag"] == t) for t in ("kneeling", "kneeling2"))
     for k in (k1, k2):
-        assert "beside" in k["stance"] and "steeply down" in k["framing"] and "standing" in k["framing"]
+        assert "straight down" in k["shot_type"] and "standing man" in k["shot_type"]
+        assert "camera at her height" in k["negative"]
         assert "whole kneeling figure" not in k["framing"]
     assert {f: k1[f] for f in ("stance", "framing", "shot_type")} == {f: k2[f] for f in ("stance", "framing", "shot_type")}
     assert "tilted back" in k2["gaze"] and "tilted back" not in k1["gaze"]
@@ -96,11 +97,12 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     # 13 while its stance said "kneeling"
     by = {p["tag"]: p for p in S.LINGERIE_PACK}
     for t in ("bendingover", "bendingover2", "spreadwide", "standingspread"):
-        assert by[t]["facing"] == "her back to the camera", t
-    assert "level with the floor" in by["bendingover"]["stance"]
-    assert "twice as wide as her shoulders" in by["standingspread"]["stance"] and "feet" in by["standingspread"]["framing"]
-    assert "kneel" not in by["bendingover2"]["stance"] and "hips raised high" in by["bendingover2"]["stance"]
-    assert "facing the camera" in by["showfeet"]["stance"]
+        assert by[t]["facing"].startswith("her back to the camera"), t
+    assert "touching her toes" in by["bendingover"]["shot_type"]
+    assert "upside-down V" in by["standingspread"]["stance"] and "feet" in by["standingspread"]["framing"]
+    assert "kneel" not in by["bendingover2"]["stance"] and "highest point" in by["bendingover2"]["stance"]
+    assert "face-down, ass-up" in by["bendingover2"]["shot_type"] and "on her heels" in by["bendingover2"]["negative"]
+    assert "feet flat on the floor, nearest the camera" in by["showfeet"]["stance"]
 
 
 def test_sitting_cannot_be_read_as_kneeling():
@@ -108,7 +110,8 @@ def test_sitting_cannot_be_read_as_kneeling():
     sit = next(p for p in S.LINGERIE_PACK if p["tag"] == "sitting")
     # and "Crystal's is the perfect example": side-saddle, bottom on the floor
     assert "kneel" not in sit["stance"]
-    assert "side-saddle" in sit["stance"] and "bottom resting on the floor" in sit["stance"]
+    assert "side-saddle" in sit["shot_type"] and "bottom resting on the floor" in sit["stance"]
+    assert "kneeling" in sit["negative"]
 
 
 def test_both_kneeling_poses_hold_eye_contact():

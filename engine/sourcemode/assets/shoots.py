@@ -548,7 +548,20 @@ CHAT_POSES = ("standing", "sitting", "kneeling", "crawling", "lyingdown", "lying
 # "comehere" went the same day - "beckoning with one finger" rendered a
 # raised pointing finger in every set, and he: "Just get rid of that one."
 _FLOOR = ("floor",)
-_KNEEL_BESIDE = "kneeling on the floor right beside the camera, sitting back on her heels, hands resting on her thighs"
+# Jeremy, 2026-11-01, after the audit of all 16 sets: "there is no way you
+# can't describe the pose better than you have already." Ten of fifteen poses
+# missed, and every pose with her torso low, seen from behind and looking back,
+# fell into one of two defaults - sitting back on her heels or standing nearly
+# upright - even with explicit words (eden's bendingover2 said "knees and
+# forearms, chest pressed to the floor" and still sat back). So each pose now:
+#   - names the pose in the shot type, the earliest pose words in the prompt
+#     ("a face-down, ass-up pose", "a wide-legged forward fold");
+#   - gives every limb a job and says where her weight is and which part of her
+#     is highest, instead of an angle the model has to imagine;
+#   - says what the camera sees, not where the photographer is standing;
+#   - refuses the default it fell into through the slot's own negative.
+_SITS_BACK = "sitting back on her heels, kneeling upright, upright torso, seiza"
+_UPRIGHT = "standing up straight, upright torso, slight lean"
 _HEAD_TO_FEET = "her whole body in frame, from her head down to her feet"
 # Jeremy, 2026-11-01: "it's important that the girl is looking directly at
 # the viewer. Diane's photos are like looking off into space" - "looking up
@@ -556,95 +569,125 @@ _HEAD_TO_FEET = "her whole body in frame, from her head down to her feet"
 _KNEEL_EYES = ("her face turned up toward the camera, her eyes looking directly into the lens, "
                "direct eye contact with the viewer")
 _KNEEL_FACING = "her body facing the camera"
-_DOWN_SHOT = "high-angle photo looking straight down"
-_LOOKING_DOWN = ("taken from a standing man's eye height right beside her, the camera pointing steeply down at "
-                 "her, her upturned face nearest the lens and her body foreshortened below it")
+# The first take of the over-her-head pair landed at chest height ("a high-angle
+# photo" from "beside her"); a point-of-view shot from straight above is a
+# phrase the model knows, and the negative refuses the level camera.
+_KNEEL_STANCE = "kneeling on the floor directly below the camera, sitting back on her heels, hands resting on her thighs"
+_DOWN_SHOT = "point-of-view photo looking straight down at her from a standing man's eye height"
+_LOOKING_DOWN = ("the camera high above her pointing straight down, her upturned face nearest the lens, her "
+                 "shoulders, breasts and knees foreshortened below it, the floor around her")
+_DOWN_NOT = "eye-level shot, camera at her height, side view"
 LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "standing", "stance": "standing facing the camera, one hand on her hip, the other hand touching "
                                   "her bra strap",
      "needs": _FLOOR, "framing": _KNEES, "gaze": _EYES},
     # Jeremy, 2026-11-01: "The bend over and spread poses are supposed to be
-    # with her back to the viewer."
-    # and of the first takes (13 of 13 hands on hips, feet hip-width, most
-    # cropped at the thighs): "always just a girl standing up straight." The
-    # stance says how wide against her shoulders and the frame takes her feet.
-    {"tag": "standingspread", "stance": "standing with her legs spread wide apart, her feet twice as wide as "
-                                        "her shoulders, legs straight, hands on her hips",
-     "needs": _FLOOR, "framing": _HEAD_TO_FEET, "shot_type": "full-length photo from behind",
-     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
+    # with her back to the viewer", and of the first takes (13 of 13 hands on
+    # hips, feet hip-width, most cropped at the thighs): "always just a girl
+    # standing up straight."
+    {"tag": "standingspread", "stance": "her feet planted on the floor far apart, much wider than her "
+                                        "shoulders, her straight legs making an upside-down V with a wide gap "
+                                        "between her thighs, hands on her hips",
+     "needs": _FLOOR, "framing": _HEAD_TO_FEET,
+     "shot_type": "full-length photo from behind of her standing with her legs spread wide",
+     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera",
+     "negative": "feet together, legs together, feet close together"},
     # Jeremy, 2026-11-01: "The sitting prompt is also always the girl
-    # kneeling." "Knees together and bent to one side" drew kneeling or legs
-    # folded under her in most of 14. Then: "Crystal's is the perfect example
-    # of what sitting is supposed to be like" - side-saddle, her hip and
-    # bottom on the floor, both legs swept out to one side, not under her.
-    {"tag": "sitting", "stance": "sitting side-saddle on the floor, her hip and bottom resting on the floor, "
-                                 "both legs bent and swept out to one side beside her, not under her, "
-                                 "leaning on one straight arm, her other hand resting on her thigh",
-     "needs": _FLOOR, "framing": _HEAD_TO_FEET, "shot_type": "full-length photo", "gaze": _EYES},
+    # kneeling" - then "Crystal's is the perfect example of what sitting is
+    # supposed to be like": side-saddle, hip and bottom on the floor, both legs
+    # swept out to one side, not under her.
+    {"tag": "sitting", "stance": "her hip and bottom resting on the floor, both legs bent and swept out to one "
+                                 "side beside her, not under her, leaning on one straight arm, her other hand "
+                                 "resting on her thigh",
+     "needs": _FLOOR, "framing": _HEAD_TO_FEET,
+     "shot_type": "full-length photo of her sitting side-saddle on the floor", "gaze": _EYES,
+     "negative": "kneeling, sitting on her heels, legs folded under her"},
     # Jeremy, 2026-11-01: "the viewer [is] standing right next to the girl while
     # she is kneeling. It would be like if you were standing next to a girl
     # kissing her, and then she kneeled down and you looked down." One pose
     # just looking up; the second the exact same pose, her head tilted back a
-    # little and her mouth open. The old pair was a full-length shot from
-    # "slightly above", a photographer a few steps away.
-    {"tag": "kneeling", "stance": _KNEEL_BESIDE, "needs": _FLOOR, "framing": _LOOKING_DOWN,
+    # little and her mouth open.
+    {"tag": "kneeling", "stance": _KNEEL_STANCE, "needs": _FLOOR, "framing": _LOOKING_DOWN,
      "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING, "gaze": _KNEEL_EYES,
-     "expression_natural": "a soft, closed-lip expression"},
-    {"tag": "kneeling2", "stance": _KNEEL_BESIDE, "needs": _FLOOR, "framing": _LOOKING_DOWN,
+     "expression_natural": "a soft, closed-lip expression", "negative": _DOWN_NOT},
+    {"tag": "kneeling2", "stance": _KNEEL_STANCE, "needs": _FLOOR, "framing": _LOOKING_DOWN,
      "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING,
      "gaze": "her head tilted back a little, " + _KNEEL_EYES,
-     "expression_natural": "her mouth open"},
-    {"tag": "spreadwide", "stance": "standing with her legs straight and her feet planted very wide apart, "
-                                    "bent forward at the waist, her hands flat on the floor between her feet, "
-                                    "her hips pushed back toward the camera",
-     "needs": _FLOOR, "framing": _HEAD_TO_FEET, "shot_type": "full-length photo from behind",
-     "facing": "her back to the camera", "gaze": "looking back at the camera from between her legs"},
-    # Jeremy, 2026-11-01, of the old spreadwide: "I actually really like [it].
-    # But that would be more like show me your feet or something in terms of
-    # the name." The game has no showfeet chat pose yet.
-    {"tag": "showfeet", "stance": "sitting on the floor leaning back on her hands, her knees up and spread "
-                                  "wide, facing the camera",
-     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
-    {"tag": "lyingdown", "stance": "lying on her side on the floor, propped on one elbow, legs together",
-     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
-    {"tag": "lyingspread", "stance": "lying back on the floor propped up on her elbows, her knees up and "
-                                     "apart with her feet flat on the floor, nearest the camera",
+     "expression_natural": "her mouth open", "negative": _DOWN_NOT},
+    # 3 of 3 stood upright with "bent forward at the waist, hands flat on the
+    # floor" - the fold is named as the yoga pose and her head goes below her hips
+    {"tag": "spreadwide", "stance": "her feet planted very wide apart, legs straight, her torso folded down "
+                                    "between her legs so her head hangs below her hips, both palms flat on the "
+                                    "floor between her feet, her hips the highest point of her body",
+     "needs": _FLOOR, "framing": _HEAD_TO_FEET,
+     "shot_type": "full-length photo from behind of her standing in a wide-legged forward fold",
+     "facing": "her back to the camera", "gaze": "her face upside down between her legs, looking back at the camera",
+     "negative": _UPRIGHT},
+    # Jeremy, 2026-11-01, of the first spreadwide: "I actually really like [it].
+    # But that would be more like show me your feet." That prompt never showed
+    # feet (0 of 16); the old lyingspread prompt put her soles to the camera in
+    # 11 of 16, so it is this pose's now, word for word. The game has no
+    # showfeet chat pose yet.
+    {"tag": "showfeet", "stance": "lying back on the floor propped up on her elbows, her knees up and "
+                                  "apart with her feet flat on the floor, nearest the camera",
      "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo from by her feet",
      "gaze": "looking down her body into the camera", "expression_natural": "lips parted"},
-    # Jeremy, 2026-11-01: "when they say X, the girl does X." The first take
-    # of each (13 sets) came back wrong: "bent forward at the waist, hands on
-    # her knees" stood her nearly upright cropped at the knees, and "kneeling
-    # ... chest down low and her hips raised high" sat her back on her heels
-    # in all 13 - "kneeling" wins over the rest of the sentence. So the torso
-    # angle is named outright and the knees-down pose never says kneeling.
-    {"tag": "bendingover", "stance": "standing with her legs straight and her feet together, bent forward at "
-                                     "the waist until her back is level with the floor, her hands on her "
-                                     "knees, her hips pushed back toward the camera",
-     "needs": _FLOOR, "framing": _HEAD_TO_FEET, "shot_type": "full-length photo from behind",
-     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
-    {"tag": "bendingover2", "stance": "down on her knees and forearms on the floor, her forearms flat on the "
-                                      "floor, her chest pressed down to the floor, her thighs straight up "
-                                      "and down, her hips raised high above her knees, her ass and the crotch "
-                                      "of her panties pointed straight at the camera",
-     "needs": _FLOOR, "framing": _FULL, "shot_type": "photo from behind, low, level with the floor",
-     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
+    {"tag": "lyingdown", "stance": "lying on her side on the floor, propped on one elbow, legs together",
+     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
+    # 0 of 16 lay back: 11 sat up, 5 lay on their stomach
+    {"tag": "lyingspread", "stance": "her back, shoulders and head resting flat on the floor, her arms out at "
+                                     "her sides, her knees bent up and spread wide apart, the soles of her feet "
+                                     "flat on the floor nearest the camera",
+     "needs": _FLOOR, "framing": _HEAD_TO_FEET,
+     "shot_type": "high-angle photo from above her feet of her lying flat on her back on the floor",
+     "gaze": "lifting her chin to look down her body into the camera", "expression_natural": "lips parted",
+     "negative": "sitting up, sitting upright, propped up on her elbows, lying on her stomach"},
+    # 16 of 16 stood nearly upright with "bent forward at the waist ... back
+    # level with the floor"
+    {"tag": "bendingover", "stance": "her legs straight and her feet together, her torso folded forward and "
+                                     "down until her chest is against her thighs, her fingertips touching her "
+                                     "toes, her hips the highest point of her body, pushed back toward the camera",
+     "needs": _FLOOR, "framing": _HEAD_TO_FEET,
+     "shot_type": "full-length photo from behind of her bent over touching her toes",
+     "facing": "her back to the camera, seen from behind and slightly to one side",
+     "gaze": "her face turned toward the camera beside her knees, looking at it", "negative": _UPRIGHT},
+    # 16 of 16 sat back on their heels, eden too with "knees and forearms,
+    # chest pressed to the floor"
+    {"tag": "bendingover2", "stance": "her knees on the floor hip-width apart with her thighs vertical, her "
+                                      "chest and the side of her face pressed flat against the floor, her arms "
+                                      "stretched out forward along the floor, her back sloping down from her "
+                                      "raised hips to her shoulders, her hips the highest point of her body, her "
+                                      "ass and the crotch of her panties pointed at the camera",
+     "needs": _FLOOR, "framing": _FULL,
+     "shot_type": "photo from behind and slightly above of her in a face-down, ass-up pose on the floor",
+     "facing": "her back to the camera", "gaze": "her cheek on the floor, her face turned to the side, "
+                                                 "looking back at the camera",
+     "negative": _SITS_BACK},
     {"tag": "crawling", "stance": "crawling toward the camera on all fours on the floor",
      "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo",
      "gaze": "looking up into the camera from under her brows"},
-    {"tag": "crawling2", "stance": "on all fours on the floor, back arched",
-     "needs": _FLOOR, "framing": _FULL, "shot_type": "photo from behind",
-     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera"},
+    # 16 of 16 sat back on their heels with "on all fours, back arched"
+    {"tag": "crawling2", "stance": "her arms straight and vertical with her palms flat on the floor under her "
+                                   "shoulders, her knees under her hips with her thighs vertical, her bottom "
+                                   "raised well off her heels, her back arched down so her hips are pushed up",
+     "needs": _FLOOR, "framing": _FULL,
+     "shot_type": "full-length photo from behind of her on her hands and knees on the floor",
+     "facing": "her back to the camera", "gaze": "her head turned to look back at the camera over her shoulder",
+     "negative": _SITS_BACK},
     {"tag": "smoochie", "stance": "kneeling up on the floor and leaning in close to the camera, lips "
                                   "puckered for a kiss",
      "needs": _FLOOR, "framing": "her face and shoulders filling the frame, close", "shot_type": "photo",
      "gaze": "her eyes closed", "expression_natural": "her lips puckered for a kiss"},
     # Jeremy, 2026-11-01: diane's and dianna's were "both missing a friggin'
-    # arm" - only the raised arm was named, so the other was simply not drawn.
-    {"tag": "after", "stance": "lying on her back on the floor, one arm bent above her head, her other arm "
-                               "resting on the floor along her side with her hand by her hip, both arms in "
-                               "view, catching her breath",
-     "needs": _FLOOR, "framing": "her body from the thighs up in frame", "shot_type": "photo from above",
-     "gaze": "looking up into the camera", "expression_natural": "a satisfied smile, eyes heavy"},
+    # arm" - only the raised arm was named. Most of 16 also read as standing
+    # with an arm up; her hair spread on the floor says she is lying down.
+    {"tag": "after", "stance": "one arm bent above her head, her other arm resting on the floor along her side "
+                               "with her hand by her hip, both arms in view, her hair fanned out on the floor "
+                               "around her head, catching her breath",
+     "needs": _FLOOR, "framing": "her body from the thighs up in frame, the floor all around her",
+     "shot_type": "photo from directly above of her lying on her back on the floor",
+     "gaze": "looking up into the camera", "expression_natural": "a satisfied smile, eyes heavy",
+     "negative": "standing, standing up"},
 )
 
 OFFICE: tuple[Shoot, ...] = (
