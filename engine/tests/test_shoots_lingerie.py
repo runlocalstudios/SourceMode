@@ -101,3 +101,10 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     assert "twice as wide as her shoulders" in by["standingspread"]["stance"] and "feet" in by["standingspread"]["framing"]
     assert "kneel" not in by["bendingover2"]["stance"] and "hips raised high" in by["bendingover2"]["stance"]
     assert "facing the camera" in by["showfeet"]["stance"]
+
+
+def test_sitting_cannot_be_read_as_kneeling():
+    # Jeremy, 2026-11-01: "The sitting prompt is also always the girl kneeling."
+    sit = next(p for p in S.LINGERIE_PACK if p["tag"] == "sitting")
+    assert "kneel" not in sit["stance"] and "bent" not in sit["stance"]
+    assert "legs stretched straight out" in sit["stance"]
