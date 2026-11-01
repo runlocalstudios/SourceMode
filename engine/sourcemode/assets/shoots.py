@@ -545,14 +545,13 @@ CHAT_POSES = ("standing", "sitting", "kneeling", "crawling", "lyingdown", "lying
 # bedroom." Every pose is on the bare studio floor with nothing to sit, lean or
 # lie on - whatever she touches would be cut out with her - so the bed, the
 # mattress and the pillows went, and each pose says where her weight is.
+# "comehere" went the same day - "beckoning with one finger" rendered a
+# raised pointing finger in every set, and he: "Just get rid of that one."
 _FLOOR = ("floor",)
 LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "standing", "stance": "standing facing the camera, one hand on her hip, the other hand touching "
                                   "her bra strap",
      "needs": _FLOOR, "framing": _KNEES, "gaze": _EYES},
-    {"tag": "comehere", "stance": "walking toward the camera, beckoning with one finger",
-     "needs": _FLOOR, "framing": _KNEES, "gaze": _EYES,
-     "expression_natural": "a teasing closed-mouth smile"},
     {"tag": "standingspread", "stance": "standing with her feet planted wide apart, hands on her hips",
      "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
     {"tag": "sitting", "stance": "sitting on the floor with her knees together and bent to one side, "
