@@ -691,14 +691,17 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden;background:var(--photo)
   cursor:pointer;-webkit-tap-highlight-color:transparent;
   transition:opacity var(--m-base) var(--ease)}
 #pick .num{color:var(--g9)}
-/* Jeremy, 2026-10-05: the kept / Undo toast lives top right on this page,
-   level with the picker, instead of floating over the photo above his thumbs.
-   Compact to match the picker; the picker narrows so the two never meet. */
+/* Jeremy, 2026-10-05: the kept / Undo toast was moved off the photo above his
+   thumbs to the top right; 2026-11-01 it covered the shot name there, so it
+   sits at the very bottom, centred between the X and the check. Compact; the
+   picker stays narrow so the shot name has the top right. */
 #pick{max-width:min(calc(100vw - 190px),380px)}
-body .toast{top:var(--s3);right:var(--s3);left:auto;bottom:auto;min-height:30px;
+body .toast{top:auto;right:auto;left:50%;
+  bottom:calc(18px + var(--safe-b) + (var(--thumb) - 30px) / 2);
+  max-width:calc(100vw - 2 * var(--thumb) - 52px);min-height:30px;
   padding:0 4px 0 12px;gap:var(--s2);font:var(--t-small);font-weight:600;
-  transform:translate(0,-8px)}
-body .toast.on{transform:none}
+  transform:translate(-50%,8px)}
+body .toast.on{transform:translate(-50%,0)}
 body .toast .btn{min-height:24px;padding:0 10px}
 #pick #setname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #pick.dim{opacity:.25}
@@ -726,10 +729,6 @@ body .toast .btn{min-height:24px;padding:0 10px}
   touch-action:manipulation;cursor:pointer;
   transition:transform var(--m-fast) var(--ease)}
 .tap:active{transform:scale(.9)}
-/* Jeremy, 2026-11-01: the "kept · Undo" toast covered which picture it was -
-   on this page it sits at the very bottom, between the X and the check. */
-body .toast{bottom:calc(18px + var(--safe-b) + (var(--thumb) - var(--tap)) / 2);
-  max-width:calc(100vw - 2 * var(--thumb) - 52px);white-space:nowrap}
 #no{left:18px;background:var(--stop-bg);border-color:var(--stop-line);color:var(--stop-ink)}
 #yes{right:18px;background:var(--done-bg);border-color:var(--done-line);color:var(--done-ink)}
 #hint{position:fixed;z-index:13;left:50%;transform:translateX(-50%);
