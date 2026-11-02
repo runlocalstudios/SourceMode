@@ -645,13 +645,16 @@ LINGERIE_PACK: tuple[dict, ...] = (
                                      "her sides, her knees bent up and spread wide apart, the soles of her feet "
                                      "flat on the floor nearest the camera",
      # Jeremy, 2026-11-01: "their head is on the bottom of the pic like they
-     # are upside down" - the frame now says which end is which.
-     "needs": _FLOOR, "framing": "her whole body in frame, her head at the top of the frame and her feet at "
-                                 "the bottom of the frame",
-     "shot_type": "high-angle photo from above her feet of her lying flat on her back on the floor",
-     "gaze": "lifting her chin to look down her body into the camera", "expression_natural": "lips parted",
+     # are upside down" - hannah, gwen, gigi, eve; "a high-angle photo from
+     # above her feet" read as a camera over her head. The camera now stands at
+     # her feet looking along her body, and the frame says which end is which.
+     "needs": _FLOOR, "framing": "her whole body in frame, her knees and feet at the bottom of the frame "
+                                 "nearest the camera, her face at the top of the frame",
+     "shot_type": "photo taken standing at her feet, looking down along the length of her body as she lies "
+                  "flat on her back on the floor",
+     "gaze": "her face turned toward the camera, looking at it", "expression_natural": "lips parted",
      "negative": "sitting up, sitting upright, propped up on her elbows, lying on her stomach, upside down, "
-                 "her head at the bottom of the frame"},
+                 "her head at the bottom of the frame, inverted, photo taken from above her head"},
     # Jeremy, 2026-11-01, of "touching her toes": "a slight bend to show off
     # her ass" - a slight bend at the hips, back arched, bottom pushed out.
     {"tag": "bendingover", "stance": "her legs straight and her feet together, bending slightly forward at the "
@@ -664,20 +667,31 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "negative": "touching her toes, forward fold, hands on the floor, chest against her thighs, "
                  "standing up straight"},
     # 16 of 16 sat back on their heels, eden too with "knees and forearms,
-    # chest pressed to the floor"
+    # chest pressed to the floor". The face-down rewrite took, but from
+    # straight behind her face is hidden past her hips, and asking her to look
+    # back twisted eve's body round (two pairs of panties). From behind and to
+    # one side her cheek on the floor is in view.
     {"tag": "bendingover2", "stance": "her knees on the floor hip-width apart with her thighs vertical, her "
                                       "chest and the side of her face pressed flat against the floor, her arms "
                                       "stretched out forward along the floor, her back sloping down from her "
                                       "raised hips to her shoulders, her hips the highest point of her body, her "
                                       "ass and the crotch of her panties pointed at the camera",
      "needs": _FLOOR, "framing": _FULL,
-     "shot_type": "photo from behind and slightly above of her in a face-down, ass-up pose on the floor",
-     "facing": "her back to the camera", "gaze": "her cheek on the floor, her face turned to the side, "
-                                                 "looking back at the camera",
-     "negative": _SITS_BACK},
-    {"tag": "crawling", "stance": "crawling toward the camera on all fours on the floor",
-     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo",
-     "gaze": "looking up into the camera from under her brows"},
+     "shot_type": "photo from behind and to one side, slightly above, of her in a face-down, ass-up pose on "
+                  "the floor",
+     "facing": "her back to the camera, seen from behind and to one side",
+     "gaze": "her cheek resting on the floor, her face turned toward the camera, looking at it",
+     "negative": _SITS_BACK + ", twisted torso, extra limbs, two pairs of panties"},
+    # Jeremy, 2026-11-01: crawling is "as if they are crawling TOWARDS the
+    # viewer" - gloria's knelt upright facing the camera.
+    {"tag": "crawling", "stance": "on her hands and knees crawling straight toward the camera, one hand reaching "
+                                  "forward mid-step, her torso low and level with the floor, her shoulders and face "
+                                  "nearest the camera, her hips and bottom raised behind her",
+     "needs": _FLOOR, "framing": _FULL,
+     "shot_type": "low-angle photo from the floor in front of her as she crawls toward the camera",
+     "facing": "her face and shoulders toward the camera",
+     "gaze": "looking up into the camera from under her brows",
+     "negative": _SITS_BACK + ", seen from the side, seen from behind"},
     # 16 of 16 sat back on their heels with "on all fours, back arched", and
     # eve's and gabi's still did with "from behind ... thighs vertical" -
     # Jeremy: "just kneeling viewed from behind". Straight from behind the
@@ -701,10 +715,12 @@ LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "after", "stance": "one arm bent above her head, her other arm resting on the floor along her side "
                                "with her hand by her hip, both arms in view, her hair fanned out on the floor "
                                "around her head, catching her breath",
-     "needs": _FLOOR, "framing": "her body from the thighs up in frame, the floor all around her",
+     # gigi's came out upside down; the frame says her head is at the top
+     "needs": _FLOOR, "framing": "her body from the thighs up in frame, her head at the top of the frame, the "
+                                 "floor all around her",
      "shot_type": "photo from directly above of her lying on her back on the floor",
      "gaze": "looking up into the camera", "expression_natural": "a satisfied smile, eyes heavy",
-     "negative": "standing, standing up"},
+     "negative": "standing, standing up, upside down, her head at the bottom of the frame"},
 )
 
 OFFICE: tuple[Shoot, ...] = (
