@@ -610,10 +610,15 @@ LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "kneeling", "stance": _KNEEL_STANCE, "needs": _FLOOR, "framing": _LOOKING_DOWN,
      "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING, "gaze": _KNEEL_EYES,
      "expression_natural": "a soft, closed-lip expression", "negative": _DOWN_NOT},
-    {"tag": "kneeling2", "stance": _KNEEL_STANCE, "needs": _FLOOR, "framing": _LOOKING_DOWN,
+    # Jeremy, 2026-11-01: "her hands either at her sides or behind her back -
+    # gabi's was sort of weird" (one arm reaching up at the lens)
+    {"tag": "kneeling2", "stance": _KNEEL_STANCE.replace("hands resting on her thighs",
+                                                         "both hands clasped behind her back"),
+     "needs": _FLOOR, "framing": _LOOKING_DOWN,
      "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING,
      "gaze": "her head tilted back a little, " + _KNEEL_EYES,
-     "expression_natural": "her mouth open", "negative": _DOWN_NOT},
+     "expression_natural": "her mouth open",
+     "negative": _DOWN_NOT + ", arm reaching toward the camera, hand on the camera, selfie"},
     # Jeremy, 2026-11-01, of the forward fold: "bent over too much ... they
     # shouldn't be touching the floor. It should be like they're standing next
     # to a bed with hands resting on the bed and looking back." The pack is a
