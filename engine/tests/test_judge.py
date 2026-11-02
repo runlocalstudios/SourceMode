@@ -277,3 +277,15 @@ def test_a_blind_set_names_nothing_and_keeps_its_shuffle(tmp_path):
     out = J.set_payload(tmp_path, "dense_x")
     assert all("label" not in it for it in out["items"])
     assert [it["id"] for it in out["items"]] == J.load_set(tmp_path, "dense_x")["order"]
+
+
+def test_review_from_the_start_walks_every_item_on_a_fresh_copy_of_the_set():
+    # Jeremy, 2026-11-02, trina's lingerie: "review from the start does not
+    # work" - a verdict jumped to the next UNJUDGED item, so on a fully judged
+    # set the restart showed one image and fell back to the results, and it
+    # restarted the list the page held from before the reshoot.
+    from sourcemode.assets.judge import PAGE
+    assert "idx=walk?idx+1:nextOpen(idx+1)" in PAGE
+    assert "idx=walk?idx+1:nextOpenPair(idx+1)" in PAGE
+    restart = PAGE[PAGE.index("if(a==='restart')"):][:200]
+    assert "openSet(cur.id)" in restart and "walk=true" in restart

@@ -815,7 +815,11 @@ BODY = """
 
 OWN_JS = r"""
 const $=id=>document.getElementById(id);
-let cur=null, idx=0, sets=[], last=null, front='A', zoom=1, zx=0, zy=0, dimT=null, idle=false;
+/* walk: "Review from the start" steps through EVERY item in order. Without it
+   a verdict jumped to the next UNJUDGED item, so on a fully judged set the
+   restart showed one image and fell back to the results (Jeremy, 2026-11-02,
+   trina's lingerie: "review from the start does not work"). */
+let cur=null, idx=0, sets=[], last=null, front='A', zoom=1, zx=0, zy=0, dimT=null, idle=false, walk=false;
 let showRef=true, refCorner=0;
 try{ refCorner=+(localStorage.getItem('refCorner')||0);
      if(localStorage.getItem('showRef')==='0') showRef=false; }catch(e){}
@@ -874,7 +878,7 @@ async function openSet(id){
   const r=await fetch('/judge/set/'+encodeURIComponent(id),{cache:'no-store'});
   if(!r.ok) throw new Error('HTTP '+r.status);
   cur=await r.json();
-  idle=false;
+  idle=false; walk=false;
   location.hash=id;
   $('results').classList.remove('on');
   $('setname').textContent=cur.title||cur.id;
@@ -945,7 +949,7 @@ async function pick(side){
   last={pair:idx,group:p.group,prev:{left:cur.verdicts[p.left]||null,right:cur.verdicts[p.right]||null}};
   cur.verdicts[p.left]=winner===p.left?'keep':'reject';
   cur.verdicts[p.right]=winner===p.right?'keep':'reject';
-  idx=nextOpenPair(idx+1);
+  idx=walk?idx+1:nextOpenPair(idx+1);
   const write=SM.postJSON('/judge/set/'+encodeURIComponent(cur.id)+'/pair',{group:p.group,winner:winner});
   pending=write;
   show();
@@ -1050,7 +1054,7 @@ async function verdict(v){
   if(!cur||idx>=cur.items.length||zoom>1) return;   /* zoomed = looking, not judging */
   const it=cur.items[idx];
   last={item:it.id,at:idx,prev:cur.verdicts[it.id]||null};
-  cur.verdicts[it.id]=v; idx=nextOpen(idx+1);
+  cur.verdicts[it.id]=v; idx=walk?idx+1:nextOpen(idx+1);
   const write=SM.postJSON('/judge/set/'+encodeURIComponent(cur.id)+'/verdict',{item:it.id,verdict:v});
   pending=write;
   show();  /* the thumb never waits */
@@ -1058,7 +1062,7 @@ async function verdict(v){
   SM.toast(v==='keep'?'kept':'rejected',{label:'Undo',run:undo});
   try{
     cur.verdicts=await write;
-    checkRedo();
+    if(!walk||idx>=cur.items.length) checkRedo();   /* a walk re-rolls at its end */
   }catch(e){
     /* Never let a lost write look like a recorded one. */
     delete cur.verdicts[it.id]; idx=last.at; last=null; show();
@@ -1393,7 +1397,9 @@ function foot(hist,left){
 $('results').addEventListener('click',async e=>{
   const b=e.target.closest('[data-act]'); if(!b) return;
   const a=b.dataset.act;
-  if(a==='restart'){ idx=0; show(); return; }
+  /* Re-read the set first: the page may hold the list from before a reshoot. */
+  if(a==='restart'){ try{ await openSet(cur.id); }catch(err){ return SM.toast(err.message); }
+    idx=0; walk=true; show(); return; }
   if(a==='nextset'){
     await refreshSets();
     const n=sets.find(x=>x.judged<x.n&&x.id!==cur.id);
