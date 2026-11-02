@@ -572,8 +572,14 @@ _KNEEL_FACING = "her body facing the camera"
 # The first take of the over-her-head pair landed at chest height ("a high-angle
 # photo" from "beside her"); a point-of-view shot from straight above is a
 # phrase the model knows, and the negative refuses the level camera.
-_KNEEL_STANCE = "kneeling on the floor directly below the camera, sitting back on her heels, hands resting on her thighs"
-_DOWN_SHOT = "point-of-view photo looking straight down at her from a standing man's eye height"
+_KNEEL_STANCE = ("kneeling on the floor directly in front of the viewer, close to his feet, sitting back on her "
+                 "heels, hands resting on her thighs")
+# Jeremy, 2026-11-02, after sienna's and maya's kneeling2 were still not
+# top-down: "I've had more success ... saying that the girl kneels directly
+# in front of the viewer on the floor while the viewer stands above her
+# looking down at her from above."
+_DOWN_SHOT = ("point-of-view photo of her kneeling directly in front of the viewer on the floor while the "
+              "viewer stands over her, looking straight down at her from a standing man's eye height")
 # Jeremy, 2026-11-02: still "not properly viewed from above. Examples are like
 # val" - val's and vera's were near front-on, the floor's far edge in view.
 # The keepers: her head the largest thing in frame, her body shrinking to her
@@ -581,8 +587,9 @@ _DOWN_SHOT = "point-of-view photo looking straight down at her from a standing m
 _LOOKING_DOWN = ("the camera high above her pointing straight down, her upturned face nearest the lens and the "
                  "largest thing in the frame, her shoulders, breasts and knees strongly foreshortened and "
                  "shrinking below it, nothing behind her but the floor, no horizon")
+# maya's kneeling, 2026-11-02: both arms outstretched toward the lens
 _DOWN_NOT = ("eye-level shot, camera at her height, side view, straight-on frontal view, chest-height camera, "
-             "horizon, far edge of the backdrop")
+             "horizon, far edge of the backdrop, arms outstretched, arm reaching toward the camera")
 LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "standing", "stance": "standing facing the camera, one hand on her hip, the other hand touching "
                                   "her bra strap",
@@ -628,7 +635,7 @@ LINGERIE_PACK: tuple[dict, ...] = (
      # and of "tongue resting on her lower lip": "much less prominent"
      "expression_natural": "her mouth open wide in a round O, her lips soft and covering her teeth, her "
                            "tongue low and barely visible inside her mouth",
-     "negative": _DOWN_NOT + ", arm reaching toward the camera, hand on the camera, selfie, teeth showing, "
+     "negative": _DOWN_NOT + ", hand on the camera, selfie, teeth showing, "
                              "smile, grin, laughing, tongue out, tongue sticking out"},
     # Jeremy, 2026-11-01, of the forward fold: "bent over too much ... they
     # shouldn't be touching the floor. It should be like they're standing next

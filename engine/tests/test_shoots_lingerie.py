@@ -85,6 +85,8 @@ def test_the_kneeling_pair_looks_down_from_beside_her_and_differs_only_in_her_he
     for k in (k1, k2):
         assert "straight down" in k["shot_type"] and "standing man" in k["shot_type"]
         assert "camera at her height" in k["negative"]
+        assert "in front of the viewer" in k["shot_type"] and "stands over her" in k["shot_type"]
+        assert "arms outstretched" in k["negative"]
         assert "whole kneeling figure" not in k["framing"]
     assert {f: k1[f] for f in ("framing", "shot_type")} == {f: k2[f] for f in ("framing", "shot_type")}
     assert "behind her back" in k2["stance"] and "hands resting on her thighs" in k1["stance"]
