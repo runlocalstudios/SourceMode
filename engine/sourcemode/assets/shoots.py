@@ -689,14 +689,17 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "negative": _SITS_BACK + ", twisted torso, extra limbs, two pairs of panties"},
     # Jeremy, 2026-11-01: crawling is "as if they are crawling TOWARDS the
     # viewer" - gloria's knelt upright facing the camera.
-    {"tag": "crawling", "stance": "on her hands and knees crawling straight toward the camera, one hand reaching "
-                                  "forward mid-step, her torso low and level with the floor, her shoulders and face "
-                                  "nearest the camera, her hips and bottom raised behind her",
+    # Jeremy, 2026-11-02: "on all fours - they are generating looking like she
+    # is missing an arm" - "one hand reaching forward mid-step" lost the other.
+    {"tag": "crawling", "stance": "on all fours on the floor crawling straight toward the camera, both arms "
+                                  "straight with both hands planted flat on the floor in front of her, both arms "
+                                  "in view, her torso low and level with the floor, her shoulders and face nearest "
+                                  "the camera, her hips and bottom raised behind her",
      "needs": _FLOOR, "framing": _FULL,
      "shot_type": "low-angle photo from the floor in front of her as she crawls toward the camera",
      "facing": "her face and shoulders toward the camera",
      "gaze": "looking up into the camera from under her brows",
-     "negative": _SITS_BACK + ", seen from the side, seen from behind"},
+     "negative": _SITS_BACK + ", seen from the side, seen from behind, missing arm, one arm, hand raised"},
     # 16 of 16 sat back on their heels with "on all fours, back arched", and
     # eve's and gabi's still did with "from behind ... thighs vertical" -
     # Jeremy: "just kneeling viewed from behind". Straight from behind the
