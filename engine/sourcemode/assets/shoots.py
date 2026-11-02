@@ -696,15 +696,24 @@ LINGERIE_PACK: tuple[dict, ...] = (
     # viewer" - gloria's knelt upright facing the camera.
     # Jeremy, 2026-11-02: "on all fours - they are generating looking like she
     # is missing an arm" - "one hand reaching forward mid-step" lost the other.
-    {"tag": "crawling", "stance": "on all fours on the floor crawling straight toward the camera, both arms "
-                                  "straight with both hands planted flat on the floor in front of her, both arms "
-                                  "in view, her torso low and level with the floor, her shoulders and face nearest "
-                                  "the camera, her hips and bottom raised behind her",
-     "needs": _FLOOR, "framing": _FULL,
-     "shot_type": "low-angle photo from the floor in front of her as she crawls toward the camera",
+    # Jeremy, 2026-11-02: "Priyanka's new crawling photo is perfect - a girl on
+    # all fours not bending over to the ground. Jojo's is not good." Same
+    # prompt: priyanka's camera stood a few steps off, slightly above and to one
+    # side, arms straight under her shoulders, hands to feet in frame; jojo's
+    # was on the floor and close, elbows bent, chest dropped, cropped. "Low-angle
+    # from the floor", "torso low" and "face nearest the camera" are gone.
+    {"tag": "crawling", "stance": "on all fours on the floor coming toward the camera, both arms straight and "
+                                  "vertical with her elbows locked and her shoulders directly above her hands, "
+                                  "both hands planted flat on the floor, her chest held up well off the floor, "
+                                  "her knees on the floor under her hips, her back level, her hips and bottom "
+                                  "behind her",
+     "needs": _FLOOR, "framing": "her whole body in frame, from her hands to her feet",
+     "shot_type": "full-length photo from a few steps in front of her, slightly above and a little to one side, "
+                  "of her on all fours crawling toward the camera",
      "facing": "her face and shoulders toward the camera",
-     "gaze": "looking up into the camera from under her brows",
-     "negative": _SITS_BACK + ", seen from the side, seen from behind, missing arm, one arm, hand raised"},
+     "gaze": "looking up into the camera",
+     "negative": _SITS_BACK + ", seen from the side, seen from behind, missing arm, one arm, hand raised, "
+                              "bent elbows, chest on the floor, forearms on the floor, close-up, cropped"},
     # 16 of 16 sat back on their heels with "on all fours, back arched", and
     # eve's and gabi's still did with "from behind ... thighs vertical" -
     # Jeremy: "just kneeling viewed from behind". Straight from behind the
