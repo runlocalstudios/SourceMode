@@ -13,6 +13,7 @@ There is one interface: the monitor, at **http://127.0.0.1:8787**.
 | Training sets | Each training image beside its caption. Approving a set is what lets it train. |
 | Shoots | Pick shoots and packs for a character and queue them as one job. |
 | Characters | Appearance, style per outfit type, jobs, hair options, locked LoRA, packs. New characters start here. |
+| Music | One looping track per game place: edit its prompt, queue takes, hear them and the loop join, ship one into the game. |
 
 Three logon tasks keep it running: **SourceMode ComfyUI**, **SourceMode Monitor**
 and **SourceMode GPU Runner** (`engine/scripts/register-autostart.ps1`).

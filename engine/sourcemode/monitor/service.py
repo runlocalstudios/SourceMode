@@ -41,6 +41,7 @@ def create_app(cfg: dict, sampler: Sampler | None = None):
     from .shoots_page import shoots_router  # noqa: PLC0415
     from .video_page import video_router  # noqa: PLC0415
     from .voice_page import voice_router  # noqa: PLC0415
+    from .music_page import music_router  # noqa: PLC0415
     from .gallery_page import gallery_router  # noqa: PLC0415
     from ..assets.review import review_router  # noqa: PLC0415
     from ..train.epochs import epochs_router  # noqa: PLC0415
@@ -57,6 +58,7 @@ def create_app(cfg: dict, sampler: Sampler | None = None):
     app.include_router(shoots_router(cfg))
     app.include_router(video_router(cfg))
     app.include_router(voice_router(cfg))
+    app.include_router(music_router(cfg))
     app.include_router(gallery_router(cfg))
     app.include_router(character_router(cfg))
     from .appearance_page import appearance_router  # noqa: PLC0415

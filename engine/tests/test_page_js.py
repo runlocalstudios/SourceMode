@@ -31,6 +31,7 @@ PAGES = [
     ("dataset", "sourcemode.train.preview", "PAGE"),
     ("shoots", "sourcemode.monitor.shoots_page", "PAGE"),
     ("gallery", "sourcemode.monitor.gallery_page", "PAGE"),
+    ("music", "sourcemode.monitor.music_page", "PAGE"),
 ]
 
 # A bare JS constant has no <script> tag, so it cannot be a PAGES row: _scripts()

@@ -1,0 +1,22 @@
+{
+  "_meta": {
+    "verified": "Built 2026-11-02 from ComfyUI 0.25.1's own templates audio_ace_step1_5_xl_turbo.json / audio_ace_step1_5_xl_sft.json (comfyui_workflow_templates_media_other). Turbo: 8 steps, cfg 1. SFT: 50 steps, cfg 7. Both: euler/simple, ModelSamplingAuraFlow shift 3, negative is the positive zeroed. ACE-Step 1.5 is MIT.",
+    "template": "ace15_music",
+    "placeholders": ["MODEL", "TAGS", "LYRICS", "SEED", "BPM", "SECONDS", "KEYSCALE", "TIMESIG", "STEPS", "CFG", "PREFIX"]
+  },
+  "104": {"class_type": "UNETLoader", "inputs": {"unet_name": "{{MODEL}}", "weight_dtype": "default"}},
+  "105": {"class_type": "DualCLIPLoader", "inputs": {"clip_name1": "qwen_0.6b_ace15.safetensors", "clip_name2": "qwen_4b_ace15.safetensors", "type": "ace", "device": "default"}},
+  "106": {"class_type": "VAELoader", "inputs": {"vae_name": "ace_1.5_vae.safetensors"}},
+  "78": {"class_type": "ModelSamplingAuraFlow", "inputs": {"model": ["104", 0], "shift": 3}},
+  "94": {"class_type": "TextEncodeAceStepAudio1.5", "inputs": {
+    "clip": ["105", 0], "tags": "{{TAGS}}", "lyrics": "{{LYRICS}}", "seed": "{{SEED}}", "bpm": "{{BPM}}",
+    "duration": "{{SECONDS}}", "timesignature": "{{TIMESIG}}", "language": "en", "keyscale": "{{KEYSCALE}}",
+    "generate_audio_codes": true, "cfg_scale": 2.0, "temperature": 0.85, "top_p": 0.9, "top_k": 0, "min_p": 0.0}},
+  "47": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["94", 0]}},
+  "98": {"class_type": "EmptyAceStep1.5LatentAudio", "inputs": {"seconds": "{{SECONDS}}", "batch_size": 1}},
+  "3": {"class_type": "KSampler", "inputs": {
+    "model": ["78", 0], "positive": ["94", 0], "negative": ["47", 0], "latent_image": ["98", 0],
+    "seed": "{{SEED}}", "steps": "{{STEPS}}", "cfg": "{{CFG}}", "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0}},
+  "18": {"class_type": "VAEDecodeAudio", "inputs": {"samples": ["3", 0], "vae": ["106", 0]}},
+  "107": {"class_type": "SaveAudioMP3", "inputs": {"audio": ["18", 0], "filename_prefix": "{{PREFIX}}", "quality": "V0"}}
+}

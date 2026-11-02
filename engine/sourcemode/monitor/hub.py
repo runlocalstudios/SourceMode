@@ -46,8 +46,8 @@ html,body{height:100%;margin:0;padding:0;overflow:hidden}
 body{display:flex;flex-direction:column;background:var(--g0)}
 #tabs{display:flex;flex:none;background:var(--g1);border-bottom:1px solid var(--g3);
   padding-top:var(--safe-t);transition:transform var(--m-base) var(--ease)}
-/* Seven tabs on a phone, no scrolling (Gallery added 2026-10-29, the long
-   names cut to Train and Char to make room). Jeremy, 2026-10-14: "The nav bar buttons
+/* Eight tabs on a phone, no scrolling (Gallery added 2026-10-29, the long
+   names cut to Train and Char to make room; Music added 2026-11-02). Jeremy, 2026-10-14: "The nav bar buttons
    need to be smaller to fit on a cell phone screen without scrolling." */
 #tabs button{flex:1;min-width:0;min-height:40px;padding:var(--s1) 2px;background:none;
   border:0;border-bottom:2px solid transparent;color:var(--g7);
@@ -101,6 +101,8 @@ BODY = """
     Video<span class=n id=n_video></span></button>
   <button id=t_gallery role=tab aria-selected=false data-tab=gallery>
     Gallery<span class=n id=n_gallery></span></button>
+  <button id=t_music role=tab aria-selected=false data-tab=music>
+    Music<span class=n id=n_music></span></button>
 </div>
 
 <iframe id=p_gpu class="pane on" src="/queue" title="GPU"></iframe>
@@ -110,6 +112,7 @@ BODY = """
 <iframe id=p_characters class=pane title="Characters"></iframe>
 <iframe id=p_video class=pane title="Video"></iframe>
 <iframe id=p_gallery class=pane title="Gallery"></iframe>
+<iframe id=p_music class=pane title="Music"></iframe>
 
 <div id=nowwrap>
   <button id=nowbar aria-label="what the card is doing">
@@ -123,7 +126,7 @@ BODY = """
 
 OWN_JS = r"""
 const $=id=>document.getElementById(id);
-const SRC={gpu:'/queue',judge:'/judge',dataset:'/dataset',shoots:'/shoots',characters:'/characters',video:'/video',gallery:'/gallery'};
+const SRC={gpu:'/queue',judge:'/judge',dataset:'/dataset',shoots:'/shoots',characters:'/characters',video:'/video',gallery:'/gallery',music:'/music'};
 /* The phone's browser chrome carries the worst state in the house. The colours
    come from the stylesheet, so the hub holds no hex literal of its own. */
 const TINT={stop:'stop-bg',you:'you-bg',live:'live-bg',unknown:'unk-bg',idle:'g0'};

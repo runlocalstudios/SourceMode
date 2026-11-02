@@ -1,0 +1,77 @@
+{
+ "_about": "One looping track per place in Chill After Dark. `id` is the file the game plays: src/assets/music/<id>.mp3. A venue id is its location id in the game's locations.js and overrides its district; a district id is district_<district>. Edit the prompts on the Music tab.",
+ "places": [
+  {
+   "id": "district_flats",
+   "label": "The Flats",
+   "kind": "district",
+   "tags": "instrumental, dusty lo-fi hip hop, boom-bap drums with vinyl crackle, warm Rhodes electric piano, mellow upright bass, late afternoon neighbourhood, unhurried, steady groove, no vocals, no build-ups, no drops, background music",
+   "bpm": 82,
+   "keyscale": "D minor",
+   "seconds": 180
+  },
+  {
+   "id": "district_midtown",
+   "label": "Midtown",
+   "kind": "district",
+   "tags": "instrumental, jazzy hip hop, bright clean electric guitar, soft brushed drums, walking bass, warm muted trumpet phrases, city opening up, easy optimistic mood, steady groove, no vocals, no build-ups, no drops, background music",
+   "bpm": 88,
+   "keyscale": "F major",
+   "seconds": 180
+  },
+  {
+   "id": "district_hill",
+   "label": "The Hill",
+   "kind": "district",
+   "tags": "instrumental, glossy downtempo, soft analog synth pads, gentle electric piano, restrained deep bass, crisp minimal percussion, expensive and quiet, evening light, steady groove, no vocals, no build-ups, no drops, background music",
+   "bpm": 78,
+   "keyscale": "A minor",
+   "seconds": 180
+  },
+  {
+   "id": "district_central",
+   "label": "Central",
+   "kind": "district",
+   "tags": "instrumental, airy city lo-fi, clean piano motif, light swung drums, soft strings in the background, civic and open, calm daytime mood, steady groove, no vocals, no build-ups, no drops, background music",
+   "bpm": 85,
+   "keyscale": "C major",
+   "seconds": 180
+  },
+  {
+   "id": "tavern",
+   "label": "Pints Half Full",
+   "kind": "venue",
+   "tags": "instrumental, laid-back bar blues rock, twangy electric guitar, Hammond organ, shuffle drums, warm bass, neighbourhood pub, sits under conversation, steady groove, no vocals, no solos, no build-ups, background music",
+   "bpm": 96,
+   "keyscale": "E major",
+   "seconds": 180
+  },
+  {
+   "id": "chillTrap",
+   "label": "The Chill Trap",
+   "kind": "venue",
+   "tags": "instrumental, slow murky trap, deep 808 bass, lo-fi detuned synth, sparse hi-hats, dark dive bar after midnight, hazy and gritty, steady groove, no vocals, no build-ups, no drops, background music",
+   "bpm": 70,
+   "keyscale": "G minor",
+   "seconds": 180
+  },
+  {
+   "id": "obsidian",
+   "label": "Obsidian",
+   "kind": "venue",
+   "tags": "instrumental, dark deep house, four-on-the-floor kick, rolling sub bass, hypnotic minor synth stabs, smoky nightclub, polished and moody, steady groove, no vocals, no build-ups, no drops, background music",
+   "bpm": 120,
+   "keyscale": "F minor",
+   "seconds": 180
+  },
+  {
+   "id": "foundersClub",
+   "label": "The Founders Club",
+   "kind": "venue",
+   "tags": "instrumental, smoky jazz lounge trio, upright bass, brushed drums, soft grand piano, old leather and a lit fire, discreet and wealthy, steady swing, no vocals, no solos, no build-ups, background music",
+   "bpm": 92,
+   "keyscale": "Bb major",
+   "seconds": 180
+  }
+ ]
+}

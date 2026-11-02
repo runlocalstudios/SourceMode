@@ -24,7 +24,7 @@ import pytest
 # implied. ALL_PAGES is the finish line.
 MIGRATED = ALL_PAGES = ("sourcemode.monitor.hub", "sourcemode.monitor.queue_page",
                         "sourcemode.assets.judge", "sourcemode.train.preview",
-                        "sourcemode.monitor.shoots_page")
+                        "sourcemode.monitor.shoots_page", "sourcemode.monitor.music_page")
 PAGE_MODULES = MIGRATED
 
 STYLE = re.compile(r"<style>(.*?)</style>", re.S)
