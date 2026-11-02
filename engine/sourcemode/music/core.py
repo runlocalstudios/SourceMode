@@ -35,6 +35,8 @@ MODELS = {
     "sft": {"file": "acestep_v1.5_xl_sft_bf16.safetensors", "steps": 50, "cfg": 7.0,
             "label": "SFT (slower, finer)"},
 }
+#: Jeremy, 2026-11-02: the slower, finer setting is the default
+DEFAULT_MODEL = "sft"
 KEYS = [f"{root} {q}" for q in ("major", "minor")
         for root in ("C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B")]
 VERDICTS = ("keep", "reject")

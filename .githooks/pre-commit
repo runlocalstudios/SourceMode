@@ -1,0 +1,14 @@
+#!/bin/sh
+# Run the non-GPU test suite before every commit (~1 minute, never touches the
+# card). Tests also read the game repo and the character records, so a commit
+# that changed neither can still fail here: something drifted since the last
+# commit. Fix it now, while it is one thing.
+#   - a test that broke because live data was edited: fake the data in the test
+#   - a real gap (a new game location with no scene): fill the gap
+# Never skip this with --no-verify.
+cd engine || exit 1
+if ! uv run pytest -m "not gpu" -q -p no:cacheprovider; then
+  echo
+  echo "pre-commit: tests failed - commit refused. See the hook for what to do."
+  exit 1
+fi

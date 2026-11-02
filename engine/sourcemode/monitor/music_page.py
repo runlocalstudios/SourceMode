@@ -68,7 +68,7 @@ BODY = """
 OWN_JS = r"""
 const $=id=>document.getElementById(id);
 const FADE=__FADE__;
-let places=[], models={}, keys=[], cur=null, showRejected=false;
+let places=[], models={}, defModel='sft', keys=[], cur=null, showRejected=false;
 try{ cur=localStorage.getItem('musicPlace'); }catch(e){}
 const takeUrl=(p,n)=>'/music/file?place='+encodeURIComponent(p)+'&name='+encodeURIComponent(n);
 
@@ -76,7 +76,7 @@ async function load(){
   let d;
   try{ d=await SM.getJSON('/music/places'); }
   catch(e){ SM.set($('who'),null,'<div class=errbox><b>Could not load</b>'+SM.esc(e.message)+'</div>'); return; }
-  places=d.places; models=d.models; keys=d.keys;
+  places=d.places; models=d.models; keys=d.keys; defModel=d.default_model||defModel;
   if(cur && !places.some(p=>p.id===cur)) cur=null;
   bubbles(); render();
 }
@@ -102,7 +102,7 @@ function render(){
       +'<label>Key<select id=key>'+keys.map(k=>opt(k,k,p.keyscale)).join('')+'</select></label>'
       +'<label>Length (s)<input id=secs type=number min=30 max=360 value="'+p.seconds+'"></label>'
       +'<label>Takes<select id=count>'+[1,2,3,4,5,6,8].map(n=>opt(String(n),String(n),'4')).join('')+'</select></label>'
-      +'<label>Model<select id=model>'+Object.keys(models).map(m=>opt(m,models[m].label,'turbo')).join('')+'</select></label>'
+      +'<label>Model<select id=model>'+Object.keys(models).map(m=>opt(m,models[m].label,defModel)).join('')+'</select></label>'
       +'</div><div class=btn-row>'
       +'<button class="btn btn-sm" id=save>Save prompt</button>'
       +'<button class="btn btn-sm btn-primary" id=make>Queue takes</button>'
@@ -118,7 +118,7 @@ function render(){
   let t='<h2>Takes <span class=muted>'+all.length+(hidden?' &middot; '+hidden+' rejected hidden':'')+'</span></h2>';
   if(hidden||showRejected) t+='<div class=btn-row style="margin-bottom:var(--s2)"><button class="btn btn-sm btn-ghost" id=rej>'
     +(showRejected?'Hide rejected':'Show rejected')+'</button></div>';
-  if(!shown.length) t+='<div class=empty><b>No takes yet</b>Queue a few - turbo makes a three-minute take in well under a minute once it starts.</div>';
+  if(!shown.length) t+='<div class=empty><b>No takes yet</b>Queue a few - SFT makes a three-minute take in a minute or so once it starts; turbo is faster for drafts.</div>';
   t+=shown.map(k=>{
     const inGame=p.shipped && p.shipped.take===k.name;
     return '<div class="card take'+(k.verdict==='keep'?' kept':'')+(k.verdict==='reject'?' rejected':'')+'" data-take="'+SM.esc(k.name)+'">'
@@ -239,7 +239,8 @@ def music_router(cfg: dict):
         for p in M.places():
             out.append({**p, "takes": M.takes(cfg, p["id"]), "shipped": shipped.get(p["id"])})
         return {"places": out, "keys": M.KEYS,
-                "models": {k: {"label": v["label"]} for k, v in M.MODELS.items()}}
+                "models": {k: {"label": v["label"]} for k, v in M.MODELS.items()},
+                "default_model": M.DEFAULT_MODEL}
 
     @r.get("/music/file")
     def _file(place: str, name: str):
@@ -272,7 +273,7 @@ def music_router(cfg: dict):
         pid = _pid(place_id)
         try:
             count = int(body.get("count") or 4)
-            spec = M.write_spec(cfg, pid, count=count, model=str(body.get("model") or "turbo"))
+            spec = M.write_spec(cfg, pid, count=count, model=str(body.get("model") or M.DEFAULT_MODEL))
         except (ValueError, TypeError) as exc:
             raise HTTPException(400, str(exc)) from exc
         cmd = M.make_command(spec)
@@ -283,7 +284,7 @@ def music_router(cfg: dict):
         doc = q.load(q.queue_path(out))
         label = f"music:{pid}:{spec.stem[6:]}"
         job = q.add(doc, kind="music", label=label, cmd=cmd, cwd=str(ENGINE_ROOT),
-                    note=f"{count} {body.get('model') or 'turbo'} take(s) for {pid}, from the Music tab",
+                    note=f"{count} {body.get('model') or M.DEFAULT_MODEL} take(s) for {pid}, from the Music tab",
                     expect={"total": count, "what": f"{count} take{'s' if count != 1 else ''}"})
         q.save(q.queue_path(out), doc)
         return {"queued": job["id"], "spec": str(spec)}
