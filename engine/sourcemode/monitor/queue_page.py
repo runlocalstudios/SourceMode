@@ -2020,7 +2020,8 @@ def queue_process_if_ready(cfg: dict, set_id: str) -> dict | None:
             str(ENGINE_ROOT / "scripts" / "eval" / "process_lingerie.py"), c]
            if lingerie else process_command(cfg, c, set_id))
     job = q.add(doc, kind="process", label=label, cmd=cmd, cwd=str(ENGINE_ROOT),
-                lane="cpu", note=f"cutout + staging of {set_id}: {why}; approve on the Characters tab")
+                lane="cpu", note=f"cutout + staging of {set_id}: {why}; "
+                + ("ships to the game - every pose is kept" if lingerie else "approve on the Characters tab"))
     q.save(qp, doc)
     return job
 
