@@ -307,9 +307,13 @@ def test_a_box_braided_character_is_never_asked_for_loose_hair(monkeypatch):
     assert hairs and not any("loose" in h for h in hairs)
 
 
-def test_a_character_with_no_list_keeps_the_shared_rotation():
+def test_a_character_with_no_list_keeps_the_shared_rotation(monkeypatch):
+    from sourcemode.assets import wardrobe as W
     from sourcemode.assets.wardrobe import DEFAULT_HAIR, hair_options
 
+    # a long-haired character with no list; the live briefs change from the Characters tab
+    monkeypatch.setattr(W, "brief", lambda c: {})
+    monkeypatch.setattr(W, "is_short_haired", lambda c: False)
     assert hair_options("zara") == DEFAULT_HAIR
     assert hair_options("nobody-at-all") == DEFAULT_HAIR
     # and passing no character at all leaves a shoot exactly as it was

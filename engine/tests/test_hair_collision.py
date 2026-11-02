@@ -75,9 +75,14 @@ def test_a_canned_up_style_is_still_swapped_for_short_hair():
     assert any(f", {s}, wearing" in p for s in hair_options("priya")), p
 
 
-def test_long_haired_characters_keep_the_shared_rotation():
-    assert not is_short_haired("zara")
-    assert hair_options("zara") == DEFAULT_HAIR
+def test_long_haired_characters_keep_the_shared_rotation(monkeypatch):
+    # with no list of her own; the live briefs change from the Characters tab
+    from sourcemode.assets import wardrobe as W
+    monkeypatch.setattr(W, "brief", lambda c: {})
+    long_haired = [c for c in CHARS if not is_short_haired(c)]
+    assert long_haired
+    for c in long_haired:
+        assert hair_options(c) == DEFAULT_HAIR, c
 
 
 def test_a_short_haired_character_with_her_own_list_never_gets_a_canned_clause(monkeypatch):

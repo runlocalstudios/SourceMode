@@ -88,6 +88,13 @@ PLACES: dict[str, dict[str, list[tuple[str, str, str]]]] = {
                    "a matching running set", "jogging past, smiling at the camera"),
                   ("golden-hour light, on the steps of a grand civic building",
                    "a fitted ribbed dress and a cropped denim jacket", "sitting on the steps")]},
+    "gameShop": {
+        "job": [("bright cool shop lighting, behind the counter of a video game and collectibles shop",
+                 "a fitted black tee and high-waisted jeans", "leaning on the glass counter, smiling")],
+        "hobby": [("soft teal neon glow, in the back room of a video game shop with a small stage riser",
+                   "an oversized cropped hoodie and bike shorts", "sitting on the edge of the riser, a controller in hand"),
+                  ("bright cool shop lighting, in a video game shop between shelves of figures",
+                   "a graphic tee knotted at the waist and a pleated skirt", "holding up a boxed figure, glancing back")]},
     "hill_street": {
         "job": [("soft morning light, on a quiet upscale street lined with townhouses",
                  "a tailored camel coat over a fitted knit dress", "walking, a leather tote on her arm")],
