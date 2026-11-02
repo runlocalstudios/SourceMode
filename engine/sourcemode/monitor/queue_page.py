@@ -65,6 +65,13 @@ OWN_CSS = r"""
 /* The runner's own last line, which is its account of what it is waiting for. */
 .runner-says{font-family:var(--mono);font-size:12px;color:var(--g7);
   word-break:break-all;margin-top:var(--s2)}
+/* Recently finished: three compact rows, the time pushed to the right. */
+.fin{padding:var(--s2) var(--s3)}
+.fin-row{display:flex;gap:var(--s2);align-items:baseline;padding:3px 0}
+.fin-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font:var(--t-meta);color:var(--g7)}
+.fin-name b{color:var(--g9);font-weight:600}
+.fin-row .age{white-space:nowrap}
 """
 
 BODY = """
@@ -76,6 +83,7 @@ BODY = """
     <div id=now><div class="card skel" style="height:148px"></div></div>
     <h2>Next 24 hours</h2>
     <div id=tonight></div>
+    <div id=finished></div>
     <h2>Queue</h2>
     <div id=list></div>
     <div id=queuefoot></div>
@@ -352,8 +360,21 @@ function drawRemoved(){
   SM.set($('removed'),null,h);
 }
 
+/* --- the last three jobs that finished, newest first ---------------------- */
+function drawFinished(){
+  const f=state.finished||[];
+  if(!f.length){ SM.set($('finished'),null,''); return; }
+  let h='<h2>Recently finished</h2><div class="card e-done fin">';
+  for(const r of f)
+    h+='<div class=fin-row title="'+SM.esc(r.id+' · '+r.label+(r.note?' · '+r.note:''))+'">'
+      +'<span class=fin-name><b>'+SM.esc(r.who)+'</b> &mdash; '+SM.esc(r.what)+'</span>'
+      +'<span class=age>'+SM.esc(SM.ago(r.ended_at))+'</span></div>';
+  h+='</div>';
+  SM.set($('finished'),null,h);
+}
+
 function draw(){
-  drawBanners(); drawNow(); drawPlan();
+  drawBanners(); drawNow(); drawPlan(); drawFinished();
   const q=state.jobs||[];
   if(!q.length)
     SM.set($('list'),null,'<div class=empty><b>Nothing queued</b>'
@@ -1519,6 +1540,13 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
     heads = {h["id"] for h in (q.head(doc, "gpu"), q.head(doc, "cpu")) if h}
 
     jobs, removed, by_id = [], [], {j["id"]: j for j in doc["jobs"]}
+    # Jeremy, 2026-11-02: "the last three completed tasks by name so that I can
+    # see in order the last few things that you finished" - newest first.
+    finished = sorted((j for j in doc["jobs"] if j["status"] == "done" and j.get("ended_at")),
+                      key=lambda j: j["ended_at"], reverse=True)[:3]
+    finished = [{"id": j["id"], "label": j["label"], "note": j.get("note"), "ended_at": j["ended_at"],
+                 "who": character_of(j["label"]).replace("_", " ").title(),
+                 "what": KIND_LABEL.get(j["kind"], j["kind"])} for j in finished]
     for j in doc["jobs"]:
         # a dismissed failure is one he (or the session that caused it) has
         # dealt with - off the page, still in the file and the log
@@ -1587,7 +1615,7 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
     # wants when deciding whether to add another character tonight.
     queued_s = sum((j["estimate"] or {}).get("total_s") or 0
                    for j in jobs if j["status"] == "queued" and not j["hold"])
-    return {"jobs": jobs, "removed": removed[-5:],
+    return {"jobs": jobs, "removed": removed[-5:], "finished": finished,
             "paused": doc["paused"], "pause_reason": doc["pause_reason"],
             "queued_s": queued_s or None,
             "now": now,
