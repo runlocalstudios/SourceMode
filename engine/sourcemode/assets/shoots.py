@@ -704,7 +704,7 @@ LINGERIE_PACK: tuple[dict, ...] = (
     # from the floor", "torso low" and "face nearest the camera" are gone.
     {"tag": "crawling", "stance": "on all fours on the floor coming toward the camera, both arms straight and "
                                   "vertical with her elbows locked and her shoulders directly above her hands, "
-                                  "both hands planted flat on the floor, her chest held up well off the floor, "
+                                  "both hands planted flat on the floor, both arms in view, her chest held up well off the floor, "
                                   "her knees on the floor under her hips, her back level, her hips and bottom "
                                   "behind her",
      "needs": _FLOOR, "framing": "her whole body in frame, from her hands to her feet",
@@ -743,8 +743,10 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "needs": _FLOOR, "framing": "her body from the thighs up in frame, her head at the top of the frame, the "
                                  "floor all around her",
      "shot_type": "photo from directly above of her lying on her back on the floor",
-     "gaze": "looking up into the camera", "expression_natural": "a satisfied smile, eyes heavy",
-     "negative": "standing, standing up, upside down, her head at the bottom of the frame, hair fanned out, hair spread wide, windswept hair"},
+     # Jeremy, 2026-11-02: "the after pose must be looking directly at the viewer"
+     "gaze": "her eyes looking directly into the lens, direct eye contact with the viewer",
+     "expression_natural": "a satisfied smile",
+     "negative": "standing, standing up, upside down, her head at the bottom of the frame, hair fanned out, hair spread wide, windswept hair, eyes closed, looking away"},
 )
 
 OFFICE: tuple[Shoot, ...] = (

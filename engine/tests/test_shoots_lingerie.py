@@ -105,6 +105,7 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     assert "face at the top of the frame" in by["lyingspread"]["framing"]
     assert "upside down" in by["lyingspread"]["negative"] and "upside down" in by["after"]["negative"]
     assert "toward the camera" in by["crawling"]["shot_type"] and "low-angle" not in by["crawling"]["shot_type"]
+    assert "direct eye contact" in by["after"]["gaze"] and "eyes closed" in by["after"]["negative"]
     assert "elbows locked" in by["crawling"]["stance"] and "chest on the floor" in by["crawling"]["negative"]
     assert "on all fours" in by["crawling"]["stance"] and "both arms in view" in by["crawling"]["stance"]
     assert "upside-down V" in by["standingspread"]["stance"] and "feet" in by["standingspread"]["framing"]
