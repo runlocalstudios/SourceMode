@@ -735,10 +735,14 @@ LINGERIE_PACK: tuple[dict, ...] = (
     # arm" - only the raised arm was named. Most of 16 also read as standing
     # with an arm up; her hair on the floor says she is lying down. Jeremy,
     # 2026-11-02: "the hair doesn't need to be so spread out" - "fanned out ...
-    # around her head" drew a wide halo.
+    # around her head" drew a wide halo. Without the halo lizzie's, marisol's
+    # and priyanka's read as standing upright - the stance now says her head
+    # and shoulders rest on the floor, so the hair need not carry it.
     {"tag": "after", "stance": "one arm bent above her head, her other arm resting on the floor along her side "
-                               "with her hand by her hip, both arms in view, her hair lying loosely on the floor "
-                               "behind her head, catching her breath",
+                               "with her hand by her hip, both arms in view, lying flat on her back with the back of "
+                               "her head and her shoulders resting on the floor, her hair lying naturally on the "
+                               "floor beside and behind her head, her breasts settled under gravity as she lies "
+                               "flat, catching her breath",
      # gigi's came out upside down; the frame says her head is at the top
      "needs": _FLOOR, "framing": "her body from the thighs up in frame, her head at the top of the frame, the "
                                  "floor all around her",
@@ -746,7 +750,7 @@ LINGERIE_PACK: tuple[dict, ...] = (
      # Jeremy, 2026-11-02: "the after pose must be looking directly at the viewer"
      "gaze": "her eyes looking directly into the lens, direct eye contact with the viewer",
      "expression_natural": "a satisfied smile",
-     "negative": "standing, standing up, upside down, her head at the bottom of the frame, hair fanned out, hair spread wide, windswept hair, eyes closed, looking away"},
+     "negative": "standing, standing up, upright pose, upside down, her head at the bottom of the frame, hair fanned out, hair spread wide, windswept hair, eyes closed, looking away"},
 )
 
 OFFICE: tuple[Shoot, ...] = (
