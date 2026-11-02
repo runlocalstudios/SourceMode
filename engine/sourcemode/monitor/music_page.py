@@ -48,6 +48,8 @@ OWN_CSS = r"""
 .take .meta{font:var(--t-small);color:var(--g7)}
 .take.kept{border-left:3px solid var(--done)}
 .take.rejected{opacity:.55}
+.take .card-head h3{white-space:nowrap}
+.take .gist{font:var(--t-body);color:var(--g9);margin:2px 0 var(--s2)}
 .take .tagline{font:var(--t-small);color:var(--g7);margin-top:2px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .btn.on{background:var(--act);border-color:var(--act-hi);color:var(--act-ink)}
@@ -88,6 +90,14 @@ function bubbles(){
       +(note?'<small>'+SM.esc(note)+'</small>':'')+'</button>';
   }).join(''));
 }
+/* Jeremy, 2026-11-02: "more than just take 1, take 2" - the first few words of
+   the prompt the take was made from, past the boilerplate. */
+function gist(tags){
+  return tags.split(',').map(x=>x.trim())
+    .filter(x=>x && x!=='instrumental' && !/^no /.test(x) && x!=='background music')
+    .slice(0,3).join(', ');
+}
+function takeName(n){ const m=/^take_0*(\d+)$/.exec(n); return m?'Take '+m[1]:n; }
 function opt(v,label,sel){ return '<option value="'+SM.esc(v)+'"'+(v===sel?' selected':'')+'>'+SM.esc(label)+'</option>'; }
 function render(){
   const p=places.find(x=>x.id===cur);
@@ -122,10 +132,11 @@ function render(){
   t+=shown.map(k=>{
     const inGame=p.shipped && p.shipped.take===k.name;
     return '<div class="card take'+(k.verdict==='keep'?' kept':'')+(k.verdict==='reject'?' rejected':'')+'" data-take="'+SM.esc(k.name)+'">'
-      +'<div class=card-head><h3>'+SM.esc(k.name)+(inGame?' &middot; in the game':'')+'</h3>'
+      +'<div class=card-head><h3>'+SM.esc(takeName(k.name))+(inGame?' &middot; in the game':'')+'</h3>'
       +'<span class=meta>'+SM.esc(k.model||'')+' &middot; seed '+SM.esc(k.seed)+' &middot; '+SM.esc(k.bpm)+' bpm &middot; '+SM.esc(k.keyscale||'')
       +' &middot; '+SM.esc(SM.ago(k.made))+'</span></div>'
-      +(k.tags && k.tags!==p.tags?'<div class=tagline title="'+SM.esc(k.tags)+'">'+SM.esc(k.tags)+'</div>':'')
+      +(k.tags?'<div class=gist title="'+SM.esc(k.tags)+'">'+SM.esc(gist(k.tags))
+        +(k.tags!==p.tags?' <span class=muted>&middot; an earlier prompt</span>':'')+'</div>':'')
       +'<audio controls preload=none src="'+takeUrl(p.id,k.name)+'"></audio>'
       +'<div class=btn-row>'
       +'<button class="btn btn-sm'+(k.verdict==='keep'?' on':'')+'" data-act=keep>Keep</button>'
