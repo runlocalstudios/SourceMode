@@ -305,8 +305,13 @@ class Runner:
             return "paused"
 
         # step() blocks in proc.wait() for its own children, so anything marked
-        # running here was started by a runner that is no longer alive
-        left = q.running(doc)
+        # running on THIS lane was started by a runner that is no longer alive.
+        # Only this lane: the CPU lane's jobs belong to this runner's own thread,
+        # which closes its orphans itself. 2026-11-02, j770 iris:lingerie: the
+        # card lane took a running cutout for an orphan, waited on it, and the
+        # instant it ended wrote "lost" over the done record the CPU lane had
+        # just saved - a false failure on a job that exited 0.
+        left = q.running(doc, "gpu")
         if left:
             procs = self.procs()
             if not procs:
@@ -318,8 +323,9 @@ class Runner:
                     self._say_once(f"wait: {j['id']} {j['label']} is still running as PID {j['pid']},"
                                    f" left by an earlier runner - waiting for it to finish")
                     return "busy"
-            self._close_orphans(doc, left)
             with self._lock:
+                doc = q.load(self.qpath)
+                self._close_orphans(doc, q.running(doc, "gpu"))
                 q.save(self.qpath, doc)
 
         job = q.head(doc, "gpu")

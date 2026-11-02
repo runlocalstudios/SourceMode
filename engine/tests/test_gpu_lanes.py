@@ -177,3 +177,20 @@ def test_an_orphan_on_the_cpu_lane_is_closed_by_the_cpu_lane_itself(tmp_path):
     o = q.find(doc, orphan["id"])
     assert o["status"] == "failed" and o["exit_code"] is None and "runner died" in o["note"]
     assert q.find(doc, nxt["id"])["status"] == "done"
+
+
+def test_the_card_lane_never_takes_a_running_cpu_job_for_an_orphan(tmp_path):
+    """2026-11-02, j770 iris:lingerie exited 0 and was recorded failed: the card
+    lane treated the CPU lane's own running job as a dead runner's orphan,
+    waited on it, then wrote "lost" over the CPU lane's done record."""
+    path = q.queue_path(tmp_path)
+    doc = q.empty()
+    cut = q.add(doc, kind="process", label="iris:lingerie", cmd=["python", "cut.py"], cwd=str(tmp_path), lane="cpu")
+    q.mark_running(doc, cut["id"], 515151, str(tmp_path / "cut.log"))
+    q.add(doc, kind="redo", label="card", cmd=["x"], cwd=str(tmp_path))
+    q.save(path, doc)
+    alive = _runner(tmp_path, procs=lambda: [(515151, "python cut.py")])
+    assert alive.step(dry_run=True) == "dry-run"                # the card lane does not wait on it
+    gone = _runner(tmp_path, procs=lambda: [(1, "something else")])
+    assert gone.step(dry_run=True) == "dry-run"
+    assert q.find(q.load(path), cut["id"])["status"] == "running"  # not closed as lost by the card lane
