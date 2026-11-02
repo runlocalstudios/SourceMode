@@ -102,7 +102,7 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     assert "slightly forward" in by["bendingover"]["shot_type"]
     assert "touching her toes" in by["bendingover"]["negative"]
     assert "touching the floor" in by["spreadwide"]["negative"]
-    assert "face at the top of the frame" in by["lyingspread"]["framing"]
+    assert "leaning back on both hands" in by["lyingspread"]["stance"] and "lying flat" in by["lyingspread"]["negative"]
     assert "upside down" in by["lyingspread"]["negative"] and "upside down" in by["after"]["negative"]
     assert "toward the camera" in by["crawling"]["shot_type"] and "low-angle" not in by["crawling"]["shot_type"]
     assert "direct eye contact" in by["after"]["gaze"] and "eyes closed" in by["after"]["negative"]
@@ -111,7 +111,11 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     assert "upside-down V" in by["standingspread"]["stance"] and "feet" in by["standingspread"]["framing"]
     assert "kneel" not in by["bendingover2"]["stance"] and "propped up on her forearms" in by["bendingover2"]["shot_type"]
     assert "lying on her stomach" in by["bendingover2"]["stance"] and "on her heels" in by["bendingover2"]["negative"]
-    assert "feet flat on the floor, nearest the camera" in by["showfeet"]["stance"]
+    assert "lying on her stomach" in by["showfeet"]["stance"] and "soles" in by["showfeet"]["stance"]
+    assert "sitting" in by["showfeet"]["negative"]                # not lyingspread's pose
+    for k in ("kneeling", "kneeling2"):
+        assert "largest thing in the frame" in by[k]["framing"] and "horizon" in by[k]["negative"]
+    assert "open wide" in by["kneeling2"]["expression_natural"] and "teeth showing" in by["kneeling2"]["negative"]
 
 
 def test_sitting_cannot_be_read_as_kneeling():

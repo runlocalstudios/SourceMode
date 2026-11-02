@@ -574,9 +574,15 @@ _KNEEL_FACING = "her body facing the camera"
 # phrase the model knows, and the negative refuses the level camera.
 _KNEEL_STANCE = "kneeling on the floor directly below the camera, sitting back on her heels, hands resting on her thighs"
 _DOWN_SHOT = "point-of-view photo looking straight down at her from a standing man's eye height"
-_LOOKING_DOWN = ("the camera high above her pointing straight down, her upturned face nearest the lens, her "
-                 "shoulders, breasts and knees foreshortened below it, the floor around her")
-_DOWN_NOT = "eye-level shot, camera at her height, side view"
+# Jeremy, 2026-11-02: still "not properly viewed from above. Examples are like
+# val" - val's and vera's were near front-on, the floor's far edge in view.
+# The keepers: her head the largest thing in frame, her body shrinking to her
+# knees, nothing behind her but floor.
+_LOOKING_DOWN = ("the camera high above her pointing straight down, her upturned face nearest the lens and the "
+                 "largest thing in the frame, her shoulders, breasts and knees strongly foreshortened and "
+                 "shrinking below it, nothing behind her but the floor, no horizon")
+_DOWN_NOT = ("eye-level shot, camera at her height, side view, straight-on frontal view, chest-height camera, "
+             "horizon, far edge of the backdrop")
 LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "standing", "stance": "standing facing the camera, one hand on her hip, the other hand touching "
                                   "her bra strap",
@@ -617,8 +623,12 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "needs": _FLOOR, "framing": _LOOKING_DOWN,
      "shot_type": _DOWN_SHOT, "facing": _KNEEL_FACING,
      "gaze": "her head tilted back a little, " + _KNEEL_EYES,
-     "expression_natural": "her mouth open",
-     "negative": _DOWN_NOT + ", arm reaching toward the camera, hand on the camera, selfie"},
+     # Jeremy, 2026-11-02: "her mouth open" drew a grin "showing too much
+     # teeth" - it is "their mouth really wide open", lips over the teeth
+     "expression_natural": "her mouth open wide in a round O, her lips soft and covering her teeth, her "
+                           "tongue resting on her lower lip",
+     "negative": _DOWN_NOT + ", arm reaching toward the camera, hand on the camera, selfie, teeth showing, "
+                             "smile, grin, laughing"},
     # Jeremy, 2026-11-01, of the forward fold: "bent over too much ... they
     # shouldn't be touching the floor. It should be like they're standing next
     # to a bed with hands resting on the bed and looking back." The pack is a
@@ -634,32 +644,33 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "facing": "her back to the camera, seen from behind and slightly to one side",
      "gaze": "her head turned to look back over her shoulder into the camera",
      "negative": _UPRIGHT + ", hands on the floor, touching the floor, forward fold, head below her hips"},
-    # Jeremy, 2026-11-01, of the first spreadwide: "I actually really like [it].
-    # But that would be more like show me your feet." That prompt never showed
-    # feet (0 of 16); the old lyingspread prompt put her soles to the camera in
-    # 11 of 16, so it is this pose's now, word for word. The game has no
-    # showfeet chat pose yet.
-    {"tag": "showfeet", "stance": "lying back on the floor propped up on her elbows, her knees up and "
-                                  "apart with her feet flat on the floor, nearest the camera",
-     "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo from by her feet",
-     "gaze": "looking down her body into the camera", "expression_natural": "lips parted"},
+    # Jeremy, 2026-11-02, after the review of his re-rolls: showfeet's keepers
+    # were either lyingspread's sitting pose or lying on her stomach with her
+    # feet kicked up behind her - the second is showfeet now, so the two slots
+    # stop making the same photo.
+    {"tag": "showfeet", "stance": "lying on her stomach on the floor, propped up on her elbows with her chin "
+                                  "resting on her hands, her knees bent and her lower legs raised up behind her, "
+                                  "her ankles crossed, the soles of her bare feet turned up toward the camera",
+     "needs": _FLOOR, "framing": "her whole body in frame, her face and her raised feet both in view",
+     "shot_type": "full-length photo from in front of her and slightly above, of her lying on her stomach "
+                  "with her feet kicked up behind her",
+     "facing": "her face toward the camera", "gaze": _EYES, "expression_natural": "a playful smile",
+     "negative": "sitting, sitting up, lying on her back, feet on the floor, feet hidden"},
     {"tag": "lyingdown", "stance": "lying on her side on the floor, propped on one elbow, legs together",
      "needs": _FLOOR, "framing": _FULL, "shot_type": "full-length photo", "gaze": _EYES},
-    # 0 of 16 lay back: 11 sat up, 5 lay on their stomach
-    {"tag": "lyingspread", "stance": "her back, shoulders and head resting flat on the floor, her arms out at "
-                                     "her sides, her knees bent up and spread wide apart, the soles of her feet "
-                                     "flat on the floor nearest the camera",
-     # Jeremy, 2026-11-01: "their head is on the bottom of the pic like they
-     # are upside down" - hannah, gwen, gigi, eve; "a high-angle photo from
-     # above her feet" read as a camera over her head. The camera now stands at
-     # her feet looking along her body, and the frame says which end is which.
-     "needs": _FLOOR, "framing": "her whole body in frame, her knees and feet at the bottom of the frame "
-                                 "nearest the camera, her face at the top of the frame",
-     "shot_type": "photo taken standing at her feet, looking down along the length of her body as she lies "
-                  "flat on her back on the floor",
-     "gaze": "her face turned toward the camera, looking at it", "expression_natural": "lips parted",
-     "negative": "sitting up, sitting upright, propped up on her elbows, lying on her stomach, upside down, "
-                 "her head at the bottom of the frame, inverted, photo taken from above her head"},
+    # Jeremy, 2026-11-02, after the review: 26 re-rolls since the rewrite. The
+    # flat-on-her-back prompt mostly drew her sitting up leaning back on her
+    # hands, and those he kept; when it did lie her flat she came out upside
+    # down and was rejected. The prompt is now the pose he keeps.
+    {"tag": "lyingspread", "stance": "sitting on the floor leaning back on both hands, her arms straight behind "
+                                     "her, her knees bent up and spread wide apart, the soles of her feet flat on "
+                                     "the floor nearest the camera",
+     "needs": _FLOOR, "framing": _HEAD_TO_FEET,
+     "shot_type": "full-length photo from in front of her of her sitting on the floor leaning back on her "
+                  "hands with her knees spread",
+     "facing": "her body facing the camera", "gaze": _EYES, "expression_natural": "lips parted",
+     "negative": "lying flat, lying on her back, lying on her stomach, upside down, her head at the bottom of "
+                 "the frame, knees together, cross-legged"},
     # Jeremy, 2026-11-01, of "touching her toes": "a slight bend to show off
     # her ass" - a slight bend at the hips, back arched, bottom pushed out.
     {"tag": "bendingover", "stance": "her legs straight and her feet together, bending slightly forward at the "
