@@ -671,22 +671,27 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "gaze": "her head turned to look back over her shoulder into the camera",
      "negative": "touching her toes, forward fold, hands on the floor, chest against her thighs, "
                  "standing up straight"},
-    # 16 of 16 sat back on their heels, eden too with "knees and forearms,
-    # chest pressed to the floor". The face-down rewrite took, but from
-    # straight behind her face is hidden past her hips, and asking her to look
-    # back twisted eve's body round (two pairs of panties). From behind and to
-    # one side her cheek on the floor is in view.
-    {"tag": "bendingover2", "stance": "her knees on the floor hip-width apart with her thighs vertical, her "
-                                      "chest and the side of her face pressed flat against the floor, her arms "
-                                      "stretched out forward along the floor, her back sloping down from her "
-                                      "raised hips to her shoulders, her hips the highest point of her body, her "
-                                      "ass and the crotch of her panties pointed at the camera",
+    # Jeremy, 2026-11-02, of mei's take on the face-down, ass-up prompt: "the
+    # physics are a bit off but that pose is great if we can explain it". She
+    # lay on her stomach propped on her forearms, hips rolled to one side, legs
+    # folded, looking back over her shoulder - but her near leg came out in
+    # front of her hip, and her far leg was hidden ("show more of the 2nd
+    # leg"). Each leg's place is named so it attaches at the hip.
+    {"tag": "bendingover2", "stance": "lying on her stomach on the floor, her upper body propped up on her "
+                                      "forearms with her elbows under her shoulders and her hands flat on the "
+                                      "floor in front of her, her back arched, her hips rolled slightly onto one "
+                                      "side, both legs lying on the floor and both in full view: the leg "
+                                      "nearest the camera bent at the knee with its foot resting behind her "
+                                      "bottom, her far leg stretched out straight behind her along the floor and "
+                                      "clearly visible from hip to foot, her bottom the nearest part of her to the "
+                                      "camera",
      "needs": _FLOOR, "framing": _FULL,
-     "shot_type": "photo from behind and to one side, slightly above, of her in a face-down, ass-up pose on "
-                  "the floor",
+     "shot_type": "photo from behind and slightly above, at her hip, of her lying on her stomach propped up on "
+                  "her forearms",
      "facing": "her back to the camera, seen from behind and to one side",
-     "gaze": "her cheek resting on the floor, her face turned toward the camera, looking at it",
-     "negative": _SITS_BACK + ", twisted torso, extra limbs, two pairs of panties"},
+     "gaze": "looking back over her shoulder into the camera",
+     "negative": _SITS_BACK + ", twisted torso, extra limbs, leg bending the wrong way, leg in front of her hip, "
+                              "kneeling, hips raised in the air, hidden leg, missing leg"},
     # Jeremy, 2026-11-01: crawling is "as if they are crawling TOWARDS the
     # viewer" - gloria's knelt upright facing the camera.
     # Jeremy, 2026-11-02: "on all fours - they are generating looking like she

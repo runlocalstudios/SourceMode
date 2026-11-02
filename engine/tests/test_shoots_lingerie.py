@@ -107,8 +107,8 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     assert "toward the camera" in by["crawling"]["shot_type"]
     assert "on all fours" in by["crawling"]["stance"] and "both arms in view" in by["crawling"]["stance"]
     assert "upside-down V" in by["standingspread"]["stance"] and "feet" in by["standingspread"]["framing"]
-    assert "kneel" not in by["bendingover2"]["stance"] and "highest point" in by["bendingover2"]["stance"]
-    assert "face-down, ass-up" in by["bendingover2"]["shot_type"] and "on her heels" in by["bendingover2"]["negative"]
+    assert "kneel" not in by["bendingover2"]["stance"] and "propped up on her forearms" in by["bendingover2"]["shot_type"]
+    assert "lying on her stomach" in by["bendingover2"]["stance"] and "on her heels" in by["bendingover2"]["negative"]
     assert "feet flat on the floor, nearest the camera" in by["showfeet"]["stance"]
 
 
