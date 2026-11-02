@@ -625,10 +625,11 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "gaze": "her head tilted back a little, " + _KNEEL_EYES,
      # Jeremy, 2026-11-02: "her mouth open" drew a grin "showing too much
      # teeth" - it is "their mouth really wide open", lips over the teeth
+     # and of "tongue resting on her lower lip": "much less prominent"
      "expression_natural": "her mouth open wide in a round O, her lips soft and covering her teeth, her "
-                           "tongue resting on her lower lip",
+                           "tongue low and barely visible inside her mouth",
      "negative": _DOWN_NOT + ", arm reaching toward the camera, hand on the camera, selfie, teeth showing, "
-                             "smile, grin, laughing"},
+                             "smile, grin, laughing, tongue out, tongue sticking out"},
     # Jeremy, 2026-11-01, of the forward fold: "bent over too much ... they
     # shouldn't be touching the floor. It should be like they're standing next
     # to a bed with hands resting on the bed and looking back." The pack is a
