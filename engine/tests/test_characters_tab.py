@@ -103,3 +103,15 @@ def test_an_age_typed_on_the_tab_satisfies_the_shoot_preflight(tmp_path, monkeyp
     with pytest.raises(ValueError):
         A.set_context("winnie", ethnicity="", age="twenty")
     A.reload()
+
+
+def test_a_lock_names_the_sweep_set_it_was_judged_on(tmp_path, monkeypatch):
+    # the word boundary was once a literal backspace byte, so this was always None
+    import sourcemode.monitor.appearance_page as P
+    import sourcemode.train.locked as L
+    (tmp_path / "sets").mkdir()
+    (tmp_path / "sets" / "dense_zara_v2_asset.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(L, "load_registry", lambda: {"zara": {
+        "epoch": 18, "basis": "epoch-choices: dense_zara_v2_asset 9/10 at ep18"}})
+    assert P._lock("zara", tmp_path)["sweep"] == "dense_zara_v2_asset"
+    assert P._lock("zara", None)["sweep"] is None

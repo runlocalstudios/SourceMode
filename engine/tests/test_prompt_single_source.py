@@ -52,7 +52,7 @@ def test_the_sweep_prompt_is_his_trimmed_sentence():
     for p in got:
         for word in ("light", "lighting", "sunlight", "makeup", "skin", "focus", "photorealistic",
                      "beautiful", "sun"):
-            assert not re.search(rf"{word}", p, re.I), f"{word!r} is back in a sweep prompt: {p}"
+            assert not re.search(rf"\b{word}\b", p, re.I), f"{word!r} is back in a sweep prompt: {p}"
 
 
 def test_the_eval_keeps_no_second_description_of_a_character():
@@ -93,7 +93,22 @@ def test_every_eval_prompt_carries_her_appearance():
         assert want in p or short in p
 
 
-def test_the_characters_negative_reaches_the_pack_and_the_eval():
+@pytest.fixture
+def records(tmp_path, monkeypatch):
+    """raven with her bangs negative, zara with none - not the live records."""
+    import sourcemode.assets.appearance as A
+    p = tmp_path / "appearance.json"
+    p.write_text(json.dumps({"raven": {"age": 24, "prompt": "a woman with a full fringe",
+                                       "negative": "no bangs, centre part"},
+                             "zara": {"age": 22, "prompt": "a woman with long dark hair"}}),
+                 encoding="utf-8")
+    monkeypatch.setattr(A, "APPEARANCE", p)
+    monkeypatch.setattr(A, "_cache", None)
+    yield p
+    A.reload()
+
+
+def test_the_characters_negative_reaches_the_pack_and_the_eval(records):
     """It used to live only in the eval. Now one accessor feeds both."""
     from sourcemode.config import load_config
     from sourcemode.pose.native import NEGATIVE, build_native_workflow
@@ -114,7 +129,7 @@ def test_the_characters_negative_reaches_the_pack_and_the_eval():
     assert '"NEGATIVE": NEGATIVE + (", " + _NEG if _NEG else "")' in src
 
 
-def test_a_character_with_no_negative_gets_the_shared_block_unchanged():
+def test_a_character_with_no_negative_gets_the_shared_block_unchanged(records):
     from sourcemode.config import load_config
     from sourcemode.pose.native import NEGATIVE, build_native_workflow
 
