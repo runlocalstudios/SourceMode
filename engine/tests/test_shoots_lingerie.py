@@ -85,8 +85,8 @@ def test_the_kneeling_pair_looks_down_from_beside_her_and_differs_only_in_her_he
     for k in (k1, k2):
         assert "straight down" in k["shot_type"] and "standing man" in k["shot_type"]
         assert "camera at her height" in k["negative"]
-        assert "in front of the viewer" in k["shot_type"] and "stands over her" in k["shot_type"]
-        assert "arms outstretched" in k["negative"]
+        assert "arms outstretched" in k["negative"] and "feet in the foreground" in k["negative"]
+        assert "viewer" not in k["shot_type"] + k["stance"] + k["framing"]  # sienna: a man's feet
         assert "whole kneeling figure" not in k["framing"]
     assert {f: k1[f] for f in ("framing", "shot_type")} == {f: k2[f] for f in ("framing", "shot_type")}
     assert "behind her back" in k2["stance"] and "hands resting on her thighs" in k1["stance"]
@@ -116,7 +116,8 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     assert "lying on her stomach" in by["showfeet"]["stance"] and "soles" in by["showfeet"]["stance"]
     assert "sitting" in by["showfeet"]["negative"]                # not lyingspread's pose
     for k in ("kneeling", "kneeling2"):
-        assert "largest thing in the frame" in by[k]["framing"] and "horizon" in by[k]["negative"]
+        assert "pointing straight down" in by[k]["framing"] and "horizon" in by[k]["negative"]
+        assert "largest thing" not in by[k]["framing"]  # maya came out straight-on
     assert "open wide" in by["kneeling2"]["expression_natural"] and "teeth showing" in by["kneeling2"]["negative"]
 
 

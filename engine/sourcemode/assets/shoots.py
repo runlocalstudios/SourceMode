@@ -572,24 +572,21 @@ _KNEEL_FACING = "her body facing the camera"
 # The first take of the over-her-head pair landed at chest height ("a high-angle
 # photo" from "beside her"); a point-of-view shot from straight above is a
 # phrase the model knows, and the negative refuses the level camera.
-_KNEEL_STANCE = ("kneeling on the floor directly in front of the viewer, close to his feet, sitting back on her "
-                 "heels, hands resting on her thighs")
-# Jeremy, 2026-11-02, after sienna's and maya's kneeling2 were still not
-# top-down: "I've had more success ... saying that the girl kneels directly
-# in front of the viewer on the floor while the viewer stands above her
-# looking down at her from above."
-_DOWN_SHOT = ("point-of-view photo of her kneeling directly in front of the viewer on the floor while the "
-              "viewer stands over her, looking straight down at her from a standing man's eye height")
-# Jeremy, 2026-11-02: still "not properly viewed from above. Examples are like
-# val" - val's and vera's were near front-on, the floor's far edge in view.
-# The keepers: her head the largest thing in frame, her body shrinking to her
-# knees, nothing behind her but floor.
-_LOOKING_DOWN = ("the camera high above her pointing straight down, her upturned face nearest the lens and the "
-                 "largest thing in the frame, her shoulders, breasts and knees strongly foreshortened and "
-                 "shrinking below it, nothing behind her but the floor, no horizon")
+_KNEEL_STANCE = "kneeling on the floor directly below the camera, sitting back on her heels, hands resting on her thighs"
+_DOWN_SHOT = "point-of-view photo looking straight down at her from a standing man's eye height"
+# Jeremy, 2026-11-02: val's and vera's were near front-on, then sienna's and
+# maya's still were. Measured on all 51 kneeling2 shots: this wording (jojo,
+# jaina, hannah, mei, zara...) is the one that gave the top-down keepers. Two
+# rewrites made it worse - "largest thing in the frame ... no horizon" gave
+# maya a straight-on shot, and naming the viewer ("in front of the viewer ...
+# close to his feet") put a man's feet in sienna's. Do not name the viewer's
+# body or say what is NOT there in the positive; the negative refuses it.
+_LOOKING_DOWN = ("the camera high above her pointing straight down, her upturned face nearest the lens, her "
+                 "shoulders, breasts and knees foreshortened below it, the floor around her")
 # maya's kneeling, 2026-11-02: both arms outstretched toward the lens
 _DOWN_NOT = ("eye-level shot, camera at her height, side view, straight-on frontal view, chest-height camera, "
-             "horizon, far edge of the backdrop, arms outstretched, arm reaching toward the camera")
+             "horizon, far edge of the backdrop, arms outstretched, arm reaching toward the camera, "
+             "a man, another person, feet in the foreground, shoes, legs in the foreground")
 LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "standing", "stance": "standing facing the camera, one hand on her hip, the other hand touching "
                                   "her bra strap",
