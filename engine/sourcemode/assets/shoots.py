@@ -719,16 +719,18 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "gaze": "her eyes closed", "expression_natural": "her lips puckered for a kiss"},
     # Jeremy, 2026-11-01: diane's and dianna's were "both missing a friggin'
     # arm" - only the raised arm was named. Most of 16 also read as standing
-    # with an arm up; her hair spread on the floor says she is lying down.
+    # with an arm up; her hair on the floor says she is lying down. Jeremy,
+    # 2026-11-02: "the hair doesn't need to be so spread out" - "fanned out ...
+    # around her head" drew a wide halo.
     {"tag": "after", "stance": "one arm bent above her head, her other arm resting on the floor along her side "
-                               "with her hand by her hip, both arms in view, her hair fanned out on the floor "
-                               "around her head, catching her breath",
+                               "with her hand by her hip, both arms in view, her hair lying loosely on the floor "
+                               "behind her head, catching her breath",
      # gigi's came out upside down; the frame says her head is at the top
      "needs": _FLOOR, "framing": "her body from the thighs up in frame, her head at the top of the frame, the "
                                  "floor all around her",
      "shot_type": "photo from directly above of her lying on her back on the floor",
      "gaze": "looking up into the camera", "expression_natural": "a satisfied smile, eyes heavy",
-     "negative": "standing, standing up, upside down, her head at the bottom of the frame"},
+     "negative": "standing, standing up, upside down, her head at the bottom of the frame, hair fanned out, hair spread wide, windswept hair"},
 )
 
 OFFICE: tuple[Shoot, ...] = (
