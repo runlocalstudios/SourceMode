@@ -416,7 +416,10 @@ def backdrop_kind(key: tuple[int, int, int], dev: float, max_dev: float = 18.0) 
     if dev > max_dev:
         return "noisy"
     r, g, b = key
-    if max(key) - min(key) < 20:
+    # A key with no channel 40 above its lowest has no colour to key on: the
+    # coloured path's despill found nothing and crashed. 2026-11-02, maya's
+    # lingerie_11 sampled a cool studio grey (180, 190, 200) and was "green".
+    if max(key) - min(key) < 40:
         return "grey"
     return "pink" if r > 150 and b > 60 and g < 80 else "green" if g > 150 else "other"
 
