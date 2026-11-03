@@ -798,10 +798,15 @@ PAJAMA_SET = ("a {c} satin pajama set: a short-sleeved {c} satin pajama shirt wi
               "an elastic waistband and white piping along the leg hems, barefoot")
 PAJAMAS: tuple[str, ...] = tuple(PAJAMA_SET.format(c=c) for c in PAJAMA_COLOURS)
 # what the model drifts to when a pajama prompt is loose: long pants, a robe,
-# a camisole, a print, the shirt open, slippers
+# a camisole, a print, the shirt open, slippers. Jeremy, 2026-11-03, after the
+# first 14 sets: a chest pocket grew on both kneeling poses in 13 of them and
+# on about half the sitting and crawling shots, never on the standing front -
+# "my preference that these not have a pocket at all, as that would be harder
+# to replicate successfully."
 _PJ_NOT = ("long sleeves, long pants, pajama pants, trousers, robe, nightgown, camisole, tank top, "
            "lace, sheer, pattern, print, stripes, polka dots, plaid, floral, bra, panties, lingerie, "
-           "bare midriff, unbuttoned, open shirt, shoes, slippers, socks, stockings")
+           "bare midriff, unbuttoned, open shirt, shoes, slippers, socks, stockings, "
+           "chest pocket, breast pocket, a pocket on the shirt, pockets")
 # a three-quarter length portrait: head to mid-thigh, close - eden's
 # standingspread framing, the one that reliably fills the frame
 _PJ_PORTRAIT = ("three-quarter length portrait framed from her head down to her mid-thighs, the camera "
@@ -830,7 +835,9 @@ PAJAMA_PACK: tuple[dict, ...] = tuple(_pj(p) for p in (
      "framing": _PJ_PORTRAIT, "shot_type": "three-quarter length portrait photo from her side",
      "facing": "her body in profile to the camera",
      "gaze": "her head turned toward the camera, looking straight into the lens",
-     "negative": _FAR + ", facing the camera, square to the camera"},
+     # Jeremy, 2026-11-03: in profile the button row drifts onto her side seam
+     "negative": _FAR + ", facing the camera, square to the camera, buttons on the side of the shirt, "
+                 "buttons along her side, side buttons, a row of buttons at the side seam"},
     # never the viewer's body in the positive (sienna's kneeling2 grew a man's
     # feet): "very close to the camera" says it; the negative refuses him
     {"tag": "standingback", "stance": "standing very close to the camera with her back to it, her hips swayed "
@@ -842,7 +849,11 @@ PAJAMA_PACK: tuple[dict, ...] = tuple(_pj(p) for p in (
      "facing": "her back to the camera, very close",
      "gaze": "looking back over her shoulder into the camera", "expression_natural": "a teasing smile",
      "negative": _FAR + ", a man, another person, chair, bending over, hands on the floor"},
-    _L["sitting"], _L["kneeling"], _L["kneeling2"], _L["showfeet"], _L["crawling"],
+    # Jeremy, 2026-11-03: sitting keeps growing buttons on the shorts
+    {**_L["sitting"],
+     "negative": _L["sitting"]["negative"] + ", buttons on the shorts, buttoned shorts, button fly, "
+                 "a button at the waistband"},
+    _L["kneeling"], _L["kneeling2"], _L["showfeet"], _L["crawling"],
     {**_L["after"],
      "stance": _L["after"]["stance"].replace(
          "her hair lying naturally on the floor beside and behind her head",

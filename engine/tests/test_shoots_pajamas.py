@@ -39,9 +39,17 @@ def test_the_nine_poses_in_his_order_with_the_pack_negative_under_each():
     assert "a man" in by["standingback"]["negative"]
     for t in ("sitting", "kneeling", "kneeling2", "showfeet", "crawling"):
         assert by[t]["stance"] == lp[t]["stance"] and by[t]["framing"] == lp[t]["framing"], t
+    # Jeremy, 2026-11-03: sitting grows buttons on the shorts; the side portrait
+    # moves the button row onto the side of the shirt. Pajama copies only.
+    assert "buttons on the shorts" in by["sitting"]["negative"]
+    assert "buttons" not in lp["sitting"]["negative"]
+    assert "buttons on the side of the shirt" in by["standingside"]["negative"]
     assert "smoothly to one side" in by["after"]["stance"] and "messy hair" in by["after"]["negative"]
     assert "naturally on the floor" not in by["after"]["stance"]
     for p in S.PAJAMA_PACK:
         assert p["needs"] == ("floor",)
-        for refuse in ("long pants", "robe", "print", "unbuttoned", "slippers"):
+        # Jeremy, 2026-11-03: a chest pocket grew on both kneeling poses in 13 of
+        # 14 sets and on about half the sitting and crawling shots, never on the
+        # standing front - so no pocket at all, on every pose
+        for refuse in ("long pants", "robe", "print", "unbuttoned", "slippers", "chest pocket"):
             assert refuse in p["negative"], (p["tag"], refuse)
