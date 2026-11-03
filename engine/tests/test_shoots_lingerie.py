@@ -110,7 +110,11 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     assert "direct eye contact" in by["after"]["gaze"] and "eyes closed" in by["after"]["negative"]
     assert "elbows locked" in by["crawling"]["stance"] and "chest on the floor" in by["crawling"]["negative"]
     assert "on all fours" in by["crawling"]["stance"] and "both arms in view" in by["crawling"]["stance"]
-    assert "upside-down V" in by["standingspread"]["stance"] and "feet" in by["standingspread"]["framing"]
+    assert "upside-down V" in by["standingspread"]["stance"]
+    # Jeremy, 2026-11-02: head-to-feet made her face too small - both close in
+    for t in ("standingspread", "bendingover"):
+        assert "knees" in by[t]["framing"] and "close" in by[t]["framing"], t
+        assert "full-length" not in by[t]["shot_type"] and "full-length" in by[t]["negative"], t
     assert "kneel" not in by["bendingover2"]["stance"] and "propped up on her forearms" in by["bendingover2"]["shot_type"]
     assert "lying on her stomach" in by["bendingover2"]["stance"] and "on her heels" in by["bendingover2"]["negative"]
     assert "lying on her stomach" in by["showfeet"]["stance"] and "soles" in by["showfeet"]["stance"]

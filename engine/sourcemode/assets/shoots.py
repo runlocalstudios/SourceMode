@@ -563,6 +563,8 @@ _FLOOR = ("floor",)
 _SITS_BACK = "sitting back on her heels, kneeling upright, upright torso, seiza"
 _UPRIGHT = "standing up straight, upright torso, slight lean"
 _HEAD_TO_FEET = "her whole body in frame, from her head down to her feet"
+_STAND_CLOSE = "framed from her head down to just below her knees, the camera close to her, her body filling the frame"
+_FAR = "full-length shot, distant shot, small figure, feet in frame, empty space around her"
 # Jeremy, 2026-11-01: "it's important that the girl is looking directly at
 # the viewer. Diane's photos are like looking off into space" - "looking up
 # into the lens" rolled her eyes up past it in both.
@@ -595,13 +597,17 @@ LINGERIE_PACK: tuple[dict, ...] = (
     # with her back to the viewer", and of the first takes (13 of 13 hands on
     # hips, feet hip-width, most cropped at the thighs): "always just a girl
     # standing up straight."
-    {"tag": "standingspread", "stance": "her feet planted on the floor far apart, much wider than her "
-                                        "shoulders, her straight legs making an upside-down V with a wide gap "
-                                        "between her thighs, hands on her hips",
-     "needs": _FLOOR, "framing": _HEAD_TO_FEET,
-     "shot_type": "full-length photo from behind of her standing with her legs spread wide",
+    # Jeremy, 2026-11-02: head-to-feet left her small in a sea of grey and the
+    # few pixels in her face came out distorted - "the standing and bending
+    # over need to be closer". Standing's knees-up close framing is the one
+    # that reliably fills the frame, so both standing-from-behind poses use it.
+    {"tag": "standingspread", "stance": "her legs spread far apart, much wider than her shoulders, her straight "
+                                        "legs making an upside-down V with a wide gap between her thighs, "
+                                        "hands on her hips",
+     "needs": _FLOOR, "framing": _STAND_CLOSE,
+     "shot_type": "photo from behind of her standing with her legs spread wide",
      "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera",
-     "negative": "feet together, legs together, feet close together"},
+     "negative": "feet together, legs together, feet close together, " + _FAR},
     # Jeremy, 2026-11-01: "The sitting prompt is also always the girl
     # kneeling" - then "Crystal's is the perfect example of what sitting is
     # supposed to be like": side-saddle, hip and bottom on the floor, both legs
@@ -678,15 +684,15 @@ LINGERIE_PACK: tuple[dict, ...] = (
                  "the frame, knees together, cross-legged"},
     # Jeremy, 2026-11-01, of "touching her toes": "a slight bend to show off
     # her ass" - a slight bend at the hips, back arched, bottom pushed out.
-    {"tag": "bendingover", "stance": "her legs straight and her feet together, bending slightly forward at the "
+    {"tag": "bendingover", "stance": "her legs straight and together, bending slightly forward at the "
                                      "hips, her lower back arched, her ass pushed out toward the camera, her "
                                      "hands resting on the fronts of her thighs",
-     "needs": _FLOOR, "framing": _HEAD_TO_FEET,
-     "shot_type": "full-length photo from behind of her bending slightly forward, showing off her ass",
+     "needs": _FLOOR, "framing": _STAND_CLOSE,
+     "shot_type": "photo from behind of her bending slightly forward, showing off her ass",
      "facing": "her back to the camera, seen from behind and slightly to one side",
      "gaze": "her head turned to look back over her shoulder into the camera",
      "negative": "touching her toes, forward fold, hands on the floor, chest against her thighs, "
-                 "standing up straight"},
+                 "standing up straight, " + _FAR},
     # Jeremy, 2026-11-02, of mei's take on the face-down, ass-up prompt: "the
     # physics are a bit off but that pose is great if we can explain it". She
     # lay on her stomach propped on her forearms, hips rolled to one side, legs
