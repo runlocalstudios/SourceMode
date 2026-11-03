@@ -117,6 +117,15 @@
    "bpm": 66,
    "keyscale": "C major",
    "seconds": 180
+  },
+  {
+   "id": "aireSpa",
+   "label": "Aire Day Spa",
+   "kind": "venue",
+   "tags": "instrumental, calm spa music, soft ambient pads, gentle harp and koto-like plucks, slow warm piano, flowing water texture, airy and serene, unhurried relaxing pace, no drums, no vocals, no build-ups, background music",
+   "bpm": 60,
+   "keyscale": "D major",
+   "seconds": 180
   }
  ]
 }
