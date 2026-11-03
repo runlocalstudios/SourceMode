@@ -93,20 +93,11 @@
   },
   {
    "id": "beach",
-   "label": "Sunset Point",
+   "label": "Sunset Point (the shore and The Sandbar)",
    "kind": "venue",
    "tags": "instrumental, chill beach music, warm acoustic guitar, gentle surf-rock electric guitar with soft reverb, light reggae offbeat, soft hand percussion and shaker, round mellow bass, sunny laid-back seaside afternoon, steady easy groove, no vocals, no build-ups, no drops, background music",
    "bpm": 90,
    "keyscale": "D major",
-   "seconds": 180
-  },
-  {
-   "id": "beachBar",
-   "label": "The Sandbar",
-   "kind": "venue",
-   "tags": "instrumental, chill beach bar music, warm acoustic guitar, ukulele, light steel drum accents, bongos and shaker, gentle reggae offbeat, round mellow bass, sunny tiki-bar afternoon, steady easy groove, no vocals, no build-ups, no drops, background music",
-   "bpm": 96,
-   "keyscale": "G major",
    "seconds": 180
   },
   {
