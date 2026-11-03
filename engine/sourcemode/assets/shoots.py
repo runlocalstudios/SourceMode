@@ -540,7 +540,9 @@ _KNEES = "framed from the knees up, the camera close to her"
 # the player's body in frame and are left out - Jeremy, 2026-10-29: "kill the
 # sitting on lap poses".
 CHAT_POSES = ("standing", "sitting", "kneeling", "crawling", "lyingdown", "lyingspread",
-              "standingspread", "spreadwide", "showfeet", "bendingover", "comehere", "smoochie", "after")
+              "standingspread", "spreadwide", "showfeet", "bendingover", "comehere", "smoochie", "after",
+              # chillafterdark cd95d04, 2026-11-03: the pajama pack's two side and back portraits
+              "standingside", "standingback")
 # Jeremy, 2026-11-01: "They are cutout sets so should not be placed in a
 # bedroom." Every pose is on the bare studio floor with nothing to sit, lean or
 # lie on - whatever she touches would be cut out with her - so the bed, the
@@ -848,7 +850,9 @@ PAJAMA_PACK: tuple[dict, ...] = tuple(_pj(p) for p in (
      "shot_type": "close intimate photo from directly behind her",
      "facing": "her back to the camera, very close",
      "gaze": "looking back over her shoulder into the camera", "expression_natural": "a teasing smile",
-     "negative": _FAR + ", a man, another person, chair, bending over, hands on the floor"},
+     # Jeremy, 2026-11-03: in about half the sets the button row ran down her back
+     "negative": _FAR + ", a man, another person, chair, bending over, hands on the floor, buttons down "
+                 "the back, buttons on the back of the shirt, a button row on her back, back-buttoned"},
     # Jeremy, 2026-11-03: sitting keeps growing buttons on the shorts
     {**_L["sitting"],
      "negative": _L["sitting"]["negative"] + ", buttons on the shorts, buttoned shorts, button fly, "

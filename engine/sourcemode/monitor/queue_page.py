@@ -2143,25 +2143,31 @@ def queue_process_if_ready(cfg: dict, set_id: str) -> dict | None:
 
     out = outputs_dir(cfg)
     why = P.process_due(judge_root(cfg), out, set_id)
-    # the lingerie pack is cut out the same way since 2026-11-01, by its own script
-    lingerie = not why and I.process_due(judge_root(cfg), out, set_id)
-    why = why or lingerie
+    # the intimate packs (lingerie since 2026-11-01, pajamas since 2026-11-03)
+    # are cut out the same way, by their own script, one pack per job
+    outfit = None
+    if not why:
+        for o in I.PACKS:
+            why = I.process_due(judge_root(cfg), out, set_id, outfit=o)
+            if why:
+                outfit = o
+                break
     if not why:
         return None
     c = (load_set(judge_root(cfg), set_id) or {}).get("meta", {}).get("character")
     if not c:
         return None
-    label = f"{c}:lingerie" if lingerie else c
+    label = f"{c}:{outfit}" if outfit else c
     qp = q.queue_path(out)
     doc = q.load(qp)
     if q.duplicate_of(doc, "process", label):
         return None
     cmd = ([str(ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"),
-            str(ENGINE_ROOT / "scripts" / "eval" / "process_lingerie.py"), c]
-           if lingerie else process_command(cfg, c, set_id))
+            str(ENGINE_ROOT / "scripts" / "eval" / "process_intimate.py"), c, outfit]
+           if outfit else process_command(cfg, c, set_id))
     job = q.add(doc, kind="process", label=label, cmd=cmd, cwd=str(ENGINE_ROOT),
                 lane="cpu", note=f"cutout + staging of {set_id}: {why}; "
-                + ("ships to the game - every pose is kept" if lingerie else "approve on the Characters tab"))
+                + ("ships to the game - every pose is kept" if outfit else "approve on the Characters tab"))
     q.save(qp, doc)
     return job
 

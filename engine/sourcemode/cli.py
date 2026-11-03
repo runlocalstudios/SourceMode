@@ -308,20 +308,22 @@ def assets_plan(
         rprint(f"  [yellow]{blank} looks have no outfit/hair yet[/yellow] — fill them in before `assets render`")
 
 
-@assets_app.command("lingerie")
-def assets_lingerie(
+@assets_app.command("intimate")
+def assets_intimate(
     character: str = typer.Argument(..., help="Character id as the game knows it."),
+    outfit: str = typer.Argument("lingerie", help="The pack: lingerie or pajamas."),
     ship: bool = typer.Option(False, "--ship", help="Copy the staged files into the game repo. Your approval; nothing else writes there."),
     game_root: Path = typer.Option(None, "--game-root", help="The game repo (default: the one the Characters tab ships to)."),
 ):
-    """Queue the cutout + staging of her kept Lingerie-pack shots; --ship copies the staging in.
+    """Queue the cutout + staging of her kept Lingerie- or Pajama-pack shots; --ship copies the staging in.
 
     Staging (a CPU-lane queue job - the matte loads a model) writes
-    outputs/game-assets/<char>/intimate/: lingerie_01.webp (the base the wardrobe
-    button checks for) and <char>_lingerie_<pose>.webp per kept pose, cut out, which
-    the chat switches to on "kneel", "crawl", "spread your legs"... plus the
-    characterAppearance.js line the base file needs. It queues itself once every pose
-    is kept; the Characters tab approves it."""
+    outputs/game-assets/<char>/intimate/: <outfit>_01.webp (her base picture in the
+    chat) and <char>_<outfit>_<pose>.webp per kept pose, cut out, which the chat
+    switches to on "kneel", "crawl", "turn around"... It queues itself once every
+    pose is kept; the Characters tab approves it. A ship then runs the game's
+    `npm run sync:intimate`, which registers the pack from the base file on disk,
+    and reports its output."""
     from .assets import intimate as I  # noqa: PLC0415
     from .assets.looks import GAME_ROOT  # noqa: PLC0415
     from .config import ENGINE_ROOT, outputs_dir  # noqa: PLC0415
@@ -330,32 +332,49 @@ def assets_lingerie(
     cfg = load_config()
     out = outputs_dir(cfg)
     c = character.lower()
+    o = outfit.lower()
+    if o not in I.PACKS:
+        rprint(f"[red]no intimate pack called {o}; one of {', '.join(I.PACKS)}[/red]")
+        raise typer.Exit(1)
     if ship:
-        st = I.read_staged(out, c)
+        st = I.read_staged(out, c, o)
         if st:
-            rprint(f"staged {len(st['files'])} files for [cyan]{c}[/cyan]; poses: {', '.join(st['poses'])}")
-            rprint("  characterAppearance.js needs:\n" + st["registration"])
+            rprint(f"staged {len(st['files'])} {o} files for [cyan]{c}[/cyan]; poses: {', '.join(st['poses'])}")
         try:
-            s = I.ship(out, c, game_root or GAME_ROOT)
+            s = I.ship(out, c, game_root or GAME_ROOT, outfit=o)
         except ValueError as exc:
             rprint(f"[red]{exc}[/red]")
             raise typer.Exit(1) from exc
         rprint(f"shipped {len(s['files'])} files ({s['overwrote']} overwritten) -> {s['to']}")
+        sync = s["sync"]
+        rprint(f"  {sync['cmd']}: " + ("[green]ok[/green]" if sync["ok"] else "[red]FAILED[/red]") + f" - {sync['output']}")
+        if not sync["ok"]:
+            raise typer.Exit(1)
         return
-    if not I.keepers(cfg, c):
-        rprint(f"[red]no kept lingerie shots for {c} - render the Lingerie pack and judge it first[/red]")
+    if not I.keepers(cfg, c, o):
+        rprint(f"[red]no kept {o} shots for {c} - render the pack and judge it first[/red]")
         raise typer.Exit(1)
     qp = q.queue_path(out)
     doc = q.load(qp)
-    if q.duplicate_of(doc, "process", f"{c}:lingerie"):
+    if q.duplicate_of(doc, "process", f"{c}:{o}"):
         rprint(f"already queued for {c}")
         return
-    job = q.add(doc, kind="process", label=f"{c}:lingerie", cwd=str(ENGINE_ROOT), lane="cpu",
+    job = q.add(doc, kind="process", label=f"{c}:{o}", cwd=str(ENGINE_ROOT), lane="cpu",
                 cmd=[str(ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"),
-                     str(ENGINE_ROOT / "scripts" / "eval" / "process_lingerie.py"), c],
-                note="lingerie cutout + staging; approve on the Characters tab")
+                     str(ENGINE_ROOT / "scripts" / "eval" / "process_intimate.py"), c, o],
+                note=f"{o} cutout + staging; approve on the Characters tab")
     q.save(qp, doc)
-    rprint(f"queued {job['id']} - cutout + staging of {c}'s lingerie keepers; approve on the Characters tab")
+    rprint(f"queued {job['id']} - cutout + staging of {c}'s {o} keepers; approve on the Characters tab")
+
+
+@assets_app.command("lingerie")
+def assets_lingerie(
+    character: str = typer.Argument(..., help="Character id as the game knows it."),
+    ship: bool = typer.Option(False, "--ship"),
+    game_root: Path = typer.Option(None, "--game-root"),
+):
+    """`assets intimate <character> lingerie` - the old name, kept."""
+    assets_intimate(character, "lingerie", ship=ship, game_root=game_root)
 
 
 @assets_app.command("render")

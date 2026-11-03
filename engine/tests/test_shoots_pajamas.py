@@ -37,6 +37,7 @@ def test_the_nine_poses_in_his_order_with_the_pack_negative_under_each():
     assert "very close" in by["standingback"]["stance"] and "back to the camera" in by["standingback"]["facing"]
     assert "viewer" not in by["standingback"]["stance"] + by["standingback"]["shot_type"]  # never his body
     assert "a man" in by["standingback"]["negative"]
+    assert "buttons down the back" in by["standingback"]["negative"]
     for t in ("sitting", "kneeling", "kneeling2", "showfeet", "crawling"):
         assert by[t]["stance"] == lp[t]["stance"] and by[t]["framing"] == lp[t]["framing"], t
     # Jeremy, 2026-11-03: sitting grows buttons on the shorts; the side portrait

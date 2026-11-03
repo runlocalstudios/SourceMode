@@ -103,9 +103,11 @@ def _packs(char: str, outputs: Path | None, judge_root: Path | None) -> dict:
     from ..assets import intimate as I  # noqa: PLC0415
     from ..assets.selfies import pack_state  # noqa: PLC0415
 
-    li = I.read_staged(outputs, char) if outputs else None
+    # one intimate pack per outfit (lingerie, pajamas), each with its own staging record
+    intimate = {o: bool(outputs and (st := I.read_staged(outputs, char, o)) and not st.get("shipped"))
+                for o in I.PACKS}
     return {"shipped": shipped, "shoots": shoots, "plan": plan, "awaiting": awaiting,
-            "lingerie_awaiting": bool(li and not li.get("shipped")),
+            "intimate_awaiting": intimate,
             "looks": looks, "looks_at": looks_at, "selfies": pack_state(char)}
 
 
@@ -125,8 +127,9 @@ def todo(row: dict) -> list[str]:
         # eden had her plan and her 28 renders; it only ever meant the game
         # repo has no outfit files for her yet
         out.append("NOT IN GAME")
-    if row["packs"].get("lingerie_awaiting"):
-        out.append("APPROVE LINGERIE")
+    for o, waiting in (row["packs"].get("intimate_awaiting") or {}).items():
+        if waiting:
+            out.append(f"APPROVE {o.upper()}")
     # Jeremy, 2026-10-23: since the selfies wear her approved looks he could
     # not tell who still has no 28-look plan, and whose selfies predate it.
     p = row["packs"]
@@ -234,6 +237,7 @@ html,body{overflow-x:hidden}
 .sec h4{margin:0 0 var(--s1);font:var(--t-meta);font-weight:600;color:var(--g8);
   text-transform:uppercase;letter-spacing:.04em}
 .sec .sub{font:var(--t-small);color:var(--g6);margin-bottom:var(--s1)}
+.sec .sub.bad{color:var(--stop-ink);background:var(--stop-bg);border:1px solid var(--stop-line);border-radius:6px;padding:var(--s1)}
 .fld{margin-top:var(--s2)}
 .fld label{display:block;font:var(--t-meta);font-weight:600;color:var(--g8);margin-bottom:2px}
 .fld .cov{font:var(--t-small);font-weight:400;color:var(--g6)}
@@ -658,33 +662,44 @@ async function looksAct(b){
   }catch(err){ SM.toast(err.message); b.disabled=false; dirty(); }
 }
 
-/* The lingerie pack's cutouts. Jeremy, 2026-11-01: "We will need the approval
-   and pipeline to move the approved cutouts into the game." Every pose kept in
-   the judge queues the cutout; it lands here, every file ticked, and Approve
-   copies the ticked ones into the game's intimate folder. */
+/* The intimate packs' cutouts, one box per pack (lingerie, pajamas). Jeremy,
+   2026-11-01: "We will need the approval and pipeline to move the approved
+   cutouts into the game." Every pose kept in the judge queues the cutout; it
+   lands here, every file ticked, and Approve copies the ticked ones into the
+   game's intimate folder and runs the game's sync:intimate, whose output is
+   shown here (chillafterdark cd95d04: no characterAppearance.js line). */
+const INTIMATE_PACKS=['lingerie','pajamas'];
+function liUrl(c,o){ return '/characters/'+encodeURIComponent(c)+'/intimate/'+encodeURIComponent(o); }
 async function loadLingerie(){
   for(const el of document.querySelectorAll('[data-lingerie]')){
-    try{ drawLingerie(el, await SM.getJSON('/characters/'+encodeURIComponent(el.dataset.lingerie)+'/lingerie')); }
+    try{ drawLingerie(el, await SM.getJSON(liUrl(el.dataset.lingerie, el.dataset.outfit))); }
     catch(e){ el.hidden=true; }
   }
 }
 function liLabel(k,n){ return 'Approve &mdash; copy '+(k===n?n+' files':k+' of '+n+' files')+' into the game'; }
-function drawLingerie(el,st){
-  const s=st.staged, c=st.character;
+function liTitle(o){ return o.charAt(0).toUpperCase()+o.slice(1)+' pack'; }
+function drawLingerie(el,st,sync){
+  const s=st.staged, c=st.character, o=st.outfit;
   el.hidden=!s||!!s.shipped;
-  if(el.hidden){ el.innerHTML=''; return; }
+  if(el.hidden){
+    el.innerHTML='';
+    /* the sync's words outlive the box: he reads them where the pack was */
+    if(sync){ el.hidden=false; el.innerHTML='<div class="sub '+(sync.ok?'':'bad')+'">'+SM.esc(liTitle(o))+' shipped. <code>'+SM.esc(sync.cmd)+'</code> '
+      +(sync.ok?'ran: ':'<b>FAILED</b> - run it in the game repo yourself: ')+SM.esc(sync.output)+'</div>'; }
+    return;
+  }
   const files=Object.keys(s.files||{}), fl=s.flagged||{};
-  let h='<h5>Lingerie pack &mdash; ship to the game <span class=cov>'+(s.cutout?'cut out ':'staged ')+SM.esc(SM.ago(s.at))+' &middot; awaiting your approval</span></h5>';
+  let h='<h5>'+SM.esc(liTitle(o))+' &mdash; ship to the game <span class=cov>'+(s.cutout?'cut out ':'staged ')+SM.esc(SM.ago(s.at))+' &middot; awaiting your approval</span></h5>';
   h+='<div class=sub>'+s.poses.length+' poses from '+SM.esc((s.set||'').split(/[\\/]/).pop())
-    +' &middot; lingerie_01 is her '+SM.esc(s.base_from)+' pose'
+    +' &middot; '+SM.esc(o)+'_01 is her '+SM.esc(s.base_from)+' pose'
     +(Object.keys(fl).length?' &middot; '+Object.keys(fl).length+' flagged by the alpha report':'')
     +'. Untick any to leave it out.</div>';
   h+='<div class=row><button class="btn btn-primary" data-act=li_ship data-n="'+files.length+'">'+liLabel(files.length,files.length)+'</button>'
     +'<button class="btn btn-ghost" data-act=li_discard>Discard this staging</button></div>';
   h+='<div class=pairs>'+files.map(f=>'<label class="tile ltile on" data-file="'+SM.esc(f)+'"><input type=checkbox checked>'
-    +'<span class=who>'+SM.esc(f.replace(/\.webp$/,'').replace(c+'_lingerie_',''))+(fl[f]?' &middot; '+SM.esc(fl[f].join(', ')):'')+'</span>'
-    +'<img loading=lazy src="/characters/'+encodeURIComponent(c)+'/lingerie/look?file='+encodeURIComponent(f)+'" alt=""></label>').join('')+'</div>';
-  h+='<div class=sub>The game also needs <code>'+SM.esc(s.registration||'')+'</code> in characterAppearance.js.</div>';
+    +'<span class=who>'+SM.esc(f.replace(/\.webp$/,'').replace(c+'_'+o+'_',''))+(fl[f]?' &middot; '+SM.esc(fl[f].join(', ')):'')+'</span>'
+    +'<img loading=lazy src="'+liUrl(c,o)+'/look?file='+encodeURIComponent(f)+'" alt=""></label>').join('')+'</div>';
+  h+='<div class=sub>Approving runs the game\'s <code>npm run sync:intimate</code>, which registers the pack from '+SM.esc(o)+'_01.webp.</div>';
   el.innerHTML=h;
 }
 function liKeep(box){ return [...box.querySelectorAll('.ltile input:checked')].map(i=>i.closest('.ltile').dataset.file); }
@@ -695,20 +710,23 @@ function liTick(inp){
   b.innerHTML=liLabel(liKeep(box).length,+b.dataset.n);
 }
 async function lingerieAct(b){
-  const box=b.closest('[data-lingerie]'), c=box.dataset.lingerie, u='/characters/'+encodeURIComponent(c)+'/lingerie';
+  const box=b.closest('[data-lingerie]'), c=box.dataset.lingerie, o=box.dataset.outfit, u=liUrl(c,o);
   b.disabled=true;
+  let sync=null;
   try{
     if(b.dataset.act==='li_ship'){
       const keep=liKeep(box), all=+b.dataset.n;
       if(!keep.length){ SM.toast('tick at least one, or discard the staging'); b.disabled=false; return; }
-      if(!confirm('Copy '+keep.length+' lingerie cutouts into the game for '+c+'? This writes into the game repo.')){ b.disabled=false; return; }
+      if(!confirm('Copy '+keep.length+' '+o+' cutouts into the game for '+c+'? This writes into the game repo and runs its sync:intimate.')){ b.disabled=false; return; }
       const r=await SM.postJSON(u+'/ship', keep.length===all?{}:{keep});
-      SM.toast(c+': '+r.files.length+' lingerie files copied into the game'+(r.overwrote?', '+r.overwrote+' overwritten':''));
+      sync=r.sync||null;
+      SM.toast(c+': '+r.files.length+' '+o+' files copied into the game'+(r.overwrote?', '+r.overwrote+' overwritten':'')
+        +(sync&&!sync.ok?' - sync:intimate FAILED, see the note':''));
     } else if(b.dataset.act==='li_discard'){
-      if(!confirm('Discard this lingerie staging for '+c+'? The cutouts stay on disk; nothing in the game changes.')){ b.disabled=false; return; }
+      if(!confirm('Discard this '+o+' staging for '+c+'? The cutouts stay on disk; nothing in the game changes.')){ b.disabled=false; return; }
       await SM.postJSON(u+'/discard',{});
     }
-    drawLingerie(box, await SM.getJSON(u));
+    drawLingerie(box, await SM.getJSON(u), sync);
   }catch(err){ SM.toast(err.message); b.disabled=false; }
 }
 
@@ -726,7 +744,7 @@ function draw(){
       /* Jeremy, 2026-10-21: "scrolling all the way to the bottom to do that makes
          no sense" - the staged pack, its sheets and its approval sit at the top */
       +(one?'<div class="sec ship" data-ship hidden></div>'
-            +'<div class="sec ship" data-lingerie="'+SM.esc(r.character)+'" hidden></div>':'')
+            +INTIMATE_PACKS.map(o=>'<div class="sec ship" data-lingerie="'+SM.esc(r.character)+'" data-outfit="'+o+'" hidden></div>').join(''):'')
       +appearance(r)+(one?profile(r):'')
     +'</div>').join(''));
   for(const t of document.querySelectorAll('.lk textarea')) fit(t);
@@ -920,42 +938,54 @@ def appearance_router(cfg: dict):
 
         return {"discarded": L.discard_staging(cfg, _char(char))}
 
-    # --- the lingerie pack's cutouts -----------------------------------------
+    # --- the intimate packs' cutouts (lingerie, pajamas) ---------------------
     # Jeremy, 2026-11-01: "We will need the approval and pipeline to move the
     # approved cutouts into the game." Same shape as pack/ship: tiles, ticks,
-    # one approval that copies into the game's intimate folder.
-    @r.get("/characters/{char}/lingerie")
-    def _lingerie(char: str) -> dict:
+    # one approval per pack that copies into the game's intimate folder and
+    # runs the game's sync:intimate (chillafterdark cd95d04, 2026-11-03).
+    def _outfit(outfit: str) -> str:
         from ..assets import intimate as I  # noqa: PLC0415
 
-        return {"character": _char(char), "staged": I.read_staged(outputs_dir(cfg), _char(char))}
+        o = outfit.lower()
+        if o not in I.PACKS:
+            raise HTTPException(404, f"no intimate pack called {outfit}")
+        return o
 
-    @r.get("/characters/{char}/lingerie/look")
-    def _lingerie_look(char: str, file: str):
+    @r.get("/characters/{char}/intimate/{outfit}")
+    def _intimate(char: str, outfit: str) -> dict:
         from ..assets import intimate as I  # noqa: PLC0415
 
-        p = I.tile(outputs_dir(cfg), _char(char), file)
+        o = _outfit(outfit)
+        return {"character": _char(char), "outfit": o, "staged": I.read_staged(outputs_dir(cfg), _char(char), o)}
+
+    @r.get("/characters/{char}/intimate/{outfit}/look")
+    def _intimate_look(char: str, outfit: str, file: str):
+        from ..assets import intimate as I  # noqa: PLC0415
+
+        p = I.tile(outputs_dir(cfg), _char(char), file, outfit=_outfit(outfit))
         if p is None:
             raise HTTPException(404)
         return FileResponse(p, media_type="image/webp")
 
-    @r.post("/characters/{char}/lingerie/ship")
-    def _lingerie_ship(char: str, body: dict | None = Body(None)) -> dict:
-        """`{keep: [files]}` ships only the ticked files; no body ships them all."""
+    @r.post("/characters/{char}/intimate/{outfit}/ship")
+    def _intimate_ship(char: str, outfit: str, body: dict | None = Body(None)) -> dict:
+        """`{keep: [files]}` ships only the ticked files; no body ships them all.
+        The result carries the game's sync output, failed or not."""
         from ..assets import intimate as I  # noqa: PLC0415
         from ..assets.looks import GAME_ROOT  # noqa: PLC0415
 
         keep = (body or {}).get("keep")
         try:
-            return I.ship(outputs_dir(cfg), _char(char), GAME_ROOT, None if keep is None else [str(x) for x in keep])
+            return I.ship(outputs_dir(cfg), _char(char), GAME_ROOT, None if keep is None else [str(x) for x in keep],
+                          outfit=_outfit(outfit))
         except ValueError as e:
             raise HTTPException(409, str(e)) from e
 
-    @r.post("/characters/{char}/lingerie/discard")
-    def _lingerie_discard(char: str) -> dict:
+    @r.post("/characters/{char}/intimate/{outfit}/discard")
+    def _intimate_discard(char: str, outfit: str) -> dict:
         from ..assets import intimate as I  # noqa: PLC0415
 
-        return {"discarded": I.discard(outputs_dir(cfg), _char(char))}
+        return {"discarded": I.discard(outputs_dir(cfg), _char(char), _outfit(outfit))}
 
     # --- the profile portrait ------------------------------------------------
     @r.get("/characters/{char}/portrait")

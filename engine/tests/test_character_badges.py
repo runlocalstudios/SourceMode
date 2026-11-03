@@ -78,3 +78,12 @@ def test_pack_state_tells_a_wardrobe_pack_from_an_older_one(tmp_path):
     s = pack_state("ash", lib)
     assert (s["wardrobe"], s["rendered"], s["total"]) == (True, 3, 7)
     assert s["at"] == datetime.fromtimestamp(late.stat().st_mtime, timezone.utc).isoformat(timespec="seconds")
+
+
+def test_each_intimate_pack_waiting_on_him_is_its_own_badge():
+    # chillafterdark cd95d04, 2026-11-03: the pajama pack ships beside lingerie
+    r = row()
+    r["packs"]["intimate_awaiting"] = {"lingerie": True, "pajamas": False}
+    assert todo(r) == ["APPROVE LINGERIE"]
+    r["packs"]["intimate_awaiting"] = {"lingerie": True, "pajamas": True}
+    assert todo(r) == ["APPROVE LINGERIE", "APPROVE PAJAMAS"]

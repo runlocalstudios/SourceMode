@@ -235,7 +235,8 @@ def game_groups(character: str, game_root: Path, out_root: Path, lib: Path) -> l
         ("selfies", "Selfies", ((game / "selfies", "in the game"),
                                 (lambda: latest_set("selfies"), "rendered, not shipped"))),
         ("intimate", "Intimate", ((game / "intimate", "in the game"), (staged / "intimate", "staged, not shipped"),
-                                  (lambda: latest_set("shoot", "_shoot_lingerie"), "rendered, not staged"))),
+                                  (lambda: latest_set("shoot", "_shoot_lingerie") + latest_set("shoot", "_shoot_pajamas"),
+                                   "rendered, not staged"))),
         ("home", "Home", ((game / "home", "in the game"),)),
         ("portrait", "Portrait", ((game / "portraits", "in the game"),)),
     )
