@@ -604,9 +604,13 @@ LINGERIE_PACK: tuple[dict, ...] = (
     {"tag": "standingspread", "stance": "her legs spread far apart, much wider than her shoulders, her straight "
                                         "legs making an upside-down V with a wide gap between her thighs, "
                                         "hands on her hips",
-     "needs": _FLOOR, "framing": _STAND_CLOSE,
+     # Jeremy, 2026-11-02: eden's is "like the perfect one" - close, from her
+     # head to her mid-thighs, from behind and a little to one side
+     "needs": _FLOOR, "framing": "framed from her head down to her mid-thighs, the camera close to her, "
+                                 "her body filling the frame",
      "shot_type": "photo from behind of her standing with her legs spread wide",
-     "facing": "her back to the camera", "gaze": "looking back over her shoulder into the camera",
+     "facing": "her back to the camera, seen from behind and slightly to one side",
+     "gaze": "looking back over her shoulder into the camera",
      "negative": "feet together, legs together, feet close together, " + _FAR},
     # Jeremy, 2026-11-01: "The sitting prompt is also always the girl
     # kneeling" - then "Crystal's is the perfect example of what sitting is
