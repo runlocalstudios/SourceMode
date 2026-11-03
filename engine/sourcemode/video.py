@@ -447,11 +447,15 @@ def script_beats(script: str) -> list[tuple[float, str]]:
 
 
 def voice_mux_args(video: Path, lines: list[tuple[float, Path]], dest: Path, *, ffmpeg: str,
-                   seconds: float) -> list[str]:
+                   seconds: float, music: Path | None = None, music_db: float = -12.0) -> list[str]:
     """One ffmpeg pass laying each spoken line at its start time under the clip.
     The picture is copied untouched; the audio is padded or cut to exactly the
     clip's `seconds` (an endless pad with -shortest never ends when the picture
-    is stream-copied - measured, it hung)."""
+    is stream-copied - measured, it hung).
+
+    `music` lays a bed under the lines (velour_dance, 2026-11-02: a dance with
+    no music): looped to cover the clip, `music_db` down, faded in over 2 s and
+    out over the last 5 s."""
     args = [ffmpeg, "-y", "-loglevel", "error", "-i", str(video)]
     for _t, wav in lines:
         args += ["-i", str(wav)]
@@ -460,7 +464,15 @@ def voice_mux_args(video: Path, lines: list[tuple[float, Path]], dest: Path, *, 
         ms = int(round(t * 1000))
         parts.append(f"[{i}:a]adelay={ms}|{ms}[a{i}]")
     mix = "".join(f"[a{i}]" for i in range(1, len(lines) + 1))
-    parts.append(f"{mix}amix=inputs={len(lines)}:normalize=0:dropout_transition=0,"
+    if music is not None:
+        m = len(lines) + 1
+        args += ["-stream_loop", "-1", "-i", str(music)]
+        fade_at = max(0.0, seconds - 5.0)
+        parts.append(f"[{m}:a]atrim=0:{seconds:.3f},asetpts=PTS-STARTPTS,volume={music_db:g}dB,"
+                     f"afade=t=in:d=2,afade=t=out:st={fade_at:.3f}:d=5[mus]")
+        mix += "[mus]"
+    n = len(lines) + (music is not None)
+    parts.append(f"{mix}amix=inputs={n}:normalize=0:dropout_transition=0,"
                  f"apad=whole_dur={seconds:.3f},atrim=0:{seconds:.3f}[aout]")
     return args + ["-filter_complex", ";".join(parts), "-map", "0:v", "-map", "[aout]",
                    "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", str(dest)]

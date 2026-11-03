@@ -25,3 +25,16 @@ def test_each_line_is_laid_under_the_clip_at_its_time_and_the_picture_is_copied(
     fc = args[args.index("-filter_complex") + 1]
     assert "adelay=1000|1000" in fc and "adelay=7500|7500" in fc and "amix=inputs=2" in fc and "apad=whole_dur=24.500" in fc and "atrim=0:24.500" in fc
     assert args[args.index("-c:v") + 1] == "copy" and "-shortest" not in args
+
+
+def test_a_music_bed_loops_under_the_lines_and_fades_out_at_the_end():
+    args = V.voice_mux_args(Path("take.mp4"), [(1.0, Path("a.wav"))], Path("out.mp4"), ffmpeg="ffmpeg",
+                            seconds=240.0, music=Path("bed.mp3"), music_db=-14)
+    i = args.index(str(Path("bed.mp3")))
+    assert args[i - 3:i - 1] == ["-stream_loop", "-1"]
+    fc = args[args.index("-filter_complex") + 1]
+    assert "[2:a]atrim=0:240.000" in fc and "volume=-14dB" in fc and "afade=t=out:st=235.000:d=5" in fc
+    assert "[a1][mus]amix=inputs=2" in fc
+    # music alone, no lines
+    fc = V.voice_mux_args(Path("t.mp4"), [], Path("o.mp4"), ffmpeg="ffmpeg", seconds=30.0, music=Path("m.mp3"))
+    assert "[mus]amix=inputs=1" in fc[fc.index("-filter_complex") + 1]

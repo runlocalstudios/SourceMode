@@ -105,6 +105,10 @@ if story.get("voice") and not FIRST:
     voice_ref = Path(v["reference"]) if v.get("reference") else None
     if not (voice_ref and voice_ref.is_file()):
         problems.append(f"{CHAR} has no voice reference")
+# `music` (optional): a track laid under the whole story at `music_db` (default -12)
+music = Path(story["music"]) if story.get("music") else None
+if music and not music.is_file():
+    problems.append(f"music is not on disk: {music}")
 if problems:
     raise SystemExit("; ".join(problems))
 
@@ -185,11 +189,16 @@ for i, s in enumerate(SEGMENTS, 1):
 
 final = d / (f"proof_{FIRST:02d}.mp4" if FIRST else "take_01.mp4")
 silent = legs / "take_01_silent.mp4"
-stitch(files, silent if lines else final, fps, ffmpeg=ff)
+stitch(files, silent if (lines or music) else final, fps, ffmpeg=ff)
 frames = [snap_frames(float(x["seconds"]), fps, int(cfg["video"]["max_frames"])) for x in SEGMENTS]
 seconds = (sum(frames) - (len(frames) - 1)) / fps
-if lines:
-    subprocess.run(voice_mux_args(silent, lines, final, ffmpeg=ff, seconds=seconds),
+if lines or music:
+    subprocess.run(voice_mux_args(silent, lines, final, ffmpeg=ff, seconds=seconds, music=music,
+                                  music_db=float(story.get("music_db", -12))),
+                   check=True, capture_output=True, text=True, timeout=300)
+if lines and music and not FIRST:
+    # the same take with the voice alone, in case the bed is the wrong track
+    subprocess.run(voice_mux_args(silent, lines, d / "take_01_voice_only.mp4", ffmpeg=ff, seconds=seconds),
                    check=True, capture_output=True, text=True, timeout=300)
 record.update(file=str(final), seconds=round(seconds, 2))
 final.with_suffix(".json").write_text(json.dumps(record, indent=1, ensure_ascii=False), encoding="utf-8")
