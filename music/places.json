@@ -108,6 +108,15 @@
    "bpm": 96,
    "keyscale": "G major",
    "seconds": 180
+  },
+  {
+   "id": "church",
+   "label": "Grace Community Church",
+   "kind": "venue",
+   "tags": "instrumental, gentle church music, soft pipe organ and warm piano playing a simple hymn-like melody, quiet string pad, reverent and peaceful, big stone-church reverb, slow steady pace, no vocals, no choir, no drums, no build-ups, background music",
+   "bpm": 66,
+   "keyscale": "C major",
+   "seconds": 180
   }
  ]
 }
