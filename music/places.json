@@ -72,6 +72,42 @@
    "bpm": 92,
    "keyscale": "Bb major",
    "seconds": 180
+  },
+  {
+   "id": "recordShop",
+   "label": "Needle & Dust Records",
+   "kind": "venue",
+   "tags": "instrumental, 90s grunge, simple mid-tempo song, fuzzy distorted electric guitars, quiet clean verses and heavier choruses, loose heavy drums, droning bass, raw garage-band production, moody and laid-back, steady groove, no vocals, background music",
+   "bpm": 96,
+   "keyscale": "E minor",
+   "seconds": 180
+  },
+  {
+   "id": "musicVenue",
+   "label": "The Broken Amp",
+   "kind": "venue",
+   "tags": "instrumental, scrappy indie punk band playing live in a small club, driving melodic bass guitar up front, crunchy overdriven guitars, fast loose drums, catchy riff with a bite, raw energetic small-venue sound, no vocals, background music",
+   "bpm": 150,
+   "keyscale": "A minor",
+   "seconds": 180
+  },
+  {
+   "id": "beach",
+   "label": "Sunset Point",
+   "kind": "venue",
+   "tags": "instrumental, chill beach music, warm acoustic guitar, gentle surf-rock electric guitar with soft reverb, light reggae offbeat, soft hand percussion and shaker, round mellow bass, sunny laid-back seaside afternoon, steady easy groove, no vocals, no build-ups, no drops, background music",
+   "bpm": 90,
+   "keyscale": "D major",
+   "seconds": 180
+  },
+  {
+   "id": "beachBar",
+   "label": "The Sandbar",
+   "kind": "venue",
+   "tags": "instrumental, chill beach bar music, warm acoustic guitar, ukulele, light steel drum accents, bongos and shaker, gentle reggae offbeat, round mellow bass, sunny tiki-bar afternoon, steady easy groove, no vocals, no build-ups, no drops, background music",
+   "bpm": 96,
+   "keyscale": "G major",
+   "seconds": 180
   }
  ]
 }
