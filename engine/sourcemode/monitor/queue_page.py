@@ -51,6 +51,10 @@ KIND_LABEL = {
     "shoot": "photo shoots",
     "redo": "re-roll rejects",
     "packtest": "pack prompt test",
+    "process": "cutout and staging",
+    "voice": "voice takes",
+    "video": "video",
+    "music": "music takes",
     "other": "job",
 }
 
@@ -72,6 +76,11 @@ OWN_CSS = r"""
   font:var(--t-meta);color:var(--g7)}
 .fin-name b{color:var(--g9);font-weight:600}
 .fin-row .age{white-space:nowrap}
+/* Now: the card and the CPU lane side by side; stacked on a phone */
+.lanes{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:var(--s2);align-items:start}
+.lanes .card+.card{margin-top:0}
+@media (max-width:700px){.lanes{grid-template-columns:minmax(0,1fr)}}
+.cpu-run+.cpu-run{margin-top:var(--s3)}
 """
 
 BODY = """
@@ -80,12 +89,17 @@ BODY = """
   <div class=col-main>
     <div id=banners></div>
     <h2>Now</h2>
-    <div id=now><div class="card skel" style="height:148px"></div></div>
+    <div class=lanes>
+      <div id=now><div class="card skel" style="height:148px"></div></div>
+      <div id=nowcpu></div>
+    </div>
     <h2>Next 24 hours</h2>
     <div id=tonight></div>
     <div id=finished></div>
-    <h2>Queue</h2>
-    <div id=list></div>
+    <h2>GPU queue <span id=gpucount class=dim></span></h2>
+    <div id=list class=qlist data-lane=gpu></div>
+    <h2>CPU queue <span id=cpucount class=dim></span></h2>
+    <div id=cpulist class=qlist data-lane=cpu></div>
     <div id=queuefoot></div>
     <div id=removed></div>
   </div>
@@ -142,8 +156,8 @@ const stats=()=>{
 function drawBanners(){
   const n=state.now, out=[];
   if(!state.lease||!state.lease.alive){
-    const work=state.queued_s?(' '+state.jobs.length+' job'+(state.jobs.length===1?'':'s')
-      +' waiting, '+SM.dur(state.queued_s)+' of work.'):'';
+    const work=state.jobs.length?(' '+state.jobs.length+' job'+(state.jobs.length===1?'':'s')
+      +' waiting'+(state.queued_s?(', '+SM.dur(state.queued_s)+' of GPU work'):'')+'.'):'';
     out.push('<div class="banner stop"><span class=msg><b>The runner is not running.</b>'
       +'<span class=why>Nothing in the queue will start.'+work+'</span></span>'
       +'<button class="btn btn-primary" data-act="runner-start">Start the runner</button></div>');
@@ -178,7 +192,8 @@ function drawNow(){
     const unk=gb('util_pct')==null&&gb('mem_used_mb')==null;
     SM.set($('now'),null,'<div class="card e-'+(unk?'unknown':'wait')+'">'
       +'<div class=card-head>'+SM.pill(unk?'unknown':'wait')
-      +'<h3>'+(unk?'The card cannot be read':'Nothing is running')+'</h3></div>'
+      +'<h3>'+(unk?'The card cannot be read':'Nothing is running')+'</h3>'
+      +'<span class=lane-tag>GPU</span></div>'
       +'<div class=card-sub>'+(unk
         ? 'nvidia-smi failed. Something may be running; the queue is not starting'
           +' anything while this is true.'
@@ -194,6 +209,7 @@ function drawNow(){
   SM.set($('now'),null,'<div class="card e-'+(n.stalled?'stop':'live')+'">'
     +'<div class=card-head>'+SM.pill(n.stalled?'stop':'live')
     +'<h3>'+SM.esc(n.who)+' &mdash; '+SM.esc(n.what)+'</h3>'
+    +'<span class=lane-tag>GPU</span>'
     +'<span class=age>as of '+SM.dur(SM.ageOf())+' ago</span></div>'
     +'<div class="card-sub'+(n.ageing?' stale':'')+'">'+bits.join(' &middot; ')+'</div>'
     +(n.progress!=null?'<div class="meter'+(n.stalled?' stop':'')
@@ -208,21 +224,56 @@ function drawNow(){
     +'<div id=logout></div></div>');
 }
 
+/* --- the CPU lane beside the card: what it runs, never the card's numbers */
+function drawNowCpu(){
+  const runs=state.now_cpu||[];
+  const n=state.queued_cpu_n||0;
+  const waiting=n?(n+' waiting'+(state.queued_cpu_s?(', about '+SM.dur(state.queued_cpu_s)):'')):'nothing waiting';
+  if(!runs.length){
+    SM.set($('nowcpu'),null,'<div class="card lane-cpu">'
+      +'<div class=card-head>'+SM.pill('wait')+'<h3>CPU lane idle</h3>'
+      +'<span class="lane-tag cpu">CPU</span></div>'
+      +'<div class=card-sub>'+waiting+'. Cutouts, staging and voice run here, beside the card.</div></div>');
+    return;
+  }
+  let h='<div class="card lane-cpu e-live"><div class=card-head>'+SM.pill('live')
+    +'<h3>CPU lane</h3><span class="lane-tag cpu">CPU</span></div>';
+  for(const r of runs){
+    const left=(r.expected_s&&r.elapsed_s!=null)?r.expected_s-r.elapsed_s:null;
+    h+='<div class=cpu-run><div class=card-sub><b>'+SM.esc(r.who)+'</b> &mdash; '+SM.esc(r.what)
+      +(r.elapsed_s!=null?' &middot; running '+SM.dur(r.elapsed_s):'')
+      +(left!=null&&left>0?' &middot; about '+SM.dur(left)+' left':'')+'</div>'
+      +(left!=null?'<div class="meter cpu"><i style="width:'
+        +Math.min(100,Math.round(r.elapsed_s/r.expected_s*100))+'%"></i></div>':'')
+      +'<div class=card-foot><button class="btn btn-ghost btn-sm" data-act="log" data-id="'
+      +SM.esc(r.job_id)+'">Show log</button></div></div>';
+  }
+  h+='<div class=card-sub>'+waiting+' after '+(runs.length===1?'this':'these')+'.</div></div>';
+  SM.set($('nowcpu'),null,h);
+}
+
 /* --- tonight, as booked and unbooked time ------------------------------- */
 function drawPlan(){
   if(!plan){ SM.set($('tonight'),null,''); return; }
   const W=plan.window_s;
-  let bars='';
-  for(const b of plan.blocks){
-    /* an unknown-length block gets a visible minimum, not a 0% sliver */
-    const share=b.unknown?4:(b.end_s-b.start_s)/W*100;
-    bars+='<button class="b-'+b.status+'" style="flex:0 0 '+share.toFixed(1)+'%" '
-      +'data-go="'+SM.esc(b.id)+'" title="'+SM.esc(b.basis)+'">'
-      +SM.esc(b.who)+' '+(b.unknown?'?':SM.dur(b.end_s-b.start_s))+'</button>';
-  }
-  if(plan.free_s>0)
-    bars+='<button class=b-free style="flex:0 0 '+(plan.free_s/W*100).toFixed(1)+'%" '
-      +'disabled>'+SM.dur(plan.free_s)+' free</button>';
+  /* one track per lane on the same clock: the CPU lane runs beside the card */
+  const track=(blocks,free,idle)=>{
+    let h='';
+    for(const b of blocks){
+      /* an unknown-length block gets a visible minimum, not a 0% sliver */
+      const share=b.unknown?4:(b.end_s-b.start_s)/W*100;
+      h+='<button class="b-'+b.status+'" style="flex:0 0 '+share.toFixed(1)+'%" '
+        +'data-go="'+SM.esc(b.id)+'" title="'+SM.esc(b.basis)+'">'
+        +SM.esc(b.who)+' '+(b.unknown?'?':SM.dur(b.end_s-b.start_s))+'</button>';
+    }
+    if(free>0)
+      h+='<button class=b-free style="flex:0 0 '+(free/W*100).toFixed(1)+'%" '
+        +'disabled>'+(blocks.length?SM.dur(free)+' free':idle)+'</button>';
+    return h;
+  };
+  const cb=plan.cpu_blocks||[];
+  const bars=track(plan.blocks,plan.free_s,'free');
+  const cpuBars=track(cb,Math.max(0,W-(plan.cpu_booked_s||0)),'idle');
   let notes='';
   if(plan.held_n)
     notes+='<div class="plan-line dim">'+plan.held_n+' held job'+(plan.held_n===1?'':'s')
@@ -239,7 +290,14 @@ function drawPlan(){
       +'<button class="btn btn-primary push" data-act="queue" data-ds="'+SM.esc(f.dataset)
       +'" data-who="'+SM.esc(f.who)+'" data-secs="'+Math.round(f.total_s)+'">Add to queue</button></div>';
   }
-  SM.set($('tonight'),null,'<div class=card><div class=plan>'+bars+'</div>'
+  SM.set($('tonight'),null,'<div class=card>'
+    +'<div class=plan-lab style="margin-top:0"><span class=lane-tag>GPU</span>the card, one job at a time</div>'
+    +'<div class=plan>'+bars+'</div>'
+    +'<div class=plan-lab><span class="lane-tag cpu">CPU</span>beside the card'
+    +(cb.length?(' &middot; '+cb.length+' job'+(cb.length===1?'':'s')
+       +(plan.cpu_booked_s?', about '+SM.dur(plan.cpu_booked_s):'')
+       +(plan.cpu_unknown_n?(', '+plan.cpu_unknown_n+' of unknown length'):'')):'')+'</div>'
+    +'<div class="plan lane-cpu">'+cpuBars+'</div>'
     +'<div class=plan-ticks><span>now '+SM.clock(plan.now_ts)+'</span>'
     +'<span>+12h</span><span>+24h</span></div>'
     +'<div class=plan-line>'+(plan.unknown_n
@@ -253,7 +311,7 @@ function drawPlan(){
 
 /* --- one row shape for a queued job ------------------------------------- */
 function jobRow(el,j,i,n){
-  el.className='jrow e-'+j.state.status;
+  el.className='jrow e-'+j.state.status+(j.lane==='cpu'?' lane-cpu':'');
   const running=j.status==='running';
   SM.set(el,null,
     (running?'<div class=grip style="cursor:default" aria-hidden=true>&#9612;</div>'
@@ -373,20 +431,27 @@ function drawFinished(){
   SM.set($('finished'),null,h);
 }
 
+function drawLane(host,q,empty){
+  if(!q.length){ SM.set(host,null,'<div class=empty>'+empty+'</div>'); return; }
+  if(host.querySelector('.empty')) host.innerHTML='';
+  SM.patch(host,q,j=>j.id,(el,j)=>jobRow(el,j,q.indexOf(j),q.length));
+}
 function draw(){
-  drawBanners(); drawNow(); drawPlan(); drawFinished();
+  drawBanners(); drawNow(); drawNowCpu(); drawPlan(); drawFinished();
   const q=state.jobs||[];
-  if(!q.length)
-    SM.set($('list'),null,'<div class=empty><b>Nothing queued</b>'
-      +'Anything approved and waiting is in Ready to train.</div>');
-  else {
-    if($('list').querySelector('.empty')) $('list').innerHTML='';
-    SM.patch($('list'),q,j=>j.id,(el,j)=>jobRow(el,j,q.indexOf(j),q.length));
-  }
+  const gq=q.filter(j=>j.lane!=='cpu'), cq=q.filter(j=>j.lane==='cpu');
+  drawLane($('list'),gq,'<b>Nothing queued for the card</b>'
+    +'Anything approved and waiting is in Ready to train.');
+  drawLane($('cpulist'),cq,'<b>Nothing queued on the CPU</b>'
+    +'Cutouts and staging land here when a set is fully kept.');
+  $('gpucount').textContent=gq.length?'· '+gq.length:'';
+  $('cpucount').textContent=cq.length?'· '+cq.length+' · runs beside the card':'';
   let foot='';
-  if(state.queued_s)
-    foot+='<div class=basis>Waiting work adds about <b>'+SM.dur(state.queued_s)
-      +'</b> of GPU time after whatever is running now.</div>';
+  if(state.queued_s||state.queued_cpu_s)
+    foot+='<div class=basis>Waiting work: <b>'+(state.queued_s?SM.dur(state.queued_s):'nothing')
+      +'</b> on the card'+(state.queued_cpu_n?(' &middot; <b>'+state.queued_cpu_n+'</b> CPU job'
+        +(state.queued_cpu_n===1?'':'s')+(state.queued_cpu_s?(', about '+SM.dur(state.queued_cpu_s)):'')
+        +', running beside it'):'')+'.</div>';
   if(q.some(j=>j.status!=='running')&&!state.paused)
     foot+='<div class="btn-row" style="margin-top:var(--s2)">'
       +'<button class="btn" data-act="pause">Pause the queue</button>'
@@ -419,8 +484,8 @@ const ACTS={
   'runner-start':()=>SM.postJSON('/queue/runner/start'),
   'queue':b=>confirmQueue(b),
   'hold':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/hold',{hold:b.dataset.on==='1'}),
-  'up':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/move',{position:+b.dataset.pos-1}),
-  'down':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/move',{position:+b.dataset.pos+1}),
+  'up':b=>laneMove(b.dataset.id,-1),
+  'down':b=>laneMove(b.dataset.id,1),
   'requeue':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/requeue'),
   'dismiss':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/dismiss'),
   'restore':b=>SM.postJSON('/queue/job/'+b.dataset.id+'/restore'),
@@ -445,6 +510,18 @@ const ACTS={
 };
 /* There is deliberately no action that stops a running job. Detection ships;
    a kill button on a phone surface waits for a conversation. */
+/* Up/down swap a job with its neighbour IN ITS LANE - the job above it on the
+   page - and send the whole order, so a CPU row never trades places with a
+   card job it is not even waiting on. */
+function laneMove(id,delta){
+  const ids=state.jobs.map(j=>j.id), me=state.jobs.find(j=>j.id===id);
+  const lane=state.jobs.filter(j=>j.lane===me.lane).map(j=>j.id);
+  const k=lane.indexOf(id), other=lane[k+delta];
+  if(!other) return null;
+  const a=ids.indexOf(id), b=ids.indexOf(other);
+  ids[a]=other; ids[b]=id;
+  return SM.postJSON('/queue/order',{ids});
+}
 function confirmQueue(b){
   const t=+b.dataset.secs?SM.dur(+b.dataset.secs):'several hours';
   return confirm('Queue '+b.dataset.who+' for LoRA training?'+SM.NL+SM.NL
@@ -470,10 +547,10 @@ document.addEventListener('click',async e=>{
 
 /* --- pointer dragging. HTML5 DnD does not fire on touch, which is why this
    page has always used pointer events; the arrows stay as the fallback. ---- */
-let dragWired=false;
-function wireDrag(){
-  const list=$('list'); if(!list||dragWired) return;
-  dragWired=true;
+function wireDrag(){ for(const l of document.querySelectorAll('.qlist')) wireList(l); }
+function wireList(list){
+  if(list.dataset.wired) return;
+  list.dataset.wired='1';
   let dragEl=null,startY=0,moved=false;
   const rows=()=>[...list.querySelectorAll('.jrow')];
   list.addEventListener('pointerdown',e=>{
@@ -508,7 +585,12 @@ function wireDrag(){
        resulting order in one request - no intermediate states to get wrong. */
     const b=t.getBoundingClientRect();
     t.parentNode.insertBefore(dropped,(b.top+b.height/2>e.clientY)?t:t.nextSibling);
-    try{ await SM.postJSON('/queue/order',{ids:rows().map(r=>r.dataset.k)}); }
+    /* this lane's new order goes back into the slots its jobs held; the
+       other lane's jobs keep theirs */
+    const mine=rows().map(r=>r.dataset.k), lane=list.dataset.lane;
+    let k=0;
+    const ids=state.jobs.map(j=>((j.lane==='cpu'?'cpu':'gpu')===lane)?mine[k++]:j.id);
+    try{ await SM.postJSON('/queue/order',{ids}); }
     catch(err){ SM.toast(err.message); }
     load();
   };
@@ -1529,6 +1611,23 @@ def _runner_last_line(outputs_root: Path) -> str | None:
     return lines[-1].strip() if lines else None
 
 
+def _lane_medians(doc: dict) -> dict[str, tuple[float, int]]:
+    """{kind: (median seconds, runs)} over the CPU lane's finished jobs - the
+    only length a cutout or a voice job has before it runs."""
+    import statistics  # noqa: PLC0415
+
+    from ..gpu import queue as q  # noqa: PLC0415
+
+    spans: dict[str, list[float]] = {}
+    for j in doc["jobs"]:
+        if j["status"] != "done" or q.lane_of(j) != "cpu" or not j.get("ended_at"):
+            continue
+        a, b = _started(j), _started({"started_at": j["ended_at"]})
+        if a is not None and b is not None and b > a:
+            spans.setdefault(j["kind"], []).append(b - a)
+    return {k: (statistics.median(v), len(v)) for k, v in spans.items()}
+
+
 def queue_state(cfg: dict, status: dict | None = None) -> dict:
     from ..config import outputs_dir  # noqa: PLC0415
     from ..gpu import queue as q  # noqa: PLC0415
@@ -1593,7 +1692,18 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
     # gets the log's age, which is the only way a silently stuck run is visible:
     # without it a dead process still renders as a healthy progress bar with a
     # confident, frozen ETA.
-    now = now_card(jobs, status, cfg)
+    # A CPU-lane job never has a measured estimate of its own; its kind's past
+    # runs on this machine are the next best thing, and better than a blank.
+    medians = _lane_medians(doc)
+    for row in jobs:
+        if row["lane"] == "cpu" and not row["estimate"] and medians.get(row["kind"]):
+            s, n = medians[row["kind"]]
+            row["estimate"] = {"train_s": None, "sweep_s": None, "total_s": s, "steps": None,
+                               "basis": f"median of {n} past {row['kind']} job{'s' if n != 1 else ''}"}
+    # The card's Now block is the CARD's job. Jeremy, 2026-11-03: six cutout
+    # jobs on the CPU lane read as a GPU backlog, and a running cutout took
+    # the card's Now card while the card sat idle.
+    now = now_card([j for j in jobs if j["lane"] == "gpu"], status, cfg)
     age = (now or {}).get("log_age_s")
     for row in jobs:
         # The age we have is the TRAINING log's. A prep, eval or assets job
@@ -1613,12 +1723,25 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
             expected_s=(row["estimate"] or {}).get("total_s"))
     # What the queue adds AFTER whatever is running now - the number he actually
     # wants when deciding whether to add another character tonight.
-    queued_s = sum((j["estimate"] or {}).get("total_s") or 0
-                   for j in jobs if j["status"] == "queued" and not j["hold"])
+    # Per lane: the CPU lane runs BESIDE the card, so its work never adds to
+    # the card's. `queued_s` stays the card's number.
+    def waiting(lane):
+        return [j for j in jobs if j["status"] == "queued" and not j["hold"] and j["lane"] == lane]
+
+    def secs(rows):
+        return sum((j["estimate"] or {}).get("total_s") or 0 for j in rows)
+
+    queued_s, queued_cpu_s = secs(waiting("gpu")), secs(waiting("cpu"))
+    now_cpu = [{"job_id": j["id"], "who": j["who"], "what": j["what"], "elapsed_s": j["elapsed_s"],
+                "expected_s": (j["estimate"] or {}).get("total_s"), "status": j["state"]["status"]}
+               for j in jobs if j["status"] == "running" and j["lane"] == "cpu"]
     return {"jobs": jobs, "removed": removed[-5:], "finished": finished,
             "paused": doc["paused"], "pause_reason": doc["pause_reason"],
             "queued_s": queued_s or None,
-            "now": now,
+            "queued_n": len(waiting("gpu")),
+            "queued_cpu_s": queued_cpu_s or None,
+            "queued_cpu_n": len(waiting("cpu")),
+            "now": now, "now_cpu": now_cpu,
             "lease": lease, "runner_says": _runner_last_line(out),
             "attention": sum(1 for j in jobs
                              if j["blocked_reason"] or j["status"] == "failed"
@@ -1837,9 +1960,24 @@ def plan(cfg: dict, status: dict | None = None) -> dict:
     st = queue_state(cfg, status)
     nowb = st.get("now") or {}
     now_ts, window = time.time(), 86400.0
+    # The CPU lane is its own track on the same clock: it runs beside the card,
+    # so it is never added to the card's booking.
+    cpu_blocks, tc = [], 0.0
+    for j in st["jobs"]:
+        if j.get("lane", "gpu") != "cpu" or j["hold"] or j["state"]["status"] in ("stop", "you"):
+            continue
+        est = j["estimate"] or {}
+        dur = est.get("total_s") or 0.0
+        if j["status"] == "running" and dur:
+            dur = max(0.0, dur - (j.get("elapsed_s") or 0.0))
+        cpu_blocks.append({"id": j["id"], "who": j["who"], "what": j["what"],
+                           "status": j["state"]["status"], "start_s": tc, "end_s": tc + dur,
+                           "estimated": True, "unknown": not dur,
+                           "basis": est.get("basis") or f"no measured duration for a {j['kind']} job"})
+        tc += dur
     blocks, t = [], 0.0
     for j in st["jobs"]:
-        if j["hold"] or j["state"]["status"] in ("stop", "you"):
+        if j.get("lane", "gpu") != "gpu" or j["hold"] or j["state"]["status"] in ("stop", "you"):
             continue
         est = j["estimate"] or {}
         if j["status"] == "running":
@@ -1876,9 +2014,9 @@ def plan(cfg: dict, status: dict | None = None) -> dict:
     # A held job is not a booking, and neither is one that cannot start. Both are
     # reported separately rather than quietly counted, because counting them is
     # how "busy till Tuesday" becomes wrong.
-    held = [j for j in st["jobs"] if j["hold"]]
-    blocked = [j for j in st["jobs"]
-               if not j["hold"] and j["state"]["status"] in ("stop", "you")]
+    held = [j for j in st["jobs"] if j["hold"] and j.get("lane", "gpu") == "gpu"]
+    blocked = [j for j in st["jobs"] if j.get("lane", "gpu") == "gpu"
+               and not j["hold"] and j["state"]["status"] in ("stop", "you")]
 
     def secs(rows):
         return sum((j["estimate"] or {}).get("total_s") or 0 for j in rows)
@@ -1892,6 +2030,8 @@ def plan(cfg: dict, status: dict | None = None) -> dict:
     return {"now_ts": now_ts, "window_s": window, "blocks": blocks,
             "unknown_n": len(unknown),
             "booked_s": t, "booked_until_ts": now_ts + t, "free_s": free,
+            "cpu_blocks": cpu_blocks, "cpu_booked_s": tc,
+            "cpu_unknown_n": sum(1 for b in cpu_blocks if b["unknown"]),
             "held_s": secs(held), "held_n": len(held),
             "blocked_s": secs(blocked), "blocked_n": len(blocked),
             "fits": [{"dataset": c["dataset"], "who": c["who"],

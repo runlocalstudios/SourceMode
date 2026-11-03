@@ -91,6 +91,11 @@ TOKENS = r"""
      three colours a page used to hand-type; they exist so no page has to. */
   --on-live:#06121f; --on-you:#2b2008; --on-stop:#2d1114;
 
+  /* ---------- lane. The CPU lane's live/next is teal where the card's is
+     blue: the same status, said by the other worker. Not a status colour of
+     its own - a CPU job that fails is still --stop. ---------- */
+  --cpu:#2cc5c9; --cpu-ink:#a3eef0; --cpu-bg:#0d2729; --cpu-line:#1f6a6e; --on-cpu:#04191a;
+
   /* ---------- action. One accent for every primary action, and it is NOT a
      status colour: green here would mean "finished", amber "waiting". ---- */
   --act:#2f6fd0; --act-hi:#3d84ef; --act-ink:#eaf2ff;
@@ -290,6 +295,22 @@ PARTS = r"""
 .plan .b-wait{background:var(--live-line);color:var(--live-ink)}
 .plan .b-you{background:var(--you);color:var(--on-you)}
 .plan .b-stop{background:var(--stop);color:var(--on-stop)}
+/* the CPU lane: the same statuses in teal, so its work never reads as the card's */
+.plan.lane-cpu{height:26px}
+.plan.lane-cpu .b-live{background:var(--cpu);color:var(--on-cpu)}
+.plan.lane-cpu .b-wait,.plan.lane-cpu .b-next{background:var(--cpu-line);color:var(--cpu-ink)}
+.plan-lab{display:flex;align-items:center;gap:var(--s2);font:var(--t-micro);
+  letter-spacing:var(--track);text-transform:uppercase;color:var(--g7);margin-top:var(--s3)}
+.lane-tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:var(--r1);
+  font:var(--t-micro);letter-spacing:var(--track);border:1px solid;
+  color:var(--live-ink);border-color:var(--live-line)}
+.lane-tag.cpu{color:var(--cpu-ink);border-color:var(--cpu-line);background:var(--cpu-bg)}
+.lane-cpu .pill.live{color:var(--cpu-ink);background:var(--cpu-bg);border-color:var(--cpu-line)}
+.lane-cpu .pill.next{color:var(--cpu-ink);border-color:var(--cpu-line)}
+.jrow.lane-cpu{background:var(--cpu-bg)}
+.jrow.lane-cpu.e-live,.jrow.lane-cpu.e-next,.card.lane-cpu.e-live{border-left-color:var(--cpu)}
+.card.lane-cpu{background:var(--cpu-bg);border-color:var(--cpu-line)}
+.meter.cpu>i{background:var(--cpu)}
 .plan .b-free{background:repeating-linear-gradient(135deg,var(--g2),var(--g2) 5px,
   var(--g3) 5px,var(--g3) 10px);color:var(--g7);cursor:default}
 .plan-ticks{display:flex;font:var(--t-small);color:var(--g6);margin-top:var(--s1);

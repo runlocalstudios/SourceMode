@@ -616,3 +616,36 @@ def test_a_dismissed_failure_leaves_the_page_but_not_the_file(client, tmp_path):
     assert [j["id"] for j in r.json()["jobs"]] == [queued]
     assert q.find(q.load(path), failed)["status"] == "failed"
     assert client.post("/queue/job/j999/dismiss").status_code == 404
+
+
+def test_cpu_lane_work_is_its_own_track_never_the_cards(cfg, tmp_path):
+    # Jeremy, 2026-11-03: six cutout jobs on the CPU lane read as a GPU
+    # backlog - "it looks like I have tons of GPU stuff loaded up to run"
+    from datetime import datetime, timedelta, timezone
+
+    from sourcemode.monitor import queue_page as qp
+
+    path = q.queue_path(tmp_path)
+    doc = q.load(path)
+    old = q.add(doc, kind="process", label="ash:lingerie", cmd=["x"], cwd=".", lane="cpu")
+    t0 = datetime(2026, 11, 1, tzinfo=timezone.utc)
+    old.update(status="done", started_at=t0.isoformat(),
+               ended_at=(t0 + timedelta(minutes=4)).isoformat())
+    for c in ("bri", "cora", "daisy"):
+        q.add(doc, kind="process", label=f"{c}:lingerie", cmd=["x"], cwd=".", lane="cpu")
+    doc["jobs"][1].update(status="running", started_at=datetime.now(timezone.utc).isoformat())
+    q.save(path, doc)
+    lease_mod.acquire(lease_mod.lease_path(tmp_path))
+
+    st = queue_state(cfg, {"sampled_at": 0, "training": {}})
+    assert st["queued_s"] is None and st["queued_n"] == 0       # nothing for the card
+    assert st["queued_cpu_n"] == 2 and st["queued_cpu_s"] == 2 * 240  # median of its kind
+    assert st["now"]["job_id"] is None                         # the card is idle
+    assert [r["who"] for r in st["now_cpu"]] == ["Bri"]
+    assert {j["lane"] for j in st["jobs"]} == {"cpu"}
+    assert st["jobs"][0]["what"] == "cutout and staging"
+
+    p = qp.plan(cfg, {"sampled_at": 0, "training": {}})
+    assert p["blocks"] == [] and p["booked_s"] == 0 and p["free_s"] == 86400
+    assert [b["who"] for b in p["cpu_blocks"]] == ["Bri", "Cora", "Daisy"]
+    assert p["cpu_booked_s"] > 0

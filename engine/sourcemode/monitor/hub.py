@@ -287,8 +287,11 @@ def _now(cfg: dict, status=None) -> dict:
     stat = stat_for_now or {}
 
     jobs = q.get("jobs") or []
-    running = next((j for j in jobs if j["status"] == "running"), None)
-    waiting = [j for j in jobs if j["status"] == "queued" and not j["hold"]]
+    # the card's job; a CPU-lane job beside it is not "what the card is doing"
+    running = next((j for j in jobs if j["status"] == "running" and j.get("lane", "gpu") == "gpu"), None)
+    cpu_running = next((j for j in jobs if j["status"] == "running" and j.get("lane") == "cpu"), None)
+    waiting = [j for j in jobs if j["status"] == "queued" and not j["hold"]
+               and j.get("lane", "gpu") == "gpu"]
     lease = q.get("lease")
     runner_down = bool(jobs) and not (lease and lease.get("alive"))
 
@@ -316,6 +319,9 @@ def _now(cfg: dict, status=None) -> dict:
         line = "Nothing is running"
         sub = (str(len(waiting)) + " waiting · " + _dur(q.get("queued_s"))
                + " of work") if waiting else "the card is free"
+        if cpu_running:
+            line = "The card is free"
+            sub = "CPU: " + cpu_running["who"] + " - " + cpu_running["what"]
         progress, status_word = None, "wait"
 
     severities = ["idle"]
