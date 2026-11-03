@@ -24,7 +24,7 @@ def test_game_assets_group_is_first_and_holds_the_packs():
     assert bs[0]["bucket"] == "game"
     assert bs[0]["label"] == "Game assets"
     # 2026-10-29: the lingerie gift pack joined the two shipped packs
-    assert [s["id"] for s in bs[0]["shoots"]] == ["pack28", "selfies", "lingerie"]
+    assert [s["id"] for s in bs[0]["shoots"]] == ["pack28", "selfies", "lingerie", "pajamas"]
 
 
 def test_the_wardrobe_pack_is_one_shot_per_look_not_four():

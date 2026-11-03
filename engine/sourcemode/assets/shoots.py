@@ -779,6 +779,80 @@ LINGERIE_PACK: tuple[dict, ...] = (
      "negative": "standing, standing up, upright pose, upside down, her head at the bottom of the frame, hair fanned out, hair spread wide, windswept hair, eyes closed, looking away"},
 )
 
+# --- the pajama gift -----------------------------------------------------------
+# Jeremy, 2026-11-03: "add a pajama set so that the player can buy the girl
+# pajamas to gift her at his apartment ... randomly roll a description that is
+# VERY easy for the model to interpret and render consistently across every
+# generation but not every girl ends up with the exact same looking pajamas."
+# So ONE garment with every detail fixed, and only its colour rolled - once per
+# set by set_outfit, kept in set.json, so a redo wears the same colour. "Be VERY
+# prescriptive on the other details like the color of the buttons, etc so I
+# don't have to constantly reroll failures." Solid colours only: a pattern
+# redraws itself every shot. No white, ivory or champagne: the white buttons
+# and piping would vanish on them.
+PAJAMA_COLOURS: tuple[str, ...] = ("navy blue", "black", "blush pink", "burgundy", "emerald green",
+                                   "lavender", "teal", "sky blue")
+PAJAMA_SET = ("a {c} satin pajama set: a short-sleeved {c} satin pajama shirt with a notched collar, one "
+              "row of small round white buttons down the front, every button done up, white piping along "
+              "the collar, the sleeve cuffs and the shirt hem, and matching {c} satin pajama shorts with "
+              "an elastic waistband and white piping along the leg hems, barefoot")
+PAJAMAS: tuple[str, ...] = tuple(PAJAMA_SET.format(c=c) for c in PAJAMA_COLOURS)
+# what the model drifts to when a pajama prompt is loose: long pants, a robe,
+# a camisole, a print, the shirt open, slippers
+_PJ_NOT = ("long sleeves, long pants, pajama pants, trousers, robe, nightgown, camisole, tank top, "
+           "lace, sheer, pattern, print, stripes, polka dots, plaid, floral, bra, panties, lingerie, "
+           "bare midriff, unbuttoned, open shirt, shoes, slippers, socks, stockings")
+# a three-quarter length portrait: head to mid-thigh, close - eden's
+# standingspread framing, the one that reliably fills the frame
+_PJ_PORTRAIT = ("three-quarter length portrait framed from her head down to her mid-thighs, the camera "
+                "close to her, her body filling the frame")
+_L = {p["tag"]: p for p in LINGERIE_PACK}
+
+
+def _pj(p: dict) -> dict:
+    """A pajama slot: on the floor, and the pack's negative under its own."""
+    return {**p, "needs": _FLOOR,
+            "negative": ", ".join(x for x in (p.get("negative"), _PJ_NOT) if x)}
+
+
+# Jeremy, 2026-11-03, the set: three standing three-quarter portraits (front;
+# side, looking at the viewer; facing away but very close, "almost like giving
+# a little lap dance - very intimate"), then the lingerie pack's sitting, both
+# kneeling, showfeet and crawling unchanged, and its after pose "with her hair
+# smoothly resting on one side - not messy like the other one".
+PAJAMA_PACK: tuple[dict, ...] = tuple(_pj(p) for p in (
+    {"tag": "standing", "stance": "standing facing the camera, her weight on one leg, one hand resting on "
+                                  "her hip, her other arm relaxed at her side",
+     "framing": _PJ_PORTRAIT, "shot_type": "three-quarter length portrait photo", "gaze": _EYES,
+     "negative": _FAR},
+    {"tag": "standingside", "stance": "standing with her body turned side-on to the camera, her hands "
+                                      "clasped behind her back, her shoulders back",
+     "framing": _PJ_PORTRAIT, "shot_type": "three-quarter length portrait photo from her side",
+     "facing": "her body in profile to the camera",
+     "gaze": "her head turned toward the camera, looking straight into the lens",
+     "negative": _FAR + ", facing the camera, square to the camera"},
+    # never the viewer's body in the positive (sienna's kneeling2 grew a man's
+    # feet): "very close to the camera" says it; the negative refuses him
+    {"tag": "standingback", "stance": "standing very close to the camera with her back to it, her hips swayed "
+                                      "to one side, her bottom pushed back a little toward the camera, one hand "
+                                      "resting on her hip, her other hand lifting her hair off her neck",
+     "framing": "framed from her head down to her mid-thighs, the camera very close to her, her body "
+                "filling the whole frame",
+     "shot_type": "close intimate photo from directly behind her",
+     "facing": "her back to the camera, very close",
+     "gaze": "looking back over her shoulder into the camera", "expression_natural": "a teasing smile",
+     "negative": _FAR + ", a man, another person, chair, bending over, hands on the floor"},
+    _L["sitting"], _L["kneeling"], _L["kneeling2"], _L["showfeet"], _L["crawling"],
+    {**_L["after"],
+     "stance": _L["after"]["stance"].replace(
+         "her hair lying naturally on the floor beside and behind her head",
+         "her hair gathered smoothly to one side and lying neatly over one shoulder, flat on the floor "
+         "beside her head"),
+     "negative": _L["after"]["negative"] + ", messy hair, tangled hair, hair on both sides of her head"},
+))
+assert "her hair gathered smoothly" in PAJAMA_PACK[-1]["stance"]
+
+
 OFFICE: tuple[Shoot, ...] = (
     Shoot("office_door", "Office doorway", "office", OFFICE_DOOR, OFFICE_SLUTTY, (),
           pose_slots=DOORWAY, shots=len(DOORWAY),
@@ -961,6 +1035,13 @@ GAME: tuple[Shoot, ...] = (
                "standing, kneeling, legs spread, bent over, crawling. Grey studio, hair loose, "
                "cut out once every pose is kept, then approved on the Characters tab. "
                "Each pose is tagged with the game's own chat pose name."),
+    Shoot("pajamas", "Pajama pack (the gift)", "game", STUDIO_BACKDROP, (), (),
+          pose_slots=PAJAMA_PACK, shots=len(PAJAMA_PACK), wardrobe="pajamas",
+          loose_hair=True,
+          note=f"{len(PAJAMA_PACK)} poses in ONE satin pajama set - short-sleeved button-up shirt and "
+               "shorts, white buttons and piping, a colour rolled once per set - for the pajama "
+               "gift at his apartment: three standing portraits (front, side, close from behind), "
+               "sitting, both kneeling, feet up, crawling, after. Grey studio, hair loose, barefoot."),
 )
 
 def _influencer() -> Shoot:
@@ -1052,6 +1133,7 @@ WARDROBES: tuple[Wardrobe, ...] = (
     Wardrobe("swim", "Swim", BY_ID["pool"].outfits + BY_ID["beach_sunset"].outfits),
     Wardrobe("work", "Work - her job outfit", record="job"),
     Wardrobe("intimatewear", "Her lingerie set - one outfit", record="intimate"),
+    Wardrobe("pajamas", "Satin pajama set - one colour, rolled", PAJAMAS),
     Wardrobe("officeslutty", "Office - very revealing professional", OFFICE_SLUTTY),
     Wardrobe("officechic", "Office - conservative chic", OFFICE_CHIC),
 )
