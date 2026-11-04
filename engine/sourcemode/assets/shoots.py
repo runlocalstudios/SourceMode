@@ -857,11 +857,15 @@ PAJAMA_PACK: tuple[dict, ...] = tuple(_pj(p) for p in (
                  + _FAR + ", facing the camera, square to the camera"},
     # never the viewer's body in the positive (sienna's kneeling2 grew a man's
     # feet): "very close to the camera" says it; the negative refuses him
+    # Jeremy, 2026-11-03: "lots of issues with 3 arms on the viewed from behind
+    # shot" - one hand on her hip and the other lifting her hair was two
+    # one-handed actions the model could not count from behind. One
+    # symmetrical action it can: both hands on her hips.
     {"tag": "standingback", "stance": "standing very close to the camera with her back to it, her hips swayed "
-                                      "to one side, her bottom pushed back a little toward the camera, one hand "
-                                      "resting on her hip, her other hand lifting her hair off her neck, the back "
-                                      "of her shirt one smooth unbroken panel of satin falling over the waistband "
-                                      "of her shorts",
+                                      "to one side, her bottom pushed back a little toward the camera, both hands "
+                                      "resting on her hips, her elbows out, her hair hanging down her back, the "
+                                      "back of her shirt one smooth unbroken panel of satin falling over the "
+                                      "waistband of her shorts",
      "framing": "framed from her head down to her mid-thighs, the camera very close to her, her body "
                 "filling the whole frame",
      "shot_type": "close intimate photo from directly behind her",
@@ -869,7 +873,8 @@ PAJAMA_PACK: tuple[dict, ...] = tuple(_pj(p) for p in (
      "gaze": "looking back over her shoulder into the camera", "expression_natural": "a teasing smile",
      "outfit_strip": (_PJ_BUTTONS,),
      "negative": "buttons, button row, a row of buttons, buttons down the back, placket, buttoned, button fly, "
-                 "buttons on the shorts, cropped shirt, " + _FAR
+                 "buttons on the shorts, cropped shirt, three arms, extra arm, third arm, extra hand, "
+                 "a hand in her hair, arm raised, " + _FAR
                  + ", a man, another person, chair, bending over, hands on the floor"},
     # Jeremy, 2026-11-03: sitting keeps growing buttons on the shorts
     {**_L["sitting"],

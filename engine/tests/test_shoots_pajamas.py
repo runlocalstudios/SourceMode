@@ -38,6 +38,10 @@ def test_the_nine_poses_in_his_order_with_the_pack_negative_under_each():
         assert "full-length" in by[t]["negative"], t
     assert "profile" in by["standingside"]["facing"] and "into the lens" in by["standingside"]["gaze"]
     assert "very close" in by["standingback"]["stance"] and "back to the camera" in by["standingback"]["facing"]
+    # Jeremy, 2026-11-03: three arms from behind - one countable action, not two one-handed ones
+    assert "both hands resting on her hips" in by["standingback"]["stance"]
+    assert "lifting her hair" not in by["standingback"]["stance"]
+    assert "three arms" in by["standingback"]["negative"]
     assert "viewer" not in by["standingback"]["stance"] + by["standingback"]["shot_type"]  # never his body
     assert "a man" in by["standingback"]["negative"]
     assert "buttons down the back" in by["standingback"]["negative"]
