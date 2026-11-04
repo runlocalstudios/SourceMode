@@ -649,3 +649,34 @@ def test_cpu_lane_work_is_its_own_track_never_the_cards(cfg, tmp_path):
     assert p["blocks"] == [] and p["booked_s"] == 0 and p["free_s"] == 86400
     assert [b["who"] for b in p["cpu_blocks"]] == ["Bri", "Cora", "Daisy"]
     assert p["cpu_booked_s"] > 0
+
+
+def test_a_training_job_is_never_judged_by_an_earlier_runs_log(tmp_path):
+    """Jeremy, 2026-11-04: isabelle_v2's card said it had failed while it was
+    caching latents. Her training log did not exist yet, so the sampler's
+    newest log was yuna_v2's, three days old: "the log has not moved in 3d".
+    A log older than the job's own start belongs to someone else's run."""
+    import time
+    from datetime import datetime, timezone
+
+    from sourcemode.monitor import queue_page as QP
+
+    now = time.time()
+    started = datetime.fromtimestamp(now - 60, timezone.utc).isoformat(timespec="seconds")
+    run = {"id": "j1", "status": "running", "kind": "train", "label": "isabelle_v2", "started_at": started}
+    yuna = {"sampled_at": now, "training": {"log": "yuna_v2.log", "log_mtime": now - 3 * 86400,
+                                            "progress": {"step": 3888, "total": 3888, "s_per_it": 4.8},
+                                            "epoch": 24, "epochs": 24}}
+    card = QP.now_card([run], yuna)
+    assert not card["stalled"] and card["log_age_s"] == pytest.approx(60, abs=5)
+    assert card["step"] is None and card["epoch"] is None          # not yuna's numbers
+    assert "3888" not in card["progress_line"]
+    # her own log, once it exists, is judged as before
+    hers = {"sampled_at": now, "training": {"log": "isabelle_v2.log", "log_mtime": now - 3,
+                                            "progress": {"step": 70, "total": 3888, "s_per_it": 4.8}}}
+    card = QP.now_card([run], hers)
+    assert card["step"] == 70 and card["log_age_s"] == pytest.approx(3, abs=1)
+    # and a job that never writes its log is still caught, from its own start
+    late = datetime.fromtimestamp(now - 3600, timezone.utc).isoformat(timespec="seconds")
+    card = QP.now_card([{**run, "started_at": late}], yuna)
+    assert card["stalled"]

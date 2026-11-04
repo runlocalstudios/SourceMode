@@ -1135,6 +1135,23 @@ def now_card(jobs: list[dict], status: dict | None,
     # and before this a stall flag for the wrong job too. Training numbers are
     # reported only when a training job is what is running.
     training_job = bool(run and run.get("kind") == "train")
+    # Jeremy, 2026-11-04: isabelle_v2's card read as failed while it cached
+    # latents - her training log did not exist yet, so the sampler's newest log
+    # was yuna_v2's from three days before: "the log has not moved in 3d". A
+    # log written before this job started is another run's. Until hers appears
+    # the job is aged from its own start and shows none of that run's numbers.
+    if training_job and mtime and run.get("started_at"):
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        try:
+            t0 = datetime.fromisoformat(run["started_at"])
+            t0 = (t0 if t0.tzinfo else t0.replace(tzinfo=timezone.utc)).timestamp()
+        except ValueError:
+            t0 = None
+        if t0 and mtime < t0:
+            tr, pr = {}, {}
+            mtime = t0
+            age = max(0.0, sampled - t0) if sampled else None
     # A train job ends with its own epoch sweep. Once that starts the trainer's
     # tqdm is frozen at "step 3600 of 3600" and its log stops moving, so the card
     # read finished-training and would have flagged a stall. In the sweep phase
