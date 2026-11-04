@@ -723,6 +723,40 @@ def set_for(character: str, path=None, mode: str | None = None) -> str:
     return pick
 
 
+# Jeremy, 2026-11-04, after casey's re-roll kept 2 of 12 and still drew the
+# iPhone in her hand: "None of the updates work properly. Go ahead and update
+# the prompts to be simple portrait shots instead of selfies." Her LoRA has an
+# uncaptioned iPhone in its training set, and any selfie wording calls it up.
+# For these characters every non-mirror slot is a plain candid portrait - same
+# look, moment, light and framing size, no selfie, arm or camera words - with
+# the phone still refused in the negative. The mirror slots stay selfies: the
+# phone belongs in those, and hers render right.
+PORTRAIT_CHARACTERS = frozenset({"casey"})
+PORTRAIT_SHOT = "candid portrait photo"
+PORTRAIT_FRAMING = ("close portrait from the chest up; her head and chest fill the frame and her face is "
+                    "large and sharp; the top of her head sits near the top edge; never a wide shot, "
+                    "never full-body")
+PORTRAIT_WAIST = ("portrait from the waist up, her head and shoulders filling the upper half of the frame, "
+                  "her face large and sharp; never a wide shot, never full-body")
+PORTRAIT_AVOID = ("No studio lighting, no professional photoshoot look, no plain backdrop: a casual candid "
+                  "photo of her in a real room.")
+_PORTRAIT_STANCE = (("she is sitting back comfortably and taking a selfie, ", "she is sitting back comfortably, "),
+                    ("she is taking a selfie, ", "she is standing relaxed, "),
+                    ("her other hand resting in her lap", "both hands resting in her lap"),
+                    ("her other hand down at her side", "both arms relaxed at her sides"))
+
+
+def as_portrait(slot: dict) -> dict:
+    """A non-mirror selfie slot rewritten as a candid portrait; a mirror slot unchanged."""
+    if slot["shot_type"] != SHOT_TYPE:
+        return slot
+    stance = slot["stance"]
+    for a, b in _PORTRAIT_STANCE:
+        stance = stance.replace(a, b)
+    framing = PORTRAIT_WAIST if slot["framing"] == WAIST_FRAMING else PORTRAIT_FRAMING
+    return {**slot, "stance": stance, "framing": framing, "shot_type": PORTRAIT_SHOT, "avoid": PORTRAIT_AVOID}
+
+
 def slots_for(character: str, batch: int = 1) -> list[dict]:
     """Her selfie pack: her approved looks under the fixed moments, her job's
     scene for the work pair, and her own hair vocabulary over the intimate
@@ -730,6 +764,8 @@ def slots_for(character: str, batch: int = 1) -> list[dict]:
     from .wardrobe import hair_options  # noqa: PLC0415
 
     out = slots(looks_for(character), work_settings(character), set_for(character))
+    if (character or "").lower() in PORTRAIT_CHARACTERS:
+        out = [as_portrait(x) for x in out]
     hair = hair_options(character) if character else ()
     return [{**x, "hair": hair[i % len(hair)]} if (hair and x["look_id"] is None) else x
             for i, x in enumerate(out)]

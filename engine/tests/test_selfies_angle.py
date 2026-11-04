@@ -46,3 +46,27 @@ def test_a_non_mirror_selfie_refuses_the_phone_in_every_way_casey_drew_it():
         for t in ("holding a phone", "phone held up beside her face", "the back of a phone",
                   "phone camera lenses", "a photo of a woman taking a selfie", "someone else taking the photo"):
             assert t in neg, t
+
+
+def test_a_portrait_character_gets_candid_portraits_and_keeps_her_mirror_selfies(monkeypatch):
+    # Jeremy, 2026-11-04, on casey: "update the prompts to be simple portrait
+    # shots instead of selfies" - no selfie, arm or camera words in any
+    # non-mirror slot; the phone still refused; the mirror slots untouched
+    import re
+    looks = {cat: [{"outfit": "a tee", "hair": "loose"}] * n for cat, n in S.GROUPS}
+    plain = S.slots(looks)
+    port = [S.as_portrait(s) for s in plain]
+    for a, b in zip(plain, port):
+        if a["shot_type"] != S.SHOT_TYPE:
+            assert b == a
+            continue
+        words = b["stance"] + " " + b["framing"] + " " + b["shot_type"] + " " + b["avoid"]
+        assert not re.search(r"selfie|arm's-length|phone|her other hand", words, re.I), words
+        assert b["negative"] == a["negative"] and "iPhone" in b["negative"]
+        assert b["setting"] == a["setting"] and b["outfit"] == a["outfit"]
+    assert "casey" in S.PORTRAIT_CHARACTERS
+    monkeypatch.setattr(S, "looks_for", lambda c: looks)
+    monkeypatch.setattr(S, "work_settings", lambda c: (S.WORK_FALLBACK, S.WORK_FALLBACK))
+    monkeypatch.setattr(S, "set_for", lambda c, *a, **k: "A" * 24)
+    assert {s["shot_type"] for s in S.slots_for("casey")} == {S.PORTRAIT_SHOT, "mirror selfie"}
+    assert S.PORTRAIT_SHOT not in {s["shot_type"] for s in S.slots_for("ash")}
