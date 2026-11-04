@@ -131,8 +131,10 @@ def shoot_loras(sh) -> tuple[tuple[str, float], ...]:
 
 
 def slot_negative(slot: dict) -> str:
-    """The run's negative plus what the slot refuses - a selfie refuses the phone."""
-    return NEG + (f", {slot['negative']}" if slot.get("negative") else "")
+    """What the slot refuses, then the run's negative - a selfie refuses the phone.
+    The slot's own terms lead (2026-11-04): they are the specific failure, and
+    casey's phone kept winning while 'phone' sat behind 30 quality terms."""
+    return (f"{slot['negative']}, " if slot.get("negative") else "") + NEG
 
 
 def run_pack(sh) -> int:

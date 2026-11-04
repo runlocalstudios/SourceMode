@@ -116,7 +116,17 @@ STANCE_MIRROR = ("she stands facing a full-length mirror and the whole picture i
 AVOID = ("No studio lighting, no professional photoshoot look, no third-person camera angle, "
          "no plain backdrop: this is a casual selfie she took herself, in a real room.")
 #: Appended to the run's negative on every non-mirror slot.
-NEGATIVE = ("phone, smartphone, phone in hand, phone screen, phone frame around the picture, "
+# Jeremy, 2026-11-04: "Casey's selfies are still plagued by showing the actual
+# iPhone in non-mirror shots - i thought we had fucking fixed this already".
+# All 12 of her rejects were one picture: an iPhone held up beside her face,
+# its camera lenses toward the viewer - a third-person photo of her taking a
+# selfie. 'phone' alone was in this negative and lost. Every form of that
+# picture is refused by name, iPhone first. (One of her 59 training photos is a
+# mirror selfie with an iPhone in hand, uncaptioned, so her LoRA pulls toward it.)
+NEGATIVE = ("iPhone, holding a phone, phone held up beside her face, a phone in her hand, "
+            "the back of a phone, phone camera lenses, smartphone, phone, phone screen, "
+            "phone frame around the picture, a photo of a woman taking a selfie, "
+            "someone else taking the photo, third-person view, "
             "camera, DSLR camera, camera in hand, both arms raised, both hands up")
 #: Appended on the mirror slots: the mirror is in front of her, not behind.
 MIRROR_NEGATIVE = ("mirror behind her, a second mirror, her back, rear view, two of her, "

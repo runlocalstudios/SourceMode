@@ -125,7 +125,8 @@ def redo_shoot(info: dict, seed: int) -> Path | None:
             log(f"  {slot['id']}: {sh.id} needs the {lock_id!r} LoRA and it is not locked")
             return None
         extra.append((lk["path"], float(strength)))
-    neg = NEG + (f", {slot['negative']}" if slot.get("negative") else "")
+    # the slot's own terms lead, as run_shoots.slot_negative (2026-11-04)
+    neg = (f"{slot['negative']}, " if slot.get("negative") else "") + NEG
     files = client.outputs(client.wait(client.submit(
         t2i_workflow(cfg, prompt, seed, f"shoots/{CHAR}/{sh.id}",
                      lora_path=LORA["path"], negative=neg, width=W, height=H,

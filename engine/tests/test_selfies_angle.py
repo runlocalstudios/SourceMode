@@ -30,3 +30,19 @@ def test_a_mirror_selfie_never_asks_for_the_phone_screen():
         if s["shot_type"] != S.SHOT_TYPE:
             assert "screen" not in s["gaze"] and "back of her phone" in s["gaze"]
             assert "a photo inside the photo" in s["negative"] and "phone" not in s["negative"]
+
+
+def test_a_non_mirror_selfie_refuses_the_phone_in_every_way_casey_drew_it():
+    # Jeremy, 2026-11-04: "Casey's selfies are still plagued by showing the
+    # actual iPhone in non-mirror shots". All 12 of her rejects were the same
+    # picture: an iPhone held up beside her face, its camera lenses toward us,
+    # as if a second person photographed her taking a selfie.
+    looks = {cat: [{"outfit": "a tee", "hair": "loose"}] * n for cat, n in S.GROUPS}
+    plain = [s for s in S.slots(looks) if s["shot_type"] == S.SHOT_TYPE]
+    assert plain
+    for s in plain:
+        neg = s["negative"]
+        assert neg.startswith("iPhone, "), neg[:40]            # first, not buried
+        for t in ("holding a phone", "phone held up beside her face", "the back of a phone",
+                  "phone camera lenses", "a photo of a woman taking a selfie", "someone else taking the photo"):
+            assert t in neg, t
