@@ -120,8 +120,12 @@ class Shoot:
                     "pose": "standing", "shoot": self.id,
                     # a pose may say what garment it needs ("panties|thong");
                     # the first outfit in the wardrobe that has it, else the rotation
-                    "outfit": outfit or next((o for o in outfits if p.get("wants") and re.search(p["wants"], o)),
-                                             outfits[i % len(outfits)]),
+                    # a pose may strip a clause from the outfit it is given
+                    # ("outfit_strip"): the pajama back shot wears the set's
+                    # colour sentence without its button row
+                    "outfit": _strip_outfit(
+                        outfit or next((o for o in outfits if p.get("wants") and re.search(p["wants"], o)),
+                                       outfits[i % len(outfits)]), p.get("outfit_strip")),
                     "hair": hair[i % len(hair)],
                     "stance": p["stance"],
                     "framing": p.get("framing", self.framing),
@@ -799,6 +803,16 @@ PAJAMA_SET = ("a {c} satin pajama set: a short-sleeved {c} satin pajama shirt wi
               "the collar, the sleeve cuffs and the shirt hem, and matching {c} satin pajama shorts with "
               "an elastic waistband and white piping along the leg hems, barefoot")
 PAJAMAS: tuple[str, ...] = tuple(PAJAMA_SET.format(c=c) for c in PAJAMA_COLOURS)
+# Jeremy, 2026-11-03, after 21 of the first 28 rejects were the back shot with
+# the button row painted down her spine (and down the shorts' side seam on
+# five): "on the side and rear photos there should be NO BUTTONS WHATSOEVER".
+# The model puts a described row on whatever surface faces the camera, so the
+# side and back slots strip the clause from the set's sentence (outfit_strip,
+# applied at plan time: the sentence itself is frozen in each set.json) and
+# say what IS seen instead - one smooth panel of satin.
+_PJ_BUTTONS = "one row of small round white buttons down the front, every button done up, "
+assert all(_PJ_BUTTONS in p for p in PAJAMAS)
+_PJ_CAMERA = "camera in frame, DSLR camera, a hand holding a camera, photographer, a man's hands"
 # what the model drifts to when a pajama prompt is loose: long pants, a robe,
 # a camisole, a print, the shirt open, slippers. Jeremy, 2026-11-03, after the
 # first 14 sets: a chest pocket grew on both kneeling poses in 13 of them and
@@ -833,31 +847,39 @@ PAJAMA_PACK: tuple[dict, ...] = tuple(_pj(p) for p in (
      "framing": _PJ_PORTRAIT, "shot_type": "three-quarter length portrait photo", "gaze": _EYES,
      "negative": _FAR},
     {"tag": "standingside", "stance": "standing with her body turned side-on to the camera, her hands "
-                                      "clasped behind her back, her shoulders back",
+                                      "clasped behind her back, her shoulders back, the side of her shirt one "
+                                      "smooth unbroken panel of satin from the sleeve to the hem",
      "framing": _PJ_PORTRAIT, "shot_type": "three-quarter length portrait photo from her side",
      "facing": "her body in profile to the camera",
      "gaze": "her head turned toward the camera, looking straight into the lens",
-     # Jeremy, 2026-11-03: in profile the button row drifts onto her side seam
-     "negative": _FAR + ", facing the camera, square to the camera, buttons on the side of the shirt, "
-                 "buttons along her side, side buttons, a row of buttons at the side seam"},
+     "outfit_strip": (_PJ_BUTTONS,),
+     "negative": "buttons, button row, a row of buttons, placket, buttoned, button fly, buttons on the shorts, "
+                 + _FAR + ", facing the camera, square to the camera"},
     # never the viewer's body in the positive (sienna's kneeling2 grew a man's
     # feet): "very close to the camera" says it; the negative refuses him
     {"tag": "standingback", "stance": "standing very close to the camera with her back to it, her hips swayed "
                                       "to one side, her bottom pushed back a little toward the camera, one hand "
-                                      "resting on her hip, her other hand lifting her hair off her neck",
+                                      "resting on her hip, her other hand lifting her hair off her neck, the back "
+                                      "of her shirt one smooth unbroken panel of satin falling over the waistband "
+                                      "of her shorts",
      "framing": "framed from her head down to her mid-thighs, the camera very close to her, her body "
                 "filling the whole frame",
      "shot_type": "close intimate photo from directly behind her",
      "facing": "her back to the camera, very close",
      "gaze": "looking back over her shoulder into the camera", "expression_natural": "a teasing smile",
-     # Jeremy, 2026-11-03: in about half the sets the button row ran down her back
-     "negative": _FAR + ", a man, another person, chair, bending over, hands on the floor, buttons down "
-                 "the back, buttons on the back of the shirt, a button row on her back, back-buttoned"},
+     "outfit_strip": (_PJ_BUTTONS,),
+     "negative": "buttons, button row, a row of buttons, buttons down the back, placket, buttoned, button fly, "
+                 "buttons on the shorts, cropped shirt, " + _FAR
+                 + ", a man, another person, chair, bending over, hands on the floor"},
     # Jeremy, 2026-11-03: sitting keeps growing buttons on the shorts
     {**_L["sitting"],
      "negative": _L["sitting"]["negative"] + ", buttons on the shorts, buttoned shorts, button fly, "
                  "a button at the waistband"},
-    _L["kneeling"], _L["kneeling2"], _L["showfeet"], _L["crawling"],
+    # casey's kneeling shot grew the photographer's camera and hands at the
+    # bottom of the frame: the point-of-view framing invites them
+    {**_L["kneeling"], "negative": _L["kneeling"]["negative"] + ", " + _PJ_CAMERA},
+    {**_L["kneeling2"], "negative": _L["kneeling2"]["negative"] + ", " + _PJ_CAMERA},
+    _L["showfeet"], _L["crawling"],
     {**_L["after"],
      "stance": _L["after"]["stance"].replace(
          "her hair lying naturally on the floor beside and behind her head",
@@ -1273,6 +1295,15 @@ def plan_path(shoot: Shoot, character: str, outputs_root) -> object | None:
     if not shoot.plan_file:
         return None
     return Path(outputs_root) / shoot.plan_file.format(character=character)
+
+
+def _strip_outfit(outfit: str, clauses) -> str:
+    """The outfit without each clause in `clauses` (exact text, tidied of the
+    comma it leaves behind). A pose that cannot show a detail does not say it:
+    the pajama back shot wears the set's sentence minus its button row."""
+    for c in clauses or ():
+        outfit = outfit.replace(c, "").replace(", ,", ",").replace("  ", " ")
+    return outfit.strip(" ,")
 
 
 def rolls_one_outfit(shoot: Shoot) -> bool:

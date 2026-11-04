@@ -19,7 +19,10 @@ def test_the_pajama_pack_is_a_game_cutout_set_in_one_rolled_colour(tmp_path):
     # white buttons and piping on a white or ivory set would vanish
     assert not {"white", "ivory", "champagne", "cream"} & set(S.PAJAMA_COLOURS)
     plan = sh.plan(character="bianca", outfit=first)
-    assert {s["outfit"] for s in plan} == {first}
+    # one sentence for the set; the side and back shots wear it minus the button row
+    assert {s["outfit"] for s in plan if s["tag"] not in ("standingside", "standingback")} == {first}
+    assert {s["outfit"] for s in plan if s["tag"] in ("standingside", "standingback")} == \
+        {first.replace(S._PJ_BUTTONS, "")}
     assert all(s["shoes"] for s in plan)        # drop_footwear never touches "barefoot"
     assert {s["hair"] for s in plan} == {"her hair worn loose"}
 
@@ -38,13 +41,28 @@ def test_the_nine_poses_in_his_order_with_the_pack_negative_under_each():
     assert "viewer" not in by["standingback"]["stance"] + by["standingback"]["shot_type"]  # never his body
     assert "a man" in by["standingback"]["negative"]
     assert "buttons down the back" in by["standingback"]["negative"]
+    # Jeremy, 2026-11-03, after 21 of 28 rejects were the back shot with the
+    # button row down her spine: "on the side and rear photos there should be
+    # NO BUTTONS WHATSOEVER". The set's colour sentence is frozen in set.json,
+    # so the strip happens per slot at plan time and reaches every redo.
+    plan = {s["tag"]: s for s in S.BY_ID["pajamas"].plan(character="bianca", outfit=S.PAJAMAS[0])}
+    for t in ("standingside", "standingback"):
+        assert "button" not in plan[t]["outfit"], (t, plan[t]["outfit"])
+        assert "satin pajama shirt with a notched collar" in plan[t]["outfit"]   # the rest survives
+        assert "white piping" in plan[t]["outfit"]
+        assert "smooth" in plan[t]["stance"], t                                   # what IS seen, said
+        assert ", buttons," in "," + plan[t]["negative"] + "," or "buttons, " in plan[t]["negative"]
+    assert "every button done up" in plan["standing"]["outfit"]                   # front poses keep them
+    # casey's kneeling shot grew the photographer's camera and hands
+    for t in ("kneeling", "kneeling2"):
+        assert "camera in frame" in by[t]["negative"], t
     for t in ("sitting", "kneeling", "kneeling2", "showfeet", "crawling"):
         assert by[t]["stance"] == lp[t]["stance"] and by[t]["framing"] == lp[t]["framing"], t
     # Jeremy, 2026-11-03: sitting grows buttons on the shorts; the side portrait
     # moves the button row onto the side of the shirt. Pajama copies only.
     assert "buttons on the shorts" in by["sitting"]["negative"]
     assert "buttons" not in lp["sitting"]["negative"]
-    assert "buttons on the side of the shirt" in by["standingside"]["negative"]
+    assert by["standingside"]["negative"].startswith("buttons, ")
     assert "smoothly to one side" in by["after"]["stance"] and "messy hair" in by["after"]["negative"]
     assert "naturally on the floor" not in by["after"]["stance"]
     for p in S.PAJAMA_PACK:
