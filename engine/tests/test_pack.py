@@ -63,7 +63,9 @@ def test_the_pack_renders_every_look_once_on_the_grey_studio_and_sets_edit_rende
     client = FakeClient()
     metas = P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n", log=lambda s: None)
     assert [m["asset"]["look"] for m in metas] == [1, 2] and all(m["graph"] == P.GRAPH for m in metas)
-    assert metas[0]["seed"] == P.SEED_BASE and metas[1]["seed"] == P.SEED_BASE + 1000
+    # Jeremy, 2026-11-05: every look drawn from scratch rolls its own random seed
+    assert metas[0]["seed"] != metas[1]["seed"]
+    assert P.SEED_BASE not in {m["seed"] for m in metas}
     assert all(P.STUDIO_BACKDROP in m["prompt"] for m in metas)
     assert P.is_t2i_folder(root) is True
     aside = [d for d in root.parent.iterdir() if d.name.startswith("renders_edit_")]
@@ -81,7 +83,8 @@ def test_the_pack_renders_every_look_once_on_the_grey_studio_and_sets_edit_rende
     assert P.rendered_prompt(Path(metas[0]["source"])) == metas[0]["prompt"]
     n = len(client.seen)
     # a re-roll of one look with a retry seed renders only that look on that seed
-    (root / "casual_02_standing" / "shot_00_s8100.png").unlink()
+    for old in (root / "casual_02_standing").glob("shot_*.png"):      # redo.py drops it first
+        old.unlink()
     metas = P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n",
                           only={"casual_02"}, seed=424242, log=lambda s: None)
     assert len(metas) == 1 and metas[0]["seed"] == 424242 and metas[0]["source"].endswith("shot_00_s424242.png")
@@ -102,7 +105,7 @@ def test_a_rewritten_look_sets_aside_its_old_reroll_shots_so_the_cutout_never_ra
     plan["categories"]["casual"]["looks"][0]["outfit"] = "a green tee"
     P.render_pack({}, client, "amanda", plan, out, lora_path="l", negative="n", log=lambda s: None)
     left = [p.name for p in P.shots(P.renders_root(out, "amanda")) if p.parent == d]
-    assert left == ["shot_00_s7100.png"]
+    assert len(left) == 1 and left[0] != "shot_00_s48783.png"
     assert (d / "_superseded" / "shot_00_s48783.png").is_file()
 
 
@@ -274,6 +277,7 @@ def test_a_fresh_shot_framed_wrong_is_redrawn_in_the_same_job(tmp_path, quiet, m
     thing when they are wrong". casual_01's first draw is chest-up; its second
     seed is fine and replaces it. casual_02 never comes right and keeps its
     first draw after REROLLS tries, for him to judge."""
+    monkeypatch.setattr(P, "fresh_seed", iter([P.SEED_BASE, P.SEED_BASE + 1000]).__next__)
     bad = {P.SEED_BASE, *(P.SEED_BASE + 1000 + P.REROLL_STRIDE * k for k in range(P.REROLLS + 1))}
     monkeypatch.setattr(P, "framing_problem",
                         lambda asked, got, p: "chest-up" if int(p.stem.split("_s")[1]) in bad else None)
@@ -351,3 +355,23 @@ def test_pack_negative_is_built_without_duplicates(monkeypatch):
                   negative="blurry", log=lambda s: None)
     terms = [t.strip() for t in seen["neg"].split(",")]
     assert "high angle" in terms and "profile view" in terms and terms.count("top-down view") == 1
+
+
+def test_a_changed_look_is_redrawn_on_a_new_seed_never_the_old_one(tmp_path, quiet, monkeypatch):
+    """Jeremy, 2026-11-05, on dianna's re-run after her prompt changed: "Why are
+    the new set of 28 photos nearly identical to the old set?" Every look had
+    the same fixed seed on every run, so a re-run drew the same picture."""
+    out = tmp_path / "out"
+    client = FakeClient()
+    first = P.render_pack({}, client, "amanda", _plan(), out, lora_path="l", negative="n", log=lambda s: None)
+    plan = _plan()
+    for b in plan["categories"].values():
+        for look in b["looks"]:
+            look["outfit"] += " in red"
+    second = P.render_pack({}, client, "amanda", plan, out, lora_path="l", negative="n", log=lambda s: None)
+    assert len(second) == 2
+    assert not {m["seed"] for m in first} & {m["seed"] for m in second}
+    # the unchanged plan renders nothing and keeps the seeds it has
+    n = len(client.seen)
+    again = P.render_pack({}, client, "amanda", plan, out, lora_path="l", negative="n", log=lambda s: None)
+    assert len(client.seen) == n and [m["seed"] for m in again] == [m["seed"] for m in second]

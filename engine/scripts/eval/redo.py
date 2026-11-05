@@ -137,6 +137,7 @@ def redo_shoot(info: dict, seed: int) -> Path | None:
         return None
     client.fetch(files[0], dest)
     dest.with_suffix(".txt").write_text(prompt, encoding="utf-8")
+    dest.with_suffix(".seed").write_text(str(seed), encoding="utf-8")
     return dest
 
 

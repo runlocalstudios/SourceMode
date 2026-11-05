@@ -49,6 +49,17 @@ def seed_for(index: int) -> int:
     return SEED_BASE + index * 1000
 
 
+def fresh_seed() -> int:
+    """A new random seed for a look drawn from scratch. Jeremy, 2026-11-05, on
+    dianna's re-run after her prompt changed: "Why are the new set of 28 photos
+    nearly identical to the old set? You are supposed to be randomly rolling
+    the seed each time a new set is generated." `seed_for` gave every look the
+    same seed on every run. Kept below 2**31 with room for the re-roll strides."""
+    import random  # noqa: PLC0415
+
+    return random.SystemRandom().randrange(1, 2**31 - 200_000)
+
+
 # Jeremy, 2026-10-20: "auto-reroll ... reroll those before the queue moves on to
 # the next thing when they are wrong". A fresh shot that comes back chest-up
 # when mid-thigh was asked, or with her head cut off at the top edge, is drawn
@@ -165,7 +176,6 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
             continue
         d = root / slot_dirname(slot)
         d.mkdir(exist_ok=True)
-        base = seed if seed is not None else seed_for(i)
         prompt = shot_prompt(character, slot, plan.get("trigger"), backdrop=backdrop)
         # jojo, 2026-10-26: a redrafted look left last week's re-roll shots (other
         # seeds, the old outfit) in the folder, and the cutout ranks every shot
@@ -179,9 +189,17 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
                     if f.exists():
                         f.replace(aside / f.name)
             log(f"  {slot['id']}: {len(stale)} shot(s) of an earlier version set aside")
-        # a shot re-drawn for its framing sits under its re-draw seed
-        s = next((base + REROLL_STRIDE * k for k in range(REROLLS + 1)
-                  if (d / f"shot_00_s{base + REROLL_STRIDE * k}.png").exists()), base)
+        if seed is not None:
+            # a redo's seed: a shot re-drawn for its framing sits under its re-draw seed
+            base = seed
+            s = next((base + REROLL_STRIDE * k for k in range(REROLLS + 1)
+                      if (d / f"shot_00_s{base + REROLL_STRIDE * k}.png").exists()), base)
+        else:
+            # the shot already on disk for this prompt is kept, whatever its seed
+            # (it may already be judged); a look drawn from scratch rolls a new one
+            have = sorted(d.glob("shot_00_s*.png"))
+            base = int(have[0].stem.rsplit("_s", 1)[1]) if have else fresh_seed()
+            s = base
         dest = d / f"shot_00_s{s}.png"
         try:
             if dest.exists() and rendered_prompt(dest) != prompt:
@@ -189,6 +207,7 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
                 # re-run skipped all 28 because the old shots were on disk
                 log(f"  {slot['id']}: the look changed since its shot was rendered - re-rendering")
                 dest.unlink()
+                base = seed if seed is not None else fresh_seed()
                 s, dest = base, d / f"shot_00_s{base}.png"
 
             def draw(seed: int, path: Path) -> bool:

@@ -28,6 +28,7 @@ the wardrobe pack and the epoch eval use. A shoot supplies outfit, hair, stance,
 framing and setting; her age, appearance, frame and negative are shared.
 """
 
+import random
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -208,9 +209,14 @@ def run_shoot(sh) -> int:
             prompt = shot_prompt(CHAR, slot, CHAR, backdrop=slot["setting"])
             if set_aside_if_changed(dest, prompt):
                 log(f"  {sh.id} {slot['id']}: the prompt changed since it was rendered - drawing it again")
+            seed_file = d / f"{slot['id']}.seed"
             if not dest.exists():
+                # Jeremy, 2026-11-05: "You are supposed to be randomly rolling the
+                # seed each time a new set is generated" - SEED + k gave every set,
+                # every character and every re-run the same seed per slot
+                seed = random.SystemRandom().randrange(1, 2**31 - 200_000)
                 files = client.outputs(client.wait(
-                    client.submit(t2i(prompt, SEED + k, f"shoots/{CHAR}/{sh.id}",
+                    client.submit(t2i(prompt, seed, f"shoots/{CHAR}/{sh.id}",
                                       negative=slot_negative(slot), extra=extra)),
                     timeout_s=3600))
                 if not files:
@@ -218,10 +224,13 @@ def run_shoot(sh) -> int:
                     continue
                 client.fetch(files[0], dest)
                 (d / f"{slot['id']}.txt").write_text(prompt, encoding="utf-8")
+                seed_file.write_text(str(seed), encoding="utf-8")
+            # a shot from before seeds were recorded was drawn on SEED + k
+            seed = int(seed_file.read_text(encoding="utf-8")) if seed_file.is_file() else SEED + k
             e = embed_image(dest)
             items.append(judge_item(
                 slot, dest, kind="shoot", character=CHAR, source=sh.id,
-                seed=SEED + k, arm=slot.get("tone") or sh.id,
+                seed=seed, arm=slot.get("tone") or sh.id,
                 score=round(float(cosine(ref, e)), 4)
                 if (ref is not None and e is not None) else None))
             n += 1
