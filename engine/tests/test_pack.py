@@ -375,3 +375,34 @@ def test_a_changed_look_is_redrawn_on_a_new_seed_never_the_old_one(tmp_path, qui
     n = len(client.seen)
     again = P.render_pack({}, client, "amanda", plan, out, lora_path="l", negative="n", log=lambda s: None)
     assert len(client.seen) == n and [m["seed"] for m in again] == [m["seed"] for m in second]
+
+
+def test_every_draw_rerolls_the_looks_pose_and_expression_from_its_seed(tmp_path, quiet, monkeypatch):
+    """Jeremy, 2026-11-06, on amanda's set re-drawn on fresh seeds: "The pictures
+    look nearly identical." The variety A/B showed re-rolling the pose per draw is
+    what changes the picture, so the prompt carries the draw's own pose."""
+    monkeypatch.setattr("sourcemode.assets.render.shot_prompt",
+                        lambda c, s, t=None, backdrop=None: f"{c} {s['outfit']} {s.get('pose_seed')} {s.get('expression')}")
+    seeds = iter([11, 22])
+    monkeypatch.setattr(P, "fresh_seed", lambda: next(seeds))
+    out = tmp_path / "out"
+    client = FakeClient()
+    plan = {**_plan(), "categories": {"casual": {"looks": _plan()["categories"]["casual"]["looks"][:1]}}}
+    a = P.render_pack({}, client, "amanda", plan, out, lora_path="l", negative="n", log=lambda s: None)[0]
+    assert "11" in a["prompt"] and a["look_prompt"] == "amanda a red tee None None"
+    # the same look kept from disk keeps the prompt it was drawn from
+    again = P.render_pack({}, client, "amanda", plan, out, lora_path="l", negative="n", log=lambda s: None)[0]
+    assert len(client.seen) == 1 and again["prompt"] == a["prompt"]
+    # a redo's seed draws a new pose
+    b = P.render_pack({}, client, "amanda", plan, out, lora_path="l", negative="n", seed=99,
+                      log=lambda s: None)[0]
+    assert "99" in b["prompt"] and b["prompt"] != a["prompt"]
+    # a look that names its expression keeps it
+    assert P.posed({"id": "x", "expression": "teeth"}, 5)["expression"] == "teeth"
+
+
+def test_pose_fields_rerolls_with_the_draws_seed():
+    from sourcemode.assets.render import pose_fields
+    slot = {"id": "casual_01", "look": 1, "n": 4, "category": "casual", "outfit": "a red tee"}
+    bodies = {pose_fields("amanda", P.posed(slot, s))["body"] for s in range(1, 40)}
+    assert len(bodies) > 3

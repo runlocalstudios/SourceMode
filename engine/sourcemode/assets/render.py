@@ -267,7 +267,8 @@ def pose_fields(character: str, slot: dict) -> dict:
     outright, which is what the sweep and tiebreaker scenes do.
     """
     look = int(slot.get("look", 1))
-    rng = random.Random(f"{character}-{slot.get('id', look)}")
+    # a pack draw re-rolls its pose from its seed (pack.posed); otherwise per look
+    rng = random.Random(f"{character}-{slot.get('pose_seed', slot.get('id', look))}")
     family = slot.get("turn")
     arms = None
     # a selfie, a shoot or an influencer slot brings its own framing or shot

@@ -137,6 +137,33 @@ def retire_other_renders(root: Path, log=print) -> Path | None:
     return dest
 
 
+def posed(slot: dict, seed: int) -> dict:
+    """The look with its pose and expression drawn from this draw's seed.
+    Jeremy, 2026-11-06, on amanda's set re-drawn on fresh seeds: "The pictures
+    look nearly identical." The pack prompt pins the turn, arms and expression
+    per look, and Qwen moves little across seeds under it; the variety A/B
+    (library/amanda/2026-11-06_ab_variety) showed re-rolling those choices per
+    draw is what changes the picture, likeness kept - so every draw does. A
+    look that names its own expression keeps it."""
+    import random  # noqa: PLC0415
+
+    from .render import EXPRESSION_TYPES  # noqa: PLC0415
+
+    r = random.Random(seed)
+    return {**slot, "pose_seed": seed, "n": r.randint(1, 4),
+            "expression": slot.get("expression") or r.choice(sorted(set(EXPRESSION_TYPES)))}
+
+
+def rendered_look(shot: Path) -> str | None:
+    """The look (outfit, hair, framing - the prompt before the draw's pose) a
+    shot was rendered from; older shots carry only their prompt."""
+    try:
+        meta = json.loads(shot.with_suffix(".json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return meta.get("look_prompt") or meta.get("prompt")
+
+
 def rendered_prompt(shot: Path) -> str | None:
     """The prompt a shot was rendered from, off its sidecar; None if unknown."""
     try:
@@ -150,9 +177,10 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
                 seed: int | None = None, backdrop: str = STUDIO_BACKDROP,
                 root: Path | None = None, log=print) -> list[dict]:
     """Every look of the plan (or `only` those) through T2I. A look whose shot is
-    already on disk from the same prompt is skipped; a changed look re-renders,
+    already on disk from the same look is skipped; a changed look re-renders,
     and a re-roll drops the old file first. `seed`
-    replaces the per-look seed, for a re-roll of one look. `backdrop` is the
+    replaces the per-look seed, for a re-roll of one look. Every draw re-rolls
+    the look's pose and expression from its seed (`posed`). `backdrop` is the
     studio by default; a key-colour trial passes `render.KEY_BACKDROP` and its
     own `root` so the pack's folder is never mixed with it. Returns the
     sidecars, one per look rendered or found."""
@@ -176,11 +204,11 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
             continue
         d = root / slot_dirname(slot)
         d.mkdir(exist_ok=True)
-        prompt = shot_prompt(character, slot, plan.get("trigger"), backdrop=backdrop)
+        look_prompt = shot_prompt(character, slot, plan.get("trigger"), backdrop=backdrop)
         # jojo, 2026-10-26: a redrafted look left last week's re-roll shots (other
         # seeds, the old outfit) in the folder, and the cutout ranks every shot
         # there - set them aside so only this look's shots stay in play
-        stale = [p for p in d.glob("shot_*.png") if rendered_prompt(p) not in (None, prompt)]
+        stale = [p for p in d.glob("shot_*.png") if rendered_look(p) not in (None, look_prompt)]
         if stale:
             aside = d / "_superseded"
             aside.mkdir(exist_ok=True)
@@ -202,13 +230,22 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
             s = base
         dest = d / f"shot_00_s{s}.png"
         try:
-            if dest.exists() and rendered_prompt(dest) != prompt:
+            if dest.exists() and rendered_look(dest) != look_prompt:
                 # winnie, 2026-10-18: her looks were rewritten off pure white and the
                 # re-run skipped all 28 because the old shots were on disk
                 log(f"  {slot['id']}: the look changed since its shot was rendered - re-rendering")
                 dest.unlink()
                 base = seed if seed is not None else fresh_seed()
                 s, dest = base, d / f"shot_00_s{base}.png"
+            fresh = not dest.exists()
+            # the pose is the base draw's; a framing re-draw below keeps it
+            pslot = posed(slot, base)
+            prompt = shot_prompt(character, pslot, plan.get("trigger"), backdrop=backdrop)
+            asked = pose_fields(character, pslot)["asked"]
+            if not fresh:
+                # a shot kept from disk keeps the prompt and ask it was drawn from
+                old = json.loads(dest.with_suffix(".json").read_text(encoding="utf-8"))                     if dest.with_suffix(".json").exists() else {}
+                prompt, asked = old.get("prompt") or prompt, old.get("asked") or asked
 
             def draw(seed: int, path: Path) -> bool:
                 files = client.outputs(client.wait(client.submit(
@@ -225,8 +262,6 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
                 except Exception as exc:  # noqa: BLE001 - a measurement, never a blocker
                     return {"failed": [], "soft": [], "got": {}, "error": str(exc)}
 
-            asked = pose_fields(character, slot)["asked"]
-            fresh = not dest.exists()
             if fresh and not draw(s, dest):
                 log(f"  {slot['id']}: no output")
                 continue
@@ -255,7 +290,7 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
                     "asset": {"character": character, "category": slot["category"],
                               "look": slot["look"], "pose": slot["pose"], "shot": 0},
                     "score": score, "asked": asked, "adherence": adh, "seed": s,
-                    "prompt": prompt, "lora": lora_path, "graph": GRAPH}
+                    "prompt": prompt, "look_prompt": look_prompt, "lora": lora_path, "graph": GRAPH}
             dest.with_suffix(".json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
             (d / "prompt.txt").write_text(prompt, encoding="utf-8")
             for f in adh.get("failed") or []:
