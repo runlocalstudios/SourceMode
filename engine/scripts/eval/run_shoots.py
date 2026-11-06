@@ -29,6 +29,7 @@ framing and setting; her age, appearance, frame and negative are shared.
 """
 
 import random
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -150,6 +151,17 @@ def run_pack(sh) -> int:
 
     pp = plan_path(sh, CHAR, OUT_ROOT)
     plan = json.loads(pp.read_text(encoding="utf-8"))
+    # Jeremy, 2026-11-05, after three dianna pack28 runs drew nothing because
+    # her 28 were on disk: "IF I WANT TO REGENERATE A CHARACTERS ASSETS, FUCKING
+    # REGENERATE THEM. IF I WANT TO OVERWRITE WHAT IS IN THE GAME, I WILL ...
+    # USING THE UI". A queued pack is a new set: the last one is set aside whole
+    # and every look draws again on a fresh seed. Re-rolling single looks is
+    # redo.py's job; the game changes only on his approval.
+    root = P.renders_root(OUT_ROOT, CHAR)
+    if root.is_dir() and any(root.glob("*_*/shot_*.png")):
+        aside = root.with_name(f"renders_{datetime.now():%Y%m%d-%H%M%S}")
+        shutil.move(str(root), str(aside))
+        log(f"  {sh.id}: the previous set moved aside to {aside.name}; drawing all {len(plan_slots(plan))} again")
     res = P.render_pack(cfg, client, CHAR, plan, OUT_ROOT, lora_path=LORA["path"], negative=NEG,
                         ref=ref, log=log)
     by_id = {s["id"]: s for s in plan_slots(plan)}
@@ -198,6 +210,15 @@ def run_shoot(sh) -> int:
     if outfit:
         log(f"  {sh.id}: the whole set wears {outfit}")
     plan = sh.plan(character=CHAR, outfit=outfit)
+    # a queued shoot is a new set (Jeremy, 2026-11-05, as run_pack): the last
+    # set's shots go aside and every slot draws again on a fresh seed
+    old = [f for slot in plan for f in d.glob(f"{slot['id']}.*") if f.suffix in (".png", ".txt", ".seed")]
+    if any(f.suffix == ".png" for f in old):
+        aside = d / f"_previous_{datetime.now():%Y%m%d-%H%M%S}"
+        aside.mkdir()
+        for f in old:
+            shutil.move(str(f), str(aside / f.name))
+        log(f"  {sh.id}: the previous set moved aside to {aside.name}; drawing all {len(plan)} again")
     if sh.id == "selfies":
         # the game reads which look each selfie wears and when it was taken
         from sourcemode.assets.selfies import manifest  # noqa: PLC0415
