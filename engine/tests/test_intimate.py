@@ -255,7 +255,10 @@ def test_the_characters_tab_serves_one_intimate_route_per_pack_and_refuses_an_un
     assert c.get("/characters/nadia/intimate/lingerie").json()["staged"] is None
     j = c.get("/characters/nadia/intimate/pajamas").json()
     assert j["outfit"] == "pajamas" and j["staged"]["poses"] == ["standing", "sitting"]
-    assert c.get("/characters/nadia/intimate/pajamas/look", params={"file": "pajamas_01.webp"}).status_code == 200
+    tile = c.get("/characters/nadia/intimate/pajamas/look", params={"file": "pajamas_01.webp"})
+    assert tile.status_code == 200
+    # a re-staging reuses the file name, so the browser must never keep the old one
+    assert "no-store" in tile.headers["cache-control"]
     assert c.get("/characters/nadia/intimate/lingerie/look", params={"file": "pajamas_01.webp"}).status_code == 404
     r = c.post("/characters/nadia/intimate/pajamas/ship", json={"keep": ["pajamas_01.webp"]}).json()
     assert r["files"] == ["pajamas_01.webp"] and r["sync"]["ok"]

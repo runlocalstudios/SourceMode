@@ -828,6 +828,10 @@ def appearance_router(cfg: dict):
     from ..config import outputs_dir  # noqa: PLC0415
 
     r = APIRouter()
+    # Jeremy, 2026-11-06: re-staged dianna's pack and the approval showed the
+    # looks from the staging before. A tile's URL is the file name, which a new
+    # staging reuses, so the browser kept its copy - every staged image no-store.
+    fresh = {"Cache-Control": "no-store, max-age=0"}
 
     @r.get("/characters", response_class=HTMLResponse)
     @r.get("/appearance", response_class=HTMLResponse)
@@ -909,7 +913,7 @@ def appearance_router(cfg: dict):
         p = L.sheet_path(cfg, _char(char), which if which in ("compare", "mapping") else "compare")
         if p is None:
             raise HTTPException(404)
-        return FileResponse(web_copy(p, 1600))
+        return FileResponse(web_copy(p, 1600), headers=fresh)
 
     @r.get("/characters/{char}/pack/look")
     def _pack_look(char: str, file: str, side: str = "new"):
@@ -919,7 +923,7 @@ def appearance_router(cfg: dict):
         p = L.look_tile(cfg, _char(char), file, side)
         if p is None:
             raise HTTPException(404)
-        return FileResponse(p, media_type="image/webp")
+        return FileResponse(p, media_type="image/webp", headers=fresh)
 
     @r.post("/characters/{char}/pack/ship")
     def _pack_ship(char: str, body: dict | None = Body(None)) -> dict:
@@ -965,7 +969,7 @@ def appearance_router(cfg: dict):
         p = I.tile(outputs_dir(cfg), _char(char), file, outfit=_outfit(outfit))
         if p is None:
             raise HTTPException(404)
-        return FileResponse(p, media_type="image/webp")
+        return FileResponse(p, media_type="image/webp", headers=fresh)
 
     @r.post("/characters/{char}/intimate/{outfit}/ship")
     def _intimate_ship(char: str, outfit: str, body: dict | None = Body(None)) -> dict:
@@ -996,7 +1000,7 @@ def appearance_router(cfg: dict):
         p = L.portrait_tile(cfg, _char(char))
         if p is None:
             raise HTTPException(404)
-        return FileResponse(p, media_type="image/webp")
+        return FileResponse(p, media_type="image/webp", headers=fresh)
 
     @r.post("/characters/{char}/portrait")
     def _portrait_pick(char: str, body: dict = Body(...)) -> dict:
