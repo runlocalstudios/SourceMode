@@ -21,8 +21,10 @@ def test_the_pajama_pack_is_a_game_cutout_set_in_one_rolled_colour(tmp_path):
     plan = sh.plan(character="bianca", outfit=first)
     # one sentence for the set; the side and back shots wear it minus the button row
     assert {s["outfit"] for s in plan if s["tag"] not in ("standingside", "standingback")} == {first}
-    assert {s["outfit"] for s in plan if s["tag"] in ("standingside", "standingback")} == \
-        {first.replace(S._PJ_BUTTONS, "")}
+    by_tag = {s["tag"]: s for s in plan}
+    assert by_tag["standingback"]["outfit"] == first.replace(S._PJ_BUTTONS, "")
+    # Jeremy, 2026-11-06: the side shot is knees-up, so it never says "barefoot"
+    assert by_tag["standingside"]["outfit"] == first.replace(S._PJ_BUTTONS, "").replace(", barefoot", "")
     assert all(s["shoes"] for s in plan)        # drop_footwear never touches "barefoot"
     assert {s["hair"] for s in plan} == {"her hair worn loose"}
 
@@ -33,9 +35,16 @@ def test_the_nine_poses_in_his_order_with_the_pack_negative_under_each():
                     "showfeet", "crawling", "after"]
     by = {p["tag"]: p for p in S.PAJAMA_PACK}
     lp = {p["tag"]: p for p in S.LINGERIE_PACK}
-    for t in ("standing", "standingside", "standingback"):
+    for t in ("standing", "standingback"):
         assert "mid-thighs" in by[t]["framing"] and "close" in by[t]["framing"], t
+    for t in ("standing", "standingside", "standingback"):
         assert "full-length" in by[t]["negative"], t
+    # Jeremy, 2026-11-06: "Keiko's side pajama shot keeps rendering full body
+    # with her feet ... it should be like a knees up shot"
+    side = by["standingside"]
+    assert "knees-up" in side["shot_type"] and "above her knees" in side["framing"]
+    assert "three-quarter" not in side["shot_type"] + side["framing"]
+    assert "feet" in side["negative"] and "lower legs" in side["negative"]
     assert "profile" in by["standingside"]["facing"] and "into the lens" in by["standingside"]["gaze"]
     assert "very close" in by["standingback"]["stance"] and "back to the camera" in by["standingback"]["facing"]
     # Jeremy, 2026-11-03: three arms from behind - one countable action, not two one-handed ones

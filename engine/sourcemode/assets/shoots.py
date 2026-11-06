@@ -849,12 +849,19 @@ PAJAMA_PACK: tuple[dict, ...] = tuple(_pj(p) for p in (
     {"tag": "standingside", "stance": "standing with her body turned side-on to the camera, her hands "
                                       "clasped behind her back, her shoulders back, the side of her shirt one "
                                       "smooth unbroken panel of satin from the sleeve to the hem",
-     "framing": _PJ_PORTRAIT, "shot_type": "three-quarter length portrait photo from her side",
+     # Jeremy, 2026-11-06: "Keiko's side pajama shot keeps rendering full body
+     # with her feet ... it should be like a knees up shot." A figure in profile
+     # read "three-quarter length" as head to toe, and the set's "barefoot" asked
+     # for her feet; the frame is cut above her knees and her feet are not named
+     "framing": "a knees-up portrait framed from the top of her head down to just above her knees, the "
+                "frame cut off above her knees, the camera close to her, her body filling the frame",
+     "shot_type": "knees-up portrait photo from her side",
      "facing": "her body in profile to the camera",
      "gaze": "her head turned toward the camera, looking straight into the lens",
-     "outfit_strip": (_PJ_BUTTONS,),
+     "outfit_strip": (_PJ_BUTTONS, ", barefoot"),
      "negative": "buttons, button row, a row of buttons, placket, buttoned, button fly, buttons on the shorts, "
-                 + _FAR + ", facing the camera, square to the camera"},
+                 + _FAR + ", knees in frame, lower legs, calves, ankles, feet, toes, bare feet, the floor, "
+                 "facing the camera, square to the camera"},
     # never the viewer's body in the positive (sienna's kneeling2 grew a man's
     # feet): "very close to the camera" says it; the negative refuses him
     # Jeremy, 2026-11-03: "lots of issues with 3 arms on the viewed from behind
