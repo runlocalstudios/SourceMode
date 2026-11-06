@@ -680,3 +680,20 @@ def test_a_training_job_is_never_judged_by_an_earlier_runs_log(tmp_path):
     late = datetime.fromtimestamp(now - 3600, timezone.utc).isoformat(timespec="seconds")
     card = QP.now_card([{**run, "started_at": late}], yuna)
     assert card["stalled"]
+
+
+def test_a_finished_run_whose_checkpoints_were_pruned_is_not_offered_again(cfg_full, tmp_path):
+    """Jeremy, 2026-11-06, on keiko_v2 and priyanka_v3 in Ready to train: "They are
+    both already trained." The prune kept only the lock, and the lock moved on."""
+    from sourcemode.monitor.queue_page import candidates
+
+    _approve(tmp_path, "keiko_v2")
+    _approve(tmp_path, "juno_v2")
+    logs = tmp_path / "training"
+    logs.mkdir()
+    (logs / "keiko_v2.log").write_text(
+        "epoch 24/24\nsaving checkpoint: C:/x/keiko_v2/lora/keiko_v2.safetensors\n", encoding="utf-8")
+    # a run that died mid-way is still offered
+    (logs / "juno_v2.log").write_text(
+        "saving checkpoint: C:/x/juno_v2/lora/juno_v2-000004.safetensors\n", encoding="utf-8")
+    assert [r["dataset"] for r in candidates(cfg_full)] == ["juno_v2"]

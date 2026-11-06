@@ -1768,6 +1768,20 @@ def queue_state(cfg: dict, status: dict | None = None) -> dict:
                          + (1 if (now and now["stalled"]) else 0)}
 
 
+def finished_training(out: Path, ds: str) -> bool:
+    """The run's log ends with the save of its final checkpoint, `<ds>.safetensors`."""
+    from .training import decode_log  # noqa: PLC0415
+
+    log = Path(out) / "training" / f"{ds}.log"
+    try:
+        raw = log.read_bytes()
+    except OSError:
+        return False
+    text = decode_log(raw[:4], raw[-4096:])
+    return any(line.strip().startswith("saving checkpoint:")
+               and line.strip().endswith(f"{ds}.safetensors") for line in text.splitlines())
+
+
 def candidates(cfg: dict) -> list[dict]:
     """Approved datasets with no checkpoints, oldest approval first.
 
@@ -1805,6 +1819,12 @@ def candidates(cfg: dict) -> list[dict]:
         # A lock is trained too. Since 2026-10-18 the prune takes the lock's
         # training-folder copy as well, so a locked set's lora/ is empty.
         if any(r.get("dataset") == ds for r in load_registry().values()):
+            continue
+        # A finished run is trained even after every checkpoint is gone: the prune
+        # keeps only the lock, so a set that lost its A/B (priyanka_v3) or whose
+        # lock moved to a newer set (keiko_v2 -> keiko_v3, 2026-11-06) has
+        # nothing on disk. Jeremy: "They are both already trained."
+        if finished_training(out, ds):
             continue
         if q.duplicate_of(doc, "train", ds):
             continue   # already queued or running
