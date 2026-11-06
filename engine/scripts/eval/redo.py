@@ -66,7 +66,10 @@ if not doc:
     raise SystemExit(f"no judge set {SET_ID!r}")
 targets = rejected(ROOT, SET_ID)
 if not targets:
-    raise SystemExit(f"{SET_ID}: nothing rejected - nothing to re-roll")
+    # every reject was judged keep before the job ran: nothing to do, not a
+    # failure - a non-zero exit this fast pauses the whole queue (j1240, 2026-11-06)
+    print(f"{SET_ID}: nothing rejected - nothing to re-roll")
+    raise SystemExit(0)
 
 CHAR = targets[0]["redo"]["character"]
 LORA = resolve_lora(cfg, CHAR)

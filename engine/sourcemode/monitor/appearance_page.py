@@ -125,8 +125,9 @@ def todo(row: dict) -> list[str]:
     elif not row["packs"]["shipped"]:
         # Jeremy, 2026-10-23: was NO WARDROBE, which read as "no plan" when
         # eden had her plan and her 28 renders; it only ever meant the game
-        # repo has no outfit files for her yet
-        out.append("NOT IN GAME")
+        # repo has no outfit files for her yet. 2026-11-06, of larissa and
+        # yuna, who have dialogue and a profile there: "they are in the game"
+        out.append("NO OUTFITS")
     for o, waiting in (row["packs"].get("intimate_awaiting") or {}).items():
         if waiting:
             out.append(f"APPROVE {o.upper()}")
