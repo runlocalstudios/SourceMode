@@ -890,7 +890,19 @@ PAJAMA_PACK: tuple[dict, ...] = tuple(_pj(p) for p in (
     # casey's kneeling shot grew the photographer's camera and hands at the
     # bottom of the frame: the point-of-view framing invites them
     {**_L["kneeling"], "negative": _L["kneeling"]["negative"] + ", " + _PJ_CAMERA},
-    {**_L["kneeling2"], "negative": _L["kneeling2"]["negative"] + ", " + _PJ_CAMERA},
+    # Jeremy, 2026-11-06: "Larissa's pajama kneeling2 keeps having super fucked
+    # up feet" - hers splayed out beside her thighs, big and near the lens; the
+    # 48 kept elsewhere sit on their heels with the feet small behind the hips.
+    # Say that, drop "barefoot" (it asks for feet), refuse the splay.
+    {**_L["kneeling2"],
+     "stance": _L["kneeling2"]["stance"].replace(
+         "sitting back on her heels",
+         "sitting back on her heels, her knees together, her feet tucked together under her bottom and hidden "
+         "behind her"),
+     "outfit_strip": (", barefoot",),
+     "negative": _L["kneeling2"]["negative"] + ", " + _PJ_CAMERA + ", feet beside her hips, feet beside her "
+                 "thighs, splayed feet, W-sitting, toes in the foreground, deformed feet, extra toes, "
+                 "malformed toes, twisted feet"},
     _L["showfeet"], _L["crawling"],
     {**_L["after"],
      "stance": _L["after"]["stance"].replace(

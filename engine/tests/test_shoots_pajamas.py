@@ -20,7 +20,7 @@ def test_the_pajama_pack_is_a_game_cutout_set_in_one_rolled_colour(tmp_path):
     assert not {"white", "ivory", "champagne", "cream"} & set(S.PAJAMA_COLOURS)
     plan = sh.plan(character="bianca", outfit=first)
     # one sentence for the set; the side and back shots wear it minus the button row
-    assert {s["outfit"] for s in plan if s["tag"] not in ("standingside", "standingback")} == {first}
+    assert {s["outfit"] for s in plan if s["tag"] not in ("standingside", "standingback", "kneeling2")} == {first}
     by_tag = {s["tag"]: s for s in plan}
     assert by_tag["standingback"]["outfit"] == first.replace(S._PJ_BUTTONS, "")
     # Jeremy, 2026-11-06: the side shot is knees-up, so it never says "barefoot"
@@ -70,7 +70,9 @@ def test_the_nine_poses_in_his_order_with_the_pack_negative_under_each():
     for t in ("kneeling", "kneeling2"):
         assert "camera in frame" in by[t]["negative"], t
     for t in ("sitting", "kneeling", "kneeling2", "showfeet", "crawling"):
-        assert by[t]["stance"] == lp[t]["stance"] and by[t]["framing"] == lp[t]["framing"], t
+        assert by[t]["framing"] == lp[t]["framing"], t
+        if t != "kneeling2":    # its feet are tucked away, pajamas only (2026-11-06)
+            assert by[t]["stance"] == lp[t]["stance"], t
     # Jeremy, 2026-11-03: sitting grows buttons on the shorts; the side portrait
     # moves the button row onto the side of the shirt. Pajama copies only.
     assert "buttons on the shorts" in by["sitting"]["negative"]
@@ -85,3 +87,15 @@ def test_the_nine_poses_in_his_order_with_the_pack_negative_under_each():
         # standing front - so no pocket at all, on every pose
         for refuse in ("long pants", "robe", "print", "unbuttoned", "slippers", "chest pocket"):
             assert refuse in p["negative"], (p["tag"], refuse)
+
+
+def test_the_pajama_kneeling2_hides_her_feet_behind_her():
+    # Jeremy, 2026-11-06: "Larissa's pajama kneeling2 keeps having super fucked up feet"
+    by = {s["tag"]: s for s in S.BY_ID["pajamas"].plan(character="bianca", outfit=S.PAJAMAS[0])}
+    k2 = by["kneeling2"]
+    assert "feet tucked together under her bottom" in k2["stance"]
+    assert "barefoot" not in k2["outfit"] and "pajama shorts" in k2["outfit"]
+    assert "splayed feet" in k2["negative"] and "deformed feet" in k2["negative"]
+    # the lingerie copy is untouched
+    lp = {p["tag"]: p for p in S.LINGERIE_PACK}["kneeling2"]
+    assert "feet tucked" not in lp["stance"]
