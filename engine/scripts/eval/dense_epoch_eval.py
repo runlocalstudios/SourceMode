@@ -32,7 +32,7 @@ _FLAGS = {"--scenes", "--epochs", "--tag", "--seed"}
 # Bare flags take no value. They are skipped here for the same reason the valued
 # ones are split out: anything left in argv lands in a positional slot by index.
 _BARE = {"--allow-incomplete-appearance", "--no-description", "--with-description",
-         "--natural-prompt", "--contract-prompt", "--no-lora", "--no-hair"}
+         "--natural-prompt", "--contract-prompt", "--no-lora", "--no-hair", "--man"}
 POS, _FLAGVALS, _BARESEEN = [], {}, set()
 _it = iter(sys.argv)
 for _a in _it:
@@ -169,7 +169,23 @@ elif "--natural-prompt" in _BARESEEN:
 NO_HAIR = "--no-hair" in _BARESEEN
 if NO_HAIR and SCENE_SET == "tiebreaker":
     raise SystemExit("--no-hair is built for the asset set only; the tiebreaker's hair is part of each slot")
-SCENES = tiebreaker_prompts(TRIGGER) if SCENE_SET == "tiebreaker" else asset_prompts(TRIGGER, hair=not NO_HAIR)
+# A MAN. Jeremy, 2026-11-07: his sweep rendered 90 women, because every scene
+# said "a woman" and the gender check below called 0/90 male "clean". --man
+# says so; without it the training captions decide - a set captioned "his"
+# is a man's set - so a man's training run never needs to remember the flag.
+def _captions_say_his() -> bool:
+    import re as _re  # noqa: PLC0415
+    txt = [t.read_text(encoding="utf-8", errors="ignore") for t in (CKPT.parent / "image_src").glob("*.txt")]
+    his = sum(1 for t in txt if _re.search(r"(his|he)", t))
+    her = sum(1 for t in txt if _re.search(r"(her|she)", t))
+    return his > her
+
+
+MAN = "--man" in _BARESEEN or _captions_say_his()
+if MAN and SCENE_SET == "tiebreaker":
+    raise SystemExit("the tiebreaker set is written for a woman; a man's sweep uses --scenes asset")
+SCENES = (tiebreaker_prompts(TRIGGER) if SCENE_SET == "tiebreaker"
+          else asset_prompts(TRIGGER, hair=not NO_HAIR, man=MAN))
 VERBATIM = True
 # --tag renders into its own folder and judge set. Without it a re-run with a
 # changed prompt finds the old scene_NN.png on disk, skips rendering, and judges
@@ -257,7 +273,8 @@ log(f"sweep seed {SEED} (scene i renders on {SEED} + i at every epoch)")
 _pre = appearance_check(CHAR) if WITH_DESCRIPTION else {"ok": True, "warnings": [], "missing": []}
 log("prompt: trigger + scene" + (" + her appearance sentence (--with-description)"
                                  if WITH_DESCRIPTION else ", no description")
-    + (", no hair words (--no-hair)" if NO_HAIR else ""))
+    + (", no hair words (--no-hair)" if NO_HAIR else "")
+    + (", A MAN (his pronouns, men's outfits, no hair)" if MAN else ""))
 for _w in _pre["warnings"]:
     log(f"appearance: WARNING {_w}")
 if not _pre["ok"]:
@@ -330,7 +347,10 @@ for ep in GRID:
             log(f"  {arm} scene{i:02d}: ERROR {ex}")
     sub = [r for r in rows if r["arm"] == arm]
     male = sum(1 for r in sub if r.get("sex") == "M")
-    log(f"{arm} (epoch {ep + OFFSET}): n={len(sub)}" + (f"   MALE {male}/{len(sub)} <-- prompt needs a gender anchor" if male else "   all female"))
+    wrong = (len(sub) - male) if MAN else male    # faces of the other sex, or none at all
+    log(f"{arm} (epoch {ep + OFFSET}): n={len(sub)}" + (
+        f"   {'NOT MALE' if MAN else 'MALE'} {wrong}/{len(sub)} <-- prompt needs a gender anchor"
+        if wrong else ("   all male" if MAN else "   all female")))
 
 (OUT / "scores.json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
 items = [{"id": f"{r['arm']}__{r['scene']:02d}", "path": Path(r["file"]),
@@ -356,7 +376,7 @@ if True:
     make_set(Path("outputs/judge"), SET_ID,
              f"{CHAR.title()} - Qwen LoRA epoch eval, epochs {GRID[0]}-{GRID[-1]} ({N_SCENES} scenes"
              + (", tiebreaker set" if SCENE_SET == "tiebreaker" else "") + ")", items,
-             question="Is this her? K = yes, X = no.",
+             question=("Is this him? K = yes, X = no." if MAN else "Is this her? K = yes, X = no."),
              reference=REF_PATH, seed=61, priority=1,
              meta={"character": CHAR, "dataset": _DATASET, "output_name": SUB,
                    "renders_dir": OUT, "epochs": ran_eps, "scenes": N_SCENES,
@@ -365,5 +385,7 @@ if True:
                    "no_description": not WITH_DESCRIPTION, "no_hair": NO_HAIR})
     log(f"judge set dense_{SUB}: {len(items)} images")
 male_total = sum(1 for r in rows if r.get("sex") == "M")
-log(f"gender check: {male_total}/{len(rows)} male" + ("  <-- INVESTIGATE" if male_total else "  (clean)"))
+wrong_total = (len(rows) - male_total) if MAN else male_total
+log(f"gender check: {male_total}/{len(rows)} male, a {'man' if MAN else 'woman'}'s sweep"
+    + ("  <-- INVESTIGATE" if wrong_total else "  (clean)"))
 log("COARSEDONE")

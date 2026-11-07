@@ -225,3 +225,17 @@ def test_the_sweep_renders_trigger_and_scene_only_unless_asked_for_her_sentence(
     assert '"no_description": not WITH_DESCRIPTION' in src
     from sourcemode.gpu.preflight import _positional
     assert _positional(["python", "x.py", "a", "--with-description", "b"]) == ["python", "x.py", "a", "b"]
+
+
+def test_a_mans_sweep_never_says_woman_she_her_or_dress():
+    """Jeremy, 2026-11-07: his own sweep rendered 90 women - every scene said
+    "a woman" and the gender check called 0/90 male "clean"."""
+    from asset_scenes import LOOKS, asset_prompts
+
+    got = asset_prompts("jeremy", man=True)
+    assert len(got) == len(LOOKS)
+    for p in got:
+        assert "a man" in p and " he looks" in p
+        assert not re.search(r"\b(woman|she|her|dress|hair|ponytail|bun|flirty)\b", p), p
+    src = EVAL.read_text(encoding="utf-8")
+    assert "_captions_say_his()" in src and "Is this him?" in src

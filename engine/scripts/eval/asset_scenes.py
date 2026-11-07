@@ -87,7 +87,27 @@ def sweep_prompt(trigger: str, look: dict, character: str | None = None, *, hair
             f"{look['doing']} wearing {look['outfit']}")
 
 
-def asset_prompts(trigger: str, *, hair: bool = True) -> list[str]:
+# A MAN'S SWEEP. Jeremy, 2026-11-07, after his own 90-image sweep came back as
+# 90 women: every look above says "a woman", "she", "her" and three put her in
+# a dress. The same ten places, turns and expressions, in his pronouns, with a
+# man's outfit for each kind, the flirty smile made a plain one, and no hair -
+# his captions never name his hair or beard, so the trigger carries them.
+MAN_OUTFIT = {"a dress": "a dark suit", "a cocktail dress": "a dark jacket over an open-collar shirt"}
+MAN_FACE = {"gives a soft flirty smile": "smiles with his mouth closed"}
+
+
+def man_prompt(trigger: str, look: dict) -> str:
+    face = MAN_FACE.get(look["face"], look["face"]).replace("her mouth", "his mouth")
+    body = BODY[look["turn"]].replace("her body", "his body")
+    doing = look["doing"].replace("her ", "his ")
+    return (f"{trigger}, portrait picture of a man {NATURAL_FRAMING}, {body}, "
+            f"he looks directly at the camera and {face}, "
+            f"{doing} wearing {MAN_OUTFIT.get(look['outfit'], look['outfit'])}")
+
+
+def asset_prompts(trigger: str, *, hair: bool = True, man: bool = False) -> list[str]:
+    if man:
+        return [man_prompt(trigger, l) for l in LOOKS]
     return [sweep_prompt(trigger, l, hair=hair) for l in LOOKS]
 
 
