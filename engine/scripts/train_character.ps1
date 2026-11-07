@@ -37,7 +37,10 @@ param(
   [string]$Trigger = "",
   # The sweep says nothing about her hair (dense_epoch_eval.py --no-hair), so it
   # shows what the LoRA draws by default. Jeremy, 2026-11-07, sylvie and nat.
-  [switch]$NoHair
+  [switch]$NoHair,
+  # A fixed sweep seed, so a second sweep of other epochs (another checkpoint
+  # folder) renders on the same noise and the two compare. 0 = a fresh draw.
+  [int]$EvalSeed = 0
 )
 if (-not $Trigger) { $Trigger = $Char }
 if (-not $OutName) { $OutName = $Ds }
@@ -182,6 +185,7 @@ if (Test-Path "$DsDir\$LoraSub\$($OutName).safetensors") {
     if ($EvalOffset) { $evArgs += @("$EvalOffset") }   # argv[9] = epoch offset
     if ($EvalScenes) { $evArgs += @("--scenes", $EvalScenes) }
     if ($NoHair) { $evArgs += @("--no-hair") }
+    if ($EvalSeed) { $evArgs += @("--seed", "$EvalSeed") }
   }
   $ev = Start-Process -FilePath $PY -NoNewWindow -Wait -PassThru -ArgumentList $evArgs `
     -RedirectStandardOutput "$L\eval_$($OutName).stdout.log" -RedirectStandardError "$L\eval_$($OutName).stderr.log"
