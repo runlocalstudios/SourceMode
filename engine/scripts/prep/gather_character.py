@@ -84,6 +84,12 @@ def sources() -> list[tuple[Path, str]]:
     if "--src" in sys.argv:
         for p in sorted(Path(sys.argv[sys.argv.index("--src") + 1]).glob("*")):
             take(p, "curated")
+        # --refs: the curated folder plus the reference photos (jeremy,
+        # 2026-11-06: "the photos ... under CNC info/Jeremy. Plus the reference photos")
+        if "--refs" in sys.argv:
+            for p in sorted(REFS.glob(f"{CHAR}_*")):
+                if p.stem.split("_")[0].lower() == CHAR:
+                    take(p, "references")
         return out
     # --no-base: Jeremy, 2026-09-30 (Sienna) - only the references and the Lora-Gen
     # outputs are candidates; the hand-collected base folder is left out entirely.
