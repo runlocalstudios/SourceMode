@@ -34,7 +34,10 @@ param(
   # appearance record and a no-LoRA arm. -Char is then the library folder name.
   [switch]$Object,
   # The caption trigger when it is not -Char (torsotoy for the torso set).
-  [string]$Trigger = ""
+  [string]$Trigger = "",
+  # The sweep says nothing about her hair (dense_epoch_eval.py --no-hair), so it
+  # shows what the LoRA draws by default. Jeremy, 2026-11-07, sylvie and nat.
+  [switch]$NoHair
 )
 if (-not $Trigger) { $Trigger = $Char }
 if (-not $OutName) { $OutName = $Ds }
@@ -178,6 +181,7 @@ if (Test-Path "$DsDir\$LoraSub\$($OutName).safetensors") {
   } else {
     if ($EvalOffset) { $evArgs += @("$EvalOffset") }   # argv[9] = epoch offset
     if ($EvalScenes) { $evArgs += @("--scenes", $EvalScenes) }
+    if ($NoHair) { $evArgs += @("--no-hair") }
   }
   $ev = Start-Process -FilePath $PY -NoNewWindow -Wait -PassThru -ArgumentList $evArgs `
     -RedirectStandardOutput "$L\eval_$($OutName).stdout.log" -RedirectStandardError "$L\eval_$($OutName).stderr.log"

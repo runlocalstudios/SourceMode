@@ -32,7 +32,7 @@ _FLAGS = {"--scenes", "--epochs", "--tag", "--seed"}
 # Bare flags take no value. They are skipped here for the same reason the valued
 # ones are split out: anything left in argv lands in a positional slot by index.
 _BARE = {"--allow-incomplete-appearance", "--no-description", "--with-description",
-         "--natural-prompt", "--contract-prompt", "--no-lora"}
+         "--natural-prompt", "--contract-prompt", "--no-lora", "--no-hair"}
 POS, _FLAGVALS, _BARESEEN = [], {}, set()
 _it = iter(sys.argv)
 for _a in _it:
@@ -164,7 +164,12 @@ if "--contract-prompt" in _BARESEEN:
     _render.PROMPT_STYLE = "contract"
 elif "--natural-prompt" in _BARESEEN:
     _render.PROMPT_STYLE = "natural"
-SCENES = tiebreaker_prompts(TRIGGER) if SCENE_SET == "tiebreaker" else asset_prompts(TRIGGER)
+# --no-hair: no hair words in any scene, so the sweep shows the hair the LoRA
+# draws by itself (Jeremy, 2026-11-07, sylvie's bob and nat's shoulder length)
+NO_HAIR = "--no-hair" in _BARESEEN
+if NO_HAIR and SCENE_SET == "tiebreaker":
+    raise SystemExit("--no-hair is built for the asset set only; the tiebreaker's hair is part of each slot")
+SCENES = tiebreaker_prompts(TRIGGER) if SCENE_SET == "tiebreaker" else asset_prompts(TRIGGER, hair=not NO_HAIR)
 VERBATIM = True
 # --tag renders into its own folder and judge set. Without it a re-run with a
 # changed prompt finds the old scene_NN.png on disk, skips rendering, and judges
@@ -251,7 +256,8 @@ log(f"sweep seed {SEED} (scene i renders on {SEED} + i at every epoch)")
 # only read when --with-description asks for it; her negative still applies.
 _pre = appearance_check(CHAR) if WITH_DESCRIPTION else {"ok": True, "warnings": [], "missing": []}
 log("prompt: trigger + scene" + (" + her appearance sentence (--with-description)"
-                                 if WITH_DESCRIPTION else ", no description"))
+                                 if WITH_DESCRIPTION else ", no description")
+    + (", no hair words (--no-hair)" if NO_HAIR else ""))
 for _w in _pre["warnings"]:
     log(f"appearance: WARNING {_w}")
 if not _pre["ok"]:
@@ -356,7 +362,7 @@ if True:
                    "renders_dir": OUT, "epochs": ran_eps, "scenes": N_SCENES,
                    "tag": _FLAGVALS.get("--tag") or "", "scene_set": SCENE_SET, "seed": SEED,
                    "offset": OFFSET,
-                   "no_description": not WITH_DESCRIPTION})
+                   "no_description": not WITH_DESCRIPTION, "no_hair": NO_HAIR})
     log(f"judge set dense_{SUB}: {len(items)} images")
 male_total = sum(1 for r in rows if r.get("sex") == "M")
 log(f"gender check: {male_total}/{len(rows)} male" + ("  <-- INVESTIGATE" if male_total else "  (clean)"))

@@ -55,6 +55,25 @@ def test_the_sweep_prompt_is_his_trimmed_sentence():
             assert not re.search(rf"\b{word}\b", p, re.I), f"{word!r} is back in a sweep prompt: {p}"
 
 
+def test_a_no_hair_sweep_says_nothing_about_her_hair():
+    """Jeremy, 2026-11-07: sylvie's bob came out in ponytails and buns because the
+    looks asked for them - leave hair out so the sweep shows the LoRA's default."""
+    import sourcemode.assets.render as R
+    from asset_scenes import asset_prompts
+
+    real = R.appearance_clause
+    R.appearance_clause = lambda character, **_: "a woman"
+    try:
+        bare, full = asset_prompts("lena", hair=False), asset_prompts("lena")
+    finally:
+        R.appearance_clause = real
+    for p in bare:
+        assert not re.search(r"\b(hair|ponytail|bun)\b", p), p
+    assert bare[0] == full[0].replace("her hair worn loose, ", "")
+    assert "--no-hair" in EVAL.read_text(encoding="utf-8")
+    assert "--no-hair" in (ENGINE_ROOT / "scripts" / "train_character.ps1").read_text(encoding="utf-8")
+
+
 def test_the_eval_keeps_no_second_description_of_a_character():
     src = EVAL.read_text(encoding="utf-8")
     body = "\n".join(l for l in src.splitlines() if not l.lstrip().startswith("#"))
