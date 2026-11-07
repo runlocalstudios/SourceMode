@@ -37,7 +37,11 @@ param(
   [string]$Ds = "",
   # Jeremy's hand-curated folder: the gather takes it and nothing else, and the
   # wait for a Lora-Gen run is skipped because the set is already final.
-  [string]$Src = ""
+  # Several folders are separated by | (fiona, 2026-11-07).
+  [string]$Src = "",
+  # with -Src: plus her reference photos, plus her loose lora-gen-80 shots
+  [switch]$Refs,
+  [switch]$Loragen
 )
 $ErrorActionPreference = "Continue"
 # Repo paths, never a session scratchpad. $SP used to be one Claude session's
@@ -174,7 +178,9 @@ if ($LoragenOnly) { $gatherArgs += "--loragen-only" }
 if ($Force) { $gatherArgs += "--force" }
 # Start-Process joins -ArgumentList with bare spaces, so a path with a space
 # must carry its own quotes.
-if ($Src) { $gatherArgs += @("--src", "`"$Src`"") }
+if ($Src) { foreach ($s in $Src.Split("|")) { $gatherArgs += @("--src", "`"$s`"") } }
+if ($Src -and $Refs) { $gatherArgs += "--refs" }
+if ($Src -and $Loragen) { $gatherArgs += "--loragen" }
 $gatherArgs += $DsArgs
 Must "$Char gather" $gatherArgs "gather_$Char"
 Verify gather
