@@ -100,12 +100,12 @@ def start_prompt(template: dict, character: str, partner: str | None = None,
     from .assets.wardrobe import short_hair  # noqa: PLC0415
 
     s = template["start"]
-    who = appearance_clause(character) or "a woman"
+    who = appearance_clause(character) or "a girl"
     hair = short_hair(character, s.get("hair", "her hair worn loose"), 1)
     parts = [trigger or character, who, s["composition"], f"{hair}, wearing {s['outfit']}"]
     if int(template.get("cast", 1)) > 1:
         other = appearance_clause(partner) if partner else ""
-        parts.append(s["partner"].format(partner=other or "another young woman"))
+        parts.append(s["partner"].format(partner=other or "another girl"))
     parts.append(s["setting"])
     return ", ".join(p.strip().rstrip(",") for p in parts if p) + \
         ". Photorealistic, natural skin texture, sharp focus."

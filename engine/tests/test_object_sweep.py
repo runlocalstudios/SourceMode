@@ -19,7 +19,7 @@ def test_object_prompts_lead_with_the_trigger_and_turn_every_tone():
     for tone in ("light-toned", "tan", "dark brown"):
         assert tone in joined, tone
     # half alone, half with a woman: a weak scene reads as that, not a weak epoch
-    assert sum("woman" in p for p in ps) == 5
+    assert sum("girl" in p for p in ps) == 5
     assert "{t}" not in joined
 
 

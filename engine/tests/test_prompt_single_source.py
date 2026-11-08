@@ -220,7 +220,8 @@ def test_the_sweep_renders_trigger_and_scene_only_unless_asked_for_her_sentence(
     too, or it would eat the positional after it."""
     src = EVAL.read_text(encoding="utf-8")
     assert re.search(r'WITH_DESCRIPTION = "--with-description" in _BARESEEN\s*\n'
-                     r'if not WITH_DESCRIPTION:\s*\n.*\n\s*_render\.appearance_clause = lambda character, \*\*_: "a woman"',
+                     r'if not WITH_DESCRIPTION:\s*\n(?:.*\n){1,3}\s*_render\.appearance_clause = '
+                     r'lambda character, \*\*_: girl\("a woman", age_of\(character\)\)',
                      src)
     assert '"no_description": not WITH_DESCRIPTION' in src
     from sourcemode.gpu.preflight import _positional
@@ -259,3 +260,35 @@ def test_a_mans_set_is_read_from_his_captions(tmp_path):
         (woman / f"src_{i}.txt").write_text(w, encoding="utf-8")
     assert captions_say_his(man) is True
     assert captions_say_his(woman) is False
+
+
+def test_a_mans_tiebreaker_is_his_twenty_slots():
+    """Jeremy, 2026-11-08: "run tiebreaker on Jeremy epochs 23 and 24"."""
+    from asset_scenes import TIEBREAKER, tiebreaker_prompts
+
+    got = tiebreaker_prompts("jeremy", man=True)
+    assert len(got) == len(TIEBREAKER) == len(set(got)) == 20
+    for p in got:
+        assert p.startswith("jeremy, portrait picture of a man") and " he looks" in p
+        assert not re.search(r"\b(woman|girl|she|her|dress|skirt|blouse|hair|ponytail)\b", p), p
+    assert "tiebreaker_prompts(TRIGGER, man=MAN)" in EVAL.read_text(encoding="utf-8")
+
+
+def test_woman_is_girl_unless_she_is_over_30():
+    """Jeremy, 2026-11-08: "Woman makes the photos look old." Never "young girl"."""
+    from sourcemode.assets.appearance import girl
+
+    assert girl("a young woman with a slim figure", 18) == "a girl with a slim figure"
+    assert girl("A woman and two women", 25) == "A girl and two girls"
+    assert girl("a young woman with red hair", None) == "a girl with red hair"
+    assert girl("a woman with red hair", 31) == "a woman with red hair"
+    assert girl("a woman with red hair", 30) == "a girl with red hair"
+
+
+def test_the_sweep_anchor_and_her_clause_say_girl(records):
+    """The records keep his words (and his confirmation); the prompt says girl."""
+    import sourcemode.assets.appearance as A
+
+    A.reload()
+    assert clause("zara") == "a girl with long dark hair"
+    assert "woman" not in clause("raven")

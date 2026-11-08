@@ -153,7 +153,9 @@ from asset_scenes import asset_prompts, captions_say_his, sweep_seed, tiebreaker
 WITH_DESCRIPTION = "--with-description" in _BARESEEN
 if not WITH_DESCRIPTION:
     import sourcemode.assets.render as _render  # noqa: E402
-    _render.appearance_clause = lambda character, **_: "a woman"
+    from sourcemode.assets.appearance import age_of, girl  # noqa: E402
+    # "a girl" unless she is over 30 - "woman" ages the photos (Jeremy, 2026-11-08)
+    _render.appearance_clause = lambda character, **_: girl("a woman", age_of(character))
 # --natural-prompt / --contract-prompt: Jeremy, 2026-10-09 - is the 1,900-character
 # contract prompt itself the problem? Same facts in the training caption's register,
 # ~70 words. Natural won (cassie ep18 12/20 vs 5/10) and is now render's default, so
@@ -174,9 +176,7 @@ if NO_HAIR and SCENE_SET == "tiebreaker":
 # says so; without it the training captions decide - a set captioned "his"
 # is a man's set - so a man's training run never needs to remember the flag.
 MAN = "--man" in _BARESEEN or captions_say_his(CKPT.parent / "image_src")
-if MAN and SCENE_SET == "tiebreaker":
-    raise SystemExit("the tiebreaker set is written for a woman; a man's sweep uses --scenes asset")
-SCENES = (tiebreaker_prompts(TRIGGER) if SCENE_SET == "tiebreaker"
+SCENES = (tiebreaker_prompts(TRIGGER, man=MAN) if SCENE_SET == "tiebreaker"
           else asset_prompts(TRIGGER, hair=not NO_HAIR, man=MAN))
 VERBATIM = True
 # --tag renders into its own folder and judge set. Without it a re-run with a

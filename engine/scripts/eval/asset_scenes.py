@@ -79,7 +79,7 @@ def sweep_prompt(trigger: str, look: dict, character: str | None = None, *, hair
 
     character = character or trigger
     hair = short_hair(character, look["hair"], look.get("look", 1)) if hair else ""
-    subject = _render.appearance_clause(character) or "a woman"
+    subject = _render.appearance_clause(character) or "a girl"
     if hair and _render.is_up_style(hair):
         subject = _render.drop_length(subject)
     return (f"{trigger}, portrait picture of {subject} {NATURAL_FRAMING}, {BODY[look['turn']]}, "
@@ -219,8 +219,36 @@ def tiebreaker_slot(s: dict) -> dict:
     return dict(s, pose="standing", framing_natural=TIEBREAKER_FRAMING)
 
 
-def tiebreaker_prompts(trigger: str) -> list[str]:
+def tiebreaker_prompts(trigger: str, *, man: bool = False) -> list[str]:
+    if man:
+        return [man_tiebreaker_prompt(trigger, s) for s in TIEBREAKER]
     return [shot_prompt(trigger, tiebreaker_slot(s), backdrop=s["setting"]) for s in TIEBREAKER]
+
+
+# A MAN'S TIEBREAKER. Jeremy, 2026-11-08: "run tiebreaker on Jeremy epochs 23
+# and 24". The same twenty slots - turn, expression, light and setting - in his
+# pronouns, a man's outfit in each slot's register, and no hair, as his sweep.
+MAN_TB_OUTFIT = {
+    "tb_01": "a cream knit sweater and dark jeans", "tb_02": "a white button-down shirt and black trousers",
+    "tb_03": "a fitted black turtleneck and camel chinos", "tb_04": "a navy polo shirt and grey trousers",
+    "tb_05": "a soft grey hoodie and black joggers", "tb_06": "a fitted black athletic t-shirt and shorts",
+    "tb_07": "a burgundy shirt under a dark blazer", "tb_08": "a light blue denim jacket over a white tee",
+    "tb_09": "a sage green linen shirt and beige trousers", "tb_10": "an emerald green shirt and black trousers",
+    "tb_11": "a dark suit with an open-collar shirt", "tb_12": "a white cotton shirt and navy chinos",
+    "tb_13": "an oatmeal cardigan over a white t-shirt", "tb_14": "a charcoal blazer over a white shirt",
+    "tb_15": "a red zip-up track jacket and black joggers", "tb_16": "a dusty blue knit sweater and jeans",
+    "tb_17": "a black leather jacket over a grey tee", "tb_18": "a lilac-grey linen shirt and dark trousers",
+    "tb_19": "a navy-and-white striped long-sleeve top and dark jeans", "tb_20": "a cream shirt and navy trousers",
+}
+MAN_TB_FACE = {"neutral": "makes a neutral expression", "closed-lip": "smiles with his mouth closed",
+               "teeth": "gives a broad smile showing his teeth"}
+
+
+def man_tiebreaker_prompt(trigger: str, s: dict) -> str:
+    body = BODY[s["turn"]].replace("her body", "his body")
+    return (f"{trigger}, portrait picture of a man {TIEBREAKER_FRAMING}, {body}, "
+            f"he looks directly at the camera and {MAN_TB_FACE[s['expression']]}, "
+            f"wearing {MAN_TB_OUTFIT[s['id']]}, {s['setting'].replace('behind her', 'behind him')}")
 
 
 # THE SWEEP SEED. Until 2026-10-11 every sweep used SEED = 8800 + scene, for every

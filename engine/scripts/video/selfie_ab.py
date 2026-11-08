@@ -49,10 +49,10 @@ SCENE = ("wearing a cream ribbed tank top, in her bedroom with a made bed and a 
          "window behind her, soft afternoon daylight, a faint closed-mouth smile")
 
 ARMS = {
-    "A_bare": f"{TRIGGER}, a woman, taking a selfie, {SCENE}",
-    "B_arm": (f"{TRIGGER}, a woman, taking a selfie photo, her arm outstretched and "
+    "A_bare": f"{TRIGGER}, a girl, taking a selfie, {SCENE}",
+    "B_arm": (f"{TRIGGER}, a girl, taking a selfie photo, her arm outstretched and "
               f"visible in the frame, {SCENE}"),
-    "C_framed": (f"{TRIGGER}, a woman, her bare arm reaching out of the bottom-left "
+    "C_framed": (f"{TRIGGER}, a girl, her bare arm reaching out of the bottom-left "
                  f"corner of the frame toward the viewer, her head and shoulders "
                  f"filling the upper half of the picture, her chin slightly lifted, "
                  f"{SCENE}"),

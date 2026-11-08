@@ -452,11 +452,27 @@ def drop_length(text: str) -> str:
     return out.strip(" ,")
 
 
+def girl(text: str, age: int | None = None) -> str:
+    """"woman" -> "girl" in a prompt unless she is over 30. Jeremy, 2026-11-08:
+    "Don't use the word woman in descriptions always use girl unless over 30
+    years old. Woman makes the photos look old." "young woman" becomes plain
+    "girl", never "young girl"."""
+    if age is not None and age > 30:
+        return text
+
+    def sub(m: re.Match) -> str:
+        word = "girls" if m.group(2).lower() == "e" else "girl"
+        return word.capitalize() if m.group(0)[0].isupper() else word
+
+    return re.sub(r"\b(young )?wom([ae])n\b", sub, text, flags=re.I)
+
+
 def clause(character: str) -> str:
-    """Her appearance text exactly as written - no age added, "" if she has none.
+    """Her appearance text as written - no age added, "" if she has none - with
+    "woman" read as "girl" unless she is over 30 (`girl`).
 
     Jeremy, 2026-10-10: an age goes in the description itself, and only when it
     is absolutely necessary.
     """
     rec = _load()["look"].get(character.lower()) or {}
-    return rec.get("prompt", "") or ""
+    return girl(rec.get("prompt", "") or "", age_of(character))
