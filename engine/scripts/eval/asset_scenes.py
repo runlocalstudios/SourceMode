@@ -105,6 +105,19 @@ def man_prompt(trigger: str, look: dict) -> str:
             f"{doing} wearing {MAN_OUTFIT.get(look['outfit'], look['outfit'])}")
 
 
+def captions_say_his(image_src) -> bool:
+    """A man's set: more of its captions say his/he than her/she, as whole
+    words - "he" is inside "the", which is how this first read every set as
+    tied and swept jeremy as a woman a second time (2026-11-07)."""
+    import re  # noqa: PLC0415
+    from pathlib import Path  # noqa: PLC0415
+
+    txt = [t.read_text(encoding="utf-8", errors="ignore") for t in Path(image_src).glob("*.txt")]
+    his = sum(1 for t in txt if re.search(r"\b(?:his|he|him)\b", t))
+    her = sum(1 for t in txt if re.search(r"\b(?:her|she)\b", t))
+    return his > her
+
+
 def asset_prompts(trigger: str, *, hair: bool = True, man: bool = False) -> list[str]:
     if man:
         return [man_prompt(trigger, l) for l in LOOKS]

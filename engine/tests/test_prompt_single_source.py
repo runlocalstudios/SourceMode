@@ -238,4 +238,24 @@ def test_a_mans_sweep_never_says_woman_she_her_or_dress():
         assert "a man" in p and " he looks" in p
         assert not re.search(r"\b(woman|she|her|dress|hair|ponytail|bun|flirty)\b", p), p
     src = EVAL.read_text(encoding="utf-8")
-    assert "_captions_say_his()" in src and "Is this him?" in src
+    assert 'captions_say_his(CKPT.parent / "image_src")' in src and "Is this him?" in src
+
+
+def test_a_mans_set_is_read_from_his_captions(tmp_path):
+    """The first cut matched "he" inside "the" and read every set as tied, so
+    jeremy's second sweep was women again (2026-11-07). Behaviour, not presence."""
+    from asset_scenes import captions_say_his
+
+    man, woman = tmp_path / "m", tmp_path / "w"
+    man.mkdir(); woman.mkdir()
+    for i, (m, w) in enumerate([
+        ("jeremy, the kitchen, turned toward his left, wearing the grey shirt",
+         "nat, the kitchen, turned toward her left, wearing the grey shirt"),
+        ("jeremy, facing the camera, wearing a suit, in the office",
+         "nat, facing the camera, wearing a dress, in the office, there"),
+        ("jeremy, his hands in his pockets, at the beach",
+         "nat, her hair worn loose, at the beach, other weather")]):
+        (man / f"src_{i}.txt").write_text(m, encoding="utf-8")
+        (woman / f"src_{i}.txt").write_text(w, encoding="utf-8")
+    assert captions_say_his(man) is True
+    assert captions_say_his(woman) is False

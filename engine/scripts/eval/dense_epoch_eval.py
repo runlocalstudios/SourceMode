@@ -138,7 +138,7 @@ if SCENE_SET not in ("asset", "tiebreaker"):
         f"age and no appearance. Use --scenes asset, which renders the asset generator's "
         f"own prompts verbatim, or --scenes tiebreaker.")
 sys.path.insert(0, str(Path("scripts/eval").resolve()))
-from asset_scenes import asset_prompts, sweep_seed, tiebreaker_prompts  # noqa: E402
+from asset_scenes import asset_prompts, captions_say_his, sweep_seed, tiebreaker_prompts  # noqa: E402
 # NO DESCRIPTION is the default. Jeremy, 2026-10-17: "when you run an epoch
 # sweep after doing LoRA training, I only want you to use the prompt and the
 # trigger word. I don't want you to incorporate the description of the
@@ -173,15 +173,7 @@ if NO_HAIR and SCENE_SET == "tiebreaker":
 # said "a woman" and the gender check below called 0/90 male "clean". --man
 # says so; without it the training captions decide - a set captioned "his"
 # is a man's set - so a man's training run never needs to remember the flag.
-def _captions_say_his() -> bool:
-    import re as _re  # noqa: PLC0415
-    txt = [t.read_text(encoding="utf-8", errors="ignore") for t in (CKPT.parent / "image_src").glob("*.txt")]
-    his = sum(1 for t in txt if _re.search(r"(his|he)", t))
-    her = sum(1 for t in txt if _re.search(r"(her|she)", t))
-    return his > her
-
-
-MAN = "--man" in _BARESEEN or _captions_say_his()
+MAN = "--man" in _BARESEEN or captions_say_his(CKPT.parent / "image_src")
 if MAN and SCENE_SET == "tiebreaker":
     raise SystemExit("the tiebreaker set is written for a woman; a man's sweep uses --scenes asset")
 SCENES = (tiebreaker_prompts(TRIGGER) if SCENE_SET == "tiebreaker"
@@ -351,6 +343,11 @@ for ep in GRID:
     log(f"{arm} (epoch {ep + OFFSET}): n={len(sub)}" + (
         f"   {'NOT MALE' if MAN else 'MALE'} {wrong}/{len(sub)} <-- prompt needs a gender anchor"
         if wrong else ("   all male" if MAN else "   all female")))
+    # a man's sweep that draws women stops at the first epoch, not nine epochs
+    # later - jeremy's ran twice to the end as women (2026-11-07)
+    if MAN and sub and wrong * 2 > len(sub):
+        log(f"STOPPED: {wrong}/{len(sub)} not male at epoch {ep + OFFSET} on a man's sweep")
+        raise SystemExit(1)
 
 (OUT / "scores.json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
 items = [{"id": f"{r['arm']}__{r['scene']:02d}", "path": Path(r["file"]),
