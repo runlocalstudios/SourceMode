@@ -263,6 +263,16 @@ def expressions(character: str) -> dict:
     return {k: v for k, v in (rec.get("expressions") or {}).items() if not k.startswith("_")}
 
 
+def subject(character: str) -> str:
+    """Who the trigger-only sweep says she is: her "subject" if the record has
+    one, else "a woman" read through `girl`. Fiona, 2026-11-08: swept as "a
+    girl" she came back as children at every epoch; Jeremy: "I'll only make
+    that fix for Fiona" - so it is her field, not a rule for everyone. Kept
+    out of CONFIRM_FIELDS: it is about the sweep, not her description."""
+    rec = _load()["look"].get((character or "").lower()) or {}
+    return rec.get("subject") or girl("a woman", age_of(character))
+
+
 def hair_unsaid(character: str) -> set[str]:
     """Hair clauses her prompt leaves out entirely, lower-cased. Jeremy,
     2026-10-22, on cassie's selfies: every "her hair worn loose" came back flat

@@ -221,7 +221,7 @@ def test_the_sweep_renders_trigger_and_scene_only_unless_asked_for_her_sentence(
     src = EVAL.read_text(encoding="utf-8")
     assert re.search(r'WITH_DESCRIPTION = "--with-description" in _BARESEEN\s*\n'
                      r'if not WITH_DESCRIPTION:\s*\n(?:.*\n){1,3}\s*_render\.appearance_clause = '
-                     r'lambda character, \*\*_: girl\("a woman", age_of\(character\)\)',
+                     r'lambda character, \*\*_: subject\(character\)',
                      src)
     assert '"no_description": not WITH_DESCRIPTION' in src
     from sourcemode.gpu.preflight import _positional
@@ -292,3 +292,13 @@ def test_the_sweep_anchor_and_her_clause_say_girl(records):
     A.reload()
     assert clause("zara") == "a girl with long dark hair"
     assert "woman" not in clause("raven")
+
+
+def test_only_a_record_with_a_subject_says_her_age_in_the_sweep(records, monkeypatch):
+    """fiona swept as "a girl" came back as children; Jeremy: fix it for her only."""
+    import sourcemode.assets.appearance as A
+
+    look = {"fiona": {"age": 18, "subject": "an 18-year-old girl"}, "nat": {"age": 22}}
+    monkeypatch.setattr(A, "_load", lambda: {"look": look, "ages": {}})
+    assert A.subject("fiona") == "an 18-year-old girl"
+    assert A.subject("nat") == "a girl"
