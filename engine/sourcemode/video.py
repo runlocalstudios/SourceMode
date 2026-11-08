@@ -149,6 +149,23 @@ def leg_cap_seconds(cfg: dict) -> float:
     return (int(v.get("max_frames", 81)) - 1) / int(v["fps"])
 
 
+def story_cfg(cfg: dict, story: dict) -> dict:
+    """The [video] a story renders with: its own fps, and its own generic Wan
+    LoRA pair ("video_loras": {"high", "low", "strength"}) in the slot a
+    character without a Wan identity LoRA leaves free - fiona_tryon_change's
+    nude legs, which base Wan 2.2 draws smoothed over. Strength stays under the
+    composition cap; the builder enforces it."""
+    video = dict(cfg["video"])
+    if story.get("fps"):
+        video["fps"] = int(story["fps"])
+    pair = story.get("video_loras") or {}
+    if pair:
+        video.update(lora_high=pair.get("high", ""), lora_low=pair.get("low", ""))
+        if "strength" in pair:
+            video["lora_strength"] = float(pair["strength"])
+    return {**cfg, "video": video}
+
+
 def estimate_seconds(spec: VideoSpec) -> float:
     rate = QUALITIES[spec.quality][1]
     still = STILL_SECONDS if (spec.source or {}).get("kind") == "still" else 0.0

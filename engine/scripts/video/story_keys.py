@@ -62,7 +62,7 @@ from sourcemode.render.client import ComfyUIClient
 from sourcemode.render.passes import build_edit_workflow, build_video_workflow
 from sourcemode.render.workflow import load_template, prune_placeholder_loras, substitute
 from sourcemode.video import NEGATIVE as VIDEO_NEGATIVE
-from sourcemode.video import ffmpeg_exe, sharpest_tail_frame, video_output
+from sourcemode.video import ffmpeg_exe, sharpest_tail_frame, story_cfg, video_output
 
 ALL_ARMS = ("text", "ref", "room", "room_empty", "text_lora", "face3", "video")
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
@@ -77,7 +77,7 @@ ARMS = tuple(next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswi
 if not ARGS or any(a not in ALL_ARMS for a in ARMS):
     raise SystemExit(__doc__)
 story = json.loads(Path(ARGS[0]).read_text(encoding="utf-8"))
-cfg = load_config()
+cfg = story_cfg(load_config(), story)   # its fps and its own Wan LoRA pair
 CHAR = story["character"].lower()
 LOG = outputs_dir(cfg) / "logs" / f"video_{CHAR}.log"
 NEGATIVE = ("different room, different furniture, different camera angle, different lighting, "
@@ -123,6 +123,15 @@ def instruction(arm: str, pose: str) -> str:
     return f"{pose}. steady camera, continuous shot, she moves slowly and gently"   # video
 
 
+# a key with no photo of his (fiona_tryon_change, 2026-11-08: nothing in the
+# shoot shows her undressed) is made only by the video arm. With "key_chain"
+# each such key's clip starts on the key before it - straps down, then topless,
+# then nude - so no 5 s clip has to undress her from the plate in one go, and
+# "key_motion" {key: motion} is what she does on the way to it.
+KEY_CHAIN = bool(story.get("key_chain"))
+MOTIONS = story.get("key_motion") or {}
+
+
 def edit3_workflow(instr: str, seed: int, image1: str, image2: str, image3: str) -> dict:
     """The two-image template with a third LoadImage wired to image3 of both
     text encoders (TextEncodeQwenImageEditPlus takes image1/2/3, verified
@@ -157,6 +166,9 @@ problems = [f"photo {k} is not on disk: {p}" for k, p in photos.items() if not p
 if plate_key not in photos:
     problems.append(f"plate {plate_key!r} is not in photos")
 problems += [f"key {k} has no key_poses line" for k in photos if k != plate_key and k not in poses]
+made = [k for k in poses if k not in photos]          # keys with no photo of his
+if made and any(a != "video" for a in ARMS):
+    problems.append(f"keys {made} have no photo, so only --arms=video can make them")
 lora = resolve_lora(cfg, CHAR)
 if "text_lora" in ARMS and not lora:
     problems.append(f"{CHAR} has no locked LoRA for the text_lora arm")
@@ -172,7 +184,7 @@ if problems:
 d = find_set(cfg, CHAR, "video", f"{story['name']}-keys", create=True)
 write_set_json(d, character=CHAR, kind="video", name=f"{story['name']}-keys", date=d.name[:10], judge_sets=[],
                story=story["name"])
-keys = [k for k in photos if k != plate_key]
+keys = [k for k in photos if k != plate_key] + made
 W, H = (int(x) for x in story.get("size") or (cfg["video"]["width"], cfg["video"]["height"]))
 log(f"{CHAR}: keys for '{story['name']}' - plate {plate_key}, {len(keys)} keys x {len(ARMS)} arms {ARMS} -> {d}")
 
@@ -250,7 +262,7 @@ for i, k in enumerate(keys, 1):
         if arm not in ARMS:
             continue
         out = d / f"{k}_{arm}.png"
-        text = instruction(arm, poses[k])
+        text = instruction(arm, MOTIONS.get(k, poses[k]) if arm == "video" else poses[k])
         seed = base + i * 10 + SEED_SLOT[arm]
         record["keys"].setdefault(k, {})[arm] = {"file": str(out), "instruction": text, "seed": seed}
         if DRY:
@@ -263,7 +275,9 @@ for i, k in enumerate(keys, 1):
         if arm == "video":
             clip = d / f"{k}_video.mp4"
             if not clip.is_file():
-                wf, settings = build_video_workflow(cfg, CHAR, positive=text, negative=VIDEO_NEGATIVE, image_name=plate_name,
+                prev = d / f"{keys[i - 2]}_video.png" if KEY_CHAIN and i > 1 else None
+                start = client.upload_image(prev) if prev else plate_name
+                wf, settings = build_video_workflow(cfg, CHAR, positive=text, negative=VIDEO_NEGATIVE, image_name=start,
                                                     seed=seed, render_pass=story.get("quality", "medium"),
                                                     duration_s=VIDEO_FRAMES / int(cfg["video"]["fps"]), width=W, height=H)
                 assert settings["LENGTH"] == VIDEO_FRAMES, settings["LENGTH"]
@@ -289,7 +303,7 @@ if not DRY:
             return round(cosine(ref_emb, e), 3) if e is not None else None
         scores[(plate_key, "his photo")] = score(photos[plate_key])
         for k in keys:
-            scores[(k, "his photo")] = score(photos[k])
+            scores[(k, "his photo")] = score(photos[k]) if k in photos else None
             record["keys"].setdefault(k, {})["his_photo_face"] = scores[(k, "his photo")]
             for arm in ALL_ARMS:
                 p = d / f"{k}_{arm}.png"
@@ -311,7 +325,7 @@ if DRY:   # a dry run lists what it would do and writes nothing
 TH = (300, 450)
 cols = ["his photo"] + [a for a in ALL_ARMS if any((d / f"{k}_{a}.png").is_file() for k in keys)]
 rows = [(plate_key, [photos[plate_key]] + [None] * (len(cols) - 1))] + \
-       [(k, [photos[k]] + [d / f"{k}_{a}.png" for a in cols[1:]]) for k in keys]
+       [(k, [photos.get(k)] + [d / f"{k}_{a}.png" for a in cols[1:]]) for k in keys]
 sheet = Image.new("RGB", (len(cols) * TH[0], len(rows) * TH[1]), "black")
 draw = ImageDraw.Draw(sheet)
 for r, (k, files) in enumerate(rows):

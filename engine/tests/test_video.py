@@ -266,9 +266,12 @@ def test_every_story_names_photos_it_has():
             # a chained leg after the first starts on the previous leg's last frame
             if i == 0 or not st.get("chain"):
                 assert s["start"] in st["photos"], f
-            assert not s.get("end") or s["end"] in st["photos"], f
-            # 5.06 s at 16 fps is the model's 81 frames
-            assert 1 <= float(s["seconds"]) <= 5.1, f
+            # or a key the video arm still has to make (no photo of his), which
+            # run_story refuses until his pick puts it in photos
+            assert not s.get("end") or s["end"] in st["photos"] or s["end"] in st.get("key_poses", {}), f
+            # 5.06 s at 16 fps is the model's 81 frames; a pigtail takes 6 s to
+            # tie properly (Jeremy, 2026-11-08), 97 frames
+            assert 1 <= float(s["seconds"]) <= 6.1, f
             if st.get("chain") and i:
                 assert s.get("end") or st["segments"][i - 1].get("end"), f"{f}: two free legs in a row at {i + 1}"
         if st.get("voice"):
@@ -309,3 +312,20 @@ def test_key_stills_and_test_renders_stay_out_of_the_clip_list(tmp_path: Path):
     (home / "2026-10-29_video_cheer-joi-v2" / "spec.json").write_text("{}", encoding="utf-8")
     (home / "2026-10-29_video_cheer-joi-v2" / "take_01.mp4").write_bytes(b"x")
     assert [s["name"] for s in V.clips(tmp_path, "nadia")] == ["2026-10-29_video_cheer-joi-v2"]
+
+
+def test_a_story_brings_its_own_wan_lora_pair_into_the_generic_slot():
+    """fiona_tryon_change, 2026-11-08: base Wan smooths a nude body over, so the
+    story names a nude-anatomy pair; it lands in [video] and nowhere else."""
+    from sourcemode.config import load_config
+    from sourcemode.render.passes import build_video_workflow
+
+    cfg = load_config()
+    story = {"fps": 16, "video_loras": {"high": "h.safetensors", "low": "l.safetensors", "strength": 0.5}}
+    got = V.story_cfg(cfg, story)
+    assert got["video"]["fps"] == 16 and got["video"]["lora_high"] == "h.safetensors"
+    assert cfg["video"]["lora_high"] == "" and cfg["video"]["fps"] != 16      # the config is not touched
+    _wf, s = build_video_workflow(got, "x", positive="p", negative="n", image_name="i.png", seed=1,
+                                  render_pass="medium")
+    assert (s["LORA_HIGH"], s["LORA_LOW"], s["LORA_STRENGTH_HIGH"]) == ("h.safetensors", "l.safetensors", 0.5)
+    assert V.story_cfg(cfg, {})["video"] == cfg["video"]

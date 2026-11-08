@@ -1,0 +1,78 @@
+{
+ "name": "fiona_tryon_change",
+ "character": "fiona",
+ "summary": "Try-on test, the change only: frame 8 of 2026-11-07_fiona_28_3 (rhinestone dress, reaching for the romper) to frame 9 (plum velour romper, high pigtails, loafers). She undresses for the viewer, is nude, then dresses in the romper. Nothing in the shoot shows her undressed, so the keys are made by the video arm only, each clip starting on the key before it (key_chain), with the Wan nude-anatomy LoRA pair. He picks each key by eye before any leg renders. Chained legs, a free leg is always followed by one that lands on a key, colour ramped. Each pigtail gets its own 6 s leg (Jeremy, 2026-11-08).",
+ "size": [960, 1440],
+ "quality": "medium",
+ "seed": 34043,
+ "voice": false,
+ "suffix": "one continuous shot, static camera, smooth natural motion, she moves slowly and gently, small smooth movements",
+ "negative": "fast motion, motion blur, camera cut, scene change, morphing, face change, different person, extra limbs, clothing merging into skin, pubic hair",
+ "video_loras": {
+  "high": "WAN2.2-HighNoise_Pussyv1-I2V_T2V.safetensors",
+  "low": "WAN2.2-LowNoise_Pussyv1-I2V_T2V.safetensors",
+  "strength": 0.6
+ },
+ "key_sources": {
+  "dress_rail": "C:/Epic Games/Files/cnc info/codex/output/2026-11-07_fiona_28_3/fiona_008_2611073.png"
+ },
+ "photos": {
+  "dress_rail": "C:/Epic Games/Files/cnc info/codex/output/2026-11-07_fiona_28_3/fiona_008_2611073.png",
+  "romper": "C:/Epic Games/Files/cnc info/codex/output/2026-11-07_fiona_28_3/fiona_009_2611073.png"
+ },
+ "plate": "dress_rail",
+ "fps": 16,
+ "chain": true,
+ "color_ramp": true,
+ "key_chain": true,
+ "key_poses": {
+  "straps_down": "facing the camera in the middle of the room, both straps of her midnight-blue rhinestone dress off her shoulders, holding the front against her chest",
+  "topless": "facing the camera, the dress pushed down to her waist, topless, hands on her hips",
+  "nude_front": "facing the camera, completely naked, smooth shaved body, the dress at her feet, silver heels, one hand in her hair",
+  "nude_back": "back to the camera, completely naked, looking back over her shoulder, silver heels",
+  "nude_barefoot": "facing the camera, completely naked, barefoot, holding the plum velour romper against her body",
+  "stepping_in": "facing the camera, stepping into the plum velour romper, pulling it up over her thighs, topless, barefoot",
+  "romper_loose_hair": "facing the camera in the plum velour romper, waist tie hanging untied, barefoot, hair fully loose",
+  "one_pigtail": "facing the camera in the plum velour romper, one small high pigtail tied above her left ear, the rest of her hair loose, barefoot"
+ },
+ "key_motion": {
+  "straps_down": "she lets go of the romper on the rail, turns to face the camera with a flirty smile, steps into the middle of the room and slowly slides both straps of her midnight-blue rhinestone dress off her shoulders, holding the front of the dress against her chest, her long straight black hair loose",
+  "topless": "holding the camera's eyes with a flirty smile, she slowly peels the rhinestone dress down over her breasts to her waist, topless, bare natural breasts, and rests her hands on her hips",
+  "nude_front": "she slowly wriggles the rhinestone dress down over her hips and lets it fall to her ankles, then straightens up completely naked, smooth hairless shaved body, flawless skin, in silver heels, and runs one hand into her hair, smiling at the camera",
+  "nude_back": "completely naked in silver heels, she slowly turns around until her back is to the camera and looks back over her shoulder with a flirty smile, her long straight black hair down her back",
+  "nude_barefoot": "completely naked, she turns back to face the camera, steps out of her silver heels one at a time and picks up a plum velour romper, holding it against her body, smiling at the camera",
+  "stepping_in": "completely naked, she bends slightly and steps into the plum velour romper one leg at a time and pulls it up over her thighs to her hips, topless, smiling at the camera",
+  "romper_loose_hair": "she pulls the plum velour romper up over her breasts, slides her arms into the short sleeves and smooths the velour flat, the waist tie hanging loose, smiling at the camera, her long black hair loose",
+  "one_pigtail": "wearing the plum velour romper, she gathers a small section of hair above her left ear and ties it into a small high pigtail with a dark elastic, the rest of her hair hanging loose, smiling at the camera"
+ },
+ "segments": [
+  {"start": "dress_rail", "end": null, "seconds": 5.06,
+   "motion": "she lets go of the romper on the rail, turns to face the viewer with a flirty smile and takes two slow steps into the middle of the room"},
+  {"end": "straps_down", "seconds": 5.06,
+   "motion": "holding the viewer's eyes, she slowly slides one strap of her dress off her shoulder, then the other, and holds the front of the dress against her chest"},
+  {"end": null, "seconds": 5.06,
+   "motion": "she bites her lip, then slowly peels the dress down over her breasts, her eyes on the viewer"},
+  {"end": "topless", "seconds": 5.06,
+   "motion": "topless, she pushes the dress down to her waist and rests her hands on her hips, swaying gently, smiling at the viewer"},
+  {"end": "nude_front", "seconds": 5.06,
+   "motion": "she slowly wriggles the dress down over her hips and lets it fall to her ankles, then straightens up naked and runs one hand into her hair"},
+  {"end": null, "seconds": 5.06,
+   "motion": "naked, she slowly runs her hands down her sides and over her hips, turning a little from side to side to show off her body"},
+  {"end": "nude_back", "seconds": 5.06,
+   "motion": "she slowly turns around, her back to the viewer, and looks back over her shoulder with a flirty smile"},
+  {"end": "nude_barefoot", "seconds": 5.06,
+   "motion": "she turns back to face the viewer, steps out of her heels one at a time and picks up the plum velour romper, holding it against her body"},
+  {"end": null, "seconds": 5.06,
+   "motion": "holding the romper, she sways playfully and teases the viewer, lowering it and raising it again"},
+  {"end": "stepping_in", "seconds": 5.06,
+   "motion": "she bends slightly and steps into the romper one leg at a time, pulling it up over her thighs"},
+  {"end": "romper_loose_hair", "seconds": 5.06,
+   "motion": "she pulls the romper up over her body, slides her arms into the short sleeves and smooths the velour flat, smiling at the viewer"},
+  {"end": "one_pigtail", "seconds": 6.0,
+   "motion": "she gathers a small section of hair above her left ear, holds it up and slowly ties it into a small high pigtail with a dark elastic, the rest of her hair hanging loose"},
+  {"end": null, "seconds": 6.0,
+   "motion": "she gathers a matching small section of hair above her right ear and slowly ties it into a second small high pigtail with a dark elastic, the rest of her hair hanging loose"},
+  {"end": "romper", "seconds": 5.06,
+   "motion": "she slips her feet into plum loafers, ties the romper's waist belt in a bow and stands relaxed facing the viewer, smiling"}
+ ]
+}

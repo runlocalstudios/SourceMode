@@ -58,17 +58,15 @@ from sourcemode.library import find_set, write_set_json
 from sourcemode.render.client import ComfyUIClient
 from sourcemode.render.passes import build_video_workflow, snap_frames
 from sourcemode.video import (NEGATIVE, color_ramp, extract_last_frame, ffmpeg_exe, normalize_source, script_beats,
-                              stitch, video_output, voice_mux_args)
+                              stitch, story_cfg, video_output, voice_mux_args)
 
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 if not ARGS:
     raise SystemExit(__doc__)
 FIRST = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--first=")), 0))
 story = json.loads(Path(ARGS[0]).read_text(encoding="utf-8"))
-cfg = load_config()
-if story.get("fps"):
-    # the builder reads the frame rate from [video]; this story renders at its own
-    cfg = {**cfg, "video": {**cfg["video"], "fps": int(story["fps"])}}
+# the builder reads the frame rate and the generic Wan LoRA from [video]; a story renders at its own
+cfg = story_cfg(load_config(), story)
 CHAIN, RAMP = bool(story.get("chain")), bool(story.get("color_ramp"))
 SEGMENTS = story["segments"][:FIRST] if FIRST else story["segments"]
 CHAR = story["character"].lower()
