@@ -25,6 +25,8 @@ def _runner(tmp_path, **kw):
     kw.setdefault("produced", lambda job: None)
     kw.setdefault("approval", lambda ds: (True, ""))
     kw.setdefault("procs", lambda: [(1, "x")])
+    # the memory guard reads the live box otherwise: a busy machine failed these
+    kw.setdefault("free_ram", lambda: 64.0)
     return Runner(tmp_path, log=lambda m: None, poll=0, sleeper=lambda s: None, cpu_threads=3, **kw)
 
 

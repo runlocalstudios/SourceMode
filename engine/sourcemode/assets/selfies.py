@@ -373,7 +373,7 @@ _C = (
       "soft bathroom light, in front of the vanity mirror getting ready", STANCE_MIRROR)),
     (("a red satin bralette and matching shorts",
       "her hair worn loose",
-      "warm low light, sitting on the edge of a bathtub", STANCE_SEATED),
+      "warm low light, standing in the doorway to her bathroom", STANCE),
      ("a white cotton tank top and lace-trim panties",
       "her hair up in a messy bun",
       "soft morning sunlight, stretched out on rumpled sheets", STANCE_SEATED),
