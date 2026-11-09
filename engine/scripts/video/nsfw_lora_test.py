@@ -1,7 +1,7 @@
 """Which nudity LoRA keeps HER: undressed stills from one clothed photo, every
 arm side by side, each scored against her face reference.
 
-    python scripts/video/nsfw_lora_test.py <character> <photo> [--dry-run]
+    python scripts/video/nsfw_lora_test.py <character> <photo> [--staged] [--arms=a,b] [--dry-run]
 
 Jeremy, 2026-11-09, on the fiona try-on keys: "a complete disaster ... it
 completely changed her identity and also looked horrible and blurry". The keys
@@ -76,6 +76,28 @@ T2I = {
     "topless": "topless, her bare natural breasts and nipples visible, her outfit pulled down to her waist",
     "nude": "completely naked, her bare natural breasts and nipples visible, her smooth shaved pubic area visible",
 }
+# --staged: Jeremy, 2026-11-09, on the first keys - "half the dress just disappeared.
+# It's not like she is sensually getting undressed." Each key now shows the garment
+# moved, not erased, so the leg between two keys is her pulling it down.
+STAGED = {
+    "straps": ("Slip the straps of her dress off her shoulders: the neckline has slid down to just above "
+               "her nipples, the dress still on. " + KEEP),
+    "topless": ("Pull the top of her dress down: the fabric is gathered and bunched around her waist, the "
+                "straps hanging loose at her sides, she is topless, her bare natural breasts and nipples "
+                "fully visible, the rest of the dress still on her hips. " + KEEP),
+    "hips": ("Her dress is pushed down over her hips to her upper thighs, the fabric bunched there, her "
+             "bare breasts visible, her smooth shaved pubic area visible, no underwear. " + KEEP),
+    "nude": ("Her dress lies crumpled on the floor around her ankles: she is completely naked, her bare "
+             "natural breasts and nipples visible, her smooth shaved pubic area visible, no underwear. "
+             + KEEP),
+}
+if "--staged" in sys.argv:
+    EDIT = STAGED
+ONLY = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--arms=")), None)
+if ONLY:
+    ARMS = {k: v for k, v in ARMS.items() if k in ONLY}
+if "--staged" in sys.argv and any(v[0] == "t2i" for v in ARMS.values()):
+    raise SystemExit("--staged edits her photo; pass --arms= with edit arms only")
 NEGATIVE = ("different person, different face, changed hair, clothes, underwear, bra, panties, pubic hair, "
             "deformed, distorted hands, extra limbs, blurry, low quality, cartoon, watermark, text")
 SEEDS = 2
@@ -87,8 +109,9 @@ if not lora:
 face_ref = reference(CHAR)
 if face_ref is None:
     raise SystemExit(f"{CHAR} has no face reference to score against")
-d = find_set(cfg, CHAR, "video", "nsfw-lora-test", create=True)
-write_set_json(d, character=CHAR, kind="video", name="nsfw-lora-test", date=d.name[:10])
+SET = "nsfw-undress-keys" if "--staged" in sys.argv else "nsfw-lora-test"
+d = find_set(cfg, CHAR, "video", SET, create=True)
+write_set_json(d, character=CHAR, kind="video", name=SET, date=d.name[:10])
 LOG = d / "run.log"
 
 
