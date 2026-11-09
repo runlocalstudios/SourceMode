@@ -50,7 +50,8 @@ for k, p in STILLS.items():
 
 ARMS = {
     "none": ("", "", 0.0),
-    "general": ("nsfw/wan22_general_nsfw_high.safetensors", "nsfw/wan22_general_nsfw_low.safetensors", 0.5),
+    # ComfyUI on Windows lists subfolder LoRAs with a backslash
+    "general": ("nsfw\\wan22_general_nsfw_high.safetensors", "nsfw\\wan22_general_nsfw_low.safetensors", 0.5),
     "pussy": ("WAN2.2-HighNoise_Pussyv1-I2V_T2V.safetensors", "WAN2.2-LowNoise_Pussyv1-I2V_T2V.safetensors", 0.5),
 }
 LEGS = (

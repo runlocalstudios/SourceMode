@@ -54,7 +54,7 @@ CHAR, PHOTO = ARGS[0].lower(), Path(ARGS[1])
 if not PHOTO.is_file():
     raise SystemExit(f"no photo at {PHOTO}")
 
-NSFW = "nsfw/"
+NSFW = "nsfw\\"  # ComfyUI on Windows lists subfolder LoRAs with a backslash
 MCNL, SEXGOD, GNASS = NSFW + "qedit_mcnl_nsfw.safetensors", NSFW + "qedit_sexgod_nudes_2511.safetensors", \
     NSFW + "qimage2512_gnass.safetensors"
 ARMS = {
