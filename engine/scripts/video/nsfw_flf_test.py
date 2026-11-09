@@ -1,7 +1,8 @@
 """Which Wan nudity LoRA, if any, the undressing legs need: the same three FLF2V
 legs between the same chosen stills, once per Wan LoRA arm.
 
-    python scripts/video/nsfw_flf_test.py <character> <dressed> <topless> <nude> <end> [--dry-run]
+    python scripts/video/nsfw_flf_test.py <character> <dressed> <topless> <nude> <end> [--arms=a,b] [--dry-run]
+    python scripts/video/nsfw_flf_test.py <character> <dressed> <straps> <waist> <hips> <nude> [<end>] --staged [--arms=none]
 
 The stills come from nsfw_lora_test.py (her body made naked where her own LoRA
 or photo carries identity). Here every leg starts AND lands on a fixed still,
@@ -40,10 +41,18 @@ from sourcemode.video import ffmpeg_exe, video_output
 
 ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
 DRY = "--dry-run" in sys.argv
-if len(ARGS) != 5:
+STAGED = "--staged" in sys.argv
+ONLY = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--arms=")), None)
+# --staged: the four keys from nsfw_lora_test.py --staged, so every leg is one
+# small move of the dress (Jeremy, 2026-11-09: "half the dress just disappeared")
+#   <character> <dressed> <straps> <waist> <hips> <nude> [<end>]   end defaults to dressed
+NAMES = ("dressed", "straps", "waist", "hips", "nude", "end") if STAGED else ("dressed", "topless", "nude", "end")
+if STAGED and len(ARGS) == len(NAMES):
+    ARGS = ARGS + [ARGS[1]]
+if len(ARGS) != len(NAMES) + 1:
     raise SystemExit(__doc__)
 CHAR = ARGS[0].lower()
-STILLS = {k: Path(p) for k, p in zip(("dressed", "topless", "nude", "end"), ARGS[1:])}
+STILLS = {k: Path(p) for k, p in zip(NAMES, ARGS[1:])}
 for k, p in STILLS.items():
     if not p.is_file():
         raise SystemExit(f"{k}: no image at {p}")
@@ -65,12 +74,30 @@ LEGS = (
      "she gets dressed again, pulling her outfit on and smoothing it down, smiling at the camera, "
      "the camera holds still"),
 )
+HOLD = ", smiling at the camera, the camera holds still"
+STAGED_LEGS = (
+    ("straps", "dressed", "straps",
+     "she slips the straps of her dress off her shoulders and eases the neckline down a little" + HOLD),
+    ("waist", "straps", "waist",
+     "she pulls the top of her dress down and gathers it at her waist, baring her breasts" + HOLD),
+    ("hips", "waist", "hips",
+     "she pushes the bunched dress down over her hips so it sits around her upper thighs" + HOLD),
+    ("floor", "hips", "nude",
+     "she pushes the dress down her legs, lets it drop to the floor and steps out of it, standing naked" + HOLD),
+    ("dress", "nude", "end",
+     "she gets dressed again, pulling her outfit on and smoothing it down" + HOLD),
+)
+if STAGED:
+    LEGS = STAGED_LEGS
+if ONLY:
+    ARMS = {k: v for k, v in ARMS.items() if k in ONLY}
 NEG = VIDEO_NEGATIVE + ", different person, changing face, blurry, morphing, extra limbs"
 
 cfg = load_config()
 face_ref = reference(CHAR)
-d = find_set(cfg, CHAR, "video", "nsfw-flf-test", create=True)
-write_set_json(d, character=CHAR, kind="video", name="nsfw-flf-test", date=d.name[:10])
+SET = "nsfw-staged-flf" if STAGED else "nsfw-flf-test"
+d = find_set(cfg, CHAR, "video", SET, create=True)
+write_set_json(d, character=CHAR, kind="video", name=SET, date=d.name[:10])
 LOG = d / "run.log"
 
 
