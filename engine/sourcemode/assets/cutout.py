@@ -446,19 +446,56 @@ def big_components(mask: np.ndarray, min_px: int) -> np.ndarray:
     return keep[lab]
 
 
+TRIMAP_IN = 25      # px inside BiRefNet's solid edge that is still worked out from colour
+TRIMAP_OUT = 6      # px beyond its faintest edge that may still hold a strand
+
+
+def grey_matte(rgb: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """(rgb, alpha) on a grey studio wall: BiRefNet says where she surely is and
+    surely is not; the band between is solved from the render's own colours by
+    closed-form matting, and each pixel there takes the foreground colour it was
+    mixed from (pymatting, MIT - rembg's own matting library).
+
+    fiona's pack and lingerie (2026-11-09): grey streaks down the outside of her
+    black hair (work_03) and a grey halo over her crown (lingerie showfeet).
+    BiRefNet had called a band ~20 px thick of strands-over-wall solid, so
+    nothing that trusted its alpha could take the wall back out, and every
+    colour rule tried on top of it either left the halo or ate a grey hoodie.
+    Matting reads the strands as strands: thin, dark, part transparent.
+    """
+    from pymatting import estimate_alpha_cf, estimate_foreground_ml  # noqa: PLC0415
+    from scipy import ndimage  # noqa: PLC0415
+
+    solid = b >= 0.98
+    sure = ndimage.binary_erosion(solid, iterations=TRIMAP_IN)
+    if not sure.any():                   # a figure thinner than the band
+        sure = ndimage.binary_erosion(solid, iterations=EDGE_CORE)
+    none = ~ndimage.binary_dilation(b > 0.05, iterations=TRIMAP_OUT)
+    if not sure.any() or not none.any():
+        return rgb.copy(), np.clip((b - 0.03) / 0.94, 0.0, 1.0)
+    tri = np.full(b.shape, 0.5)
+    tri[sure], tri[none] = 1.0, 0.0
+    img = rgb.astype(np.float64) / 255.0
+    alpha = np.clip(estimate_alpha_cf(img, tri), 0.0, 1.0)
+    alpha[sure], alpha[none] = 1.0, 0.0
+    fg = estimate_foreground_ml(img, alpha) * 255.0
+    out = np.where(sure[..., None], rgb, np.clip(fg, 0, 255)).astype(np.float32)
+    return out, alpha.astype(np.float32)
+
+
 def hybrid_matte(rgb: np.ndarray, key: tuple[int, int, int], kind: str,
                  b: np.ndarray) -> tuple[np.ndarray, np.ndarray, dict]:
     """(rgb, alpha 0..1, stats) from the render and BiRefNet's alpha `b`."""
     from scipy import ndimage  # noqa: PLC0415
 
-    if kind in ("grey", "noisy"):
+    if kind == "grey":
+        out, alpha = grey_matte(rgb, b)
+        return out, alpha, {"override": 0, "clash": False}
+    if kind == "noisy":
         alpha = np.clip((b - 0.03) / 0.94, 0.0, 1.0)
-        # A soft pixel's colour is part her, part wall. Neutral needs no despill
-        # in hue, but it does in brightness: iris's black hair kept a light grey
-        # rim in the game (2026-10-25). Soft pixels, and the opaque ring just
-        # inside them, take the colour of the nearest pixel of her CORE - solid
-        # and EDGE_CORE px clear of the edge, because the outermost opaque pixels
-        # are part wall too, and copying them only spread the rim outward.
+        # A soft pixel's colour is part her, part wall. Soft pixels, and the
+        # opaque ring just inside them, take the colour of the nearest pixel of
+        # her CORE - solid and EDGE_CORE px clear of the edge (iris, 2026-10-25).
         out = rgb.copy()
         solid = b >= 0.98
         core = ndimage.binary_erosion(solid, iterations=EDGE_CORE)

@@ -611,6 +611,9 @@ def test_hybrid_on_grey_gives_soft_hair_the_hairs_colour_not_the_walls():
     m = np.full((120, 80), 0.015, np.float32)
     m[30:110, 20:60] = 0.996
     m[30:110, 16:20] = 0.5
+    # a render has grain; on a perfectly flat image the grey cut's matting has
+    # no colour statistics to read (2026-11-09)
+    a = np.clip(a + np.random.default_rng(3).normal(0, 3, a.shape), 0, 255).astype(np.uint8)
     out = np.asarray(hybrid_remover(lambda img: m)(Image.fromarray(a)))
     edge = out[40:100, 16:20]
     assert (edge[..., 3] > 0).all() and (edge[..., 3] < 255).all()   # still soft
