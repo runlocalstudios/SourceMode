@@ -284,6 +284,8 @@ def test_young_woman_unless_she_is_over_30():
     assert young("a beautiful girl with a medium build", 24) == "a beautiful young woman with a medium build"
     assert young("A woman and two girls", 25) == "A young woman and two young women"
     assert young("a 25-year-old woman with red hair", 25) == "a 25-year-old woman with red hair"
+    # fiona's record, 2026-11-09: an age already given with "young" stays as written
+    assert young("an 18-year-old young woman with a petite figure", 18) == "an 18-year-old young woman with a petite figure"
     assert young("a woman with red hair", None) == "a young woman with red hair"
     assert young("a young woman with red hair", 31) == "a woman with red hair"
     assert young("the womanly figure", 20) == "the womanly figure"

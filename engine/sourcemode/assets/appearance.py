@@ -468,7 +468,9 @@ def young(text: str, age: int | None = None) -> str:
         word = ("women" if plural else "woman") if old else ("young women" if plural else "young woman")
         return word[0].upper() + word[1:] if m.group(0)[0].isupper() else word
 
-    return re.sub(r"(?<!year-old )\b(?:young )?(?:wom[ae]n|girls?)\b", sub, text, flags=re.I)
+    # both lookbehinds: with only the first, "an 18-year-old young woman" matched
+    # on "woman" alone and came out "young young woman" (fiona, 2026-11-09)
+    return re.sub(r"(?<!year-old )(?<!year-old young )\b(?:young )?(?:wom[ae]n|girls?)\b", sub, text, flags=re.I)
 
 
 def clause(character: str) -> str:
