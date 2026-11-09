@@ -11,17 +11,16 @@ def test_the_lingerie_pack_sits_with_the_game_assets_and_wears_one_set():
     assert S.rolls_one_outfit(sh)
 
 
-def test_her_set_is_her_intimate_line_or_satin_in_her_colour_with_the_white_band(monkeypatch):
+def test_every_character_wears_the_same_black_set_with_the_white_band(monkeypatch):
+    """sylvie's own "soft bright colours" line shot her pack in pastels; Jeremy,
+    2026-11-09: black with white trim, exactly as every other character's."""
     import sourcemode.assets.wardrobe as W
-    lines = {"sienna": "Black satin", "winnie": "Satin lingerie with garter sets, the colors vary",
-             "ash": "patterns, silk, lace", "nadia": "",
-             "mei": "a red satin bra and matching panties with a thin white band"}
+    lines = {"sylvie": "strapless and thin-strap lingerie in soft bright colours",
+             "mei": "a red satin bra and matching panties with a thin white band", "nadia": ""}
     monkeypatch.setattr(W, "editable", lambda c: {"outfits": {"intimate": lines.get(c, "")}})
-    assert S.lingerie_set("sienna") == S.LINGERIE_DEFAULT.format(c="black")
-    assert S.lingerie_set("nadia") == S.LINGERIE_DEFAULT.format(c="black")
-    assert S.lingerie_set("ash") == S.LINGERIE_DEFAULT.format(c="black")
-    assert S.lingerie_set("winnie") == S.LINGERIE_DEFAULT.format(c="black")    # a brief, not an outfit
-    assert S.lingerie_set("mei") == lines["mei"]                               # one garment, verbatim
+    for c in lines:
+        assert S.lingerie_set(c) == S.LINGERIE_DEFAULT
+    assert S.LINGERIE_DEFAULT.startswith("a black satin bra")
     assert "lace" not in S.LINGERIE_DEFAULT and "white" in S.LINGERIE_DEFAULT
 
 
@@ -34,7 +33,7 @@ def test_every_pose_carries_a_tag_the_game_can_key_on_and_the_set_is_one_outfit(
         assert want in tags
     sh = S.BY_ID["lingerie"]
     first = S.set_outfit(sh, tmp_path, "sienna", rng=random.Random(1))
-    assert first == S.LINGERIE_DEFAULT.format(c="black")
+    assert first == S.LINGERIE_DEFAULT
     plan = sh.plan(character="sienna", outfit=first)
     assert {s["outfit"] for s in plan} == {first}
     assert [s["tag"] for s in plan] == tags

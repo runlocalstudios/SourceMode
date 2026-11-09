@@ -177,23 +177,18 @@ LINGERIE: tuple[str, ...] = (
 # her move rather than one picture. Every pose carries a `tag` the game can
 # key a chat moment to.
 #
-# The outfit is HERS and it is one line: her Intimate wardrobe line when it
-# names a single garment, else satin in her intimate colour (black when she
-# names none), edged with the white band. Satin, never lace: lace redraws
-# itself every shot.
-LINGERIE_DEFAULT = ("a {c} satin bra and matching high-cut satin panties, each edged with a thin white "
+# One set for every character: black satin edged with the white band. Satin,
+# never lace: lace redraws itself every shot. Her Intimate wardrobe line used to
+# win when it named a garment, and sylvie's "strapless and thin-strap lingerie
+# in soft bright colours" shot her pack in pastels - Jeremy, 2026-11-09: "it
+# should be black with white trim described exactly how every other
+# character's is".
+LINGERIE_DEFAULT = ("a black satin bra and matching high-cut satin panties, each edged with a thin white "
                     "satin band")
 
 
 def lingerie_set(character: str) -> str:
-    from .looks import GARMENT_RE, _colours_in, is_brief  # noqa: PLC0415
-    from .wardrobe import editable  # noqa: PLC0415
-
-    line = str((editable(character).get("outfits") or {}).get("intimate") or "").strip()
-    if line and GARMENT_RE.search(line) and not is_brief(line):
-        return line
-    colours = _colours_in(line)
-    return LINGERIE_DEFAULT.format(c=colours[0] if colours else "black")
+    return LINGERIE_DEFAULT
 
 
 # The submissive pose set, in Jeremy's order (2026-10-12), then the five added
