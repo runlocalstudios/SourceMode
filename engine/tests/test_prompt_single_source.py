@@ -220,8 +220,8 @@ def test_the_sweep_renders_trigger_and_scene_only_unless_asked_for_her_sentence(
     too, or it would eat the positional after it."""
     src = EVAL.read_text(encoding="utf-8")
     assert re.search(r'WITH_DESCRIPTION = "--with-description" in _BARESEEN\s*\n'
-                     r'if not WITH_DESCRIPTION:\s*\n(?:.*\n){1,3}\s*_render\.appearance_clause = '
-                     r'lambda character, \*\*_: subject\(character\)',
+                     r'if not WITH_DESCRIPTION:\s*\n(?:.*\n){1,4}\s*_render\.appearance_clause = '
+                     r'lambda character, \*\*_: young\("a woman", age_of\(character\)\)',
                      src)
     assert '"no_description": not WITH_DESCRIPTION' in src
     from sourcemode.gpu.preflight import _positional
@@ -274,31 +274,25 @@ def test_a_mans_tiebreaker_is_his_twenty_slots():
     assert "tiebreaker_prompts(TRIGGER, man=MAN)" in EVAL.read_text(encoding="utf-8")
 
 
-def test_woman_is_girl_unless_she_is_over_30():
-    """Jeremy, 2026-11-08: "Woman makes the photos look old." Never "young girl"."""
-    from sourcemode.assets.appearance import girl
+def test_young_woman_unless_she_is_over_30():
+    """Jeremy, 2026-11-08: "woman" aged the photos, "girl" made them children -
+    "young woman for all"."""
+    from sourcemode.assets.appearance import young
 
-    assert girl("a young woman with a slim figure", 18) == "a girl with a slim figure"
-    assert girl("A woman and two women", 25) == "A girl and two girls"
-    assert girl("a young woman with red hair", None) == "a girl with red hair"
-    assert girl("a woman with red hair", 31) == "a woman with red hair"
-    assert girl("a woman with red hair", 30) == "a girl with red hair"
+    assert young("a woman with a slim figure", 18) == "a young woman with a slim figure"
+    assert young("a young woman with red hair", 22) == "a young woman with red hair"
+    assert young("a beautiful girl with a medium build", 24) == "a beautiful young woman with a medium build"
+    assert young("A woman and two girls", 25) == "A young woman and two young women"
+    assert young("a 25-year-old woman with red hair", 25) == "a 25-year-old woman with red hair"
+    assert young("a woman with red hair", None) == "a young woman with red hair"
+    assert young("a young woman with red hair", 31) == "a woman with red hair"
+    assert young("the womanly figure", 20) == "the womanly figure"
 
 
-def test_the_sweep_anchor_and_her_clause_say_girl(records):
-    """The records keep his words (and his confirmation); the prompt says girl."""
+def test_the_sweep_anchor_and_her_clause_say_young_woman(records):
+    """The records keep his words (and his confirmation); the prompt says young woman."""
     import sourcemode.assets.appearance as A
 
     A.reload()
-    assert clause("zara") == "a girl with long dark hair"
-    assert "woman" not in clause("raven")
-
-
-def test_only_a_record_with_a_subject_says_her_age_in_the_sweep(records, monkeypatch):
-    """fiona swept as "a girl" came back as children; Jeremy: fix it for her only."""
-    import sourcemode.assets.appearance as A
-
-    look = {"fiona": {"age": 18, "subject": "an 18-year-old girl"}, "nat": {"age": 22}}
-    monkeypatch.setattr(A, "_load", lambda: {"look": look, "ages": {}})
-    assert A.subject("fiona") == "an 18-year-old girl"
-    assert A.subject("nat") == "a girl"
+    assert clause("zara") == "a young woman with long dark hair"
+    assert "girl" not in clause("raven")

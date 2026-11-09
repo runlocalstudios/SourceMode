@@ -115,13 +115,13 @@ def legs_for(seconds):
 
 def video_prompt(pyjamas: str, setting: str) -> str:
     """One prompt shape, reused for every leg so nothing changes at a seam."""
-    return (f"a girl {setting}, wearing {pyjamas}, holding her phone at "
+    return (f"a young woman {setting}, wearing {pyjamas}, holding her phone at "
             f"arm's length and talking to the camera, head and chest in frame, "
             f"warm low lamplight, {PACING}")
 
 
 def plate_prompt(trigger: str, pyjamas: str, setting: str) -> str:
-    return (f"{trigger}, a girl, taking a selfie photo, her arm outstretched and "
+    return (f"{trigger}, a young woman, taking a selfie photo, her arm outstretched and "
             f"visible in the frame, wearing {pyjamas}, {setting}, "
             f"a head-and-chest portrait, warm low lamplight, a soft flirty smile")
 

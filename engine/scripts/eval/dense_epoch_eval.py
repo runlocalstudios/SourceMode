@@ -153,9 +153,10 @@ from asset_scenes import asset_prompts, captions_say_his, sweep_seed, tiebreaker
 WITH_DESCRIPTION = "--with-description" in _BARESEEN
 if not WITH_DESCRIPTION:
     import sourcemode.assets.render as _render  # noqa: E402
-    from sourcemode.assets.appearance import subject  # noqa: E402
-    # "a girl" unless she is over 30 - "woman" ages the photos (Jeremy, 2026-11-08)
-    _render.appearance_clause = lambda character, **_: subject(character)
+    from sourcemode.assets.appearance import age_of, young  # noqa: E402
+    # "a young woman" unless she is over 30 - "woman" ages the photos, "girl"
+    # makes them children (Jeremy, 2026-11-08)
+    _render.appearance_clause = lambda character, **_: young("a woman", age_of(character))
 # --natural-prompt / --contract-prompt: Jeremy, 2026-10-09 - is the 1,900-character
 # contract prompt itself the problem? Same facts in the training caption's register,
 # ~70 words. Natural won (cassie ep18 12/20 vs 5/10) and is now render's default, so

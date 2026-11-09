@@ -126,19 +126,19 @@ _SQUAT_GLAMOUR = (
 )
 _SQUAT_TAIL_FRONT = _SQUAT_GLAMOUR + (
     "Her whole body from head to feet is in frame with space around her. A slim, elegant "
-    "girl, natural realistic human proportions, correct anatomy, a normal sized head. "
+    "young woman, natural realistic human proportions, correct anatomy, a normal sized head. "
     "She wears a plain fitted grey vest top and plain grey shorts. Plain light grey studio "
     "backdrop, soft flattering glamour lighting, photorealistic, sharp focus."
 )
 _SQUAT_CAMERA_REAR = (
-    "Photograph of a girl seen from directly behind, her back fully turned to the camera and "
+    "Photograph of a young woman seen from directly behind, her back fully turned to the camera and "
     "her face not visible at all, taken from straight behind her with the camera at her eye "
     "level and not above her, shot from a distance with a long lens. The floor is completely "
     "empty apart from her. "
 )
 _SQUAT_TAIL_REAR = (
     "Her back is gracefully arched and her posture is poised and feminine. Her whole body is "
-    "in frame with space around her. A slim, elegant girl, natural realistic human "
+    "in frame with space around her. A slim, elegant young woman, natural realistic human "
     "proportions, correct anatomy, a normal sized head. She wears a plain fitted grey vest top "
     "and plain grey shorts. Plain light grey studio backdrop, soft flattering glamour lighting, "
     "photorealistic, sharp focus."
@@ -173,7 +173,7 @@ POSES: dict[str, dict] = {
         "suffix": "kneeling",
         "variants": _KNEEL_ARMS,
         "ref_prompt": _KNEEL_CAMERA + (
-            "A girl kneels upright on both knees on the floor, sitting back on her heels, "
+            "A young woman kneels upright on both knees on the floor, sitting back on her heels, "
             "knees together, back straight, {arms}. " + _KNEEL_TAIL
         ),
         "ref_negative": _KNEEL_NEGATIVE,
@@ -188,7 +188,7 @@ POSES: dict[str, dict] = {
         "ref_limits": {**BASE_LIMITS, "thigh_angle": (60.0, 100.0)},
         "ref_weights": {**BASE_WEIGHTS, "thigh_angle": 1.5},
         "ref_prompt": _KNEEL_CAMERA + (
-            "A girl kneels upright on both knees on the floor, sitting back on her heels. "
+            "A young woman kneels upright on both knees on the floor, sitting back on her heels. "
             "Her knees are set wide apart on the floor, roughly sixty degrees between her "
             "thighs, a wide open kneeling stance with a clear gap between her knees, her "
             "lower legs angled outward behind her. Her back is straight, {arms}. " + _KNEEL_TAIL
@@ -203,7 +203,7 @@ POSES: dict[str, dict] = {
                        "head_turn": (0.0, 0.45)},
         "ref_weights": {"body_facing": 1.5, "head_turn": 1.3},
         "ref_prompt": (
-            "Photograph of a girl standing with her back fully turned to the camera, seen "
+            "Photograph of a young woman standing with her back fully turned to the camera, seen "
             "from directly behind. Her face is not visible at all, the back of her head and "
             "her hair are toward the camera. She stands upright, {arms}. Shot from a distance "
             "with a long lens at chest height so the whole body stays in proportion, the floor "
@@ -225,7 +225,7 @@ POSES: dict[str, dict] = {
                        "head_turn": (0.70, 3.20)},
         "ref_weights": {"body_facing": 1.5, "head_turn": 1.3},
         "ref_prompt": (
-            "Photograph of a girl standing with her back turned to the camera, seen from "
+            "Photograph of a young woman standing with her back turned to the camera, seen from "
             "behind, turning her head to glance back over her shoulder at the camera. Her body "
             "faces away but her face is turned back in three-quarter profile so one side of "
             "her face and one eye are clearly visible, making eye contact with the camera. "
@@ -255,7 +255,7 @@ POSES: dict[str, dict] = {
         "ref_weights": {**_SQUAT_FRONT_WEIGHTS, "squat_depth": 2.0, "hand_height": 1.5,
                         "thigh_angle": 1.0},
         "ref_prompt": _SQUAT_CAMERA_FRONT + (
-            "A girl is squatting on the floor facing the camera. " + _SQUAT_BODY
+            "A young woman is squatting on the floor facing the camera. " + _SQUAT_BODY
             + "{arms}. Her back is straight and upright. " + _SQUAT_TAIL_FRONT
         ),
         "ref_negative": _SQUAT_NEGATIVE,
@@ -290,7 +290,7 @@ POSES: dict[str, dict] = {
         "ref_weights": {"head": 1.0, "foreshorten": 1.0, "gaze": 1.0,
                         "squat_depth": 2.0, "hand_height": 2.0, "thigh_angle": 1.0},
         "ref_prompt": _SQUAT_CAMERA_FRONT + (
-            "A girl is squatting on the floor facing the camera. " + _SQUAT_BODY
+            "A young woman is squatting on the floor facing the camera. " + _SQUAT_BODY
             + "{arms}. Her torso leans forward over her hands. " + _SQUAT_TAIL_FRONT
         ),
         "ref_negative": "hands on knees, hands on thighs, arms at her sides, " + _SQUAT_NEGATIVE,

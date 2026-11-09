@@ -79,7 +79,7 @@ def sweep_prompt(trigger: str, look: dict, character: str | None = None, *, hair
 
     character = character or trigger
     hair = short_hair(character, look["hair"], look.get("look", 1)) if hair else ""
-    subject = _render.appearance_clause(character) or "a girl"
+    subject = _render.appearance_clause(character) or "a young woman"
     if hair and _render.is_up_style(hair):
         subject = _render.drop_length(subject)
     return (f"{trigger}, portrait picture of {subject} {NATURAL_FRAMING}, {BODY[look['turn']]}, "

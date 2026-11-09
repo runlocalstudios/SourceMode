@@ -99,10 +99,10 @@ def log(s: str) -> None:
 def instruction(arm: str, pose: str) -> str:
     if arm == "text":
         return (f"Keep the bedroom, the furniture, the camera position, the lighting and her cheerleader "
-                f"outfit exactly as in the picture. Change only her: {pose}. The same girl, photorealistic.")
+                f"outfit exactly as in the picture. Change only her: {pose}. The same young woman, photorealistic.")
     if arm == "text_lora":
         return (f"{CHAR}. Keep the bedroom, the furniture, the camera position, the lighting and her cheerleader "
-                f"outfit exactly as in the picture. Change only her: {pose}. The same girl, {CHAR}, photorealistic.")
+                f"outfit exactly as in the picture. Change only her: {pose}. The same young woman, {CHAR}, photorealistic.")
     if arm == "ref":
         return (f"Keep the bedroom, the furniture, the camera position and the lighting of image 1, and the "
                 f"woman's face, hair and cheerleader outfit of image 1. Pose her like the woman in image 2: "

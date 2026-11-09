@@ -82,7 +82,7 @@ def appearance_clause(d: dict) -> str:
     they should not go into the prompts unless I include in the descriptions
     intentionally." Both are still recorded, as context for the game's writing.
     """
-    bits = ["a girl"]
+    bits = ["a young woman"]
     if d.get("skin"):
         bits.append(f"{d['skin']} skin")
     # Vera's form wrote "a slim with a large bust, blonde, blue": a bare

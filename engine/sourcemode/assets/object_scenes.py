@@ -16,11 +16,11 @@ SCENES: tuple[str, ...] = (
     "a dark brown {t} lying on its side on a grey fur rug, seen from the front, soft room light",
     "a light-toned {t} standing on a kitchen counter, seen from a side three-quarter angle, bright morning light",
     "a tan {t} standing against a grey plaster wall with ferns beside it, seen from behind, soft light",
-    "a girl with long dark hair kneeling on a hotel bed holding a light-toned {t} that lies on the white sheets, seen from the front, soft daylight",
-    "a girl in white stockings seen from behind, kneeling over a tan {t} on a bed, warm orange light",
-    "a blonde girl in red stockings lying on a white bed beside a light-toned {t}, her hand around it, seen from the side, daylight",
-    "a close view from behind of a girl in a red harness lowering onto a dark brown {t}, window blinds behind, daylight",
-    "a girl in a black choker sitting on a light-toned {t} on the floor of a bright room, seen from the front, a plaid mini skirt, white thigh-highs",
+    "a young woman with long dark hair kneeling on a hotel bed holding a light-toned {t} that lies on the white sheets, seen from the front, soft daylight",
+    "a young woman in white stockings seen from behind, kneeling over a tan {t} on a bed, warm orange light",
+    "a blonde young woman in red stockings lying on a white bed beside a light-toned {t}, her hand around it, seen from the side, daylight",
+    "a close view from behind of a young woman in a red harness lowering onto a dark brown {t}, window blinds behind, daylight",
+    "a young woman in a black choker sitting on a light-toned {t} on the floor of a bright room, seen from the front, a plaid mini skirt, white thigh-highs",
 )
 
 
@@ -63,16 +63,16 @@ TIEBREAKER: tuple[dict, ...] = (
 
 # Ten women who are nobody in particular, one per random slot, in slot order.
 RANDOM_WOMEN: tuple[str, ...] = (
-    "a 20-year-old girl with long blonde hair and fair skin",
-    "a 20-year-old girl with a short black bob and tan skin",
-    "a 20-year-old girl with long red curls and pale skin",
-    "a 20-year-old girl with long straight black hair and brown skin",
-    "a 20-year-old girl with shoulder-length light brown hair and olive skin",
-    "a 20-year-old girl with a dark brown ponytail and freckled fair skin",
-    "a 20-year-old girl with wavy honey-blonde hair and golden skin",
-    "a 20-year-old girl with long dark hair in a braid and deep brown skin",
-    "a 20-year-old girl with a platinum pixie cut and fair skin",
-    "a 20-year-old girl with long auburn hair and light skin",
+    "a 20-year-old woman with long blonde hair and fair skin",
+    "a 20-year-old woman with a short black bob and tan skin",
+    "a 20-year-old woman with long red curls and pale skin",
+    "a 20-year-old woman with long straight black hair and brown skin",
+    "a 20-year-old woman with shoulder-length light brown hair and olive skin",
+    "a 20-year-old woman with a dark brown ponytail and freckled fair skin",
+    "a 20-year-old woman with wavy honey-blonde hair and golden skin",
+    "a 20-year-old woman with long dark hair in a braid and deep brown skin",
+    "a 20-year-old woman with a platinum pixie cut and fair skin",
+    "a 20-year-old woman with long auburn hair and light skin",
 )
 
 

@@ -112,7 +112,7 @@ def test_the_sweep_scenes_keep_their_mid_thigh_sentence():
         "asset_scenes", Path(__file__).resolve().parents[1] / "scripts" / "eval" / "asset_scenes.py")
     m = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(m)
-    assert "portrait picture of a girl from the mid-thigh up, her body faces the camera" in \
+    assert "portrait picture of a young woman from the mid-thigh up, her body faces the camera" in \
         m.sweep_prompt("lena", m.LOOKS[0], "nobody_without_a_record")
 
 

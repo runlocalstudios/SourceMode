@@ -263,16 +263,6 @@ def expressions(character: str) -> dict:
     return {k: v for k, v in (rec.get("expressions") or {}).items() if not k.startswith("_")}
 
 
-def subject(character: str) -> str:
-    """Who the trigger-only sweep says she is: her "subject" if the record has
-    one, else "a woman" read through `girl`. Fiona, 2026-11-08: swept as "a
-    girl" she came back as children at every epoch; Jeremy: "I'll only make
-    that fix for Fiona" - so it is her field, not a rule for everyone. Kept
-    out of CONFIRM_FIELDS: it is about the sweep, not her description."""
-    rec = _load()["look"].get((character or "").lower()) or {}
-    return rec.get("subject") or girl("a woman", age_of(character))
-
-
 def hair_unsaid(character: str) -> set[str]:
     """Hair clauses her prompt leaves out entirely, lower-cased. Jeremy,
     2026-10-22, on cassie's selfies: every "her hair worn loose" came back flat
@@ -462,27 +452,31 @@ def drop_length(text: str) -> str:
     return out.strip(" ,")
 
 
-def girl(text: str, age: int | None = None) -> str:
-    """"woman" -> "girl" in a prompt unless she is over 30. Jeremy, 2026-11-08:
-    "Don't use the word woman in descriptions always use girl unless over 30
-    years old. Woman makes the photos look old." "young woman" becomes plain
-    "girl", never "young girl"."""
-    if age is not None and age > 30:
-        return text
+def young(text: str, age: int | None = None) -> str:
+    """"young woman" in a prompt unless she is over 30.
+
+    Jeremy, 2026-11-08 morning: "Woman makes the photos look old" - so it was
+    "girl" for a day, and "girl" made them children: fiona (18) swept as kids at
+    every epoch, nat's tiebreaker said "a girl" too. Evening: "we'll need to use
+    young woman for all because girl is making it too childish." So "woman" and
+    "girl" both read as "young woman"; an age already given ("a 25-year-old
+    woman") is left alone; over 30 she is a woman."""
+    old = age is not None and age > 30
 
     def sub(m: re.Match) -> str:
-        word = "girls" if m.group(2).lower() == "e" else "girl"
-        return word.capitalize() if m.group(0)[0].isupper() else word
+        plural = m.group(0).lower().endswith(("women", "girls"))
+        word = ("women" if plural else "woman") if old else ("young women" if plural else "young woman")
+        return word[0].upper() + word[1:] if m.group(0)[0].isupper() else word
 
-    return re.sub(r"\b(young )?wom([ae])n\b", sub, text, flags=re.I)
+    return re.sub(r"(?<!year-old )\b(?:young )?(?:wom[ae]n|girls?)\b", sub, text, flags=re.I)
 
 
 def clause(character: str) -> str:
     """Her appearance text as written - no age added, "" if she has none - with
-    "woman" read as "girl" unless she is over 30 (`girl`).
+    "woman" read as "young woman" unless she is over 30 (`young`).
 
     Jeremy, 2026-10-10: an age goes in the description itself, and only when it
     is absolutely necessary.
     """
     rec = _load()["look"].get(character.lower()) or {}
-    return girl(rec.get("prompt", "") or "", age_of(character))
+    return young(rec.get("prompt", "") or "", age_of(character))
