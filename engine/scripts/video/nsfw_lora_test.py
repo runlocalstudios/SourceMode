@@ -85,8 +85,12 @@ STAGED = {
     "topless": ("Pull the top of her dress down: the fabric is gathered and bunched around her waist, the "
                 "straps hanging loose at her sides, she is topless, her bare natural breasts and nipples "
                 "fully visible, the rest of the dress still on her hips. " + KEEP),
-    "hips": ("Her dress is pushed down over her hips to her upper thighs, the fabric bunched there, her "
-             "bare breasts visible, her smooth shaved pubic area visible, no underwear. " + KEEP),
+    # "bunched at her upper thighs" alone read as a hiked-up hem (bianca, both seeds):
+    # say where the dress is NOT as well as where it is
+    "hips": ("Pull the whole dress down off her body to her thighs: the dress is now only a band of bunched "
+             "fabric around her upper thighs, below her hips, with nothing on her shoulders, chest or "
+             "stomach. Above the bunched fabric she is naked: her bare natural breasts and nipples, her "
+             "stomach and her smooth shaved pubic area all visible, no underwear. " + KEEP),
     "nude": ("Her dress lies crumpled on the floor around her ankles: she is completely naked, her bare "
              "natural breasts and nipples visible, her smooth shaved pubic area visible, no underwear. "
              + KEEP),
