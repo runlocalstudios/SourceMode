@@ -54,6 +54,18 @@ rolled, naked from the waist down once his pants are off.
 | The cum shot, POV | same POV framing | + "her hand jerking his thick erect penis held just above her vagina as he ejaculates, ropes of thick white semen landing across her stomach, her breasts and her face, her eyes on the camera, loving it" | **works** - ropes across her stomach and chest, his penis above her pussy, her face hers (0.59); nothing landed on her face | `qwen4play__cum_pov__r4_s0.png` |
 | Her back on the desk, anal deep, side view | `m15510n4ry, ` + "picture from the side of the desk, the desk running left to right across the frame: she lies on her back along the desk with her head on the left and her legs raised and spread on the right, her face turned toward the camera; he stands at the right end of the desk between her legs" | same act wording | **works** as the photographer's angle - whole scene, him bare below the waist, her face to the camera (0.34 in near-profile, hers by eye) | `qwen4play__desk_anal_side__r4_s0.png` |
 | The cum shot, side view | same side framing | same cum wording | **works** - ropes on her stomach and chest, his penis at her crotch | `qwen4play__cum_side__r4_s0.png` |
+| **The desk and finish sections as story sections** (`--section e,f`, j1372-j1373) | POV and side | desk tip, deep, deep side, anal tip, anal deep, anal side, anal squirt; pullout, cum POV, cum side, covered | **13 of 13 kept, 11 first try** (0.35-0.62; the two side views needed a second seed to pass the face floor). Every act drawn: tip at her vagina, inside, in her anus with her pussy above, the squirt stream, ropes of semen on her stomach, chest and chin, the covered smile. | `library/fiona/2026-11-10_video_office-story/e0*__a*.png`, `f0*__a*.png` |
+
+## The office story, complete (2026-11-10)
+
+38 of 38 shots kept, judge set `story_fiona_office`, folder
+`library/fiona/2026-11-10_video_office-story/` (`sheet.jpg` is the whole set).
+Rendered in six batches of 3-10 after four probe rounds per path. Only
+deepthroat was dropped. To add a storyline to the shot creator: model =
+her locked LoRA; clothing = the set's outfit stages; scene = a `shoots.*`
+setting; storyline = a STORY tuple like `office_story.STORY`, each shot
+carrying its path (t2i + act LoRA + triggers, or an edit step with its parent)
+and its framing wording from this file.
 | Her back on the desk, him standing beside it; the finish | photographer beside the desk | | **failed** on GNASS: her head hung off the near edge upside down, the penis floated, the cum shot was a bucket of milk. Needs: camera at the side of the desk with her face upright, QWEN 4 PLAY, cumshot wording | `library/fiona/2026-11-10_video_office-story/e02_desk_deep__a1.png`, `f02_cum__a3.png` |
 
 ## Edit path (Qwen-Image-Edit 2511 from an office POV plate) - the POV winner
