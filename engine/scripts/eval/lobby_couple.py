@@ -56,12 +56,15 @@ DOOR = ("a full-length picture of a young man and a young woman walking arm in a
         "black dress and black heels, her face in profile as she looks left, mid-stride, both figures "
         f"fully in frame from head to feet, {STUDIO_BACKDROP}. Photorealistic, natural skin texture, "
         "sharp focus.")
-STAIRS = ("Show the same two people a few steps further on, both with their backs fully to the camera, "
-          "looking away and slightly upward to the left as if about to climb a staircase, still arm in "
-          "arm, neither face visible. Keep their clothes, hair, heights and builds exactly the same: his "
-          "navy bomber jacket, dark jeans and white sneakers; her long camel coat, short black dress and "
-          "black heels. Keep the plain light grey studio background, the soft even lighting and the "
-          "full-length framing from head to feet. Photorealistic, natural skin texture, sharp focus.")
+# the first stairs edits barely moved their heads (still in profile toward Mei), so
+# this says what must NOT be seen - any part of either face - as well as where they look
+STAIRS = ("Turn both of them to face completely away from the camera: we see only the backs of both "
+          "heads and no part of either face, their heads tilted up a little as they look toward the top "
+          "left of the frame, as if about to climb a staircase just ahead of them, still arm in arm, "
+          "mid-stride. Keep their clothes, hair, heights and builds exactly the same: his navy bomber "
+          "jacket, dark jeans and white sneakers; her long camel coat, short black dress and black heels. "
+          "Keep the plain light grey studio background, the soft even lighting and the full-length "
+          "framing from head to feet. Photorealistic, natural skin texture, sharp focus.")
 NEGATIVE = (CAMERA_NEGATIVE + ", facing the camera, looking at the camera, three people, extra person, "
             "cropped feet, cut off at the knees, close-up, blurry, deformed hands, extra limbs, "
             "cartoon, text, watermark, props, furniture, doorway, stairs")
