@@ -19,8 +19,8 @@ tiles still get thrown out.)
 
 Arms (Qwen-Image 2512 text-to-image, her locked LoRA at 1.0 plus the GNASS sex
 LoRA - its training name is s3x_2512_qwen - at two strengths):
-  gnass06  GNASS 0.6 (the composition rule's cap for a second LoRA)
-  gnass08  GNASS 0.8 - anatomy first, identity second; the score says which
+  gnass04  GNASS 0.4 - identity first
+  gnass06  GNASS 0.6 - the composition rule's cap for a second LoRA; anything higher raises
 
 Output: library/<character>/<date>_video_sex-shoot/<arm>__<shot>__<seed>.png,
 shots.json (seed, face score, age estimate) and sheet.jpg (rows = shot, columns
@@ -57,7 +57,7 @@ ONLY_SHOTS = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswi
 YOUNG_FLAG = 20  # Jeremy, 2026-11-10: "The floor should be like 20 because 18 is a fucking adult"
 
 GNASS = "nsfw\\qimage2512_gnass.safetensors"  # ComfyUI on Windows lists subfolder LoRAs with a backslash
-ARMS = {"gnass06": 0.6, "gnass08": 0.8}
+ARMS = {"gnass04": 0.4, "gnass06": 0.6}  # 0.8 is over the composition cap for a second LoRA and raises
 
 HIM = "a man with a thick eight-inch erect penis, the penis large and prominent"
 BED = "on a bed in a softly lit bedroom"
