@@ -139,6 +139,31 @@ SHOTS.update({
 })
 if ONLY_SHOTS:
     SHOTS = {k: v for k, v in SHOTS.items() if k in ONLY_SHOTS}
+# round 4 (2026-11-10): round 3 put the camera at the foot of the desk looking over her upside-down head every
+# time (0.13-0.18), whatever "side of the desk" and "head toward the far end" said - but the penis, the pullout
+# and the cum ropes were right. So two framings that keep her face upright: his eyes looking down at her,
+# and a true side view.
+DESK_POV = ("close point-of-view photo from the eyes of the man standing at the end of the desk between her "
+            "raised legs, looking down the length of her body at her, his bare thighs at the bottom of the "
+            "frame, his face out of frame; she lies on her back on the big walnut desk, her legs spread wide "
+            "and held up, her face looking up at the camera")
+DESK_SIDE = ("picture from the side of the desk, the desk running left to right across the frame: she lies on "
+             "her back along the desk with her head on the left and her legs raised and spread on the right, "
+             "her face turned toward the camera; {HIM} stands at the right end of the desk between her legs")
+SHOTS.update({
+    "desk_anal_pov": ("", f"{DESK_POV}, {SKIRT_UP}, {COCK} deep inside her anus, her wet vagina in full view "
+                          f"above it, her face flushed with pleasure, eyes heavy-lidded, lips parted in a soft "
+                          f"moan"),
+    "cum_pov": ("", f"{DESK_POV}, {SKIRT_UP}, her hand jerking {COCK} held just above her vagina as he "
+                    f"ejaculates, ropes of thick white semen landing across her stomach, her breasts and her "
+                    f"face, her eyes on the camera, loving it"),
+    "desk_anal_side": ("m15510n4ry, ", f"{DESK_SIDE.format(HIM=HIM)}, {SKIRT_UP}, {COCK} deep inside her anus, "
+                                       f"her wet vagina visible above it, her face turned to the camera flushed "
+                                       f"with pleasure, eyes heavy-lidded, lips parted in a soft moan"),
+    "cum_side": ("", f"{DESK_SIDE.format(HIM=HIM)}, {SKIRT_UP}, her hand jerking {COCK} held just above her "
+                     f"vagina as he ejaculates, ropes of thick white semen landing across her stomach, her "
+                     f"breasts and her face, her face turned to the camera, loving it"),
+})
 NEG = ("different person, different face, changed hair, bra, bralette, vest, blouse, shirt on her, top on her, "
        "extra penis, extra hands, extra limbs, deformed genitals, deformed hands, blurry, low quality, cartoon, "
        "anime, watermark, text, condom, tears, crying, watering eyes, toothy grin, childlike, child, underage")
@@ -176,7 +201,7 @@ def prompt_for(arm: str, shot: str) -> str:
     arm_trigger = ARMS[arm][2]
     shot_trigger, body = SHOTS[shot]
     # the "pov" trigger only on the shots from his eyes; the desk shots are by a photographer
-    pov = shot in ("release", "stroke", "tip", "deep")
+    pov = shot in ("release", "stroke", "tip", "deep", "desk_anal_pov", "cum_pov")
     lead = ((arm_trigger if pov else "") + shot_trigger) if ARMS[arm][0] == Q4P else ""
     return (f"{lead}{trig}, {clause(CHAR)}, {HAIR}, {body}. {OFFICE_IN}. Photorealistic, natural skin texture, "
             f"sharp focus.")
@@ -197,7 +222,7 @@ def splice_lora(wf: dict, after: str, path: str, strength: float, new: str) -> d
 def workflow(arm: str, shot: str, seed: int) -> dict:
     loras = arm_loras(arm, shot)
     path, strength = loras[0]
-    neg = NEG + (NEG_POV if shot in ("release", "stroke", "tip", "deep") else "")
+    neg = NEG + (NEG_POV if shot in ("release", "stroke", "tip", "deep", "desk_anal_pov", "cum_pov") else "")
     extra = appearance_negative(CHAR)
     # built at the cap, then the act LoRA's own strength set on its node - the probe's deliberate bypass
     wf = t2i_workflow(cfg, prompt_for(arm, shot), seed, f"sourcemode/{CHAR}_actprobe", lora_path=lora["path"],
