@@ -47,27 +47,35 @@ SEEDS = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--seeds=
 # the player stands, Mei at the desk on the left, the pair on the right. At the
 # door Danny is almost back-on from the side but looking across at Mei, the
 # woman looking at Mei too; at the stairs both face away, about to go up.
+# Second note (the "three-quarter rear view" draw came out back-on, and her coat's open
+# front was drawn on her BACK, the dress showing through it): the door view is from the
+# side, not from behind, and the coat's opening faces away from the camera in both views.
 DOOR = ("a full-length picture of a young man and a young woman walking arm in arm, side by side, "
-        "seen from behind and to the side in a three-quarter rear view, walking toward the left of the "
-        "frame, both of their heads turned to the left as if looking at someone across the room, late "
-        "on a Sunday night: he is half a step ahead in a dark navy bomber jacket over a plain white "
-        "t-shirt, dark jeans and white sneakers, his back mostly to the camera, his face seen only in "
-        "part profile as he looks left; she holds his arm, in a long camel wool coat open over a short "
-        "black dress and black heels, her face in profile as she looks left, mid-stride, both figures "
-        f"fully in frame from head to feet, {STUDIO_BACKDROP}. Photorealistic, natural skin texture, "
-        "sharp focus.")
+        "seen from the side, their bodies angled about three-quarters away from the camera, walking "
+        "from the right of the frame toward the left, both of their heads turned further to the left "
+        "as if looking at someone across the room, late on a Sunday night: he is half a step ahead in "
+        "a dark navy bomber jacket over a plain white t-shirt, dark jeans and white sneakers, his face "
+        "seen only in part profile as he looks left; she holds his arm, wearing a long camel wool coat "
+        "over a short black dress and black heels, the plain smooth back of her coat toward the camera "
+        "and the coat's open front, lapels and buttons on her far side facing away from the camera, "
+        "her face in profile as she looks left, mid-stride, both figures fully in frame from head to "
+        f"feet, {STUDIO_BACKDROP}. Photorealistic, natural skin texture, sharp focus.")
 # the first stairs edits barely moved their heads (still in profile toward Mei), so
 # this says what must NOT be seen - any part of either face - as well as where they look
-STAIRS = ("Turn both of them to face completely away from the camera: we see only the backs of both "
-          "heads and no part of either face, their heads tilted up a little as they look toward the top "
-          "left of the frame, as if about to climb a staircase just ahead of them, still arm in arm, "
-          "mid-stride. Keep their clothes, hair, heights and builds exactly the same: his navy bomber "
-          "jacket, dark jeans and white sneakers; her long camel coat, short black dress and black heels. "
-          "Keep the plain light grey studio background, the soft even lighting and the full-length "
-          "framing from head to feet. Photorealistic, natural skin texture, sharp focus.")
+STAIRS = ("Turn both of them to face completely away from the camera, their backs square to the camera: "
+          "we see only the backs of both heads and no part of either face, their heads tilted up a "
+          "little as they look toward the top left of the frame, as if about to climb a staircase just "
+          "ahead of them, still arm in arm, mid-stride. Keep their clothes, hair, heights and builds "
+          "exactly the same: his navy bomber jacket, dark jeans and white sneakers; her long camel coat, "
+          "short black dress and black heels. We see the plain smooth back of her coat, one continuous "
+          "panel of camel wool with no opening, lapels or buttons - the coat's open front faces away "
+          "from the camera. Keep the plain light grey studio background, the soft even lighting and the "
+          "full-length framing from head to feet. Photorealistic, natural skin texture, sharp focus.")
 NEGATIVE = (CAMERA_NEGATIVE + ", facing the camera, looking at the camera, three people, extra person, "
-            "cropped feet, cut off at the knees, close-up, blurry, deformed hands, extra limbs, "
-            "cartoon, text, watermark, props, furniture, doorway, stairs")
+            "coat open at the back, dress showing through the back of the coat, lapels on the back of "
+            "the coat, buttons on the back of the coat, cropped feet, cut off at the knees, close-up, "
+            "blurry, deformed hands, extra limbs, cartoon, text, watermark, props, furniture, doorway, "
+            "stairs")
 
 cfg = load_config()
 d = find_set(cfg, "_extras", "shoot", "lobby-couple", create=True)
