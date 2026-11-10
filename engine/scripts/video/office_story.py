@@ -307,8 +307,18 @@ def save() -> None:
     SHOTS.write_text(json.dumps(record, indent=1), encoding="utf-8")
 
 
+def face_floor(sid: str) -> float:
+    return FACE_SIDE_MIN if sid.endswith("_side") else FACE_MIN
+
+
+def passes(sid: str, a: dict) -> bool:
+    """Judged against the CURRENT floor, not the flag stored when it rendered: the
+    side floor was lowered after a02_side's four profiles of her all failed 0.5."""
+    return bool(a.get("face") is not None and a["face"] >= face_floor(sid) and not a.get("young"))
+
+
 def kept_of(sid: str) -> dict | None:
-    ok = [a for a in record[sid]["attempts"] if a.get("ok")]
+    ok = [a for a in record[sid]["attempts"] if passes(sid, a)]
     return max(ok, key=lambda a: a["face"]) if ok else None
 
 
@@ -368,7 +378,7 @@ if not SHEET_ONLY:
             out.with_suffix(".txt").write_text(prompt_for(body), encoding="utf-8")
             face, age = score(out)
             young = bool(age is not None and age < YOUNG_FLAG)
-            fmin = FACE_SIDE_MIN if sid.endswith("_side") else FACE_MIN
+            fmin = face_floor(sid)
             ok = bool(face is not None and face >= fmin and not young)
             why = "" if ok else ("no face" if face is None else "YOUNG" if young else f"face {face} < {fmin}")
             record[sid]["attempts"].append({"file": out.name, "seed": seed, "face": face, "age": age,
