@@ -69,7 +69,10 @@ her: this path scores 0.68-0.70 where text-to-image scores 0.44-0.57.
 | hands (both) | "all included" | "both of her hands wrapped around it one above the other" | **one hand only**, the other stayed on the rug; face 0.67. Retry: "two hands stacked" wording | `allin__hands__s0.png` |
 | balls | "all included" | "her other hand cups and gently squeezes his balls" | **balls not drawn**, one hand at the base; face 0.69. Retry: name the balls as visible below the shaft | `allin__balls__s0.png` |
 | deepthroat | "all included" | "Deepthroat: ... all the way into her mouth and throat, lips pressed to its base" | **tip only**, and the edit zoomed in on her face (0.41, eyes closed). Neither path has drawn deep yet. Retry: the LoRA's own word `throating` and "half the shaft inside her mouth" | `allin__deep__s0.png` |
-| free, size | | "thick erect penis" still balloons through the chain | Retry: "proportionate to his body, realistic size" | |
+| free, realistic size | "all included" | "His erect penis, proportionate to his body and of realistic size, stands up from between his thighs ..." | **works** - smaller, still big, attached, 0.70; chain later steps from this one | `allin__free2__s0.png` |
+| hands, both (round 3) | "all included" | "handjob: two hands - both of her hands grip the shaft of his erect penis, stacked one above the other, the head showing above her top hand ..." | **works**, two hands stacked, 0.71 | `allin__hands2__s0.png` |
+| deepthroat (round 3) | "all included" | "throating: half of the shaft inside her mouth ..." | **failed worse**: a second penis head at her lips with his still at his lap, because her face is a foot above his lap in this plate. Round 4: move her down to his lap, and a second start from the text-to-image tip render where her mouth is already on it | `allin__deep2__s0.png` |
+| balls (round 3) | "all included" | "cups his balls, which hang visible below the shaft" | **not drawn again** (they are hidden in the plate). Round 4: "testicles", lifting the penis to show them; last try | `allin__balls2__s0.png` |
 
 Edit LoRAs: `nsfw/qedit_mcnl_nsfw.safetensors` (MCNL) and
 `nsfw/qedit2511_all_included_v2.safetensors` (act words: fellatio, handjob,

@@ -120,6 +120,20 @@ CHAIN: dict[str, tuple[str | None, str]] = {
     "balls2": ("free", "handjob: one of her hands strokes the shaft of his erect penis while her other hand "
                        "cups his balls, which hang visible below the shaft, looking up into the camera and "
                        "loving it. Keep her face, her hair, her bare breasts and the room as they are."),
+    # round 4 (2026-11-10): free2 (realistic size) and hands2 (two hands stacked) worked; "throating" drew a
+    # second penis head at her lips with his still at his lap, because her face is a foot from his lap in
+    # this plate; balls twice not drawn. So deep moves her down to his lap, or starts from the text-to-image
+    # tip render where her mouth is already on it; balls get the plain word once more, then stop.
+    "deep3": ("free2", "She bends down with her face at his lap and takes his erect penis all the way into her "
+                       "mouth, her lips at the base of the shaft and her nose in his pubic hair, her eyes "
+                       "heavy-lidded looking up at the camera. There is only one penis. Keep her hair, her "
+                       "bare breasts, the room and the framing as they are."),
+    "balls3": ("free2", "She holds his erect penis up with one hand so his testicles are visible below it, and "
+                        "cups his testicles in her other hand, looking up into the camera. Keep her face, her "
+                        "hair, her bare breasts and the room as they are."),
+    "deep_tip": (None, "She pushes her head down, taking the whole shaft of his erect penis into her mouth, her "
+                       "lips at the base of the shaft and her nose in his pubic hair, her eyes heavy-lidded "
+                       "looking up at the camera. Keep her face, her hair, the room and the framing as they are."),
 }
 if ONLY_KEYS:
     CHAIN = {k: v for k, v in CHAIN.items() if k in ONLY_KEYS}
