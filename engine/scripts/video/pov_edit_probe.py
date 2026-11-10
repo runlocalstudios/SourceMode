@@ -24,6 +24,8 @@ nsfw_lora_test.py did on 2026-11-09 (mcnl_char scored 0.63-0.65, sexgod_char
 0.50-0.67 on nude edits of her):
   mcnl     MCNL NSFW edit LoRA + her LoRA
   sexgod   SexGod nudes 2511 edit LoRA + her LoRA
+  allin    "Qwen Image Edit 2511 All included" act LoRA + her LoRA (its words: fellatio, handjob, throating)
+  couples  SexGod Couples Nudity (Edit 2511) + her LoRA
 
 Output: library/<character>/<date>_video_pov-edit-probe/<arm>__<key>__s<seed>.png,
 keys.json (face score and age per render) and sheet.jpg (rows = arm x seed,
@@ -59,7 +61,11 @@ SEEDS = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--seeds=
 ONLY_ARMS = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--arms=")), None)
 
 NSFW = "nsfw\\"
-ARMS = {"mcnl": NSFW + "qedit_mcnl_nsfw.safetensors", "sexgod": NSFW + "qedit_sexgod_nudes_2511.safetensors"}
+ARMS = {"mcnl": NSFW + "qedit_mcnl_nsfw.safetensors", "sexgod": NSFW + "qedit_sexgod_nudes_2511.safetensors",
+        # act-trained Edit-2511 LoRAs found 2026-11-10 (Hugging Face mirrors): the "all included" one lists
+        # fellatio, handjob, throating, semen, anal among its words; SexGod Couples is two-person nudity
+        "allin": NSFW + "qedit2511_all_included_v2.safetensors",
+        "couples": NSFW + "qedit2511_sexgod_couples_v1.safetensors"}
 if ONLY_ARMS:
     ARMS = {k: v for k, v in ARMS.items() if k in ONLY_ARMS}
 STRENGTH = 0.8
