@@ -472,3 +472,37 @@ def test_a_character_keeps_her_selfie_mix_and_old_packs_stay_on_set_a(tmp_path, 
     r1 = selfies.set_for("r1", path=f, mode="rotate")
     r2 = selfies.set_for("r2", path=f, mode="rotate")
     assert len(set(r1)) == len(set(r2)) == 1 and r1 != r2
+
+
+# --- one hair per office set (Jeremy, 2026-11-10) -------------------------------------
+
+OFFICE_IDS = ("office_door", "office_desk", "office_pov")
+
+
+def test_every_office_shoot_wears_her_loose_hair_on_every_shot(monkeypatch):
+    """'The hair style changes in every photo which ruins that immersion' - loose
+    by default, in her own words, across all three office shoots."""
+    from sourcemode.assets import wardrobe as W
+
+    monkeypatch.setattr(W, "brief", lambda c: {"hair": ["her hair worn loose and flowing",
+                                                         "her hair pulled back in a high ponytail"]})
+    monkeypatch.setattr(W, "is_short_haired", lambda c: False)
+    for sid in OFFICE_IDS:
+        hairs = {s["hair"] for s in BY_ID[sid].plan(character="fiona")}
+        assert hairs == {"her hair worn loose and flowing"}, sid
+    # the other pose-slot shoots still rotate
+    assert len({s["hair"] for s in BY_ID["boudoir"].plan(character="fiona")}) > 1
+
+
+def test_a_set_queued_in_one_hair_style_wears_it_on_every_shot_and_a_redo_reads_it_back(tmp_path):
+    from sourcemode.assets.shoots import set_hair
+
+    curls = "her hair worn down with wavy curls throughout"
+    for sid in OFFICE_IDS + ("boudoir",):
+        hairs = {s["hair"] for s in BY_ID[sid].plan(character="nobody", hair=curls)}
+        assert hairs == {curls}, sid
+    # recorded beside the set's outfit, so redo.py rebuilds the same slot
+    assert set_hair(tmp_path) is None
+    assert set_hair(tmp_path, curls) == curls
+    assert set_hair(tmp_path) == curls
+    assert json.loads((tmp_path / "set.json").read_text(encoding="utf-8"))["hair"] == curls

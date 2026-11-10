@@ -83,7 +83,7 @@ class Shoot:
     loose_hair: bool = False
 
     def plan(self, seed: int = 0, character: str | None = None,
-             outfit: str | None = None) -> list[dict]:
+             outfit: str | None = None, hair: str | None = None) -> list[dict]:
         """The shot list: outfit x pose walked in step, hair rotating under them.
 
         Deterministic, so re-running a shoot reproduces it and a judge verdict
@@ -91,6 +91,11 @@ class Shoot:
 
         `outfit` puts every shot in that one outfit - the set's own roll
         (`set_outfit`), so the shoot reads as one shoot.
+
+        `hair` puts every shot in that one hair clause, over the rotation and
+        over `loose_hair` alike - the set's own style (`set_hair`, from
+        run_shoots `--hair`). Jeremy, 2026-11-10: "if I want a set run with a
+        different hair style I will ask you to queue it for me."
 
         `character` swaps in HER hair vocabulary where she has one. Tess wears
         box braids in every frame she was trained on, and the shared rotation
@@ -106,9 +111,12 @@ class Shoot:
             return [dict(x) for x in self.explicit] if not character else [
                 {**x, "hair": hair_options(character)[i % len(hair_options(character))]}
                 for i, x in enumerate(self.explicit)]
-        hair = hair_options(character) if character else self.hair
+        hairs = hair_options(character) if character else self.hair
         if self.loose_hair:
-            hair = (loose_hair(character) if character else self.hair[0],)
+            hairs = (loose_hair(character) if character else self.hair[0],)
+        if hair:
+            hairs = (hair,)
+        hair = hairs
         outfits = self.outfits
         if self.wardrobe:
             outfits = wardrobe_outfits(self.wardrobe, character or "") or self.outfits
@@ -909,19 +917,25 @@ PAJAMA_PACK: tuple[dict, ...] = tuple(_pj(p) for p in (
 assert "her hair gathered smoothly" in PAJAMA_PACK[-1]["stance"]
 
 
+# One hair for the whole office romance, like the one outfit: Jeremy, 2026-11-10,
+# "I want them to be a unified photo set. The hair style changes in every photo
+# which ruins that immersion" - loose by default across all three, and a set in
+# another style is queued on request (run_shoots `--hair=...`).
 OFFICE: tuple[Shoot, ...] = (
     Shoot("office_door", "Office doorway", "office", OFFICE_DOOR, OFFICE_SLUTTY, (),
-          pose_slots=DOORWAY, shots=len(DOORWAY),
+          pose_slots=DOORWAY, shots=len(DOORWAY), loose_hair=True,
           note="At the open door of a luxurious private office, leaning in toward him at his "
                "desk. Revealing professional by default; the Office scenes in Mix and match "
-               "take the chic wardrobe."),
+               "take the chic wardrobe. Hair loose for the whole set."),
     Shoot("office_desk", "Private office, door closed", "office", OFFICE_IN, OFFICE_SLUTTY, (),
-          pose_slots=DESK, shots=len(DESK),
-          note="Inside with the door closed: on the desk, across it, in his chair, against the door."),
+          pose_slots=DESK, shots=len(DESK), loose_hair=True,
+          note="Inside with the door closed: on the desk, across it, in his chair, against the "
+               "door. Hair loose for the whole set."),
     Shoot("office_pov", "Between his legs (office)", "office", OFFICE_IN, OFFICE_SLUTTY, (),
-          pose_slots=BETWEEN_LEGS, shots=len(BETWEEN_LEGS),
+          pose_slots=BETWEEN_LEGS, shots=len(BETWEEN_LEGS), loose_hair=True,
           note="His point of view from the chair, his legs and boxer briefs in frame, her on the "
-               "floor between his knees. The pose pack mixes into any scene with a floor."),
+               "floor between his knees. The pose pack mixes into any scene with a floor. Hair "
+               "loose for the whole set."),
 )
 
 # Buckets group the tab's checkboxes. Keep each shoot small: the point is that
@@ -1364,6 +1378,23 @@ def set_outfit(shoot: Shoot, folder, character: str, *, roll: bool = True, rng=N
     Path(folder).mkdir(parents=True, exist_ok=True)
     sj.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     return pick
+
+
+def set_hair(folder, hair: str | None = None) -> str | None:
+    """The one hair clause this set is shot in, kept in its set.json beside
+    the outfit so a redo of one rejected shot wears it too. Given `hair`
+    (run_shoots `--hair`), it is written; otherwise whatever the set recorded
+    is read back, None when nothing was."""
+    import json  # noqa: PLC0415
+    from pathlib import Path  # noqa: PLC0415
+
+    sj = Path(folder) / "set.json"
+    doc = json.loads(sj.read_text(encoding="utf-8")) if sj.is_file() else {}
+    if hair:
+        doc["hair"] = hair.strip()
+        Path(folder).mkdir(parents=True, exist_ok=True)
+        sj.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    return str(doc["hair"]) if doc.get("hair") else None
 
 
 def set_aside_if_changed(dest, prompt: str) -> bool:

@@ -42,7 +42,8 @@ from sourcemode.assets.judge import make_set  # noqa: E402
 from sourcemode.assets.lora import resolve_lora  # noqa: E402
 from sourcemode.assets.redo import judge_item  # noqa: E402
 from sourcemode.assets.render import shot_prompt, t2i_workflow  # noqa: E402
-from sourcemode.assets.shoots import plan_path, resolve, set_aside_if_changed, set_outfit, total_shots  # noqa: E402
+from sourcemode.assets.shoots import (  # noqa: E402
+    plan_path, resolve, set_aside_if_changed, set_hair, set_outfit, total_shots)
 from sourcemode.config import load_config, outputs_dir  # noqa: E402
 from sourcemode.gates.identity import cosine, embed_image  # noqa: E402
 from sourcemode.library import find_set, library_dir, shoot_kind, write_set_json  # noqa: E402
@@ -50,8 +51,13 @@ from sourcemode.pose.native import NEGATIVE  # noqa: E402
 from sourcemode.render.client import ComfyUIClient  # noqa: E402
 
 _BARE = {"--allow-incomplete-appearance"}
-POS = [a for a in sys.argv if a not in _BARE]
+POS = [a for a in sys.argv if not a.startswith("--")]
 BARE = {a for a in sys.argv if a in _BARE}
+# --hair="her hair worn down with wavy curls throughout": one hair clause for
+# every shot of every selection, recorded in each set's set.json so a redo
+# wears it too (Jeremy, 2026-11-10, on the office sets: "if I want a set run
+# with a different hair style I will ask you to queue it for me")
+HAIR = next((a.split("=", 1)[1].strip() for a in sys.argv if a.startswith("--hair=")), None)
 if len(POS) < 3:
     raise SystemExit(__doc__)
 
@@ -209,7 +215,10 @@ def run_shoot(sh) -> int:
     outfit = set_outfit(sh, d, CHAR)
     if outfit:
         log(f"  {sh.id}: the whole set wears {outfit}")
-    plan = sh.plan(character=CHAR, outfit=outfit)
+    hair = set_hair(d, HAIR)
+    if hair:
+        log(f"  {sh.id}: the whole set has {hair}")
+    plan = sh.plan(character=CHAR, outfit=outfit, hair=hair)
     # a queued shoot is a new set (Jeremy, 2026-11-05, as run_pack): the last
     # set's shots go aside and every slot draws again on a fresh seed
     old = [f for slot in plan for f in d.glob(f"{slot['id']}.*") if f.suffix in (".png", ".txt", ".seed")]

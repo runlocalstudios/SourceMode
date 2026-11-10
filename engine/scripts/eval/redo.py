@@ -106,13 +106,14 @@ def redo_shoot(info: dict, seed: int) -> Path | None:
     if sh is None:
         log(f"  {info['slot_id']}: unknown shoot {info['source']!r}")
         return None
-    from sourcemode.assets.shoots import set_outfit
+    from sourcemode.assets.shoots import set_hair, set_outfit
     from sourcemode.library import find_set, shoot_kind
 
     folder = find_set(cfg, CHAR, shoot_kind(sh.id), sh.id, create=True)
-    # a re-roll wears the set's own outfit; it never rolls a new one
+    # a re-roll wears the set's own outfit and hair; it never rolls a new one
     outfit = set_outfit(sh, folder, CHAR, roll=False)
-    slot = next((s for s in sh.plan(character=CHAR, outfit=outfit) if s["id"] == info["slot_id"]), None)
+    slot = next((s for s in sh.plan(character=CHAR, outfit=outfit, hair=set_hair(folder))
+                 if s["id"] == info["slot_id"]), None)
     if slot is None:
         log(f"  {info['slot_id']}: no longer in {sh.id} - the catalog changed")
         return None
