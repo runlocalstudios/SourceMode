@@ -64,6 +64,7 @@ ONLY = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--
 RETRY = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--retry=")), [])
 MAX_ATTEMPTS = 4      # the first render plus three retries
 FACE_MIN = 0.50       # her face against the reference; GNASS renders of her ran 0.68-0.70 on 2026-11-09
+FACE_SIDE_MIN = 0.35  # a profile scores low against a frontal reference: a02_side a1 was her at 0.464
 YOUNG_FLAG = 23       # InsightFace runs a few years low on young adults; below this is never kept
 
 GNASS = "nsfw\\qimage2512_gnass.safetensors"
@@ -155,49 +156,104 @@ STORY: tuple[tuple[str, float, str], ...] = (
                            f"base, her nose against his body, seen from the side"),
     ("d09_pov", 0.8, f"{POV}: she kneels between his legs {RUG}, {TOPLESS}, her lips wrapped around {COCK}, "
                      f"one hand at the base, looking up into the camera"),
-    # --- sex, on the desk or the floor, her face to the camera ---
-    ("e01_desk_tip", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread and held up, "
-                          f"{HIM} standing at the edge of the desk between her legs with just the head of "
-                          f"{COCK} pressing into her vagina, her face turned to the camera"),
-    ("e02_desk_deep", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs held up and wide, "
-                           f"{HIM} standing between her legs with his thick penis deep inside her vagina, "
-                           f"thrusting, her labia stretched around the shaft, her face turned to the camera "
-                           f"with her mouth open"),
-    ("e03_desk_edge", 0.8, f"{PHOTOG}: she sits on the edge of the desk facing the camera, {SKIRT_UP}, leaning "
-                           f"back on her hands, {HIM} standing between her thighs with {COCK} deep inside her "
-                           f"vagina, her face to the camera"),
-    ("e04_rug_cowgirl", 0.8, f"{PHOTOG}: {HIM} lies on his back {RUG}, she straddles his hips facing the camera, "
-                             f"{SKIRT_UP}, riding {COCK} deep inside her vagina, her knees wide, her hands on "
-                             f"his chest, looking at the camera"),
-    ("e05_rug_missionary", 0.8, f"{PHOTOG} from beside them: she lies on her back {RUG}, {SKIRT_UP}, her "
-                                f"stockinged legs up over his shoulders, {HIM} kneeling over her with his thick "
-                                f"penis deep inside her vagina, thrusting, her face turned to the camera"),
-    ("e06_bent_tip", 0.8, f"{PHOTOG}: she bends over the desk with her hands flat on it, {SKIRT_UP}, looking "
-                          f"back over her shoulder at the camera, {HIM} standing behind her with just the head "
-                          f"of {COCK} pressing against her anus"),
-    ("e07_bent_deep", 0.8, f"{PHOTOG}: she bends over the desk with her hands flat on it, {SKIRT_UP}, {HIM} "
-                           f"standing behind her with his thick penis deep inside her anus, thrusting, her "
-                           f"looking back over her shoulder at the camera with her mouth open"),
-    ("e08_rug_anal_crouch", 0.8, f"{PHOTOG}: {HIM} lies on his back {RUG}, she crouches over his hips facing "
-                                 f"the camera with her feet flat on the rug and her knees wide, {SKIRT_UP}, "
-                                 f"{COCK} deep inside her anus, her wet vagina fully visible just above it, "
-                                 f"looking at the camera"),
+    # --- sex: she faces him on every shot, legs spread and planted, her pussy in his view ---
+    # Jeremy, 2026-11-10: "All anal and vaginal she is to be facing him - meaning no bent
+    # over shots. So she needs to have her legs spread and planted on the desk or floor
+    # and she brings her pussy or ass down onto his cock, he can always see her pussy in
+    # all those shots. Before he finishes, her back is on the desk and he is standing next
+    # to the desk ... add some poses where she is really looking pleasured. Try to add a
+    # few of her squirting while he is deep in her ass too"
+    ("s01_rug_tip", 0.8, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over his hips "
+                         f"facing him with her feet planted flat on the rug either side of him and her knees "
+                         f"spread wide, {SKIRT_UP}, one hand guiding just the head of {COCK} into her vagina, "
+                         f"her vagina fully visible between her spread thighs, her face turned to the camera"),
+    ("s02_rug_deep", 0.8, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over his hips "
+                          f"facing him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, lowered all "
+                          f"the way down with his thick penis deep inside her vagina, her stretched labia fully "
+                          f"visible, her head tilted back and her mouth open in pleasure, her face to the camera"),
+    ("s03_rug_pov", 0.8, f"{POV} from his eyes as he lies on his back {RUG}: she squats over his hips facing "
+                         f"him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, {COCK} deep inside "
+                         f"her vagina, her vagina stretched around it in full view, her face flushed, biting "
+                         f"her lip and looking into the camera"),
+    ("s04_rug_pleasure", 0.8, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over him "
+                              f"facing him, feet planted, knees wide, {SKIRT_UP}, riding his thick penis deep "
+                              f"in her vagina, her eyes half closed and rolling back, her mouth open in a moan, "
+                              f"her hands squeezing her own breasts, her face to the camera"),
+    ("s05_desk_tip", 0.8, f"{PHOTOG} from beside the desk: {HIM} lies on his back on the big walnut desk, she "
+                          f"squats over his hips on the desk facing him with her feet planted flat on the "
+                          f"desktop and her knees spread wide, {SKIRT_UP}, guiding just the head of {COCK} into "
+                          f"her vagina, her vagina fully visible, her face turned to the camera"),
+    ("s06_desk_deep", 0.8, f"{PHOTOG} from beside the desk: {HIM} lies on his back on the big walnut desk, she "
+                           f"squats over him on the desk facing him, feet planted on the desktop, knees wide, "
+                           f"{SKIRT_UP}, his thick penis deep inside her vagina, her stretched labia visible, "
+                           f"bouncing on it, her face to the camera with her mouth open in pleasure"),
+    ("s07_desk_pov", 0.8, f"{POV} from his eyes as he lies on his back on the big walnut desk: she squats over "
+                          f"his hips facing him, feet planted on the desktop, knees spread wide, {SKIRT_UP}, "
+                          f"{COCK} deep inside her vagina in full view, her face flushed with pleasure, looking "
+                          f"into the camera"),
+    ("s08_rug_anal_tip", 0.8, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over his "
+                              f"hips facing him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, "
+                              f"one hand guiding just the head of {COCK} against her anus, her wet vagina fully "
+                              f"visible just above it, her face turned to the camera"),
+    ("s09_rug_anal_deep", 0.8, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over "
+                               f"him facing him, feet planted, knees wide, {SKIRT_UP}, lowered all the way down "
+                               f"with his thick penis deep inside her anus, her wet vagina fully visible above "
+                               f"it, her head back and her mouth open in pleasure, her face to the camera"),
+    ("s10_rug_anal_pov", 0.8, f"{POV} from his eyes as he lies on his back {RUG}: she squats over his hips "
+                              f"facing him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, "
+                              f"{COCK} deep inside her anus, her wet vagina in full view above it, her eyes "
+                              f"rolling back with pleasure, looking into the camera"),
+    ("s11_rug_anal_squirt", 0.8, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over "
+                                 f"him facing him, feet planted, knees wide, {SKIRT_UP}, his thick penis deep "
+                                 f"inside her anus, a clear stream of fluid squirting from her vagina, her head "
+                                 f"thrown back and her mouth open in a cry of pleasure, her face to the camera"),
+    ("s12_desk_anal_deep", 0.8, f"{PHOTOG} from beside the desk: {HIM} lies on his back on the big walnut desk, "
+                                f"she squats over him on the desk facing him, feet planted on the desktop, "
+                                f"knees wide, {SKIRT_UP}, his thick penis deep inside her anus, her wet vagina "
+                                f"fully visible above it, her face to the camera, moaning"),
+    ("s13_desk_anal_squirt", 0.8, f"{PHOTOG} from beside the desk: {HIM} lies on his back on the big walnut "
+                                  f"desk, she squats over him facing him, feet planted on the desktop, knees "
+                                  f"wide, {SKIRT_UP}, his thick penis deep inside her anus, a clear stream of "
+                                  f"fluid squirting from her vagina, her eyes rolling back, her face to the "
+                                  f"camera"),
+    # --- her back on the desk, him standing beside it, before he finishes ---
+    ("e01_desk_tip", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread wide with her "
+                          f"feet planted on the edge of the desk, {HIM} standing at the edge of the desk "
+                          f"between her legs with just the head of {COCK} pressing into her vagina, her vagina "
+                          f"in full view, her face turned to the camera"),
+    ("e02_desk_deep", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread wide and "
+                           f"held up, {HIM} standing between her legs with his thick penis deep inside her "
+                           f"vagina, thrusting, her labia stretched around the shaft, her head back and her "
+                           f"mouth open in pleasure, her face turned to the camera"),
     ("e09_desk_anal_tip", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and held "
                                f"open, {HIM} standing at the edge of the desk with just the head of {COCK} "
-                               f"entering her anus, her face turned to the camera"),
+                               f"entering her anus, her wet vagina in full view above it, her face turned to "
+                               f"the camera"),
     ("e10_desk_anal_deep", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and "
                                 f"held open, {HIM} standing at the edge of the desk with his thick penis deep "
                                 f"inside her anus, thrusting, her wet vagina visible above it, her face turned "
                                 f"to the camera with her mouth open"),
-    # --- the finish ---
-    ("f01_pullout", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, {HIM} standing at the edge of "
-                         f"the desk having just pulled {COCK} out of her anus, she reaches down and wraps her "
-                         f"hand around it, looking at the camera"),
-    ("f02_cum", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, jerking {COCK} with her hand as he "
-                     f"ejaculates, a massive load of thick white cum spraying across her stomach, chest and "
-                     f"face, her eyes on the camera"),
-    ("f03_covered", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her stomach, breasts and face "
-                         f"covered in thick white cum, {COCK} still in her hand, smiling at the camera"),
+    ("e11_desk_anal_pleasure", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and "
+                                    f"held open, {HIM} standing at the edge of the desk with his thick penis "
+                                    f"deep inside her anus, her wet vagina visible above it, her eyes rolling "
+                                    f"back and her mouth open in a moan, gripping the edge of the desk, her "
+                                    f"face to the camera"),
+    ("e12_desk_anal_squirt", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and "
+                                  f"held open, {HIM} standing at the edge of the desk with his thick penis deep "
+                                  f"inside her anus, a clear stream of fluid squirting from her vagina, her "
+                                  f"head thrown back in a cry of pleasure, her face to the camera"),
+    # --- the finish: he stands beside the desk, his penis held just above her pussy ---
+    ("f01_pullout", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread, {HIM} "
+                         f"standing beside the desk having just pulled {COCK} out of her anus and holding it "
+                         f"just above her vagina, she reaches down and wraps her hand around it, looking at "
+                         f"the camera"),
+    ("f02_cum", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread, {HIM} standing "
+                     f"beside the desk, she jerks {COCK} held just above her vagina as he ejaculates, a massive "
+                     f"load of thick white cum spraying across her stomach, chest and face, her eyes on the "
+                     f"camera"),
+    ("f03_covered", 0.8, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread, {HIM} standing "
+                         f"beside the desk, her stomach, breasts and face covered in thick white cum, {COCK} "
+                         f"still in her hand just above her vagina, smiling at the camera"),
 )
 IDS = [s[0] for s in STORY]
 assert len(IDS) == len(set(IDS)), "duplicate shot id"
@@ -312,8 +368,9 @@ if not SHEET_ONLY:
             out.with_suffix(".txt").write_text(prompt_for(body), encoding="utf-8")
             face, age = score(out)
             young = bool(age is not None and age < YOUNG_FLAG)
-            ok = bool(face is not None and face >= FACE_MIN and not young)
-            why = "" if ok else ("no face" if face is None else "YOUNG" if young else f"face {face} < {FACE_MIN}")
+            fmin = FACE_SIDE_MIN if sid.endswith("_side") else FACE_MIN
+            ok = bool(face is not None and face >= fmin and not young)
+            why = "" if ok else ("no face" if face is None else "YOUNG" if young else f"face {face} < {fmin}")
             record[sid]["attempts"].append({"file": out.name, "seed": seed, "face": face, "age": age,
                                             "young": young, "ok": ok, "why": why, "gnass": strength})
             k = kept_of(sid)
