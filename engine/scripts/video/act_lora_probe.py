@@ -107,22 +107,22 @@ SHOTS: dict[str, tuple[str, str]] = {
                          f"camera"),
     "deep": ("bl0wj0b, ", f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, deepthroat: {COCK_POV} all the "
                           f"way inside her mouth and throat, her lips pressed to its base, her nose touching his "
-                          f"belly, her cheeks hollowed, her eyes watering, looking up into the camera"),
+                          f"belly, her cheeks hollowed, her eyes heavy-lidded with pleasure looking up into the camera, loving it"),
     "cowgirl": ("c0wg1rl, ", f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over his "
                              f"hips facing him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, "
                              f"lowered all the way down with his thick penis deep inside her vagina, her "
-                             f"stretched labia fully visible, her head tilted back and her mouth open in "
+                             f"stretched labia fully visible, her head tilted back and her lips parted in "
                              f"pleasure, her face to the camera"),
     "anal": ("c0wg1rl, ", f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over him "
                           f"facing him, feet planted, knees wide, {SKIRT_UP}, lowered all the way down with his "
                           f"thick penis deep inside her anus, her wet vagina fully visible above it, her head "
-                          f"back and her mouth open in pleasure, her face to the camera"),
+                          f"back and her lips parted in pleasure, her face to the camera"),
 }
 if ONLY_SHOTS:
     SHOTS = {k: v for k, v in SHOTS.items() if k in ONLY_SHOTS}
 NEG = ("different person, different face, changed hair, bra, bralette, vest, blouse, shirt on her, top on her, "
        "extra penis, extra hands, extra limbs, deformed genitals, deformed hands, blurry, low quality, cartoon, "
-       "anime, watermark, text, condom, childlike, child, underage")
+       "anime, watermark, text, condom, tears, crying, watering eyes, toothy grin, childlike, child, underage")
 NEG_POV = ", the man's face, his face, far away, distant, standing, office chair behind her, a second man"
 
 cfg = load_config()

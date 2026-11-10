@@ -175,7 +175,7 @@ STORY: tuple[tuple[str, float, str], ...] = (
     ("d06_side", 0.6, f"{SIDE}: {SEATED_SIDE}, {TOPLESS}, {COCK} halfway into her mouth, her lips stretched "
                       f"around the shaft, seen from the side"),
     ("d07_deep_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, most of {COCK_POV} inside her "
-                          f"mouth, her lips near the base, her cheeks hollowed, her eyes watering, looking up "
+                          f"mouth, her lips near the base, her cheeks hollowed, her eyes heavy-lidded with pleasure, looking up "
                           f"into the camera"),
     ("d08_deep_side", 0.6, f"{SIDE}: {SEATED_SIDE}, {TOPLESS}, {COCK} all the way in her mouth, her lips at "
                            f"the base, her nose against his body, seen from the side"),
@@ -195,14 +195,14 @@ STORY: tuple[tuple[str, float, str], ...] = (
     ("s02_rug_deep", 0.6, f"{PHOTOG} from beside his head: {HIM_BARE} lies on his back {RUG}, she squats over his hips "
                           f"facing him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, lowered all "
                           f"the way down with his thick penis deep inside her vagina, her stretched labia fully "
-                          f"visible, her head tilted back and her mouth open in pleasure, her face to the camera"),
+                          f"visible, her face to the camera flushed with pleasure, eyes heavy-lidded, lips parted in a soft moan"),
     ("s03_rug_pov", 0.6, f"{POV} from his eyes as he lies on his back {RUG}: she squats over his hips facing "
                          f"him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, {COCK} deep inside "
                          f"her vagina, her vagina stretched around it in full view, her face flushed, biting "
                          f"her lip and looking into the camera"),
     ("s04_rug_pleasure", 0.6, f"{PHOTOG} from beside his head: {HIM_BARE} lies on his back {RUG}, she squats over him "
                               f"facing him, feet planted, knees wide, {SKIRT_UP}, riding his thick penis deep "
-                              f"in her vagina, her eyes half closed and rolling back, her mouth open in a moan, "
+                              f"in her vagina, her eyes half closed in pleasure, lips parted in a soft moan, her face flushed, "
                               f"her hands squeezing her own breasts, her face to the camera"),
     ("s05_desk_tip", 0.6, f"{PHOTOG} from beside the desk: {HIM_BARE} lies on his back on the big walnut desk, she "
                           f"squats over his hips on the desk facing him with her feet planted flat on the "
@@ -211,7 +211,7 @@ STORY: tuple[tuple[str, float, str], ...] = (
     ("s06_desk_deep", 0.6, f"{PHOTOG} from beside the desk: {HIM_BARE} lies on his back on the big walnut desk, she "
                            f"squats over him on the desk facing him, feet planted on the desktop, knees wide, "
                            f"{SKIRT_UP}, his thick penis deep inside her vagina, her stretched labia visible, "
-                           f"bouncing on it, her face to the camera with her mouth open in pleasure"),
+                           f"bouncing on it, her face to the camera flushed with pleasure, eyes heavy-lidded, lips parted"),
     ("s07_desk_pov", 0.6, f"{POV} from his eyes as he lies on his back on the big walnut desk: she squats over "
                           f"his hips facing him, feet planted on the desktop, knees spread wide, {SKIRT_UP}, "
                           f"{COCK} deep inside her vagina in full view, her face flushed with pleasure, looking "
@@ -223,7 +223,7 @@ STORY: tuple[tuple[str, float, str], ...] = (
     ("s09_rug_anal_deep", 0.6, f"{PHOTOG} from beside his head: {HIM_BARE} lies on his back {RUG}, she squats over "
                                f"him facing him, feet planted, knees wide, {SKIRT_UP}, lowered all the way down "
                                f"with his thick penis deep inside her anus, her wet vagina fully visible above "
-                               f"it, her head back and her mouth open in pleasure, her face to the camera"),
+                               f"it, her face to the camera flushed with pleasure, eyes heavy-lidded, lips parted in a soft moan"),
     ("s10_rug_anal_pov", 0.6, f"{POV} from his eyes as he lies on his back {RUG}: she squats over his hips "
                               f"facing him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, "
                               f"{COCK} deep inside her anus, her wet vagina in full view above it, her eyes "
@@ -231,11 +231,11 @@ STORY: tuple[tuple[str, float, str], ...] = (
     ("s11_rug_anal_squirt", 0.6, f"{PHOTOG} from beside his head: {HIM_BARE} lies on his back {RUG}, she squats over "
                                  f"him facing him, feet planted, knees wide, {SKIRT_UP}, his thick penis deep "
                                  f"inside her anus, a clear stream of fluid squirting from her vagina, her head "
-                                 f"thrown back and her mouth open in a cry of pleasure, her face to the camera"),
+                                 f"thrown back and her lips parted in a cry of pleasure, her face to the camera"),
     ("s12_desk_anal_deep", 0.6, f"{PHOTOG} from beside the desk: {HIM_BARE} lies on his back on the big walnut desk, "
                                 f"she squats over him on the desk facing him, feet planted on the desktop, "
                                 f"knees wide, {SKIRT_UP}, his thick penis deep inside her anus, her wet vagina "
-                                f"fully visible above it, her face to the camera, moaning"),
+                                f"fully visible above it, her face to the camera flushed with pleasure, lips parted in a soft moan"),
     ("s13_desk_anal_squirt", 0.6, f"{PHOTOG} from beside the desk: {HIM_BARE} lies on his back on the big walnut "
                                   f"desk, she squats over him facing him, feet planted on the desktop, knees "
                                   f"wide, {SKIRT_UP}, his thick penis deep inside her anus, a clear stream of "
@@ -257,11 +257,11 @@ STORY: tuple[tuple[str, float, str], ...] = (
     ("e10_desk_anal_deep", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and "
                                 f"held open, {HIM_BARE} standing at the edge of the desk with his thick penis deep "
                                 f"inside her anus, thrusting, her wet vagina visible above it, her face turned "
-                                f"to the camera with her mouth open"),
+                                f"to the camera with her lips parted"),
     ("e11_desk_anal_pleasure", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and "
                                     f"held open, {HIM_BARE} standing at the edge of the desk with his thick penis "
                                     f"deep inside her anus, her wet vagina visible above it, her eyes rolling "
-                                    f"back and her mouth open in a moan, gripping the edge of the desk, her "
+                                    f"back and her lips parted in a soft moan, gripping the edge of the desk, her "
                                     f"face to the camera"),
     ("e12_desk_anal_squirt", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and "
                                   f"held open, {HIM_BARE} standing at the edge of the desk with his thick penis deep "
@@ -285,7 +285,7 @@ assert len(IDS) == len(set(IDS)), "duplicate shot id"
 
 NEG_BASE = ("different person, different face, changed hair, extra penis, extra hands, extra limbs, deformed "
             "genitals, deformed hands, blurry, low quality, cartoon, anime, watermark, text, condom, childlike, "
-            "child, underage")
+            "child, underage, tears, crying, watering eyes, toothy grin")
 NEG_BARE = "bra, bralette, vest, blouse, shirt on her, top on her"   # once she is topless, nothing comes back
 NEG_POV = "the man's face, his face, far away, distant, standing, office chair behind her, a second man"
 
