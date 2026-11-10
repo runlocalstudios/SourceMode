@@ -61,6 +61,7 @@ CHAR = ARGS[0].lower()
 SEEDS = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--seeds=")), 2))
 ONLY_ARMS = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--arms=")), None)
 ONLY_SHOTS = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--shots=")), None)
+TAG = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--tag=")), "")   # round name in the file name
 W, H = 1024, 1536
 
 NSFW = "nsfw\\"
@@ -84,30 +85,29 @@ TOPLESS = ("topless with her bare breasts showing, wearing only the tight red pe
            "black stockings")
 SKIRT_UP = ("topless with her bare breasts showing, her red mini skirt pushed up around her waist, her sheer "
             "black stockings still on, otherwise naked")
-HIM = "a fit man in a white dress shirt with the sleeves rolled up"
-COCK = "his thick eight-inch erect penis, large and prominent"
+HIM = "a fit man in a white dress shirt with the sleeves rolled up, naked from the waist down"
+COCK = "his thick erect penis"
 PHOTOG = "picture by a photographer shooting the set"
 RUG = "on the cream wool rug"
 POV_SEAT = ("close point-of-view photo looking down from the eyes of a man sitting in the big leather office "
             "chair with his knees spread, his own thighs along both sides of the bottom of the frame, his face "
             "out of frame")
-TROUSERS_DOWN = "his suit trousers and boxer briefs pushed down around his ankles"
+TROUSERS_DOWN = "he is naked from the waist down, his bare thighs spread"
 KNEEL_POV = "she kneels on the cream wool rug right between his spread knees, close, facing the camera"
-COCK_POV = "his thick eight-inch erect penis rising from between his thighs at the bottom of the frame"
+COCK_POV = "his thick erect penis rising from between his bare thighs at the bottom of the frame"
 
 # shot -> (qwen4play trigger, body)
 SHOTS: dict[str, tuple[str, str]] = {
-    "release": ("", f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, her hands pulling the waistband of his "
-                    f"black boxer briefs down as {COCK} springs up between his thighs right in front of her "
-                    f"face, her eyes wide, grinning up at the camera"),
+    "release": ("", f"{POV_SEAT}, {KNEEL_POV}, {TOPLESS}, her hands pulling his black boxer briefs down his thighs "
+                    f"as {COCK} springs up right in front of her face, her eyes wide, grinning up at the camera"),
     "stroke": ("", f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, stroking {COCK_POV} with one hand, the "
                    f"shaft glistening with saliva, looking up into the camera"),
     "tip": ("bl0wj0b, ", f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, just the head of {COCK_POV} "
                          f"between her lips, her lips closed around the tip only, her eyes looking up into the "
                          f"camera"),
-    "deep": ("bl0wj0b, ", f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, most of {COCK_POV} inside her "
-                          f"mouth, her lips near the base, her cheeks hollowed, her eyes watering, looking up "
-                          f"into the camera"),
+    "deep": ("bl0wj0b, ", f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, deepthroat: {COCK_POV} all the "
+                          f"way inside her mouth and throat, her lips pressed to its base, her nose touching his "
+                          f"belly, her cheeks hollowed, her eyes watering, looking up into the camera"),
     "cowgirl": ("c0wg1rl, ", f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over his "
                              f"hips facing him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, "
                              f"lowered all the way down with his thick penis deep inside her vagina, her "
@@ -220,7 +220,7 @@ def score(p: Path) -> tuple[float | None, int | None]:
 
 
 for arm, shot, s in plan:
-    out = d / f"{arm}__{shot}__s{s}.png"
+    out = d / f"{arm}__{shot}__{TAG + '_' if TAG else ''}s{s}.png"
     if out.is_file():
         continue
     seed = rng.randrange(1, 2**31)
@@ -242,7 +242,7 @@ sheet = Image.new("RGB", (TW * len(SHOTS), TH * len(rows)), "black")
 dr = ImageDraw.Draw(sheet)
 for r, (arm, s) in enumerate(rows):
     for c, shot in enumerate(SHOTS):
-        p = d / f"{arm}__{shot}__s{s}.png"
+        p = d / f"{arm}__{shot}__{TAG + '_' if TAG else ''}s{s}.png"
         if not p.is_file():
             continue
         im = Image.open(p).convert("RGB")
