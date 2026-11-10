@@ -12,8 +12,10 @@ him standing next to the bed."
 Only characters who read as adults run through this. The character record's
 age is not enough on its own: InsightFace's age estimate is logged per render
 and anything that reads young is flagged on the sheet for rejection. QC only;
-his eye is final. (The request named fiona; her renders have read younger than
-her record this session, so she does not run here.)
+his eye is final. (fiona was held back on 2026-11-09 while her "18-year-old
+girl" wording rendered young; her record now says "a 20-year-old young woman"
+and her office set of 2026-11-10 reads early twenties, so she runs - flagged
+tiles still get thrown out.)
 
 Arms (Qwen-Image 2512 text-to-image, her locked LoRA at 1.0 plus the GNASS sex
 LoRA - its training name is s3x_2512_qwen - at two strengths):
