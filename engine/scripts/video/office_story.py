@@ -249,7 +249,7 @@ STORY: tuple[tuple[str, float, str], ...] = (
     ("e02_desk_deep", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread wide and "
                            f"held up, {HIM_BARE} standing between her legs with his thick penis deep inside her "
                            f"vagina, thrusting, her labia stretched around the shaft, her head back and her "
-                           f"mouth open in pleasure, her face turned to the camera"),
+                           f"lips parted in pleasure, her face turned to the camera"),
     ("e09_desk_anal_tip", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and held "
                                f"open, {HIM_BARE} standing at the edge of the desk with just the head of {COCK} "
                                f"entering her anus, her wet vagina in full view above it, her face turned to "
