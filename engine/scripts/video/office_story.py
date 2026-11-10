@@ -80,6 +80,8 @@ TOPLESS = ("topless with her bare breasts showing, wearing only the tight red pe
 SKIRT_UP = ("topless with her bare breasts showing, her red mini skirt pushed up around her waist, her sheer "
             "black stockings still on, otherwise naked")
 HIM = "a fit man in a white dress shirt with the sleeves rolled up"
+# every facing-him render of j1351 kept his trousers ON under her: the sex shots say so outright
+HIM_BARE = f"{HIM}, naked from the waist down with his trousers off"
 COCK = "his thick eight-inch erect penis, large and prominent"
 PHOTOG = "picture by a photographer shooting the set"
 SIDE = "picture by a photographer shooting the set from the side at her eye level, her face in profile"
@@ -186,11 +188,11 @@ STORY: tuple[tuple[str, float, str], ...] = (
     # all those shots. Before he finishes, her back is on the desk and he is standing next
     # to the desk ... add some poses where she is really looking pleasured. Try to add a
     # few of her squirting while he is deep in her ass too"
-    ("s01_rug_tip", 0.6, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over his hips "
+    ("s01_rug_tip", 0.6, f"{PHOTOG} from beside his head: {HIM_BARE} lies on his back {RUG}, she squats over his hips "
                          f"facing him with her feet planted flat on the rug either side of him and her knees "
                          f"spread wide, {SKIRT_UP}, one hand guiding just the head of {COCK} into her vagina, "
                          f"her vagina fully visible between her spread thighs, her face turned to the camera"),
-    ("s02_rug_deep", 0.6, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over his hips "
+    ("s02_rug_deep", 0.6, f"{PHOTOG} from beside his head: {HIM_BARE} lies on his back {RUG}, she squats over his hips "
                           f"facing him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, lowered all "
                           f"the way down with his thick penis deep inside her vagina, her stretched labia fully "
                           f"visible, her head tilted back and her mouth open in pleasure, her face to the camera"),
@@ -198,15 +200,15 @@ STORY: tuple[tuple[str, float, str], ...] = (
                          f"him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, {COCK} deep inside "
                          f"her vagina, her vagina stretched around it in full view, her face flushed, biting "
                          f"her lip and looking into the camera"),
-    ("s04_rug_pleasure", 0.6, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over him "
+    ("s04_rug_pleasure", 0.6, f"{PHOTOG} from beside his head: {HIM_BARE} lies on his back {RUG}, she squats over him "
                               f"facing him, feet planted, knees wide, {SKIRT_UP}, riding his thick penis deep "
                               f"in her vagina, her eyes half closed and rolling back, her mouth open in a moan, "
                               f"her hands squeezing her own breasts, her face to the camera"),
-    ("s05_desk_tip", 0.6, f"{PHOTOG} from beside the desk: {HIM} lies on his back on the big walnut desk, she "
+    ("s05_desk_tip", 0.6, f"{PHOTOG} from beside the desk: {HIM_BARE} lies on his back on the big walnut desk, she "
                           f"squats over his hips on the desk facing him with her feet planted flat on the "
                           f"desktop and her knees spread wide, {SKIRT_UP}, guiding just the head of {COCK} into "
                           f"her vagina, her vagina fully visible, her face turned to the camera"),
-    ("s06_desk_deep", 0.6, f"{PHOTOG} from beside the desk: {HIM} lies on his back on the big walnut desk, she "
+    ("s06_desk_deep", 0.6, f"{PHOTOG} from beside the desk: {HIM_BARE} lies on his back on the big walnut desk, she "
                            f"squats over him on the desk facing him, feet planted on the desktop, knees wide, "
                            f"{SKIRT_UP}, his thick penis deep inside her vagina, her stretched labia visible, "
                            f"bouncing on it, her face to the camera with her mouth open in pleasure"),
@@ -214,11 +216,11 @@ STORY: tuple[tuple[str, float, str], ...] = (
                           f"his hips facing him, feet planted on the desktop, knees spread wide, {SKIRT_UP}, "
                           f"{COCK} deep inside her vagina in full view, her face flushed with pleasure, looking "
                           f"into the camera"),
-    ("s08_rug_anal_tip", 0.6, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over his "
+    ("s08_rug_anal_tip", 0.6, f"{PHOTOG} from beside his head: {HIM_BARE} lies on his back {RUG}, she squats over his "
                               f"hips facing him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, "
                               f"one hand guiding just the head of {COCK} against her anus, her wet vagina fully "
                               f"visible just above it, her face turned to the camera"),
-    ("s09_rug_anal_deep", 0.6, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over "
+    ("s09_rug_anal_deep", 0.6, f"{PHOTOG} from beside his head: {HIM_BARE} lies on his back {RUG}, she squats over "
                                f"him facing him, feet planted, knees wide, {SKIRT_UP}, lowered all the way down "
                                f"with his thick penis deep inside her anus, her wet vagina fully visible above "
                                f"it, her head back and her mouth open in pleasure, her face to the camera"),
@@ -226,43 +228,43 @@ STORY: tuple[tuple[str, float, str], ...] = (
                               f"facing him, feet planted flat on the rug, knees spread wide, {SKIRT_UP}, "
                               f"{COCK} deep inside her anus, her wet vagina in full view above it, her eyes "
                               f"rolling back with pleasure, looking into the camera"),
-    ("s11_rug_anal_squirt", 0.6, f"{PHOTOG} from beside his head: {HIM} lies on his back {RUG}, she squats over "
+    ("s11_rug_anal_squirt", 0.6, f"{PHOTOG} from beside his head: {HIM_BARE} lies on his back {RUG}, she squats over "
                                  f"him facing him, feet planted, knees wide, {SKIRT_UP}, his thick penis deep "
                                  f"inside her anus, a clear stream of fluid squirting from her vagina, her head "
                                  f"thrown back and her mouth open in a cry of pleasure, her face to the camera"),
-    ("s12_desk_anal_deep", 0.6, f"{PHOTOG} from beside the desk: {HIM} lies on his back on the big walnut desk, "
+    ("s12_desk_anal_deep", 0.6, f"{PHOTOG} from beside the desk: {HIM_BARE} lies on his back on the big walnut desk, "
                                 f"she squats over him on the desk facing him, feet planted on the desktop, "
                                 f"knees wide, {SKIRT_UP}, his thick penis deep inside her anus, her wet vagina "
                                 f"fully visible above it, her face to the camera, moaning"),
-    ("s13_desk_anal_squirt", 0.6, f"{PHOTOG} from beside the desk: {HIM} lies on his back on the big walnut "
+    ("s13_desk_anal_squirt", 0.6, f"{PHOTOG} from beside the desk: {HIM_BARE} lies on his back on the big walnut "
                                   f"desk, she squats over him facing him, feet planted on the desktop, knees "
                                   f"wide, {SKIRT_UP}, his thick penis deep inside her anus, a clear stream of "
                                   f"fluid squirting from her vagina, her eyes rolling back, her face to the "
                                   f"camera"),
     # --- her back on the desk, him standing beside it, before he finishes ---
     ("e01_desk_tip", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread wide with her "
-                          f"feet planted on the edge of the desk, {HIM} standing at the edge of the desk "
+                          f"feet planted on the edge of the desk, {HIM_BARE} standing at the edge of the desk "
                           f"between her legs with just the head of {COCK} pressing into her vagina, her vagina "
                           f"in full view, her face turned to the camera"),
     ("e02_desk_deep", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread wide and "
-                           f"held up, {HIM} standing between her legs with his thick penis deep inside her "
+                           f"held up, {HIM_BARE} standing between her legs with his thick penis deep inside her "
                            f"vagina, thrusting, her labia stretched around the shaft, her head back and her "
                            f"mouth open in pleasure, her face turned to the camera"),
     ("e09_desk_anal_tip", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and held "
-                               f"open, {HIM} standing at the edge of the desk with just the head of {COCK} "
+                               f"open, {HIM_BARE} standing at the edge of the desk with just the head of {COCK} "
                                f"entering her anus, her wet vagina in full view above it, her face turned to "
                                f"the camera"),
     ("e10_desk_anal_deep", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and "
-                                f"held open, {HIM} standing at the edge of the desk with his thick penis deep "
+                                f"held open, {HIM_BARE} standing at the edge of the desk with his thick penis deep "
                                 f"inside her anus, thrusting, her wet vagina visible above it, her face turned "
                                 f"to the camera with her mouth open"),
     ("e11_desk_anal_pleasure", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and "
-                                    f"held open, {HIM} standing at the edge of the desk with his thick penis "
+                                    f"held open, {HIM_BARE} standing at the edge of the desk with his thick penis "
                                     f"deep inside her anus, her wet vagina visible above it, her eyes rolling "
                                     f"back and her mouth open in a moan, gripping the edge of the desk, her "
                                     f"face to the camera"),
     ("e12_desk_anal_squirt", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs raised and "
-                                  f"held open, {HIM} standing at the edge of the desk with his thick penis deep "
+                                  f"held open, {HIM_BARE} standing at the edge of the desk with his thick penis deep "
                                   f"inside her anus, a clear stream of fluid squirting from her vagina, her "
                                   f"head thrown back in a cry of pleasure, her face to the camera"),
     # --- the finish: he stands beside the desk, his penis held just above her pussy ---
@@ -270,11 +272,11 @@ STORY: tuple[tuple[str, float, str], ...] = (
                          f"standing beside the desk having just pulled {COCK} out of her anus and holding it "
                          f"just above her vagina, she reaches down and wraps her hand around it, looking at "
                          f"the camera"),
-    ("f02_cum", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread, {HIM} standing "
+    ("f02_cum", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread, {HIM_BARE} standing "
                      f"beside the desk, she jerks {COCK} held just above her vagina as he ejaculates, a massive "
                      f"load of thick white cum spraying across her stomach, chest and face, her eyes on the "
                      f"camera"),
-    ("f03_covered", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread, {HIM} standing "
+    ("f03_covered", 0.6, f"{PHOTOG} from beside the desk: {ON_DESK}, {SKIRT_UP}, her legs spread, {HIM_BARE} standing "
                          f"beside the desk, her stomach, breasts and face covered in thick white cum, {COCK} "
                          f"still in her hand just above her vagina, smiling at the camera"),
 )
