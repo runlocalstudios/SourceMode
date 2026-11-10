@@ -63,8 +63,8 @@ CHAR = ARGS[0].lower()
 ONLY = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--only=")), None)
 RETRY = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--retry=")), [])
 MAX_ATTEMPTS = 4      # the first render plus three retries
-FACE_MIN = 0.50       # her face against the reference; GNASS renders of her ran 0.68-0.70 on 2026-11-09
-FACE_SIDE_MIN = 0.35  # a profile scores low against a frontal reference: a02_side a1 was her at 0.464
+FACE_MIN = 0.30       # only a tie-breaker: her kneeling looking-up shots scored 0.34-0.48 and were all her (j1351)
+FACE_SIDE_MIN = 0.30  # a profile scores low against a frontal reference: a02_side a1 was her at 0.464
 YOUNG_FLAG = 20       # Jeremy, 2026-11-10: "The floor should be like 20 because 18 is a fucking adult"
 
 GNASS = "nsfw\\qimage2512_gnass.safetensors"
@@ -85,6 +85,16 @@ PHOTOG = "picture by a photographer shooting the set"
 SIDE = "picture by a photographer shooting the set from the side at her eye level, her face in profile"
 POV = "POV picture from the man's eyes looking down"
 KNEEL = f"she kneels on the cream wool rug in front of {HIM}, who stands by the desk with his trousers down"
+# From his eyes, as the office pov shoot frames it (shoots._POV / _HIS): his own thighs along the
+# bottom of the frame put the camera in his head, and his face stays out of frame.
+POV_SEAT = ("close point-of-view photo looking down from the eyes of a man sitting in the big leather office "
+            "chair with his knees spread, his own thighs along both sides of the bottom of the frame, his face "
+            "out of frame")
+TROUSERS_DOWN = "his suit trousers and boxer briefs pushed down around his ankles"
+KNEEL_POV = "she kneels on the cream wool rug right between his spread knees, close, facing the camera"
+COCK_POV = "his thick eight-inch erect penis rising from between his thighs at the bottom of the frame"
+SEATED_SIDE = (f"{HIM} sits in the big leather office chair with his trousers down around his ankles and his "
+               f"knees spread, she kneels on the cream wool rug between his knees, both seen from the side")
 ON_DESK = "she lies on her back on the big walnut desk"
 RUG = "on the cream wool rug"
 
@@ -109,55 +119,64 @@ STORY: tuple[tuple[str, float, str], ...] = (
                               f"her face to the camera"),
     ("a07_topless_back", 0.6, f"{PHOTOG}: seen from behind, three-quarter length, {TOPLESS}, lifting her hair "
                               f"with both hands, looking back over her shoulder at the camera"),
-    # --- his pants come off ---
-    ("b01_belt", 0.6, f"{PHOTOG}: she kneels on the cream wool rug in front of {HIM} standing by the desk, "
-                      f"{TOPLESS}, her hands undoing his belt buckle, a large bulge straining in his suit "
-                      f"trousers, she looks up at him with a grin"),
-    # a1 put HER in the trousers: he has to be named in the frame
-    ("b02_unzip", 0.6, f"{PHOTOG}: she kneels on the cream wool rug in front of {HIM} standing by the desk, "
-                       f"{TOPLESS}, her hands pulling his unzipped suit trousers down over his hips, his "
-                       f"erection straining against his black boxer briefs, she looks at the camera with a grin"),
-    ("b03_release", 0.6, f"{PHOTOG}: she kneels on the cream wool rug, {TOPLESS}, pulling his boxer briefs down "
-                         f"as {COCK} springs free right in front of her face, her eyes wide, grinning at the "
-                         f"camera"),
-    # --- handjob ---
-    ("c01_grab", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, wrapping one hand around {COCK}, looking up at the camera "
-                      f"with a hungry smile"),
-    ("c02_spit", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, holding {COCK} in one hand and spitting onto the head of "
-                      f"it, a string of saliva running from her lips to the penis"),
-    ("c03_stroke", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, stroking {COCK} with one hand, the shaft glistening "
-                        f"with saliva, looking up at the camera"),
-    ("c04_stroke_side", 0.6, f"{SIDE}: {KNEEL}, {TOPLESS}, stroking {COCK} with one hand, the penis seen from "
-                             f"the side pointing at her face"),
-    ("c05_balls", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, stroking the shaft of {COCK} with one hand while her "
-                       f"other hand cups and rubs his balls, looking up at the camera"),
-    ("c06_squeeze", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, her hand gently squeezing his balls, the head of "
-                         f"{COCK} resting against her cheek, smiling at the camera"),
-    ("c07_two_hands", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, both of her hands wrapped around {COCK} one above "
-                           f"the other, stroking it, the head still showing above her top hand, looking up at "
-                           f"the camera"),
-    ("c08_two_hands_side", 0.6, f"{SIDE}: {KNEEL}, {TOPLESS}, both hands wrapped around {COCK} stroking it, "
-                                f"the penis seen from the side"),
+    # --- his pants come off, from his eyes ---
+    # Jeremy, 2026-11-10: "this is supposed to be POV, so like he should be either sitting in
+    # a chair or sitting on the desk, and she undoes his pants there, and then all of the hand
+    # job and blow job shots except for the side view ones are all supposed to be POV."
+    ("b01_belt_pov", 0.6, f"{POV_SEAT}, his suit trousers still on, {KNEEL_POV}, {TOPLESS}, her hands undoing "
+                          f"his belt buckle, a large bulge straining in his trousers, looking up into the "
+                          f"camera with a grin"),
+    ("b02_unzip_pov", 0.6, f"{POV_SEAT}, {KNEEL_POV}, {TOPLESS}, her hands tugging his unzipped suit trousers "
+                           f"down his thighs, his erection straining against his black boxer briefs, looking "
+                           f"up into the camera with a grin"),
+    ("b03_release_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, her hands pulling the "
+                             f"waistband of his black boxer briefs down as {COCK} springs up between his "
+                             f"thighs right in front of her face, her eyes wide, grinning up at the camera"),
+    # --- handjob, from his eyes, two side views by the photographer ---
+    ("c01_grab_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, wrapping one hand around "
+                          f"{COCK_POV}, looking up into the camera with a hungry smile"),
+    ("c02_spit_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, holding {COCK_POV} in one hand "
+                          f"and spitting onto the head of it, a string of saliva running from her lips to the "
+                          f"penis, her eyes on the camera"),
+    ("c03_stroke_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, stroking {COCK_POV} with one "
+                            f"hand, the shaft glistening with saliva, looking up into the camera"),
+    ("c04_stroke_side", 0.6, f"{SIDE}: {SEATED_SIDE}, {TOPLESS}, stroking {COCK} with one hand, the penis seen "
+                             f"from the side pointing up at her face"),
+    ("c05_balls_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, stroking the shaft of "
+                           f"{COCK_POV} with one hand while her other hand cups and rubs his balls, looking up "
+                           f"into the camera"),
+    ("c06_squeeze_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, her hand gently squeezing "
+                             f"his balls, the head of {COCK_POV} resting against her cheek, smiling up at the "
+                             f"camera"),
+    ("c07_two_hands_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, both of her hands wrapped "
+                               f"around {COCK_POV} one above the other, stroking it, the head still showing "
+                               f"above her top hand, looking up into the camera"),
+    ("c08_two_hands_side", 0.6, f"{SIDE}: {SEATED_SIDE}, {TOPLESS}, both hands wrapped around {COCK} stroking "
+                                f"it, the penis seen from the side"),
     ("c09_pov", 0.6, f"{POV}: she kneels between his legs {RUG}, {TOPLESS}, stroking {COCK} with both hands, "
                      f"looking up into the camera"),
-    # --- blowjob ---
-    ("d01_tip", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, just the head of {COCK} between her lips, her lips closed "
-                     f"around the tip only, her eyes looking up at the camera"),
-    ("d02_lick", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, her tongue out licking the head of {COCK}, one hand "
-                      f"holding it at the base, her eyes on the camera"),
-    ("d03_hands_on_legs", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, sucking {COCK} with the shaft halfway in her "
-                               f"mouth, both of her hands resting on his thighs, no hands on the penis, looking "
-                               f"up at the camera"),
-    ("d04_one_hand", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, sucking the head of {COCK} with one hand wrapped "
-                          f"around the base of the shaft, looking up at the camera"),
-    ("d05_two_hands", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, sucking the head of {COCK} with both hands wrapped "
-                           f"around the shaft, looking up at the camera"),
-    ("d06_side", 0.6, f"{SIDE}: {KNEEL}, {TOPLESS}, {COCK} halfway into her mouth, her lips stretched around "
-                      f"the shaft, seen from the side"),
-    ("d07_deep", 0.6, f"{PHOTOG}: {KNEEL}, {TOPLESS}, most of {COCK} inside her mouth, her lips near the base, "
-                      f"her cheeks hollowed, her eyes watering, looking up at the camera"),
-    ("d08_deep_side", 0.6, f"{SIDE}: {KNEEL}, {TOPLESS}, {COCK} all the way in her mouth, her lips at the "
-                           f"base, her nose against his body, seen from the side"),
+    # --- blowjob, from his eyes, two side views by the photographer ---
+    ("d01_tip_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, just the head of {COCK_POV} "
+                         f"between her lips, her lips closed around the tip only, her eyes looking up into "
+                         f"the camera"),
+    ("d02_lick_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, her tongue out licking the "
+                          f"head of {COCK_POV}, one hand holding it at the base, her eyes on the camera"),
+    ("d03_hands_on_legs_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, sucking {COCK_POV} "
+                                   f"with the shaft halfway in her mouth, both of her hands resting on his "
+                                   f"thighs, no hands on the penis, looking up into the camera"),
+    ("d04_one_hand_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, sucking the head of "
+                              f"{COCK_POV} with one hand wrapped around the base of the shaft, looking up "
+                              f"into the camera"),
+    ("d05_two_hands_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, sucking the head of "
+                               f"{COCK_POV} with both hands wrapped around the shaft, looking up into the "
+                               f"camera"),
+    ("d06_side", 0.6, f"{SIDE}: {SEATED_SIDE}, {TOPLESS}, {COCK} halfway into her mouth, her lips stretched "
+                      f"around the shaft, seen from the side"),
+    ("d07_deep_pov", 0.6, f"{POV_SEAT}, {TROUSERS_DOWN}, {KNEEL_POV}, {TOPLESS}, most of {COCK_POV} inside her "
+                          f"mouth, her lips near the base, her cheeks hollowed, her eyes watering, looking up "
+                          f"into the camera"),
+    ("d08_deep_side", 0.6, f"{SIDE}: {SEATED_SIDE}, {TOPLESS}, {COCK} all the way in her mouth, her lips at "
+                           f"the base, her nose against his body, seen from the side"),
     ("d09_pov", 0.6, f"{POV}: she kneels between his legs {RUG}, {TOPLESS}, her lips wrapped around {COCK}, "
                      f"one hand at the base, looking up into the camera"),
     # --- sex: she faces him on every shot, legs spread and planted, her pussy in his view ---
@@ -266,6 +285,7 @@ NEG_BASE = ("different person, different face, changed hair, extra penis, extra 
             "genitals, deformed hands, blurry, low quality, cartoon, anime, watermark, text, condom, childlike, "
             "child, underage")
 NEG_BARE = "bra, bralette, vest, blouse, shirt on her, top on her"   # once she is topless, nothing comes back
+NEG_POV = "the man's face, his face, far away, distant, standing, office chair behind her, a second man"
 
 cfg = load_config()
 OUT_ROOT = outputs_dir(cfg)
@@ -298,6 +318,8 @@ def negative_for(sid: str, strength: float) -> str:
     neg = NEG_BASE
     if strength:
         neg += ", " + NEG_BARE
+    if sid.endswith("_pov"):
+        neg += ", " + NEG_POV
     extra = appearance_negative(CHAR)
     return neg + (", " + extra if extra else "")
 
