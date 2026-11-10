@@ -92,8 +92,8 @@ OUTFIT = ("a black tailored vest buttoned over a lace bralette, a tight red penc
           "sheer black stockings")
 TOPLESS = ("topless with her bare breasts showing, wearing only the tight red pencil mini skirt and sheer "
            "black stockings")
-SKIRT_UP = ("topless with her bare breasts showing, her red mini skirt pushed up around her waist, her sheer "
-            "black stockings still on, otherwise naked")
+SKIRT_UP = ("topless with her bare breasts showing and her torso bare, no shirt on her, her red mini skirt pushed "
+            "up around her waist, her sheer black stockings still on, otherwise naked")
 HIM = "a fit man in a white dress shirt with the sleeves rolled up, naked from the waist down"
 COCK = "his thick erect penis"
 PHOTOG = "picture by a photographer shooting the set"
