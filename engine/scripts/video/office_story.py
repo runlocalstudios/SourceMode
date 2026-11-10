@@ -21,7 +21,7 @@ Continuity is the office desk set's: its outfit, its hair, the OFFICE_IN room.
 Every shot is her locked LoRA at 1.0 through Qwen-Image 2512; the explicit shots
 add the GNASS sex LoRA. A shot gets at most MAX_ATTEMPTS renders (the first plus
 three retries): an attempt is kept when her face scores and reads adult, and the
-best kept attempt is the shot's tile; a shot with no kept attempt after four is
+best kept attempt is the shot's tile, every kept attempt goes to the judge; a shot with no kept attempt after four is
 logged GAVE UP and left out of the judge set. `--retry` spends another attempt
 on a shot whose kept render missed the content (my audit by eye, prompt revised
 in STORY first); `--only` limits a run to some shots.
@@ -415,8 +415,11 @@ for i, (sid, strength, _) in enumerate(STORY):
     dr.rectangle([x, y, x + TW, y + 18], fill=colour)
     dr.text((x + 4, y + 3), f"{sid} / {len(att)} tries / face {best['face'] if best else None} "
                             f"age {best['age'] if best else None}{'' if k else ' NO KEEP'}", fill="yellow")
-    if k:
-        items.append({"id": sid, "path": d / k["file"], "arm": "story", "group": sid[0]})
+    # every attempt that passes goes to the judge, not only the best-scoring one:
+    # Jeremy, 2026-11-10, "I don't want you throwing out good images for no reason"
+    for a in att:
+        if passes(sid, a) and (d / a["file"]).is_file():
+            items.append({"id": a["file"][:-4], "path": d / a["file"], "arm": "story", "group": sid})
 sheet.save(d / "sheet.jpg", quality=90)
 log(f"sheet -> {d / 'sheet.jpg'}")
 if items and not DRY:
