@@ -65,7 +65,7 @@ RETRY = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("-
 MAX_ATTEMPTS = 4      # the first render plus three retries
 FACE_MIN = 0.50       # her face against the reference; GNASS renders of her ran 0.68-0.70 on 2026-11-09
 FACE_SIDE_MIN = 0.35  # a profile scores low against a frontal reference: a02_side a1 was her at 0.464
-YOUNG_FLAG = 23       # InsightFace runs a few years low on young adults; below this is never kept
+YOUNG_FLAG = 20       # Jeremy, 2026-11-10: "The floor should be like 20 because 18 is a fucking adult"
 
 GNASS = "nsfw\\qimage2512_gnass.safetensors"
 W, H = 1024, 1536
@@ -97,9 +97,11 @@ STORY: tuple[tuple[str, float, str], ...] = (
     ("a03_back", 0.0, f"{PHOTOG}: seen from behind, three-quarter length, standing at the desk with her back "
                       f"to the camera, the tight red skirt hugging her bottom, looking back over her shoulder "
                       f"at the camera, in {OUTFIT}"),
+    # a1 kept the bralette on and put her tongue out: the bralette is gone now and the vest hangs open on bare skin
     ("a04_vest_open", 0.6, f"{PHOTOG}: she sits on the edge of the desk facing the camera, waist up, her black "
-                           f"vest unbuttoned and hanging open, her lace bralette pulled down beneath her bare "
-                           f"breasts, biting her lip, a tight red pencil mini skirt and sheer black stockings"),
+                           f"vest unbuttoned and hanging open over her bare breasts with nothing beneath it, "
+                           f"her nipples showing between the open sides, biting her lower lip with her mouth "
+                           f"closed, a tight red pencil mini skirt and sheer black stockings"),
     ("a05_topless_front", 0.6, f"{PHOTOG}: she stands facing the camera, three-quarter length, {TOPLESS}, her "
                                f"hands sliding up her sides, smiling at the camera"),
     ("a06_topless_side", 0.6, f"{SIDE}: she stands in profile, waist up, {TOPLESS}, her back arched, turning "
@@ -292,7 +294,7 @@ def prompt_for(body: str) -> str:
 
 def negative_for(sid: str, strength: float) -> str:
     neg = NEG_BASE
-    if strength and not sid.startswith("a04"):
+    if strength:
         neg += ", " + NEG_BARE
     extra = appearance_negative(CHAR)
     return neg + (", " + extra if extra else "")
@@ -313,8 +315,10 @@ def face_floor(sid: str) -> float:
 
 def passes(sid: str, a: dict) -> bool:
     """Judged against the CURRENT floor, not the flag stored when it rendered: the
-    side floor was lowered after a02_side's four profiles of her all failed 0.5."""
-    return bool(a.get("face") is not None and a["face"] >= face_floor(sid) and not a.get("young"))
+    side floor was lowered after a02_side's four profiles of her all failed 0.5, and
+    the age floor is judged the same way."""
+    young = a.get("age") is not None and a["age"] < YOUNG_FLAG
+    return bool(a.get("face") is not None and a["face"] >= face_floor(sid) and not young)
 
 
 def kept_of(sid: str) -> dict | None:

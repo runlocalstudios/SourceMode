@@ -54,7 +54,7 @@ CHAR = ARGS[0].lower()
 SEEDS = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--seeds=")), 2))
 ONLY_ARMS = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--arms=")), None)
 ONLY_SHOTS = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--only=")), None)
-YOUNG_FLAG = 23  # InsightFace age estimates run a few years low on young adults; below this the tile is flagged
+YOUNG_FLAG = 20  # Jeremy, 2026-11-10: "The floor should be like 20 because 18 is a fucking adult"
 
 GNASS = "nsfw\\qimage2512_gnass.safetensors"  # ComfyUI on Windows lists subfolder LoRAs with a backslash
 ARMS = {"gnass06": 0.6, "gnass08": 0.8}
