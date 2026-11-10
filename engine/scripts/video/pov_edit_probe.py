@@ -103,6 +103,23 @@ CHAIN: dict[str, tuple[str | None, str]] = {
     "lick": ("free", f"Her tongue is out, licking the head of {COCK}, one hand holding it at the base, her eyes "
                      f"heavy-lidded looking up into the camera. Keep her face, her hair, her bare breasts and "
                      f"the room as they are."),
+    # round 3 (2026-11-10): spit worked; hands drew one hand, balls drew none, deep stayed at the tip and
+    # zoomed in; every step ballooned the penis. The LoRA's own words (throating, handjob) and plainer
+    # geometry this time, and a size clause on a second `free`.
+    "free2": ("topless", "Remove the man's navy shorts. His erect penis, proportionate to his body and of "
+                         "realistic size, stands up from between his thighs at the bottom of the frame, and she "
+                         "wraps one hand around it, looking up into the camera. Keep her face, her hair, her bare "
+                         "breasts, the room, the framing and the man's legs exactly as they are."),
+    "deep2": ("free", "throating: she has half of the shaft of his erect penis inside her mouth, her lips "
+                      "stretched around the middle of the shaft, her cheeks hollowed, her eyes heavy-lidded "
+                      "looking up into the camera. Keep her face, her hair, her bare breasts, the room and the "
+                      "framing exactly as they are, do not zoom in."),
+    "hands2": ("free", "handjob: two hands - both of her hands grip the shaft of his erect penis, stacked one "
+                       "above the other, the head showing above her top hand, looking up into the camera with "
+                       "a hungry smile. Keep her face, her hair, her bare breasts and the room as they are."),
+    "balls2": ("free", "handjob: one of her hands strokes the shaft of his erect penis while her other hand "
+                       "cups his balls, which hang visible below the shaft, looking up into the camera and "
+                       "loving it. Keep her face, her hair, her bare breasts and the room as they are."),
 }
 if ONLY_KEYS:
     CHAIN = {k: v for k, v in CHAIN.items() if k in ONLY_KEYS}
