@@ -118,6 +118,25 @@ SHOTS: dict[str, tuple[str, str]] = {
                           f"thick penis deep inside her anus, her wet vagina fully visible above it, her head "
                           f"back and her lips parted in pleasure, her face to the camera"),
 }
+# round 3 (2026-11-10): her back on the desk with him standing, and the finish - the section GNASS failed outright
+ON_DESK = ("she lies on her back on the big walnut desk with her head toward the far end of the desk, her legs "
+           "spread wide and held up, her face turned toward the camera")
+DESK_CAM = "picture by a photographer standing at the side of the desk, level with her hips"
+SHOTS.update({
+    "desk_tip": ("m15510n4ry, ", f"{DESK_CAM}: {ON_DESK}, {SKIRT_UP}, {HIM} standing at the end of the desk "
+                                 f"between her legs with just the head of {COCK} pressing into her vagina, her "
+                                 f"vagina in full view, her face flushed with anticipation, lips parted"),
+    "desk_anal": ("m15510n4ry, ", f"{DESK_CAM}: {ON_DESK}, {SKIRT_UP}, {HIM} standing at the end of the desk "
+                                  f"between her legs with {COCK} deep inside her anus, her wet vagina in full "
+                                  f"view above it, her face flushed with pleasure, eyes heavy-lidded, lips "
+                                  f"parted in a soft moan"),
+    "pullout": ("", f"{DESK_CAM}: {ON_DESK}, {SKIRT_UP}, {HIM} standing at the end of the desk between her legs "
+                    f"having just pulled {COCK} out of her anus, holding it just above her vagina, her hand "
+                    f"reaching down to wrap around it, her eyes on the camera"),
+    "cum": ("", f"{DESK_CAM}: {ON_DESK}, {SKIRT_UP}, {HIM} standing at the end of the desk between her legs, "
+                f"her hand jerking {COCK} held just above her vagina as he ejaculates, ropes of thick white "
+                f"semen landing across her stomach, her breasts and her face, her eyes on the camera, loving it"),
+})
 if ONLY_SHOTS:
     SHOTS = {k: v for k, v in SHOTS.items() if k in ONLY_SHOTS}
 NEG = ("different person, different face, changed hair, bra, bralette, vest, blouse, shirt on her, top on her, "
@@ -156,7 +175,9 @@ def prompt_for(arm: str, shot: str) -> str:
     trig = lora.get("trigger") or CHAR
     arm_trigger = ARMS[arm][2]
     shot_trigger, body = SHOTS[shot]
-    lead = (arm_trigger + shot_trigger) if ARMS[arm][0] == Q4P else ""
+    # the "pov" trigger only on the shots from his eyes; the desk shots are by a photographer
+    pov = shot in ("release", "stroke", "tip", "deep")
+    lead = ((arm_trigger if pov else "") + shot_trigger) if ARMS[arm][0] == Q4P else ""
     return (f"{lead}{trig}, {clause(CHAR)}, {HAIR}, {body}. {OFFICE_IN}. Photorealistic, natural skin texture, "
             f"sharp focus.")
 
