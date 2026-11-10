@@ -12,21 +12,22 @@ and two cutouts seam at the linked arms and drift apart at other window shapes.
 Two views of the SAME pair, for the two positions in the beat (the lobby is
 seen from where the player stands, Mei at the desk on the left, the pair on
 the right):
+  door    just inside the street door, walking diagonally away from the player
+          toward the back left - a rear three-quarter view from their right -
+          both heads turned left toward Mei
   stairs  at the foot of the stairs, backs square to the camera, heads up as
-          they are about to climb - T2I on the pack's grey studio, no LoRA
-  door    just inside the street door, seen from their side at an angle, both
-          looking across at Mei - Qwen-Image-Edit of the stairs render, so
-          clothes, hair and build carry over (his ask: "generate one and then
-          edit it for the different angles")
-In both views the opening of her coat faces away from the camera.
+          they are about to climb
+Both by T2I on the pack's grey studio, no LoRA, with the same hair and clothes
+named in both prompts so the seeds pair up; he picks a matching pair. In both
+views the opening of her coat faces away from the camera.
 
-Why this way round (three rounds, 2026-11-09): T2I would not hold the door
-angle - "three-quarter rear view", "angled three-quarters away" and a placed
-camera each drew back-on and front-on seeds and never the side - while the
-Edit pass turned a pair a full half turn cleanly but kept the source's head
-turn every time. So the view T2I draws reliably (a straight back view) is the
-source, and the Edit pass, which keeps heads turned, makes the view where
-heads ARE turned. Sunday night: she is in a coat (Mei's closer is "Different
+Four rounds, 2026-11-09: "walking toward the left of the frame" is a sideways
+walk, which T2I snaps to full back or full front whatever the view is called
+("three-quarter rear view", "angled three-quarters away", a placed camera);
+the Edit pass turned a pair a half turn cleanly but kept the source's head
+turn, and a quarter turn left the bodies back-on or facing each other. The
+door view is them walking AWAY diagonally, and that is the word that places
+the camera. Sunday night: she is in a coat (Mei's closer is "Different
 coat."), he is half a step ahead with his face away - Danny has no face yet,
 and this does not give him one. Cut out with the pack's grey-studio matte.
 Output: library/_extras/<date>_shoot_lobby-couple/ (renders, sheet.jpg) and
@@ -48,7 +49,6 @@ from sourcemode.assets.render import t2i_workflow
 from sourcemode.config import load_config, outputs_dir
 from sourcemode.library import find_set, write_set_json
 from sourcemode.render.client import ComfyUIClient
-from sourcemode.render.passes import build_edit_workflow
 
 DRY = "--dry-run" in sys.argv
 SEEDS = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--seeds=")), 4))
@@ -63,16 +63,20 @@ STAIRS = ("a full-length picture of a young man and a young woman walking arm in
           "back, the plain smooth back of her coat toward the camera, one continuous panel of camel "
           "wool with no opening, lapels or buttons, mid-stride, both figures fully in frame from head "
           f"to feet, {STUDIO_BACKDROP}. Photorealistic, natural skin texture, sharp focus.")
-DOOR = ("Move the camera a quarter turn around to their right side, so we now see the two of them from "
-        "the side and a little behind, at an angle: they walk from the right of the frame toward the "
-        "left, his right shoulder and the right side of his back toward the camera, she on his far side "
-        "holding his arm, and both of them turn their heads to the left as if looking at someone across "
-        "the room, so only the right edge of each face is seen. Keep their clothes, hair, heights and "
-        "builds exactly the same: his navy bomber jacket, white t-shirt, dark jeans and white sneakers; "
-        "her long camel coat, short black dress and black heels, with the plain back and right side of "
-        "her coat toward the camera and the coat's open front, lapels and buttons on her far side, away "
-        "from the camera. Keep the plain light grey studio background, the soft even lighting and the "
-        "full-length framing from head to feet. Photorealistic, natural skin texture, sharp focus.")
+# Fourth round: "walking toward the left of the frame" is a sideways walk, which T2I
+# snaps to full back or full front. The shot is them walking diagonally AWAY from the
+# player toward the back left - a rear three-quarter view - so that is what it says.
+DOOR = ("a full-length picture of a young man and a young woman walking arm in arm, side by side, "
+        "walking away from the camera diagonally toward the back left of the frame, seen from behind "
+        "and from their right in a rear three-quarter view, so we see their backs and the right side of "
+        "each body, both of their heads turned to the left as if looking at someone across the room, "
+        "only the right edge of each face visible, late on a Sunday night: he is nearest the camera and "
+        "half a step ahead, in a dark navy bomber jacket over a plain white t-shirt, dark jeans and white "
+        "sneakers, short dark hair; she holds his arm on his far side, in a long camel wool coat over a "
+        "short black dress and black heels, long dark hair down her back, the plain smooth back of her "
+        "coat toward the camera, the coat's open front, lapels and buttons on her far side facing away "
+        "from the camera, mid-stride, both figures fully in frame from head to feet, "
+        f"{STUDIO_BACKDROP}. Photorealistic, natural skin texture, sharp focus.")
 NEGATIVE = (CAMERA_NEGATIVE + ", facing the camera, looking at the camera, three people, extra person, "
             "coat open at the back, dress showing through the back of the coat, lapels on the back of "
             "the coat, buttons on the back of the coat, cropped feet, cut off at the knees, close-up, "
@@ -93,7 +97,7 @@ def log(s: str) -> None:
         f.write(line + "\n")
 
 
-log(f"lobby couple: {SEEDS} seeds, stairs by T2I then door by Edit -> {d}")
+log(f"lobby couple: {SEEDS} seeds, door and stairs by T2I -> {d}")
 if DRY:
     for s in range(SEEDS):
         log(f"  would render stairs_{s}.png then door_{s}.png, then cut both out -> {CUT_DIR}")
@@ -119,9 +123,8 @@ for s in range(SEEDS):
     if not front.is_file():
         seed = rng.randrange(1, 2**31)
         t0 = time.monotonic()
-        wf, _ = build_edit_workflow(cfg, "extras", instruction=DOOR, negative=NEGATIVE,
-                                    image_name=client.upload_image(back), seed=seed,
-                                    render_pass="medium", filename_prefix="sourcemode/extras_lobby_couple")
+        wf = t2i_workflow(cfg, DOOR, seed, "sourcemode/extras_lobby_couple", lora_path="",
+                          negative=NEGATIVE, width=W, height=H)
         files = client.outputs(client.wait(client.submit(wf), timeout_s=3600))
         if not files:
             raise SystemExit(f"door_{s}: ComfyUI returned no image")
