@@ -48,7 +48,23 @@ rolled, naked from the waist down once his pants are off.
 | Anal facing him, deep | from above his head | `c0wg1rl, ` + the cowgirl wording with "deep inside her anus, her wet vagina fully visible above it" | round 2 pending | |
 | Her back on the desk, him standing beside it; the finish | photographer beside the desk | | **failed** on GNASS: her head hung off the near edge upside down, the penis floated, the cum shot was a bucket of milk. Needs: camera at the side of the desk with her face upright, QWEN 4 PLAY, cumshot wording | `library/fiona/2026-11-10_video_office-story/e02_desk_deep__a1.png`, `f02_cum__a3.png` |
 
-## Edit path (Qwen-Image-Edit 2511 from an office POV plate)
+## Edit path (Qwen-Image-Edit 2511 from an office POV plate) - the POV winner
 
-Probe j1359 (2026-11-10): MCNL and the "all included" act LoRA, chain
-topless -> free -> tip. Results to be recorded here when evaluated.
+`pov_edit_probe.py`: a plate from the office POV shoot (her between his knees,
+his boxer shorts at the bottom of the frame), her LoRA at 1.0 on the Edit
+graph, an NSFW edit LoRA spliced after it at 0.8, `render_pass` medium. Each
+step edits the previous step's output, so the face, the room and the pose carry
+through untouched. Identity is capped by the plate, and the plate is already
+her: this path scores 0.68-0.70 where text-to-image scores 0.44-0.57.
+
+| Step | Edit LoRA | Instruction that worked | Status | Proof |
+|---|---|---|---|---|
+| topless | MCNL or "all included" | "Remove her blazer and her bra so she is topless with her bare breasts showing, and change her skirt to red. Keep her face, her hair, her pose, the room and the man's legs exactly as they are." | **works**, both LoRAs, 0.70 | `library/fiona/2026-11-10_video_pov-edit-probe/allin__topless__s0.png` |
+| free (his shorts gone, her hand on him) | "all included" (`nsfw/qedit2511_all_included_v2.safetensors`); MCNL draws a smoother, less real penis | "Remove the man's navy shorts. His thick erect penis stands up from between his thighs at the bottom of the frame, and she wraps one hand around it, looking up into the camera. Keep her face, her hair, her bare breasts, the room and the man's legs exactly as they are." | **works**, 0.70, attached, same face and room as the plate | `allin__free__s0.png` |
+| tip | both | "She leans in and takes just the head of his thick erect penis between her lips, her eyes looking up into the camera. Keep ..." | **works**, lips on the head, hand on the shaft, her face (0.48-0.54, tilted); the penis is oversized on every step - "thick" is enough, never "eight-inch" | `mcnl__tip__s0.png`, `allin__tip__s0.png` |
+| deep, hands, spit, balls | "all included" | from `free` | round 2 pending | |
+
+Edit LoRAs: `nsfw/qedit_mcnl_nsfw.safetensors` (MCNL) and
+`nsfw/qedit2511_all_included_v2.safetensors` (act words: fellatio, handjob,
+throating, semen, anal). Both spliced after her LoRA at 0.8
+(`pov_edit_probe.splice_lora`), as `nsfw_lora_test.py` did.

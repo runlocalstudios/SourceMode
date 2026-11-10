@@ -74,7 +74,7 @@ if ONLY_ARMS:
     ARMS = {k: v for k, v in ARMS.items() if k in ONLY_ARMS}
 STRENGTH = 0.8
 
-COCK = "his thick eight-inch erect penis"
+COCK = "his thick erect penis"
 # key -> (parent key or None, instruction). Everything else in the picture stays as it is.
 CHAIN: dict[str, tuple[str | None, str]] = {
     "topless": (None, "Remove her blazer and her bra so she is topless with her bare breasts showing, and "
@@ -85,17 +85,30 @@ CHAIN: dict[str, tuple[str | None, str]] = {
                         f"face, her hair, her bare breasts, the room and the man's legs exactly as they are."),
     "tip": ("free", f"She leans in and takes just the head of {COCK} between her lips, her eyes looking up "
                     f"into the camera. Keep her face, her hair, her bare breasts and the room as they are."),
-    "deep": ("free", f"She sucks {COCK} with the shaft deep in her mouth, her cheeks hollowed, her eyes looking "
-                     f"up into the camera. Keep her face, her hair, her bare breasts and the room as they are."),
+    "deep": ("free", f"Deepthroat: she takes {COCK} all the way into her mouth and throat, her lips pressed to its "
+                     f"base, her nose touching his belly, her cheeks hollowed, her eyes heavy-lidded looking up "
+                     f"into the camera and loving it. Keep her face, her hair, her bare breasts and the room as "
+                     f"they are."),
     "hands": ("free", f"She strokes {COCK} with both of her hands wrapped around it one above the other, "
                       f"looking up into the camera with a hungry smile. Keep her face, her hair, her bare "
                       f"breasts and the room as they are."),
+    # round 2 (2026-11-10): the chain to `free` and `tip` held her face at 0.68-0.70 and 0.48-0.54; these
+    # continue from `free`
+    "spit": ("free", f"She holds {COCK} in one hand and spits onto the head of it, a string of saliva running "
+                     f"from her lips to the penis, her eyes on the camera. Keep her face, her hair, her bare "
+                     f"breasts and the room as they are."),
+    "balls": ("free", f"She strokes the shaft of {COCK} with one hand while her other hand cups and gently "
+                      f"squeezes his balls, looking up into the camera and loving it. Keep her face, her hair, "
+                      f"her bare breasts and the room as they are."),
+    "lick": ("free", f"Her tongue is out, licking the head of {COCK}, one hand holding it at the base, her eyes "
+                     f"heavy-lidded looking up into the camera. Keep her face, her hair, her bare breasts and "
+                     f"the room as they are."),
 }
 if ONLY_KEYS:
     CHAIN = {k: v for k, v in CHAIN.items() if k in ONLY_KEYS}
 NEGATIVE = ("different person, different face, changed hair, bra, blazer, clothes on her chest, condom, "
             "deformed genitals, deformed hands, extra hands, extra limbs, blurry, low quality, cartoon, "
-            "watermark, text, childlike, child, underage")
+            "watermark, text, tears, crying, watering eyes, childlike, child, underage")
 
 cfg = load_config()
 lora = resolve_lora(cfg, CHAR)
