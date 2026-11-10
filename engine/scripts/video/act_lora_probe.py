@@ -7,11 +7,15 @@ you researched that." GNASS (s3x_2512_qwen, no trigger words) at the 0.6 cap
 attached the penis nowhere on j1351's handjob and blowjob shots. Found the same
 day on Hugging Face mirrors, for Qwen-Image 2512:
 
-  qwen4play  QWEN 4 PLAY 2512 v2 by DR34MSC4PE - the all-in-one with position
-             triggers: pov, bl0wj0b, c0wg1rl, r3v3rs3_c0wg1rl, m15510n4ry,
-             d0gg13; the author runs it at 1.0 and says penises are hit or miss
-  penis      Qwen-Image-2512 Penis LoRA v2 (+blowjob, +cumshot) - male anatomy
-  gnass      s3x_2512_qwen as the control, at 0.6
+  qwen4play    QWEN 4 PLAY 2512 v2 by DR34MSC4PE - the all-in-one with position
+               triggers: pov, bl0wj0b, c0wg1rl, r3v3rs3_c0wg1rl, m15510n4ry,
+               d0gg13; the author runs it at 1.0 and says penises are hit or miss
+  anatomy      Qwen-Image-2512 Penis LoRA v2 (+blowjob, +cumshot) on the POV shots,
+               qwen_2512_pussy_anus_v2 on the cowgirl and anal shots
+  q4p_anatomy  QWEN 4 PLAY at 1.0 with that anatomy LoRA spliced after it at 0.8
+  gnass        s3x_2512_qwen as the control, at 0.6 - j1351's facing-him renders
+               held her face and the pose but put the penis between her thighs
+               attached to nothing (Jeremy: "the penis isn't really in her properly")
 
 Six shots, the story's own wording: his pants freed, one-hand stroke, the tip
 between her lips, deep, cowgirl facing him deep, anal facing him deep. Several
@@ -57,11 +61,16 @@ W, H = 1024, 1536
 
 NSFW = "nsfw\\"
 # arm -> (lora file, strength, trigger words put first in the prompt)
-ARMS: dict[str, tuple[str, float, str]] = {
-    "qwen4play": (NSFW + "qimage2512_qwen4play_v2.safetensors", 1.0, "pov, "),
-    "penis": (NSFW + "qimage2512_penis_v2.safetensors", 1.0, ""),
-    "gnass": (NSFW + "qimage2512_gnass.safetensors", 0.6, ""),
+Q4P, PENIS, PUSSY, GNASS = (NSFW + "qimage2512_qwen4play_v2.safetensors", NSFW + "qimage2512_penis_v2.safetensors",
+                            NSFW + "qimage2512_pussy_anus_v2.safetensors", NSFW + "qimage2512_gnass.safetensors")
+# arm -> (first lora, strength, trigger words put first in the prompt, second lora or None, its strength)
+ARMS: dict[str, tuple[str, float, str, str | None, float]] = {
+    "qwen4play": (Q4P, 1.0, "pov, ", None, 0.0),
+    "anatomy": (PENIS, 1.0, "", None, 0.0),          # the Penis LoRA on his shots, pussy/anus on hers
+    "q4p_anatomy": (Q4P, 1.0, "pov, ", PENIS, 0.8),  # the all-rounder plus the anatomy LoRA
+    "gnass": (GNASS, 0.6, "", None, 0.0),
 }
+SEX_SHOTS = ("cowgirl", "anal")   # the anatomy LoRA for these is the pussy/anus one, not the penis one
 if ONLY_ARMS:
     ARMS = {k: v for k, v in ARMS.items() if k in ONLY_ARMS}
 
@@ -129,17 +138,38 @@ def log(s: str) -> None:
         f.write(line + "\n")
 
 
+def arm_loras(arm: str, shot: str) -> list[tuple[str, float]]:
+    path, strength, _, second, s2 = ARMS[arm]
+    out = [(PUSSY if (path == PENIS and shot in SEX_SHOTS) else path, strength)]
+    if second:
+        out.append((PUSSY if (second == PENIS and shot in SEX_SHOTS) else second, s2))
+    return out
+
+
 def prompt_for(arm: str, shot: str) -> str:
     trig = lora.get("trigger") or CHAR
     arm_trigger = ARMS[arm][2]
     shot_trigger, body = SHOTS[shot]
-    lead = (arm_trigger + shot_trigger) if arm == "qwen4play" else ""
+    lead = (arm_trigger + shot_trigger) if ARMS[arm][0] == Q4P else ""
     return (f"{lead}{trig}, {clause(CHAR)}, {HAIR}, {body}. {OFFICE_IN}. Photorealistic, natural skin texture, "
             f"sharp focus.")
 
 
+def splice_lora(wf: dict, after: str, path: str, strength: float, new: str) -> dict:
+    """One more LoraLoaderModelOnly between node `after` and whatever read its model."""
+    nodes = wf["nodes"] if "nodes" in wf else wf
+    for node in nodes.values():
+        for k, v in node.get("inputs", {}).items():
+            if k == "model" and v == [after, 0]:
+                node["inputs"][k] = [new, 0]
+    nodes[new] = {"class_type": "LoraLoaderModelOnly",
+                  "inputs": {"model": [after, 0], "lora_name": path, "strength_model": float(strength)}}
+    return wf
+
+
 def workflow(arm: str, shot: str, seed: int) -> dict:
-    path, strength, _ = ARMS[arm]
+    loras = arm_loras(arm, shot)
+    path, strength = loras[0]
     neg = NEG + (NEG_POV if shot in ("release", "stroke", "tip", "deep") else "")
     extra = appearance_negative(CHAR)
     # built at the cap, then the act LoRA's own strength set on its node - the probe's deliberate bypass
@@ -147,9 +177,13 @@ def workflow(arm: str, shot: str, seed: int) -> dict:
                       negative=neg + (", " + extra if extra else ""), width=W, height=H,
                       extra_loras=((path, min(strength, 0.6)),))
     nodes = wf["nodes"] if "nodes" in wf else wf
-    for node in nodes.values():
+    slot = None
+    for key, node in nodes.items():
         if node.get("class_type") == "LoraLoaderModelOnly" and node["inputs"].get("lora_name") == path:
             node["inputs"]["strength_model"] = float(strength)
+            slot = key
+    if len(loras) > 1 and slot:
+        splice_lora(wf, slot, loras[1][0], loras[1][1], "901")
     return wf
 
 
@@ -191,7 +225,7 @@ for arm, shot, s in plan:
     client.fetch(files[0], out)
     out.with_suffix(".txt").write_text(prompt_for(arm, shot), encoding="utf-8")
     face, age = score(out)
-    record[out.stem] = {"arm": arm, "shot": shot, "seed": seed, "lora": ARMS[arm][0], "strength": ARMS[arm][1],
+    record[out.stem] = {"arm": arm, "shot": shot, "seed": seed, "loras": arm_loras(arm, shot),
                         "face": face, "age": age}
     (d / "shots.json").write_text(json.dumps(record, indent=1), encoding="utf-8")
     log(f"  {out.name}: face {face}  age {age}  {time.monotonic() - t0:.0f}s")
