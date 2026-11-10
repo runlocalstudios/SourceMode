@@ -149,9 +149,9 @@ STORY: tuple[tuple[str, str, str | None, str], ...] = (
                                      f"saliva running from her lips to the penis, her eyes on the camera. {KEEP}"),
     ("p04_stroke", "edit", "p02_free", f"handjob: she strokes {COCK} with one hand, the shaft glistening wet with "
                                        f"saliva, looking up into the camera and loving it. {KEEP}"),
-    ("p05_balls", "edit", "p02_free", f"She holds {COCK} up with one hand so his testicles are visible below it, "
-                                      f"and cups his testicles in her other hand, looking up into the camera. "
-                                      f"{KEEP}"),
+    ("p05_balls", "edit", "p02_free", f"Add his testicles, visible below the base of {COCK}; she holds the penis up "
+                                      f"with one hand and cups his testicles in the palm of her other hand, "
+                                      f"looking up into the camera. {KEEP}"),
     ("p06_two_hands", "edit", "p02_free", f"handjob: two hands - both of her hands grip the shaft of {COCK}, "
                                           f"stacked one above the other, the head showing above her top hand, "
                                           f"looking up into the camera with a hungry smile. {KEEP}"),
@@ -159,12 +159,14 @@ STORY: tuple[tuple[str, str, str | None, str], ...] = (
                                      f"base, her eyes heavy-lidded looking up into the camera. {KEEP}"),
     ("p08_tip", "edit", "p02_free", f"She leans in and takes just the head of {COCK} between her lips, her eyes "
                                     f"looking up into the camera. {KEEP}"),
-    ("p09_suck_hands_on_legs", "edit", "p08_tip", f"fellatio: the head of {COCK} in her mouth, both of her hands "
-                                                  f"resting on his thighs, no hands on the penis, her eyes looking "
-                                                  f"up into the camera. {KEEP}"),
-    ("p10_suck_two_hands", "edit", "p08_tip", f"fellatio: the head of {COCK} in her mouth with both of her hands "
-                                              f"wrapped around the shaft below her lips, her eyes looking up into "
-                                              f"the camera. {KEEP}"),
+    # a1 of both kept one hand on the shaft: the hands are placed first, then the mouth
+    ("p09_suck_hands_on_legs", "edit", "p08_tip", f"Move both of her hands onto the tops of his thighs, palms flat "
+                                                  f"on his thighs, no hand touching the penis; the head of {COCK} "
+                                                  f"stays in her mouth, her eyes looking up into the camera. "
+                                                  f"{KEEP}"),
+    ("p10_suck_two_hands", "edit", "p06_two_hands", f"She keeps both hands stacked on the shaft and lowers her "
+                                                    f"mouth onto it, the head of {COCK} between her lips above "
+                                                    f"her top hand, her eyes looking up into the camera. {KEEP}"),
     # --- q: sex facing him, squatting over him, rug and desk ----------------------
     ("q01_rug_tip", "t2i", "q4p", f"c0wg1rl, {OVER_HIM}: {HIM} lies on his back {RUG}, she squats over his hips "
                                   f"facing him with her feet planted flat on the rug either side of him and her "
