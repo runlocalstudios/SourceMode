@@ -1,6 +1,9 @@
 """Which text-to-image sex LoRA draws the office story's POV and facing-him acts?
 
-    python scripts/video/act_lora_probe.py <character> [--arms=a,b] [--seeds=N] [--dry-run]
+    python scripts/video/act_lora_probe.py <character> [--arms=a,b] [--shots=a,b] [--seeds=N] [--dry-run]
+
+Small batches: Jeremy, 2026-11-10, "Don't run tons of photos. Run like 4 and see if what
+you created works or not" - so one seed, two arms, two shots, then look.
 
 Jeremy, 2026-11-10: "Sometimes you need specific LORAs for each sex act, have
 you researched that." GNASS (s3x_2512_qwen, no trigger words) at the 0.6 cap
@@ -57,6 +60,7 @@ if len(ARGS) != 1:
 CHAR = ARGS[0].lower()
 SEEDS = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--seeds=")), 2))
 ONLY_ARMS = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--arms=")), None)
+ONLY_SHOTS = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--shots=")), None)
 W, H = 1024, 1536
 
 NSFW = "nsfw\\"
@@ -114,6 +118,8 @@ SHOTS: dict[str, tuple[str, str]] = {
                           f"thick penis deep inside her anus, her wet vagina fully visible above it, her head "
                           f"back and her mouth open in pleasure, her face to the camera"),
 }
+if ONLY_SHOTS:
+    SHOTS = {k: v for k, v in SHOTS.items() if k in ONLY_SHOTS}
 NEG = ("different person, different face, changed hair, bra, bralette, vest, blouse, shirt on her, top on her, "
        "extra penis, extra hands, extra limbs, deformed genitals, deformed hands, blurry, low quality, cartoon, "
        "anime, watermark, text, condom, childlike, child, underage")

@@ -1,6 +1,9 @@
 """Can the edit path draw the office story's POV acts? One plate, a chain of edits.
 
-    python scripts/video/pov_edit_probe.py <character> <plate.png> [--arms=a,b] [--seeds=N] [--dry-run]
+    python scripts/video/pov_edit_probe.py <character> <plate.png> [--arms=a,b] [--keys=a,b] [--seeds=N] [--dry-run]
+
+Small batches: Jeremy, 2026-11-10, "Don't run tons of photos. Run like 4 and see if what
+you created works or not" - one seed, two arms, the chain to the first act, then look.
 
 Jeremy, 2026-11-10: "If generating the assets from scratch is too problematic
 with the 2 characters, then I suggest you feel free to start with a photo more
@@ -59,6 +62,7 @@ if not PLATE.is_file():
     raise SystemExit(f"no plate {PLATE}")
 SEEDS = int(next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--seeds=")), 2))
 ONLY_ARMS = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--arms=")), None)
+ONLY_KEYS = next((a.split("=", 1)[1].split(",") for a in sys.argv if a.startswith("--keys=")), None)
 
 NSFW = "nsfw\\"
 ARMS = {"mcnl": NSFW + "qedit_mcnl_nsfw.safetensors", "sexgod": NSFW + "qedit_sexgod_nudes_2511.safetensors",
@@ -87,6 +91,8 @@ CHAIN: dict[str, tuple[str | None, str]] = {
                       f"looking up into the camera with a hungry smile. Keep her face, her hair, her bare "
                       f"breasts and the room as they are."),
 }
+if ONLY_KEYS:
+    CHAIN = {k: v for k, v in CHAIN.items() if k in ONLY_KEYS}
 NEGATIVE = ("different person, different face, changed hair, bra, blazer, clothes on her chest, condom, "
             "deformed genitals, deformed hands, extra hands, extra limbs, blurry, low quality, cartoon, "
             "watermark, text, childlike, child, underage")
