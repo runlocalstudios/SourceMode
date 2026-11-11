@@ -114,7 +114,7 @@ if CHAR not in LOOKS:
 HAIR, OUTFIT, COAT = LOOKS[CHAR]["hair"], LOOKS[CHAR]["outfit"], LOOKS[CHAR]["coat"]
 DRESS, NUDE = LOOKS[CHAR]["dress"], LOOKS[CHAR]["nude"]
 GNASS = "nsfw\\qimage2512_gnass.safetensors"
-GNASS_STRENGTH = 0.5   # 0.6 cost her face (0.49-0.61 nude vs 0.60-0.78 clothed, j1383); Jeremy: "identity is a little bit weaker"
+GNASS_STRENGTH = 0.0   # the nude face probe (j1388): her LoRA alone renders the nudity and scores 0.62-0.67; GNASS 0.5 scored 0.46-0.49 on the same seeds
 PLEASURE = "eyes heavy-lidded, lips parted in a soft moan"   # "flushed" painted blush circles on her cheeks (j1384)
 CLUTCH = "a small black clutch purse"
 ROOM = ("Inside a luxury hotel suite at night, warm lamplight, beige walls with walnut trim, a king bed with a "
@@ -368,7 +368,7 @@ def negative_for(sid: str) -> str:
 def t2i_wf(sid: str, text: str, seed: int) -> dict:
     return t2i_workflow(cfg, prompt_for(text), seed, f"sourcemode/{CHAR}_hotel", lora_path=lora["path"],
                         negative=negative_for(sid), width=W, height=H,
-                        extra_loras=((GNASS, GNASS_STRENGTH),) if sid in NUDE_IDS else ())
+                        extra_loras=((GNASS, GNASS_STRENGTH),) if sid in NUDE_IDS and GNASS_STRENGTH else ())
 
 
 record: dict = json.loads(SHOTS.read_text(encoding="utf-8")) if SHOTS.is_file() else {}
