@@ -178,8 +178,10 @@ STORY: tuple[tuple[str, str], ...] = (
                         f"{COAT_OFF}"),
     ("k03_crawl", f"{POV}: she crawls toward the camera on her hands and knees across the carpet, looking "
                   f"up at it with a sly smile, her long hair falling forward, {COAT_OFF}"),
-    ("k04_kneel_chin", f"{POV}: kneeling close in front of the camera she raises her chin and pushes her hair "
-                       f"back with one hand, eyes half closed, lips parted, {COAT_OFF}"),
+    ("k04_kneel_chin", f"{POV}: a full-length photo from slightly above, her whole kneeling figure in frame, "
+                       f"kneeling on the carpet right in front of the camera, sitting back on her heels, she "
+                       f"raises her chin and pushes her hair back with one hand, eyes half closed, lips parted, "
+                       f"{COAT_OFF}"),
     # --- p: close portraits ------------------------------------------------------
     ("p01_half_smile", f"{CLOSE}, she looks straight into the camera with a playful asymmetric half-smile, "
                        f"chin dipped a little, in {OUTFIT}"),
