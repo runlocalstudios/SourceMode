@@ -165,10 +165,25 @@ corset), evening study partner. Same recipe as the hotel story: her LoRA alone,
 one outfit sentence, one room sentence, the viewer never named. Two attempts per
 shot ("redo it one time before moving on"), `--reject` after the audit.
 
-| set | result | notes |
+| set | result (first try / after one re-roll) | notes |
 |---|---|---|
-| librarian | 26/26 first try, 0.46-0.75 | "one gloved-free index finger" drew a black glove (a negative-shaped phrase in the positive); "leaning forward toward the camera" alone became a selfie arm - name where the hands are |
-| dictation | 27/27 first try, 0.40-0.75 | one selfie arm again (b02); `selfie, her arm reaching toward the camera` now in NEG_BASE; the Codex-refused frames (bending for the pen, the armrest perch, kneeling for the note, sitting on the desk) all rendered first try |
+| librarian | 24/26 -> 26/26, 0.46-0.75 | "one gloved-free index finger" drew a black glove (a negative-shaped phrase in the positive); "leaning forward toward the camera" alone became a selfie arm |
+| dictation | 26/27 -> 27/27, 0.40-0.75 | the Codex-refused frames (bending for the pen, the armrest perch, kneeling for the note, sitting on the desk) all rendered first try |
+| try-on | 16/26 -> 26/26, 0.50-0.78 | three looks held (rhinestone dress, velour romper + pigtails, cropped knit + half-up); 6 selfie arms and 4 rear/side poses that sat her on the bed - "standing on the oak floor" + hands clasped behind her back fixed all 10 |
+| cheer tease | 23/27 -> 27/27, 0.40-0.78 | every bed-contact frame OpenAI refused rendered first try (bed edge, lying on one hip, kneeling on the duvet, all fours, skirt lift, high kick); 2 selfie arms, and "shot on a tripod" drew a TRIPOD into two frames |
+| living room tease | 23/27 -> re-rolling, 0.36-0.76 | the plaid micro mini + tied-off top + stockings look; the couch-arm straddle needs the full "sitting astride the arm as if riding it, one leg hanging down on each side, the arm between her thighs" - "straddles the arm" alone sat her sideways on it 5/5 for both characters |
+| massage | 24/25 -> 25/25, 0.54-0.80 | the POV thigh frames (his sweatpant thighs along the bottom, her hands high on the inside of his thigh) rendered 6/6 first try with the "him" flag; one over-the-shoulder frame drew his face |
+| closing the bar | 20/26 -> 26/26, 0.46-0.75 | "{POV} from the bar stool" sat HER on a stool in 9 of 12 frames - the hotel armchair lesson again, the camera line never names a seat; sitting on the bar top and standing between his knees rendered first try |
+| study partner | dropped | the storyline is a tutor/student premise; not rendered |
+| Eden living room | 26/27 -> 26/27, 0.39-0.69 | black lace bodysuit, leather mini, thigh-highs; the lie-back shot came out upside down three times ("knees up toward the camera" inverts her every time, even "propped up facing the camera") - dropped |
+
+**The selfie arm.** A POV frame with one of her hands unaccounted for reaches
+it toward the lens (try-on 6/26, cheer 2, dictation 1, librarian 1). Fixes that
+worked: name BOTH hands in every waist-up shot ("hands clasped behind her back",
+"both hands at the waist seam", "one hand holding her ponytail, the other on her
+hip"), `selfie, her arm reaching toward the camera` in NEG_BASE, and "both of
+her hands away from the camera" appended after every shot text (`HANDS`).
+"Shot on a tripod" is NOT a fix: it drew a tripod.
 
 Nude identity (the probe, j1388, 3 poses x GNASS 0.5 / 0.35 / 0.2 / none on
 fixed seeds): **her LoRA alone draws the nudity and scores 0.62-0.67; GNASS at

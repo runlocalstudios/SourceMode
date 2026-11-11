@@ -367,8 +367,9 @@ STORIES["cheer"] = Story(
                          "her upper teeth, in {OUTFIT}"),
         Shot("a03_back", "{POV}: {FULL}, standing with her back to the camera, the pleated skirt over her bottom, "
                          "glancing back over her right shoulder with a teasing smile, in {OUTFIT}", flags=("face_low",)),
-        Shot("a04_profile", "{POV}: three-quarter length, in profile at the window holding the end of her ponytail, "
-                            "a soft smile, in {OUTFIT}", flags=("face_low",)),
+        Shot("a04_profile", "{POV}: three-quarter length, standing in profile at the window, one hand holding the "
+                            "end of her ponytail in front of her and the other hand resting on her hip, a soft "
+                            "smile, in {OUTFIT}", flags=("face_low",)),
         Shot("a05_ponytail", "{POV}: waist up, adjusting the elastic of her ponytail with both hands behind her head, "
                              "exactly two hands, one eyebrow raised, a warm closed-lip smile, in {OUTFIT}"),
         Shot("a06_skirt_lift", "{POV}: {FULL}, standing facing the camera, lifting the front hem of her pleated "
@@ -431,16 +432,18 @@ LIVING_SHOTS = (
     Shot("a01_door", "{POV} from the sofa: waist up, she stands in the open apartment doorway with the hall behind "
                      "her, catching the camera's eye with a surprised laugh, a clutch in one hand and the other on "
                      "the door edge, in {OUTFIT}"),
-    Shot("a02_close_door", "{POV} from the sofa: {FULL}, she eases the door closed with her shoulder, glancing "
+    Shot("a02_close_door", "{POV} from the sofa: {FULL}, standing at the entrance door across the room, she eases "
+                           "it closed with her shoulder, one hand on the door edge and the clutch in the other, glancing "
                            "toward the sofa, in {OUTFIT}"),
     Shot("a03_against_door", "{POV} from the sofa: three-quarter length, one shoulder against the closed door, chin "
                              "lifted, eyes gently closed, a relaxed smile, in {OUTFIT}"),
     Shot("a04_crouch_shoe", "{POV} from the sofa: {FULL}, crouching down by the door with her knees apart to undo the "
                             "strap of one shoe, one palm on the door, glancing up at the camera with an amused "
                             "smile, in {OUTFIT}"),
-    Shot("a05_step_out", "{POV} from the sofa: {FULL}, stepping out of her second shoe looking down, lips open in "
+    Shot("a05_step_out", "{POV} from the sofa: {FULL}, standing on one foot by the door stepping out of her second "
+                         "shoe, one hand on the door frame, looking down, lips open in "
                          "concentration, in {OUTFIT}"),
-    Shot("b01_pour", "{POV} from the sofa: waist up in three-quarter view, at the drinks cabinet pouring a small "
+    Shot("b01_pour", "{POV} from the sofa: waist up in three-quarter view, standing at the drinks cabinet pouring a small "
                      "nightcap from the decanter, eyes on the stream, in {OUTFIT}"),
     Shot("b02_sip", "{POV} from the sofa: waist up, turned from the cabinet sipping, eyes over the rim toward the "
                     "camera, in {OUTFIT}"),
@@ -466,25 +469,25 @@ LIVING_SHOTS = (
                               "into the camera, in {OUTFIT}"),
     Shot("c05_kneel_tilt", "{POV} from the sofa: three-quarter length, kneeling upright on the cushion, head tipped "
                            "to one side, an amused closed-lip smile, in {OUTFIT}"),
-    Shot("d01_straddle_arm", "{POV} from the sofa: {FULL}, she straddles the broad padded arm of the sofa facing the "
-                             "camera, one leg on each side of it, her skirt riding up so her panties show, hands "
-                             "on her thighs, {TEASE}, in {OUTFIT}"),
-    Shot("d02_straddle_lean", "{POV} from the sofa: three-quarter length, straddling the sofa arm, leaning forward "
-                              "toward the camera with her hands on the arm in front of her, her panties showing "
+    Shot("d01_straddle_arm", "{POV} from the sofa: {FULL}, sitting astride the broad padded arm of the sofa as if riding it, one leg hanging down on each side of the arm with the arm between her thighs, facing the camera, her skirt riding up so her "
+                             "panties show, hands on her thighs, {TEASE}, in {OUTFIT}"),
+    Shot("d02_straddle_lean", "{POV} from the sofa: three-quarter length, sitting astride the broad padded arm of the sofa as if riding it, one leg hanging down on each side of the arm with the arm between her thighs, leaning forward toward the "
+                              "camera with both hands gripping the arm in front of her, her panties showing "
                               "under the skirt, lips parted, in {OUTFIT}"),
-    Shot("d03_straddle_back", "{POV} from the sofa: {FULL}, straddling the sofa arm with her back to the camera, the "
-                              "skirt up over her bottom showing her panties, looking back over her shoulder, in "
-                              "{OUTFIT}", flags=("face_low",)),
-    Shot("d04_straddle_hair", "{POV} from the sofa: three-quarter length, straddling the sofa arm facing the camera, "
-                              "both hands lifting her hair up behind her head, exactly two hands, chest out, "
-                              "her panties showing, in {OUTFIT}"),
-    Shot("d05_straddle_side", "{POV} from the sofa: {FULL}, straddling the sofa arm side-on to the camera, one hand "
-                              "on the arm, the skirt pushed up over her thigh, her face turned to the camera, "
-                              "{TEASE}, in {OUTFIT}", flags=("face_low",)),
+    Shot("d03_straddle_back", "{POV} from the sofa: {FULL}, sitting astride the broad padded arm of the sofa as if riding it, one leg hanging down on each side of the arm with the arm between her thighs, her back to the camera, the skirt up over her "
+                              "bottom showing her panties, looking back over her shoulder, in {OUTFIT}",
+         flags=("face_low",)),
+    Shot("d04_straddle_hair", "{POV} from the sofa: three-quarter length, sitting astride the broad padded arm of the sofa as if riding it, one leg hanging down on each side of the arm with the arm between her thighs, facing the camera, both hands "
+                              "lifting her hair up behind her head, exactly two hands, chest out, her panties "
+                              "showing, in {OUTFIT}"),
+    Shot("d05_straddle_side", "{POV} from the sofa: {FULL}, sitting astride the broad padded arm of the sofa as if riding it, one leg hanging down on each side of the arm with the arm between her thighs, seen side-on so both legs hanging down either "
+                              "side of the arm are visible, one hand on the arm, the skirt pushed up over her "
+                              "thigh, her face turned to the camera, {TEASE}, in {OUTFIT}", flags=("face_low",)),
     Shot("d06_arm_sit_legs", "{POV} from the sofa: {FULL}, sitting sideways on the sofa arm with her legs crossed, "
                              "the skirt high on her thighs, leaning back on one hand, in {OUTFIT}"),
-    Shot("e01_lie_back", "{POV} from the sofa: {FULL}, lying back along the sofa with her head on the far arm and "
-                         "her knees up, the skirt fallen back to show her panties, looking at the camera, in {OUTFIT}"),
+    Shot("e01_lie_back", "{POV} from the sofa: {FULL}, lying back along the sofa propped up on the cushions facing "
+                         "the camera, her knees up and apart, the skirt fallen back to show her panties, her face "
+                         "upright looking at the camera, in {OUTFIT}", negative="upside down, head toward the camera"),
     Shot("e02_close_whisper", "{CLOSE}, she shares a quiet remark just beside the camera, in {OUTFIT}", flags=("close",)),
     Shot("e03_stretch", "{POV} from the sofa: {FULL}, standing in front of the sofa stretching both arms overhead, "
                         "eyes half closed, the crop top riding up, in {OUTFIT}"),
