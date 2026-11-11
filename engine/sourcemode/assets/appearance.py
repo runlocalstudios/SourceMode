@@ -460,12 +460,19 @@ def young(text: str, age: int | None = None) -> str:
     every epoch, nat's tiebreaker said "a girl" too. Evening: "we'll need to use
     young woman for all because girl is making it too childish." So "woman" and
     "girl" both read as "young woman"; an age already given ("a 25-year-old
-    woman") is left alone; over 30 she is a woman."""
+    woman") is left alone; over 30 a bare "woman" stays a woman.
+
+    Jeremy, 2026-11-11: "Hers should follow her description just like every
+    other character should follow their description. If young woman casts her
+    images as too young I will update and regenerate" - so "young woman" WRITTEN
+    in the description is never taken out by the age field (serena, 38, says
+    "a young woman"); the age only decides what a bare "woman" or "girl" becomes."""
     old = age is not None and age > 30
 
     def sub(m: re.Match) -> str:
         plural = m.group(0).lower().endswith(("women", "girls"))
-        word = ("women" if plural else "woman") if old else ("young women" if plural else "young woman")
+        written_young = m.group(0).lower().startswith("young ")
+        word = ("women" if plural else "woman") if (old and not written_young) else             ("young women" if plural else "young woman")
         return word[0].upper() + word[1:] if m.group(0)[0].isupper() else word
 
     # both lookbehinds: with only the first, "an 18-year-old young woman" matched
