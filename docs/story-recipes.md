@@ -100,3 +100,40 @@ Edit LoRAs: `nsfw/qedit_mcnl_nsfw.safetensors` (MCNL) and
 `nsfw/qedit2511_all_included_v2.safetensors` (act words: fellatio, handjob,
 throating, semen, anal). Both spliced after her LoRA at 0.8
 (`pov_edit_probe.splice_lora`), as `nsfw_lora_test.py` did.
+
+## Hotel arrival story (Nadia and Fiona, 2026-11-10) - the clothed Codex storyline from text
+
+`engine/scripts/video/hotel_story.py <char>`: 30 shots, her locked LoRA alone at
+1.0, text-to-image 1024x1536, no act LoRA, no plate. One fixed outfit sentence
+and one fixed room sentence in every frame; a `COAT_ON` / `COAT_OFF` tail says
+where the fur coat is. Storyboard from the Codex hotel stories
+(`2026-10-30_nadia_26_1`, `2026-11-08_fiona_29_2`) plus the dance he asked for:
+door (3), coat (3), window (3), champagne (3), dance (5), ottoman (5), kneeling
+in front of him (4), close portraits (2), last look (2).
+
+| what | result | proof |
+|---|---|---|
+| Fiona (velour dress, gloves, white fur) | **30 of 30, 28 first try**, identity 0.49-0.78, ages 21-28; outfit held in every frame including the gloves | `library/fiona/2026-11-10_video_hotel-story/` |
+| Nadia (blue satin, boots, black fur) | **30 of 30**, 7 re-rolled after the audit; identity 0.29-0.69, ages 24-34 - her LoRA is the weaker one (Jeremy: "her LoRA is bad, but the quality of the photos is good") | `library/nadia/2026-11-10_video_hotel-story/` |
+
+Lessons:
+- **Never name the viewer or his seat.** "from the eyes of the man seated in a
+  tan leather armchair" painted the armchair into three of four frames and sat
+  her in it twice; "from the eyes of a seated man" drew his suit shoulder into
+  the corner. `POV = "point-of-view photo, the camera at seated eye level"` and
+  armchair / sofa / a man / suit jacket in the negative fixed both.
+- **Pose words from the kneeling pack** ("a full-length photo from slightly above,
+  her whole kneeling figure in frame, kneeling on the carpet ... sitting back on
+  her heels") put her on the floor; "she kneels in front of the camera" alone put
+  her on the ottoman.
+- **Close portraits get their own room sentence** (soft out-of-focus suite); the
+  full room sentence made the "close" portrait a three-quarter shot.
+- **The coat colour is in `COAT_OFF`** ("the black clutch and a long white fur
+  coat lying on the bed"), or a brown coat appears on the bed.
+- **Hands at her sides in the T2I path**: "biting her lower lip" drew a tongue
+  out; "lips parted in a sly smile" did not.
+- Floors: face 0.25 (an over-the-shoulder look at 0.291 was plainly her), side
+  profile 0.15 (a true profile scores 0.22-0.25 against the frontal reference).
+- `--reject=<stem>,...` marks an audited miss (knelt on the bed, sat on the bed,
+  wide portrait) without discarding it: it stays on the judge board and the shot
+  renders again.
