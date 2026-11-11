@@ -137,3 +137,20 @@ Lessons:
 - `--reject=<stem>,...` marks an audited miss (knelt on the bed, sat on the bed,
   wide portrait) without discarding it: it stays on the judge board and the shot
   renders again.
+
+### Hotel story, sections s and t: she undresses and plays with herself (Fiona, 2026-11-10 evening)
+
+Same script, `--section=s,t`: unzip, dress down, dress off, sit, spread, touch,
+lying back, after (s01-s10); standing beside the bed showing her bottom and
+vagina, bent over, hair held up in a ponytail while she rubs her clit or
+fingers herself, foot on the bed, squat, all fours (t01-t14). Her LoRA 1.0 +
+GNASS at **0.5** (`GNASS_STRENGTH`). 24 of 24 kept, 2 of 3 first try, identity
+0.37-0.64 nude against 0.49-0.78 clothed.
+
+| lesson | evidence |
+|---|---|
+| **Never name the dress once it is off.** "naked except for her gloves ... her purple velour dress lying on the bed" re-dressed her 3 of 4. The nude line says what is bare ("completely naked, her bare breasts, bare stomach and bare vagina showing, wearing nothing but ...") and the bed carries only the clutch and the coat. | j1383 vs j1384 |
+| **"flushed with pleasure" paints blush circles on her cheeks** (Jeremy: "the makeup looks really bad"). PLEASURE is now "eyes heavy-lidded, lips parted in a soft moan"; blush circles / pink cheeks / heavy blush in the negative; "natural makeup" in the nude line. | `s06_touch__a2` (blush) vs every j1385 frame (clean) |
+| **No upside-down frames.** "lying on her back with her knees up toward the camera" put her head at the bottom of the frame with the face inverted and unrecognisable (0.05-0.18). Jeremy: "they never look right". Lying shots say "lying back propped up on the pillows facing the camera, her face visible above her knees". | `s08_lying_back__a1`, `s09_knees_up_eyes__a1-a3` |
+| GNASS 0.6 -> 0.5 brought nude identity up a notch without losing the nudity. | 0.49-0.61 at 0.6, 0.37-0.64 at 0.5 (profiles pull the floor down) |
+| "one foot up on the edge of the bed" is unreliable (1 of 3); "hair gathered up in a high ponytail with one gloved hand" works every time, and once drew a floating third glove until "exactly two hands" was added. | `t09`, `t10`, `t14` |

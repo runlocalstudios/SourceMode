@@ -1,6 +1,6 @@
 """The hotel-arrival photo story for a character, rendered from text with her LoRA.
 
-    python scripts/video/hotel_story.py <character> [--section=d,c,w,g,n,o,k,p,l] [--only=id,id] [--retry=id,id] [--reject=file,file] [--dry-run] [--sheet-only]
+    python scripts/video/hotel_story.py <character> [--section=d,c,w,g,n,o,k,p,l,s,t] [--only=id,id] [--retry=id,id] [--reject=file,file] [--dry-run] [--sheet-only]
 
 Jeremy, 2026-11-10: the Codex photo stories ("her coming into the viewer's hotel
 room, taking off her fur coat, pouring a glass of champagne, dancing sexy for the
@@ -18,7 +18,17 @@ kneeling beats OpenAI refused, close portraits, the last look - plus the dance
 he asked for. Every frame is from the eyes of the viewer in the armchair.
 
 Every shot is text-to-image through `render.t2i_workflow` with her locked LoRA
-at 1.0 and no other LoRA: identity first. The outfit and the room are one fixed
+at 1.0 and no other LoRA: identity first. Section s (Jeremy, 2026-11-10 evening:
+"have her undress and sit on the bed, spread her legs, play with herself") is
+the one exception: its nude shots stack GNASS at 0.6 under hers, as the office
+story's show-off shots did. Section t (same evening: "standing next to the bed
+showing her ass and pussy to the viewer, legs spread apart, her playing with
+herself, lots of different poses, angles ... fingering herself or at least
+playing with her clit while she holds her hair up") is the same recipe standing.
+Lesson from the first spicy probe (j1383): "naked except for her gloves" lost to
+"her purple velour dress ... lying on the bed" three times out of four - the
+dress word re-dressed her. The nude line now says what is bare and the dress is
+never named once it is off. The outfit and the room are one fixed
 sentence each so they are worded identically in every frame; the room is the
 loosest of the three and he said so.
 
@@ -80,12 +90,19 @@ W, H = 1024, 1536
 LOOKS = {
     "nadia": {
         "hair": "her hair worn loose",
+        "dress": "her blue satin dress",
+        "nude": ("completely naked, natural makeup, her bare breasts, bare stomach and bare vagina showing, wearing nothing "
+                 "but her black leather knee-high stiletto boots and diamond stud earrings"),
         "outfit": ("a tight sky-blue satin sleeveless mini dress with a draped cowl neckline, black leather "
                    "knee-high stiletto boots and diamond stud earrings"),
         "coat": "a knee-length black fur coat",
     },
     "fiona": {
         "hair": "her hair worn loose",
+        "dress": "her purple velour dress",
+        "nude": ("completely naked, natural makeup, her bare breasts, bare stomach and bare vagina showing, wearing nothing "
+                 "but her purple velour opera gloves, her narrow purple velour choker, silver hoop earrings and "
+                 "purple velour pumps"),
         "outfit": ("a fitted amethyst-purple velour mini dress with short sleeves and a high round neckline, "
                    "matching purple velour opera gloves reaching above her elbows, a narrow purple velour "
                    "choker, silver hoop earrings and purple velour pumps"),
@@ -95,6 +112,10 @@ LOOKS = {
 if CHAR not in LOOKS:
     raise SystemExit(f"no hotel look for {CHAR}; add one to LOOKS")
 HAIR, OUTFIT, COAT = LOOKS[CHAR]["hair"], LOOKS[CHAR]["outfit"], LOOKS[CHAR]["coat"]
+DRESS, NUDE = LOOKS[CHAR]["dress"], LOOKS[CHAR]["nude"]
+GNASS = "nsfw\\qimage2512_gnass.safetensors"
+GNASS_STRENGTH = 0.5   # 0.6 cost her face (0.49-0.61 nude vs 0.60-0.78 clothed, j1383); Jeremy: "identity is a little bit weaker"
+PLEASURE = "eyes heavy-lidded, lips parted in a soft moan"   # "flushed" painted blush circles on her cheeks (j1384)
 CLUTCH = "a small black clutch purse"
 ROOM = ("Inside a luxury hotel suite at night, warm lamplight, beige walls with walnut trim, a king bed with a "
         "white duvet on the left, a floor-to-ceiling window full of city lights at night on the right, a low "
@@ -105,6 +126,11 @@ CLOSE = "a close-up portrait photo, head and shoulders only, her face filling th
 CLOSE_ROOM = "Soft out-of-focus hotel suite behind her at night, warm lamplight, city lights in the window"
 COAT_ON = f"wearing {COAT} open over {OUTFIT}"
 COAT_OFF = f"in {OUTFIT}, the black clutch and {COAT} lying on the bed"
+ON_BED = f"the black clutch and {COAT} lying on the bed"
+HAIR_UP = "holding all of her long hair gathered up behind her head in a high ponytail with one gloved hand"
+HAIR_UP_BOTH = "both hands gathering all of her long hair up behind her head in a high ponytail"
+CLIT = "her fingers rubbing her clitoris"
+FINGERS = "two fingers inside her vagina"
 
 # A shot is (id, text). Section = first letter of the id.
 STORY: tuple[tuple[str, str], ...] = (
@@ -193,7 +219,91 @@ STORY: tuple[tuple[str, str], ...] = (
     ("l02_last_look", f"{POV}: she stands in the hotel corridor just outside the door, giving the camera a "
                       f"last playful smile through the half-closed doorway, the corridor lights behind her, "
                       f"waist up, {COAT_ON}"),
+    # --- s: she undresses and plays with herself on the bed ---------------------------
+    ("s01_unzip", f"{POV}: standing beside the bed with her back half turned to the camera, reaching behind "
+                  f"her to unzip the dress, the zip open down her back showing bare skin, looking back over "
+                  f"her shoulder with a sly smile, three-quarter length, {COAT_OFF}"),
+    ("s02_dress_down", f"{POV}: standing beside the bed facing the camera, three-quarter length, the dress "
+                       f"pushed down to her waist, topless with her bare breasts showing, {NUDE} above the "
+                       f"waist, a teasing smile, eyes on the camera, the black clutch and {COAT} lying on the "
+                       f"bed"),
+    ("s03_dress_off", f"{POV}: a full-length photo, standing beside the bed facing the camera, {NUDE}, holding "
+                      f"the dress she has just taken off in one hand, one hip cocked, a teasing smile, "
+                      f"{ON_BED}"),
+    ("s04_sit_bed", f"{POV}: a full-length photo, sitting on the edge of the bed facing the camera, {NUDE}, "
+                    f"knees together and hands resting on her knees, lips parted in a teasing smile, eyes on "
+                    f"the camera, {ON_BED}"),
+    ("s05_spread", f"{POV}: a full-length photo, sitting on the edge of the bed facing the camera, {NUDE}, "
+                   f"leaning back on her hands with her legs spread wide apart and her feet planted on the "
+                   f"carpet, her vagina visible between her spread thighs, eyes on the camera with a teasing "
+                   f"smile, {ON_BED}"),
+    ("s06_touch", f"{POV}: a full-length photo, sitting on the edge of the bed facing the camera, {NUDE}, her "
+                  f"legs spread wide apart with her feet planted on the carpet, one hand between her legs with "
+                  f"her fingers rubbing her clitoris, the other hand on the bed behind her, {PLEASURE}, eyes on "
+                  f"the camera, {ON_BED}"),
+    ("s07_touch_close", f"{POV}: from the thighs up, sitting on the edge of the bed facing the camera with her "
+                        f"legs spread wide, {NUDE}, her fingers rubbing her vagina, her other hand cupping her "
+                        f"breast, {PLEASURE}, {ON_BED}"),
+    ("s08_lying", f"{POV}: a full-length photo, lying back on the bed propped up on the pillows facing the "
+                  f"camera, her knees bent and spread wide apart toward the camera, {NUDE}, {FINGERS}, her "
+                  f"face visible above her knees looking at the camera, {PLEASURE}, {ON_BED}"),
+    ("s09_knees_up_eyes", f"{POV}: a full-length photo, lying back on the bed propped up on the pillows facing "
+                          f"the camera, her knees bent and spread wide apart toward the camera, {NUDE}, one "
+                          f"hand between her legs with {CLIT}, the other squeezing her breast, her face "
+                          f"visible above her knees looking at the camera with heavy-lidded eyes and parted "
+                          f"lips, {ON_BED}"),
+    ("s10_after", f"{POV}: lying on her side on the bed propped on one elbow, {NUDE}, flushed and smiling "
+                  f"softly at the camera, one hand resting on her hip, three-quarter length, {ON_BED}"),
+    # --- t: standing beside the bed, showing him everything, playing with herself ----
+    ("t01_ass", f"{POV}: a full-length photo, standing beside the bed with her back to the camera, {NUDE}, "
+                f"feet apart and hands on her hips, her bare bottom to the camera, looking back over her "
+                f"shoulder with a teasing smile, {ON_BED}"),
+    ("t02_bend_over", f"{POV}: a full-length photo, standing beside the bed with her back to the camera, "
+                      f"{NUDE}, bent forward at the waist with her hands on the bed and her legs spread wide "
+                      f"apart, her bare bottom and her vagina shown to the camera from behind, looking back "
+                      f"over her shoulder, {ON_BED}"),
+    ("t03_back_touch", f"{POV}: a full-length photo, standing with her back to the camera and her legs spread "
+                       f"wide, {NUDE}, bending forward slightly and reaching back between her legs from "
+                       f"behind with {CLIT}, looking back over her shoulder, {PLEASURE}, {ON_BED}"),
+    ("t04_front_spread", f"{POV}: a full-length photo, standing beside the bed facing the camera with her legs "
+                         f"spread wide apart in a wide stance, feet far apart, {NUDE}, hands on her hips, chest out, a teasing smile, eyes on "
+                         f"the camera, {ON_BED}"),
+    ("t05_front_touch", f"{POV}: a full-length photo, standing beside the bed facing the camera with her legs "
+                        f"apart, {NUDE}, one hand between her thighs with {CLIT}, the other hand on her "
+                        f"breast, {PLEASURE}, eyes on the camera, {ON_BED}"),
+    ("t06_hair_up", f"{POV}: three-quarter length, standing facing the camera with her legs spread, {NUDE}, "
+                    f"{HAIR_UP_BOTH}, elbows up, chin raised and chest out, eyes on the camera, lips parted, "
+                    f"{ON_BED}"),
+    ("t07_hair_up_clit", f"{POV}: three-quarter length, standing facing the camera with her legs spread, "
+                         f"{NUDE}, {HAIR_UP}, her other hand between her legs with {CLIT}, head tilted back, "
+                         f"{PLEASURE}, {ON_BED}"),
+    ("t08_side_hair_up", f"{POV}: three-quarter length, standing in profile to the camera with her back "
+                         f"arched, {NUDE}, {HAIR_UP}, her other hand between her legs with {CLIT}, her face "
+                         f"turned toward the camera, {PLEASURE}, {ON_BED}"),
+    ("t09_foot_on_bed", f"{POV}: a full-length photo, standing beside the bed facing the camera with one knee "
+                        f"bent and that foot raised up resting on the edge of the mattress, her thighs open, {NUDE}, her fingers spreading her vagina open for the "
+                        f"camera, eyes on the camera with a sly smile, {ON_BED}"),
+    ("t10_foot_fingering", f"{POV}: a full-length photo, standing beside the bed facing the camera with one knee "
+                           f"bent and that foot raised up resting on the edge of the mattress, her thighs open, {NUDE}, {FINGERS}, {HAIR_UP}, {PLEASURE}, "
+                           f"{ON_BED}"),
+    ("t11_squat", f"{POV}: a full-length photo, squatting on the carpet in front of the bed facing the camera "
+                  f"with her knees spread wide apart, {NUDE}, one hand between her legs with {CLIT}, the "
+                  f"other hand on her knee, looking into the camera, {PLEASURE}, {ON_BED}"),
+    ("t12_all_fours", f"{POV}: a full-length photo, kneeling on all fours on the bed with her back to the "
+                      f"camera and her bottom raised toward it, {NUDE}, her legs apart so her vagina shows "
+                      f"between her thighs, looking back over her shoulder with a sly smile, {ON_BED}"),
+    ("t13_all_fours_touch", f"{POV}: a full-length photo, on all fours on the bed seen from behind, her back to the camera, "
+                            f"her bottom raised toward it and her bare back and the back of her head in view, {NUDE}, one hand reaching back between her legs "
+                            f"with {CLIT}, her face turned back over her shoulder, {PLEASURE}, {ON_BED}"),
+    ("t14_edge_hair_fingers", f"{POV}: a full-length photo, sitting on the edge of the bed facing the camera "
+                              f"with her legs spread wide apart and her feet planted on the carpet, {NUDE}, "
+                              f"one hand up behind her head holding her hair gathered in a high ponytail, "
+                              f"her other hand down between her thighs with {FINGERS}, exactly two hands, "
+                              f"{PLEASURE}, {ON_BED}"),
 )
+NUDE_IDS = tuple(sid for sid, _ in STORY if sid[0] in "st" and sid != "s01_unzip")
+FACE_HIDDEN = ("w01_back",)                                  # her face is out of frame by design
+FACE_LOW = ("w02", "t01", "t02", "t03", "t08", "t12", "t13")  # profile or over the shoulder
 IDS = [s[0] for s in STORY]
 assert len(IDS) == len(set(IDS)), "duplicate shot id"
 
@@ -205,6 +315,9 @@ NEG_CLOTHES = {
     "nadia": "long dress, gown, pants, sneakers, bare feet",
     "fiona": "bare arms, bare hands, long dress, gown, boots, bare feet",
 }
+NEG_NUDE = ("dress, mini dress, strapless dress, velour dress, clothes on her, bra, panties, underwear, "
+            "covered, censored, deformed genitals, extra fingers, tears, crying, toothy grin, a man, his hand, "
+            "upside down, blush circles, pink cheeks, heavy blush")
 
 cfg = load_config()
 OUT_ROOT = outputs_dir(cfg)
@@ -246,13 +359,16 @@ def negative_for(sid: str) -> str:
         neg += ", sitting, sitting on the bed, seated"
     if sid.startswith("p0"):
         neg += ", full body, full length, wide shot, her legs, her boots, her shoes"
+    if sid in NUDE_IDS:
+        neg += ", " + NEG_NUDE
     extra = appearance_negative(CHAR)
     return neg + (", " + extra if extra else "")
 
 
 def t2i_wf(sid: str, text: str, seed: int) -> dict:
     return t2i_workflow(cfg, prompt_for(text), seed, f"sourcemode/{CHAR}_hotel", lora_path=lora["path"],
-                        negative=negative_for(sid), width=W, height=H)
+                        negative=negative_for(sid), width=W, height=H,
+                        extra_loras=((GNASS, GNASS_STRENGTH),) if sid in NUDE_IDS else ())
 
 
 record: dict = json.loads(SHOTS.read_text(encoding="utf-8")) if SHOTS.is_file() else {}
@@ -265,16 +381,16 @@ def save() -> None:
 
 
 def face_floor(sid: str) -> float:
-    if sid.endswith("_back"):
+    if sid in FACE_HIDDEN:
         return -1.0          # her face is hidden by design; kept on sight
-    return FACE_SIDE_MIN if sid.endswith("_side") else FACE_MIN
+    return FACE_SIDE_MIN if sid.startswith(FACE_LOW) else FACE_MIN
 
 
 def passes(sid: str, a: dict) -> bool:
     """Her face and age pass, judged against the CURRENT floors, not the flag stored when it rendered."""
     if a.get("why") == "no image":
         return False
-    if sid.endswith("_back"):
+    if sid in FACE_HIDDEN:
         return True
     young = a.get("age") is not None and a["age"] < YOUNG_FLAG
     return bool(a.get("face") is not None and a["face"] >= face_floor(sid) and not young)
