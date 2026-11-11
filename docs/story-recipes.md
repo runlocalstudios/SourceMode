@@ -154,3 +154,24 @@ GNASS at **0.5** (`GNASS_STRENGTH`). 24 of 24 kept, 2 of 3 first try, identity
 | **No upside-down frames.** "lying on her back with her knees up toward the camera" put her head at the bottom of the frame with the face inverted and unrecognisable (0.05-0.18). Jeremy: "they never look right". Lying shots say "lying back propped up on the pillows facing the camera, her face visible above her knees". | `s08_lying_back__a1`, `s09_knees_up_eyes__a1-a3` |
 | GNASS 0.6 -> 0.5 brought nude identity up a notch without losing the nudity. | 0.49-0.61 at 0.6, 0.37-0.64 at 0.5 (profiles pull the floor down) |
 | "one foot up on the edge of the bed" is unreliable (1 of 3); "hair gathered up in a high ponytail with one gloved hand" works every time, and once drew a floating third glove until "exactly two hands" was added. | `t09`, `t10`, `t14` |
+
+## Photo stories from the Codex shot plans (Fiona, 2026-11-10/11) - `photo_story.py <char> <story>`
+
+`engine/scripts/video/story_defs.py` holds eight storyboards rebuilt from his
+Codex folders (`docs/codex-story-plans.md`): librarian, dictation, try-on,
+cheer tease, living room tease (schoolgirl costume, the couch-arm straddle),
+massage (messy bun, POV thigh work clothed), closing the bar (pigtails, leather
+corset), evening study partner. Same recipe as the hotel story: her LoRA alone,
+one outfit sentence, one room sentence, the viewer never named. Two attempts per
+shot ("redo it one time before moving on"), `--reject` after the audit.
+
+| set | result | notes |
+|---|---|---|
+| librarian | 26/26 first try, 0.46-0.75 | "one gloved-free index finger" drew a black glove (a negative-shaped phrase in the positive); "leaning forward toward the camera" alone became a selfie arm - name where the hands are |
+| dictation | 27/27 first try, 0.40-0.75 | one selfie arm again (b02); `selfie, her arm reaching toward the camera` now in NEG_BASE; the Codex-refused frames (bending for the pen, the armrest perch, kneeling for the note, sitting on the desk) all rendered first try |
+
+Nude identity (the probe, j1388, 3 poses x GNASS 0.5 / 0.35 / 0.2 / none on
+fixed seeds): **her LoRA alone draws the nudity and scores 0.62-0.67; GNASS at
+0.5 scores 0.46-0.49 on the same seed.** GNASS is retired from these stories
+(`GNASS_STRENGTH = 0`). The hotel story's six re-rolled nudes went from
+0.37-0.52 to 0.53-0.66.

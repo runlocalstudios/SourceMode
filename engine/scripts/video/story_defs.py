@@ -32,6 +32,9 @@ GNASS = "nsfw\\qimage2512_gnass.safetensors"
 GNASS_STRENGTH = 0.0   # j1388: her LoRA alone renders nudity and keeps her face; GNASS only cost identity
 
 POV = "point-of-view photo, the camera at seated eye level"
+HANDS = "both of her hands away from the camera"   # appended after every shot text by photo_story.prompt_for
+# the selfie arm: a close POV frame with one hand unaccounted for reaches for the camera (try-on 6/26, cheer a01/a04);
+# "shot on a tripod" put a TRIPOD in the frame (cheer b03/b04). Name BOTH hands in every waist-up shot.
 CLOSE = "a close-up portrait photo, head and shoulders only, her face filling the frame"
 PLEASED = "a warm closed-lip smile"
 TEASE = "a teasing smile, eyes on the camera"
@@ -39,7 +42,8 @@ FULL = "a full-length photo, her whole figure in frame"
 
 NEG_BASE = ("different person, different face, changed hair, extra hands, extra limbs, deformed hands, "
             "blurry, low quality, cartoon, anime, watermark, text, a second woman, the man's face, his face, "
-            "tongue out, blush circles, pink cheeks, heavy blush, childlike, child, underage")
+            "tongue out, blush circles, pink cheeks, heavy blush, selfie, her arm reaching toward the camera, "
+            "childlike, child, underage")
 NEG_NOMAN = "armchair, a man, man's shoulder, suit jacket, another person"   # dropped on shots flagged "him"
 NEG_NUDE = ("clothes on her, bra, panties, underwear, covered, censored, deformed genitals, extra fingers, "
             "tears, crying, toothy grin, his hand, upside down")
@@ -116,7 +120,7 @@ STORIES["librarian"] = Story(
                                 "pressing a book flush into the shelf, looking back over her shoulder with a "
                                 "quick closed-lip smile, in {OUTFIT}", flags=("face_low",)),
         Shot("a05_hush", "{POV}: three-quarter length, standing on the ladder's first rung turned toward the "
-                         "camera, one gloved-free index finger raised to her lips in a playful hush, eyebrows "
+                         "camera, her bare index finger raised to her lips in a playful hush, eyebrows "
                          "lifted, in {OUTFIT}"),
         Shot("a06_step_down", "{POV}: {FULL}, she steps down off the ladder onto the floor, one foot still on the "
                               "rung and one hand on the brass rail, glancing at the camera, in {OUTFIT}"),
@@ -136,7 +140,8 @@ STORIES["librarian"] = Story(
                           "other at the knee, palms behind her on the oak, leaning back a little, head tilted, "
                           "one corner of her mouth lifted, in {OUTFIT}"),
         Shot("c03_lean_in", "{POV}: waist up, seated on the table corner beside a red book, leaning forward toward "
-                            "the camera to listen with her brows lifted, in {OUTFIT}"),
+                            "the camera to listen with her brows lifted, both hands resting on the table edge beside "
+                            "her hips, in {OUTFIT}"),
         Shot("c04_laugh", "{POV}: waist up, seated on the table corner, straightening up and laughing, one hand "
                           "open palm-up at her waist, in {OUTFIT}"),
         Shot("c05_slide_closer", "{POV}: three-quarter length, she has slid along the table edge closer to the "
@@ -278,39 +283,46 @@ STORIES["tryon"] = Story(
                             "on the oak jamb, an expectant closed-mouth smile, in {OUTFIT}", alt="A"),
         Shot("a02_step_out", "{POV}: three-quarter length, one step out of the closet, pausing at the threshold "
                              "with her shoulders to the camera and a small warm smile, in {OUTFIT}", alt="A"),
-        Shot("a03_side", "{POV}: three-quarter length, a soft pivot showing the side of the dress with the stones "
-                         "catching the light, torso side-on, face turned back three-quarter watching the camera's "
+        Shot("a03_side", "{POV}: three-quarter length, standing on the oak floor in a soft pivot showing the side of "
+                         "the dress with the stones catching the light, torso side-on, face turned back three-quarter watching the camera's "
                          "reaction, in {OUTFIT}", alt="A", flags=("face_low",)),
-        Shot("a04_rear_look", "{POV}: {FULL}, in a rear three-quarter stance showing the back of the dress, looking "
+        Shot("a04_rear_look", "{POV}: {FULL}, standing on the oak floor in a rear three-quarter stance showing the back "
+                              "of the dress, looking "
                               "back over her near shoulder with a confident half-smile, in {OUTFIT}", alt="A",
              flags=("face_low",)),
         Shot("a05_hair_sweep", "{POV}: three-quarter length, near the camera, sweeping a section of hair behind one "
                                "shoulder and raising her eyes with a small cheek lift, in {OUTFIT}", alt="A"),
-        Shot("a06_well", "{POV}: three-quarter length, feet planted, one hand lowering, one brow lifted, a playful "
+        Shot("a06_well", "{POV}: three-quarter length, standing with her feet planted and both hands resting at her "
+                         "sides, one brow lifted, a playful "
                          "half-smile asking which look he likes, in {OUTFIT}", alt="A"),
         Shot("a07_back_in", "{POV}: {FULL}, stepping back into the closet with her body angled away, turning partway "
                             "back with an easy smile before changing, in {OUTFIT}", alt="A", flags=("face_low",)),
         Shot("b01_doorway", "{POV}: {FULL}, she stands at the closet threshold in the romper, one hand at the side "
                             "seam, a small knowing smile, in {OUTFIT}", alt="B"),
-        Shot("b02_step", "{POV}: three-quarter length, one step toward the camera with her arms hanging, eyebrows "
+        Shot("b02_step", "{POV}: three-quarter length, one step toward the camera with both arms hanging at her sides "
+                         "and her hands by her thighs, eyebrows "
                          "lifted, an amused closed-lip smile, in {OUTFIT}", alt="B"),
-        Shot("b03_side", "{POV}: three-quarter length, side-on at the near mark, head partly turned for a sideways "
+        Shot("b03_side", "{POV}: three-quarter length, standing side-on at the near mark with her hands clasped behind "
+                         "her back, head partly turned for a sideways "
                          "glance with a small smile, in {OUTFIT}", alt="B", flags=("face_low",)),
         Shot("b04_rear", "{POV}: {FULL}, rear three-quarter stance showing the back of the romper and the pigtails, "
                          "glancing back over her near shoulder with a quiet half-smile, in {OUTFIT}", alt="B",
              flags=("face_low",)),
-        Shot("b05_check_velour", "{POV}: three-quarter length, rotated to face the camera, one hand at the waist "
-                                 "seam, eyes flicking down to check the velour, in {OUTFIT}", alt="B"),
-        Shot("b06_laugh", "{POV}: waist up, a brief natural laugh, cheeks lifting, eyes crinkling, in {OUTFIT}", alt="B"),
+        Shot("b05_check_velour", "{POV}: three-quarter length, standing facing the camera, both hands at the waist "
+                                 "seam of the romper, eyes flicking down to check the velour, in {OUTFIT}", alt="B"),
+        Shot("b06_laugh", "{POV}: waist up, standing with her hands clasped behind her back, a brief natural laugh, "
+                          "cheeks lifting, eyes crinkling, in {OUTFIT}", alt="B"),
         Shot("b07_back_in", "{POV}: {FULL}, walking back to the closet with one quick grin back over her shoulder, "
                             "in {OUTFIT}", alt="B", flags=("face_low",)),
         Shot("c01_doorway", "{POV}: {FULL}, she stands in the closet doorway with one hand on the jamb, relaxed, a "
                             "faint knowing smile, in {OUTFIT}", alt="C"),
-        Shot("c02_cuff", "{POV}: three-quarter length, one step out turning to the camera, fingertips touching a "
-                         "knit cuff, the choker and her midriff showing, soft eye contact, in {OUTFIT}", alt="C"),
-        Shot("c03_side", "{POV}: three-quarter length, a comfortable side stance, glancing back in a three-quarter "
+        Shot("c02_cuff", "{POV}: three-quarter length, standing one step out of the closet turned to the camera, "
+                         "both hands down in front of her, the fingertips of one hand touching the knit cuff of the other, the choker and her midriff showing, soft eye contact, in {OUTFIT}", alt="C"),
+        Shot("c03_side", "{POV}: three-quarter length, standing on the oak floor in a comfortable side stance with her "
+                         "hands clasped behind her back, glancing back in a three-quarter "
                          "head turn, in {OUTFIT}", alt="C", flags=("face_low",)),
-        Shot("c04_rear", "{POV}: {FULL}, turned to show the back of the outfit, the short skirt over her bottom, "
+        Shot("c04_rear", "{POV}: {FULL}, standing on the oak floor turned to show the back of the outfit, the short "
+                         "skirt over her bottom, "
                          "looking back over her near shoulder with a confident soft closed-lip smile, in {OUTFIT}",
              alt="C", flags=("face_low",)),
         Shot("c05_to_bed", "{POV}: three-quarter length, she turns to the near foot corner of the bed and looks down "
@@ -485,11 +497,16 @@ STORIES["livingroom"] = Story(
     close_room="Soft out-of-focus living room and amber lamplight behind her",
     negative="classroom, backpack, school desk",
     looks={
+        # Jeremy asked for "a very schoolgirl outfit"; the first six frames in knee socks and Mary Janes read
+        # 19-20 and the costume itself is the thing that reads under age, so that version was cancelled
+        # (j1397) and deleted. This is the adult read of the same look: his repertoire's plaid micro mini and
+        # tied-off top, with stockings, stilettos, red lips and a drink in her hand.
         "fiona": Look(hair="her hair worn loose",
-                      outfit=("a tight white cropped button-up shirt tied in a knot under her breasts, a very "
-                              "short red plaid pleated schoolgirl mini skirt, white cotton panties, white "
-                              "knee-high socks and black Mary Jane shoes"),
-                      negative="long skirt, pants, tie, blazer"),
+                      outfit=("a tight white cropped button-up shirt tied in a knot under her breasts with the "
+                              "top buttons open, a very short red plaid pleated micro mini skirt, red lace "
+                              "panties, sheer black thigh-high stockings with lace tops, black stiletto heels, "
+                              "red lipstick and gold hoop earrings"),
+                      negative="long skirt, pants, tie, blazer, knee socks, ankle socks, flat shoes, backpack"),
         "eden": Look(hair="her hair worn loose",
                      outfit=("a sheer black lace bodysuit with a plunging neckline and high-cut legs, a tiny "
                              "black leather mini skirt, sheer black thigh-high stockings with lace tops, black "
@@ -528,8 +545,10 @@ STORIES["massage"] = Story(
         Shot("a05_hips", "{POV} from the sofa: three-quarter length, hands on her hips, a one-cheek smile finishing "
                          "setup, in {OUTFIT}"),
         Shot("b01_shoulders", "{POV} from the sofa looking back over the shoulder: waist up, she stands behind the low "
-                              "sofa back with both palms on the shoulders of the man seated in front of her, "
-                              "leaning slightly forward, looking down at the camera, in {OUTFIT}", flags=("him",)),
+                              "sofa back with both palms on the shoulders of the man seated in front of her, only "
+                              "the back of his head and his shoulders in the bottom of the frame, leaning slightly "
+                              "forward, looking down at the camera, in {OUTFIT}", flags=("him",),
+             negative="his face, a man facing the camera"),
         Shot("b02_shoulders_laugh", "{POV} from the sofa looking back over the shoulder: waist up, standing behind "
                                     "the sofa with her hands on the man's shoulders, laughing with her head tipped "
                                     "back, in {OUTFIT}", flags=("him",)),
@@ -578,6 +597,7 @@ STORIES["massage"] = Story(
 
 # =============================================================================================
 # 7. CLOSING THE BAR - after hours
+#    ("{POV} from the bar stool" sat HER on a stool in 9 of the first 12 frames - the hotel armchair lesson again)
 # =============================================================================================
 BAR = ("Inside an intimate closed cocktail bar at night, a short dark-walnut bar counter with a rounded near end "
        "right in front of the camera running back toward a backlit wall of bottles, warm amber pendant lights, "
@@ -594,163 +614,64 @@ STORIES["bar"] = Story(
                 "choker with a small silver ring and silver hoop earrings"),
         negative="apron, long skirt, pants, sneakers, bare feet, other customers, crowd")},
     shots=(
-        Shot("a01_lock", "{POV} from the bar stool: three-quarter length, at the front door turning the lock with "
+        Shot("a01_lock", "{POV}: three-quarter length, at the front door turning the lock with "
                          "her torso three-quarter away, head angled down, in {OUTFIT}", flags=("face_low",)),
-        Shot("a02_sign", "{POV} from the bar stool: three-quarter length, flipping the hanging door sign to closed "
+        Shot("a02_sign", "{POV}: three-quarter length, flipping the hanging door sign to closed "
                          "with her chin raised, lips parted exhaling, in {OUTFIT}"),
-        Shot("a03_walk_back", "{POV} from the bar stool: {FULL}, walking back from the door toward the bar with a "
+        Shot("a03_walk_back", "{POV}: {FULL}, walking back from the door toward the bar with a "
                               "half-smile at the camera, her pigtails swinging, in {OUTFIT}"),
-        Shot("b01_pour", "{POV} from the bar stool: waist up, behind the bar pouring the second of two drinks, chin "
+        Shot("b01_pour", "{POV}: waist up, behind the bar pouring the second of two drinks, chin "
                          "lowered, focused, in {OUTFIT}"),
-        Shot("b02_slide", "{POV} from the bar stool: waist up, sliding a glass across the bar to the camera, a small "
+        Shot("b02_slide", "{POV}: waist up, sliding a glass across the bar to the camera, a small "
                           "smile, eyes meeting the camera, in {OUTFIT}"),
-        Shot("b03_palms", "{POV} from the bar stool: waist up, facing the camera behind the bar with both palms on "
+        Shot("b03_palms", "{POV}: waist up, facing the camera behind the bar with both palms on "
                           "the edge shoulder-width apart, leaning a little forward so the corset presses her "
                           "cleavage up, lips parted, in {OUTFIT}"),
-        Shot("b04_chin_knuckles", "{POV} from the bar stool: waist up, leaning across the bar on one elbow with her "
+        Shot("b04_chin_knuckles", "{POV}: waist up, leaning across the bar on one elbow with her "
                                   "chin on her knuckles, a slow closed-mouth smile, in {OUTFIT}"),
-        Shot("b05_laugh", "{POV} from the bar stool: waist up, head lifting back in a brief natural laugh, eyes "
+        Shot("b05_laugh", "{POV}: waist up, head lifting back in a brief natural laugh, eyes "
                           "narrowed, in {OUTFIT}"),
-        Shot("b06_forearms", "{POV} from the bar stool: waist up, both forearms on the bar, her chest nearer the "
+        Shot("b06_forearms", "{POV}: waist up, both forearms on the bar, her chest nearer the "
                              "camera, chin lowered, a smile settling, in {OUTFIT}"),
-        Shot("b07_turn_away", "{POV} from the bar stool: three-quarter length, straightening and turning toward the "
+        Shot("b07_turn_away", "{POV}: three-quarter length, straightening and turning toward the "
                               "end of the bar, one hand trailing the bar edge, seen from behind, the leather skirt "
                               "tight over her bottom, in {OUTFIT}", flags=("face_low",)),
-        Shot("c01_around", "{POV} from the bar stool: {FULL}, stepping around the rounded end of the bar toward the "
+        Shot("c01_around", "{POV}: {FULL}, stepping around the rounded end of the bar toward the "
                            "camera, three-quarter to it, a brief speaking expression, in {OUTFIT}"),
-        Shot("c02_beside", "{POV} from the bar stool: three-quarter length, standing right beside the camera at the "
+        Shot("c02_beside", "{POV}: three-quarter length, standing right beside the camera at the "
                            "near end of the bar, one palm on the bar, head tilted, a small asymmetrical smile, "
                            "in {OUTFIT}"),
-        Shot("c03_hop_up", "{POV} from the bar stool: three-quarter length, settling her hips up onto the rounded near "
+        Shot("c03_hop_up", "{POV}: three-quarter length, settling her hips up onto the rounded near "
                            "end of the bar with her palms on the edge, gaze down at her hands, in {OUTFIT}"),
-        Shot("c04_bar_sit", "{POV} from the bar stool: three-quarter length, seated on the bar top facing the camera "
+        Shot("c04_bar_sit", "{POV}: three-quarter length, seated on the bar top facing the camera "
                             "with one leg crossed over the other, the fishnets and ankle boots in view, a quiet "
                             "closed-lip smile, in {OUTFIT}"),
-        Shot("c05_bar_sit_smile", "{POV} from the bar stool: three-quarter length, seated on the bar top with her "
+        Shot("c05_bar_sit_smile", "{POV}: three-quarter length, seated on the bar top with her "
                                   "legs crossed, head tilted, a broad soft smile with teeth, eyes down to the "
                                   "camera, in {OUTFIT}"),
-        Shot("c06_bar_lean", "{POV} from the bar stool: waist up, seated on the bar top leaning forward from the "
+        Shot("c06_bar_lean", "{POV}: waist up, seated on the bar top leaning forward from the "
                              "hips toward the camera, one hand on her crossed knee, in {OUTFIT}"),
-        Shot("c07_bar_legs_open", "{POV} from the bar stool: {FULL}, seated on the bar top facing the camera with "
+        Shot("c07_bar_legs_open", "{POV}: {FULL}, seated on the bar top facing the camera with "
                                   "her knees apart and her boots on the brass rail, leaning back on her palms, "
                                   "{TEASE}, in {OUTFIT}"),
-        Shot("c08_slide_off", "{POV} from the bar stool: three-quarter length, sliding off the bar top with her palms "
+        Shot("c08_slide_off", "{POV}: three-quarter length, sliding off the bar top with her palms "
                               "pressing the edge behind her hips, boots lowering to the floor, in {OUTFIT}"),
-        Shot("d01_between_knees", "{POV} from the bar stool: three-quarter length, standing directly in front of the "
+        Shot("d01_between_knees", "{POV}: three-quarter length, standing directly in front of the "
                                   "camera very close, head inclined down to it, a gentle closed-mouth smile, her "
                                   "hands resting on the shoulders of the man on the stool, in {OUTFIT}", flags=("him",)),
-        Shot("d02_closer", "{POV} from the bar stool: waist up, standing very close with her hands on the man's "
+        Shot("d02_closer", "{POV}: waist up, standing very close with her hands on the man's "
                            "shoulders, inclining closer, lips parted finishing a quiet sentence, in {OUTFIT}", flags=("him",)),
-        Shot("d03_pigtails", "{POV} from the bar stool: waist up, standing close, holding one pigtail in each hand "
+        Shot("d03_pigtails", "{POV}: waist up, standing close, holding one pigtail in each hand "
                              "and giving them a playful tug, exactly two hands, {TEASE}, in {OUTFIT}"),
         Shot("d04_close_toast", "{CLOSE}, raising a lowball glass toward the camera at chin height, a genuine small "
                                 "smile with a little teeth, in {OUTFIT}", flags=("close",)),
         Shot("d05_close_look", "{CLOSE}, she looks straight into the camera with a slow half-smile, the choker ring "
                                "at her throat, in {OUTFIT}", flags=("close",)),
-        Shot("e01_bottles", "{POV} from the bar stool: {FULL}, at the backlit bottles with her back to the camera, "
+        Shot("e01_bottles", "{POV}: {FULL}, at the backlit bottles with her back to the camera, "
                             "the leather skirt tight over her bottom, torso turned for a look back, in {OUTFIT}",
              flags=("face_low",)),
-        Shot("e02_bar_lie", "{POV} from the bar stool: {FULL}, lying on her side along the bar top propped on one "
+        Shot("e02_bar_lie", "{POV}: {FULL}, lying on her side along the bar top propped on one "
                             "elbow facing the camera, one knee bent, {TEASE}, in {OUTFIT}"),
-        Shot("e03_last_drink", "{POV} from the bar stool: waist up, back behind the bar, picking up her own glass "
+        Shot("e03_last_drink", "{POV}: waist up, back behind the bar, picking up her own glass "
                                "from its coaster, lips pursed considering a toast, in {OUTFIT}"),
-    ))
-
-# =============================================================================================
-# 8. TUTOR - study session
-# =============================================================================================
-TUTOR_ROOM = ("Inside a quiet apartment living room at dusk, a three-seat grey woven-fabric sofa against a warm "
-              "ivory wall, a low oak coffee table right in front with a notebook, a pen and an open silver "
-              "laptop on it, a small oak end table with a warm shaded lamp beyond the sofa arm, soft blue dusk "
-              "light in the window")
-TUTOR_A = ("a tight cropped petrol-teal rib-knit sweater showing her midriff, a camel corduroy micro mini "
-           "skirt, sheer black thigh-high stockings with lace tops, no shoes, small gold hoop earrings and "
-           "black-rimmed reading glasses")
-TUTOR_B = ("a tight ivory ribbed tank top with thin straps, a camel corduroy micro mini skirt, sheer black "
-           "thigh-high stockings with lace tops, no shoes, small gold hoop earrings")
-STORIES["tutor"] = Story(
-    title="study session",
-    room=TUTOR_ROOM,
-    close_room="Soft out-of-focus grey sofa and warm lamplight behind her at dusk",
-    looks={"*": Look(
-        hair="her hair worn loose", outfit=TUTOR_A,
-        negative="shoes, sneakers, heels, long skirt, pants, jeans, blazer",
-        alts={"sweater": ("her hair worn loose", TUTOR_A),
-              "tank": ("her hair worn loose", TUTOR_B + ", no glasses")})},
-    shots=(
-        Shot("a01_prim", "{POV} from the end of the sofa: three-quarter length, she sits upright on the far cushion "
-                         "turned a quarter toward the camera, knees together, glasses on, a notebook on her lap "
-                         "and a pen above the page, an attentive look, in {OUTFIT}", alt="sweater"),
-        Shot("a02_reading", "{POV} from the end of the sofa: waist up, chin lowered to the notebook, eyes following a "
-                            "line, lips parting as she reads, in {OUTFIT}", alt="sweater"),
-        Shot("a03_over_glasses", "{POV} from the end of the sofa: waist up, chin tucked, eyes lifting over the top "
-                                 "of her glasses at the camera, a small one-cheek closed-lip smile, in {OUTFIT}",
-             alt="sweater"),
-        Shot("a04_closer", "{POV} from the end of the sofa: three-quarter length, shifted onto the middle cushion "
-                           "beside the camera, three-quarter to it, mouth in an explaining shape, in {OUTFIT}",
-             alt="sweater"),
-        Shot("a05_shin_tucked", "{POV} from the end of the sofa: {FULL}, one shin tucked under her on the seat and "
-                                "the other foot on the floor, the micro skirt riding up to the lace tops of her "
-                                "stockings, head turned to the notebook, in {OUTFIT}", alt="sweater"),
-        Shot("a06_share_page", "{POV} from the end of the sofa: waist up, leaning in toward the camera to share the "
-                               "notebook page, eyes checking the camera's reaction, in {OUTFIT}", alt="sweater"),
-        Shot("a07_glasses_off", "{POV} from the end of the sofa: waist up, sitting upright pulling her glasses off "
-                                "with one hand, lips softening from speech to a quiet smile, in {OUTFIT}",
-             alt="sweater"),
-        Shot("a08_hair_comb", "{POV} from the end of the sofa: waist up, head tilted toward her shoulder, fingers "
-                              "combing through her hair, looking at the camera, mouth slightly open, no glasses, "
-                              "in {OUTFIT}", alt="sweater", negative="glasses"),
-        Shot("b01_sweater_off", "{POV} from the end of the sofa: waist up, pulling the teal sweater up over her head "
-                                "with both arms raised, the fabric covering her face, the ivory tank top "
-                                "underneath, in {OUTFIT}", alt="tank", flags=("face_hidden",)),
-        Shot("b02_tank_reveal", "{POV} from the end of the sofa: three-quarter length, the sweater off and draped on "
-                                "the sofa back beside her, knees together, torso turned to the camera, {PLEASED}, "
-                                "in {OUTFIT}", alt="tank"),
-        Shot("b03_legs_up", "{POV} from the end of the sofa: {FULL}, both legs folded together to one side on the "
-                            "cushion beside the camera, stockinged feet on the seat, the lace stocking tops "
-                            "showing under the skirt, chest facing the camera, in {OUTFIT}", alt="tank"),
-        Shot("b04_chin_knuckles", "{POV} from the end of the sofa: waist up, legs folded, chin on her knuckles, brows "
-                                  "raised with amused curiosity, in {OUTFIT}", alt="tank"),
-        Shot("b05_laugh", "{POV} from the end of the sofa: waist up, a small laugh, eyes crinkling, shoulders relaxed "
-                          "back, in {OUTFIT}", alt="tank"),
-        Shot("b06_tank_lean", "{POV} from the end of the sofa: waist up, leaning forward toward the camera with the "
-                              "notebook, the thin straps of the tank top slipping off one shoulder, eyes on the "
-                              "camera, in {OUTFIT}", alt="tank"),
-        Shot("b07_tank_read", "{POV} from the end of the sofa: three-quarter length, reading the notebook on her lap "
-                              "with her legs tucked up beside the camera, the tank top tight over her chest, in "
-                              "{OUTFIT}", alt="tank"),
-        Shot("c01_whisper", "{POV} from the end of the sofa: waist up, legs folded, leaning from the hips toward the "
-                            "side of the camera to whisper, head turned toward where his ear would be, in "
-                            "{OUTFIT}", alt="tank", flags=("face_low",)),
-        Shot("c02_whisper_smile", "{POV} from the end of the sofa: waist up, the same lean, head tilted, a restrained "
-                                  "smile lifting one cheek, in {OUTFIT}", alt="tank", flags=("face_low",)),
-        Shot("c03_hold_laugh", "{POV} from the end of the sofa: waist up, easing back, head turned to the camera, "
-                               "lips pressed holding back a laugh, in {OUTFIT}", alt="tank"),
-        Shot("c04_kneel", "{POV} from the end of the sofa: three-quarter length, kneeling upright on the middle "
-                          "cushion right beside the camera, both knees on the seat facing it, hands on her "
-                          "thighs, head inclined, in {OUTFIT}", alt="tank"),
-        Shot("c05_kneel_shoulders", "{POV} from the end of the sofa: waist up, kneeling on the cushion beside the "
-                                    "camera and leaning over it with her hands resting on the shoulders of the "
-                                    "man seated at the end of the sofa, looking down into the camera, in "
-                                    "{OUTFIT}", alt="tank", flags=("him",)),
-        Shot("c06_kneel_forward", "{POV} from the end of the sofa: three-quarter length, kneeling on the cushion "
-                                  "leaning forward on her hands toward the camera, the tank top hanging open at "
-                                  "the neckline, in {OUTFIT}", alt="tank"),
-        Shot("c07_straddle_lap", "{POV} from the end of the sofa, the camera looking up at her: three-quarter length, "
-                                 "she kneels astride the lap of the man seated at the end of the sofa, one knee on "
-                                 "the cushion either side of him, her hands on his shoulders, looking down into "
-                                 "the camera with a slow smile, in {OUTFIT}", alt="tank", flags=("him",)),
-        Shot("c08_settle_hip", "{POV} from the end of the sofa: {FULL}, settling back down onto one hip with her "
-                               "legs folded together after the kneel, the skirt high on her stockinged thighs, "
-                               "in {OUTFIT}", alt="tank"),
-        Shot("d01_close_glasses", "{CLOSE}, glasses on, looking into the camera over the top of the frames with a "
-                                  "slow half-smile, in {OUTFIT}", alt="sweater", flags=("close",)),
-        Shot("d02_close_pen", "{CLOSE}, no glasses, the end of a pen resting on her lower lip, eyes up at the camera, "
-                              "in {OUTFIT}", alt="tank", flags=("close",), negative="glasses"),
-        Shot("d03_table_reach", "{POV} from the end of the sofa: three-quarter length, leaning forward off the sofa to "
-                                "reach for her glasses on the coffee table, the tank top falling open at the "
-                                "neckline toward the camera, in {OUTFIT}", alt="tank"),
-        Shot("d04_glasses_back", "{POV} from the end of the sofa: three-quarter length, glasses back on and the "
-                                 "notebook on her lap, a relaxed echo of the opening pose but seated right beside "
-                                 "the camera, a knowing smile, in {OUTFIT}", alt="tank", negative="sweater"),
     ))

@@ -37,7 +37,7 @@ import cv2
 from PIL import Image, ImageDraw
 
 sys.path.insert(0, str(Path(__file__).parent))
-from story_defs import GNASS, GNASS_STRENGTH, NEG_BASE, NEG_NOMAN, NEG_NUDE, STORIES, Shot  # noqa: E402
+from story_defs import GNASS, GNASS_STRENGTH, HANDS, NEG_BASE, NEG_NOMAN, NEG_NUDE, STORIES, Shot  # noqa: E402
 
 from sourcemode.assets.appearance import clause, negative as appearance_negative  # noqa: E402
 from sourcemode.assets.judge import make_set  # noqa: E402
@@ -106,7 +106,7 @@ def prompt_for(shot: Shot) -> str:
     trig = lora.get("trigger") or CHAR
     room = story.close_room if "close" in shot.flags else story.room
     hair, _ = story.hair_outfit(shot, look)
-    return (f"{trig}, {clause(CHAR)}, {hair}, {text_of(shot)}. {room}. Photorealistic, natural skin "
+    return (f"{trig}, {clause(CHAR)}, {hair}, {text_of(shot)}, {HANDS}. {room}. Photorealistic, natural skin "
             f"texture, sharp focus.")
 
 
