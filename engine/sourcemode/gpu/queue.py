@@ -229,6 +229,33 @@ def purge(doc: dict, job_id: str) -> dict:
     return job
 
 
+#: a cancelled job nobody restored or purged falls off the file after this long
+CANCELLED_TTL_HOURS = 24.0
+
+
+def expire_cancelled(doc: dict, *, hours: float = CANCELLED_TTL_HOURS, at: str | None = None) -> list[dict]:
+    """Purge every cancelled job that has sat un-actioned for `hours` since it
+    was cancelled. Jeremy, 2026-11-11, with eight cancelled jobs from three
+    days on the page: "clean up the canceled job queue please. have those fall
+    off in 24 hours if they haven't been actioned from now on." Restore and
+    purge are the actions; a cancelled job without `ended_at` (older files)
+    is left for a hand. Returns what fell off."""
+    cutoff = datetime.fromisoformat(at) if at else datetime.now(timezone.utc)
+    gone = []
+    for j in doc["jobs"]:
+        if j["status"] != "cancelled" or not j.get("ended_at"):
+            continue
+        ended = datetime.fromisoformat(j["ended_at"])
+        if ended.tzinfo is None:
+            ended = ended.replace(tzinfo=timezone.utc)
+        if (cutoff - ended).total_seconds() >= hours * 3600:
+            gone.append(j)
+    if gone:
+        ids = {j["id"] for j in gone}
+        doc["jobs"] = [j for j in doc["jobs"] if j["id"] not in ids]
+    return gone
+
+
 def dismiss(doc: dict, job_id: str) -> dict:
     """Take a failed job off the page: the record and its log stay, the banner
     and the row go. Jeremy, 2026-10-30, after a job of a session's failed on

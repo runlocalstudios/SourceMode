@@ -300,6 +300,16 @@ class Runner:
     def step(self, *, dry_run: bool = False) -> str:
         """One decision. Returns what it did, which is usually 'wait: <why>'."""
         doc = q.load(self.qpath)
+        # cancelled jobs left un-actioned for a day fall off the file here, on
+        # the tick, so the page's Removed list never grows for three days again
+        if any(j["status"] == "cancelled" for j in doc["jobs"]):
+            with self._lock:
+                doc = q.load(self.qpath)
+                gone = q.expire_cancelled(doc)
+                if gone:
+                    q.save(self.qpath, doc)
+                    self.log("fell off after a day cancelled: "
+                             + ", ".join(f"{j['id']} {j['label']}" for j in gone))
         if doc["paused"]:
             self._say_once(f"wait: queue PAUSED - {doc['pause_reason']}")
             return "paused"

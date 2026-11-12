@@ -370,6 +370,48 @@ def test_a_colon_in_the_label_does_not_make_an_alternate_data_stream():
     assert log_name({"id": "j110", "label": "mei:boudoir+club"}) == "gpu-j110-mei_boudoir+club.log"
 
 
+def test_a_cancelled_job_falls_off_after_a_day_unless_actioned(tmp_path):
+    doc = q.empty()
+    stale = _add(doc, "nat_v2")
+    fresh = _add(doc, "sylvie_v2b")
+    queued = _add(doc, "zara_v2")
+    failed = _add(doc, "marisol_v2")
+    q.mark_running(doc, failed["id"], 7, "log")
+    q.mark_finished(doc, failed["id"], 1)
+    q.cancel(doc, stale["id"])
+    q.cancel(doc, fresh["id"])
+    stale["ended_at"] = "2026-11-10T09:00:00+00:00"
+    fresh["ended_at"] = "2026-11-11T10:00:00+00:00"
+
+    gone = q.expire_cancelled(doc, at="2026-11-11T12:00:00+00:00")
+    assert [j["id"] for j in gone] == [stale["id"]]
+    left = [j["id"] for j in doc["jobs"]]
+    assert stale["id"] not in left
+    assert fresh["id"] in left, "cancelled two hours ago: still restorable"
+    assert queued["id"] in left and failed["id"] in left, "only cancelled jobs expire"
+
+    # a restore is an action: the job is queued again and never expires
+    q.restore(doc, fresh["id"])
+    fresh["ended_at"] = "2026-11-01T00:00:00+00:00"
+    assert q.expire_cancelled(doc, at="2026-11-11T12:00:00+00:00") == []
+    assert q.find(doc, fresh["id"])["status"] == "queued"
+
+
+def test_the_runner_sweeps_stale_cancelled_jobs_on_its_tick(tmp_path):
+    path = q.queue_path(tmp_path)
+    doc = q.empty()
+    stale = _add(doc, "nat_v2")
+    q.cancel(doc, stale["id"])
+    stale["ended_at"] = "2026-01-01T00:00:00+00:00"
+    q.save(path, doc)
+    said = []
+    r = _runner(tmp_path)
+    r.log = said.append
+    assert r.step() == "empty"
+    assert q.find(q.load(path), stale["id"]) is None
+    assert any("fell off" in m and stale["id"] in m for m in said)
+
+
 def test_only_a_failed_job_can_be_dismissed(tmp_path):
     doc = q.empty()
     queued = _add(doc, "zara_v2")

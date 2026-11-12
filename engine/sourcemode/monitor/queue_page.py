@@ -410,7 +410,7 @@ function drawRemoved(){
       +'<div class=head>'+SM.pill('you')+'<span class=title>'+SM.esc(r.who)
       +' <span class=what>&mdash; '+SM.esc(r.what)+'</span></span></div>'
       +'<div class=why>Removed &mdash; put it back if that was a mis-click.'
-      +' It returns held.</div><div class=jid>'+SM.esc(r.id)+'</div>'
+      +' It returns held. Left alone, it falls off after a day.</div><div class=jid>'+SM.esc(r.id)+'</div>'
       +'<div class="acts btn-row"><button class="btn btn-primary" data-act="restore" '
       +'data-id="'+SM.esc(r.id)+'">Restore (held)</button>'
       +'<button class="btn btn-danger push" data-act="purge" data-id="'+SM.esc(r.id)
