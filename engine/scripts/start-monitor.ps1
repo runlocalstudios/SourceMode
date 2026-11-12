@@ -7,4 +7,6 @@ New-Item -ItemType Directory -Force -Path $log | Out-Null
 Set-Location "C:\dev\sourcemode\engine"
 $uv = Join-Path $env:USERPROFILE ".local\bin\uv.exe"
 if (-not (Test-Path $uv)) { $uv = "uv" }
-& $uv run sourcemode monitor serve *>> "$log\monitor.log"
+# --no-sync, as start-gpu-runner.ps1: a sync at logon can fail on a file the
+# other task holds, and then nothing serves
+& $uv run --no-sync sourcemode monitor serve *>> "$log\monitor.log"

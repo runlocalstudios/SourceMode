@@ -12,4 +12,8 @@ New-Item -ItemType Directory -Force -Path $log | Out-Null
 Set-Location "C:\dev\sourcemode\engine"
 $uv = Join-Path $env:USERPROFILE ".local\bin\uv.exe"
 if (-not (Test-Path $uv)) { $uv = "uv" }
-& $uv run sourcemode gpu run *>> "$log\gpu-runner.console.log"
+# --no-sync: the venv is synced deliberately, never at logon. 2026-11-11, on a
+# `gpu restart`: the implicit sync tried to reinstall the editable package and
+# died on "failed to remove Scripts/sourcemode.exe ... being used by another
+# process" - the monitor was running from it - so the runner never came back.
+& $uv run --no-sync sourcemode gpu run *>> "$log\gpu-runner.console.log"
