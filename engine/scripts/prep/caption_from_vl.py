@@ -446,7 +446,11 @@ for _name, _entry in PLAN.items():
 talking = {k for k, v in mpf.items() if v.get("mouth_open")}
 
 written, thin, teeth_n = 0, [], 0
-for p in sorted(IMG.glob("*")):
+# An image he excluded on the Training sets tab sits in _excluded beside its caption
+# and comes back with it on a restore, so it is re-captioned too. Freya, 2026-11-12:
+# the plan mapping was fixed after he had culled three, and the three would have
+# carried the old wrong outfit back into the set.
+for p in sorted([*IMG.glob("*"), *(DS / "_excluded").glob("*")]):
     if p.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
         continue
     g = geom.get(p.name) or {}
