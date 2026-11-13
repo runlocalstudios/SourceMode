@@ -138,3 +138,16 @@ def test_a_continuation_checks_its_own_folder_and_its_start_point(tmp_path, monk
     cmd[-1] = str(ds / "lora" / "missing.safetensors")
     out = preflight({"cmd": cmd, "cwd": str(tmp_path)}, outputs, None)
     assert any("-Resume" in p and "does not exist" in p for p in out)
+
+
+def test_a_mans_shoot_needs_no_appearance_record_but_a_womans_still_does(tmp_path):
+    """jeremy has no appearance record and his talk shoot never reads one
+    (2026-11-12); the same job for one of her shoots still names the gap."""
+    s = tmp_path / "run_shoots.py"
+    s.write_text("", encoding="utf-8")
+    man = preflight(_job([PY, str(s), "nobody_at_all", "talk_office"], tmp_path), tmp_path)
+    assert not any("appearance" in p for p in man)
+    hers = preflight(_job([PY, str(s), "nobody_at_all", "office_desk"], tmp_path), tmp_path)
+    assert any("appearance record is not ready" in p for p in hers)
+    mixed = preflight(_job([PY, str(s), "nobody_at_all", "talk_office,office_desk"], tmp_path), tmp_path)
+    assert any("appearance record is not ready" in p for p in mixed)

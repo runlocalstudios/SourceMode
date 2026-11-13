@@ -189,10 +189,16 @@ def _run_shoots(cmd: list[str], cwd: Path, outputs: Path, previews_root: Path | 
             out.append(f"{char} has no chosen checkpoint - pick her epoch on the judge page first")
     except Exception as ex:  # noqa: BLE001
         out.append(f"could not resolve {char}'s LoRA: {ex}")
-    p = _appearance_problem(char)
+    ids = [x.strip() for x in pos[i + 2].split(",") if x.strip()]
+    # A man's shoot (shoots.Shoot.man) renders without an appearance record -
+    # jeremy has none and run_shoots does not ask for one (2026-11-12)
+    from ..assets.shoots import BY_ID  # noqa: PLC0415
+
+    man = bool(ids) and all(getattr(BY_ID.get(x), "man", False) for x in ids)
+    p = None if man else _appearance_problem(char)
     if p:
         out.append(p)
-    if "selfies" in pos[i + 2].split(","):
+    if "selfies" in ids:
         from ..assets.looks import approved_path  # noqa: PLC0415
 
         if not approved_path(outputs, char).is_file():
