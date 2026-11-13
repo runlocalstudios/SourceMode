@@ -81,6 +81,10 @@ class Shoot:
     # (wardrobe.loose_hair) - instead of the rotation. The lingerie pack is
     # one set per character, so it shows her one way.
     loose_hair: bool = False
+    # A man's shoot: every slot carries "man": True and render.shot_prompt
+    # builds it in his pronouns with no hair clause (Jeremy's own LoRA giving a
+    # talk, 2026-11-12). The hair rotation still runs and is ignored.
+    man: bool = False
 
     def plan(self, seed: int = 0, character: str | None = None,
              outfit: str | None = None, hair: str | None = None) -> list[dict]:
@@ -143,6 +147,7 @@ class Shoot:
                     "shoes": True,
                     **{k: p[k] for k in ("facing", "gaze", "shot_type", "expression_natural",
                                          "negative", "tag") if k in p},
+                    **({"man": True} if self.man else {}),
                 })
             return out
         for i in range(self.shots):
@@ -155,6 +160,7 @@ class Shoot:
                 "framing": self.framing,
                 "setting": self.setting,
                 **({"shot_type": self.shot_type} if self.shot_type else {}),
+                **({"man": True} if self.man else {}),
             })
         return out
 
@@ -921,6 +927,57 @@ assert "her hair gathered smoothly" in PAJAMA_PACK[-1]["stance"]
 # "I want them to be a unified photo set. The hair style changes in every photo
 # which ruins that immersion" - loose by default across all three, and a set in
 # another style is queued on request (run_shoots `--hair=...`).
+# --- giving a talk (a man's shoot) ------------------------------------------
+# Jeremy, 2026-11-12, for his own LoRA: "a set of photos in a chic business
+# casual outfit with a sport coat ... a consistent office background with
+# several different poses, sort of like he is giving a talk ... 10 to 12
+# photos. The outfit needs to be the same. The office needs to be the same.
+# But ... use some hand gestures in some of the photos, be moving around a
+# little bit, talking, etc." One outfit, one room, twelve poses - the shots
+# differ in his hands, his turn, where he looks and whether he is mid-sentence.
+# Built in his pronouns (Shoot.man); no hair clause, as his sweeps.
+TALK_OFFICE = ("warm daylight from tall windows, inside a modern glass-walled office meeting room, "
+               "a long pale wood conference table and a wall-mounted screen softly blurred behind him")
+TALK_COAT: tuple[str, ...] = (
+    "a navy wool sport coat over a light blue open-collar button-down shirt, tailored charcoal "
+    "grey trousers and a brown leather belt",
+)
+_TALK_NEG = "other people, audience in frame, crowd, microphone, podium"
+_T_FRONT, _T_SLIGHT = "his body faces the camera", "his body is just slightly angled"
+_T_SCREEN = "his body is turned slightly toward the screen beside him"
+_T_SPEAK = "he is speaking mid-sentence with his mouth open"
+_T_CLOSED = "he smiles with his mouth closed"
+_T_TEETH = "he gives a broad smile showing his teeth"
+_T_NEUTRAL = "a neutral expression"
+TALK: tuple[dict, ...] = tuple({"negative": _TALK_NEG, **p} for p in (
+    {"tag": "opening", "facing": _T_FRONT, "expression_natural": _T_SPEAK,
+     "stance": "standing at the front of the room with one hand raised in an open palm-up gesture as he makes a point"},
+    {"tag": "explaining", "facing": _T_SLIGHT, "expression_natural": _T_SPEAK,
+     "stance": "both hands held out in front of him, palms up, shaping an idea in the air as he explains it"},
+    {"tag": "screen", "facing": _T_SCREEN, "expression_natural": _T_CLOSED,
+     "stance": "pointing with one hand at the screen beside him"},
+    {"tag": "walking", "facing": _T_SLIGHT + ", mid-stride as he walks slowly across the front of the room",
+     "gaze": "he looks off to his left toward the audience", "expression_natural": _T_SPEAK,
+     "stance": "one hand loosely gesturing as he talks"},
+    {"tag": "counting", "facing": _T_FRONT, "expression_natural": _T_NEUTRAL,
+     "stance": "counting off points on the fingers of one raised hand"},
+    {"tag": "listening", "facing": _T_SLIGHT, "gaze": "he looks off to his right toward someone asking a question",
+     "expression_natural": _T_NEUTRAL, "stance": "his hands clasped loosely in front of him, listening"},
+    {"tag": "chair", "facing": _T_FRONT, "expression_natural": _T_TEETH,
+     "stance": "one hand resting on the back of a chair beside him, the other hand in his trouser pocket"},
+    {"tag": "pocket", "facing": _T_SLIGHT, "expression_natural": _T_SPEAK,
+     "stance": "one hand in his trouser pocket, the other hand raised mid-gesture"},
+    {"tag": "clicker", "facing": _T_SCREEN, "expression_natural": _T_CLOSED,
+     "stance": "holding a small presentation clicker in one hand", "framing": "from the waist up"},
+    {"tag": "folded", "facing": _T_FRONT, "expression_natural": _T_CLOSED,
+     "stance": "his arms folded across his chest", "framing": "from the waist up"},
+    {"tag": "laugh", "facing": _T_FRONT, "expression_natural": "he laughs with a broad smile showing his teeth",
+     "stance": "one hand half raised as he laughs at his own remark", "framing": "from the waist up"},
+    {"tag": "table", "facing": _T_FRONT, "expression_natural": _T_SPEAK,
+     "stance": "sitting on the edge of the conference table at the front of the room, hands open in front of him as he talks",
+     "framing": "from the knees up"},
+))
+
 OFFICE: tuple[Shoot, ...] = (
     Shoot("office_door", "Office doorway", "office", OFFICE_DOOR, OFFICE_SLUTTY, (),
           pose_slots=DOORWAY, shots=len(DOORWAY), loose_hair=True,
@@ -936,6 +993,11 @@ OFFICE: tuple[Shoot, ...] = (
           note="His point of view from the chair, his legs and boxer briefs in frame, her on the "
                "floor between his knees. The pose pack mixes into any scene with a floor. Hair "
                "loose for the whole set."),
+    Shoot("talk_office", "Giving a talk (a man's shoot)", "office", TALK_OFFICE, TALK_COAT, (),
+          pose_slots=TALK, shots=len(TALK), man=True,
+          note="Jeremy's own LoRA: twelve poses giving a talk in one meeting room, one navy sport "
+               "coat outfit - gesturing, pointing at the screen, walking, listening, laughing. "
+               "Written in his pronouns; tick it for a man, not for her."),
 )
 
 # Buckets group the tab's checkboxes. Keep each shoot small: the point is that

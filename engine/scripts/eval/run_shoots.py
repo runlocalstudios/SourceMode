@@ -83,7 +83,13 @@ SHOOTS = resolve(IDS)                       # raises on an unknown id
 pre = appearance_check(CHAR)
 for w in pre["warnings"]:
     log(f"appearance: WARNING {w}")
-if not pre["ok"] and "--allow-incomplete-appearance" not in BARE:
+# A man's shoot (shoots.Shoot.man) never reads an appearance record - his prompt
+# is the trigger, the pose and the outfit, as his sweeps were - so a missing
+# record is not a reason to refuse it (jeremy has none, 2026-11-12).
+MAN = bool(SHOOTS) and all(getattr(sh, "man", False) for sh in SHOOTS)
+if MAN:
+    log("a man's shoot: his pronouns, no appearance sentence, no hair clause")
+if not pre["ok"] and "--allow-incomplete-appearance" not in BARE and not MAN:
     raise SystemExit(f"{CHAR}'s appearance record is incomplete - "
                      + "; ".join(pre["missing"])
                      + ". Add it to characters/appearance.json, or pass "

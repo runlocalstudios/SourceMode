@@ -3,7 +3,7 @@ from sourcemode.assets import shoots as S
 
 def test_the_office_group_has_its_three_shoots_revealing_by_default():
     office = next(b for b in S.buckets() if b["bucket"] == "office")
-    assert [s["id"] for s in office["shoots"]] == ["office_door", "office_desk", "office_pov"]
+    assert [s["id"] for s in office["shoots"]] == ["office_door", "office_desk", "office_pov", "talk_office"]
     assert all(S.BY_ID[i].outfits == S.OFFICE_SLUTTY for i in ("office_door", "office_desk", "office_pov"))
 
 

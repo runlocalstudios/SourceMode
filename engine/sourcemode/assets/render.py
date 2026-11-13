@@ -428,6 +428,42 @@ def natural_prompt(character: str, slot: dict, trigger: str | None = None,
             f"{backdrop or KEY_BACKDROP}. Photorealistic, natural skin texture, sharp focus.{avoid}")
 
 
+# A MAN'S SHOOT. Jeremy, 2026-11-12, his own LoRA giving a talk: his pronouns,
+# no hair clause, no appearance sentence, no makeup - the register his man
+# tiebreaker kept 11 of 20 in (scripts/eval/asset_scenes.man_tiebreaker_prompt).
+# A slot says it is his with "man": True (shoots.Shoot.man), so the one
+# builder every caller uses dispatches here and a re-roll renders the same words.
+MAN_FRONT = "his body faces the camera"
+MAN_SLIGHT = "his body is just slightly angled"
+MAN_GAZE = "he looks directly at the camera"
+MAN_EXPRESSION = {"neutral": "a neutral expression", "closed-lip": "he smiles with his mouth closed",
+                  "teeth": "he gives a broad smile showing his teeth",
+                  "speaking": "he is speaking mid-sentence with his mouth open"}
+
+
+def man_prompt(character: str, slot: dict, trigger: str | None = None,
+               backdrop: str | None = None) -> str:
+    """The natural prompt for a man: same slot fields, same order, his words.
+
+    `facing`, `gaze` and `expression_natural` are written in his pronouns by
+    the pose list; `turn` (front / slight) and `expression` (MAN_EXPRESSION
+    keys) are the defaults under them. Hair is never said - his captions do
+    not name it, so the trigger carries it.
+    """
+    body = slot.get("facing") or (MAN_FRONT if slot.get("turn", "front") == "front" else MAN_SLIGHT)
+    head = slot.get("gaze") or MAN_GAZE
+    expression = slot.get("expression_natural") or MAN_EXPRESSION[slot.get("expression", "neutral")]
+    shot = slot.get("shot_type") or NATURAL_SHOT
+    crop = f"a {shot}, {slot['framing']}" if slot.get("framing") else (
+        f"a {shot} {slot.get('framing_natural') or NATURAL_FRAMING}")
+    outfit = drop_hem_detail(slot["outfit"] if slot.get("shoes") else drop_footwear(slot["outfit"]))
+    stance = f", {slot['stance']}" if slot.get("stance") else ""
+    avoid = f" {slot['avoid']}" if slot.get("avoid") else ""
+    return (f"{trigger or character}, {crop} of a man, {body}, {head}{stance}, {expression}, "
+            f"wearing {outfit}, {backdrop or KEY_BACKDROP}. "
+            f"Photorealistic, natural skin texture, sharp focus.{avoid}")
+
+
 def shot_prompt(character: str, slot: dict, trigger: str | None = None,
                 backdrop: str | None = None) -> str:
     """The trigger is the bare character name unless the plan overrides it; the rest
@@ -453,6 +489,8 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     # chin-length bob was asked for buns and rendered down AND up. A line from
     # her own wardrobe list is never touched: Jeremy, 2026-10-15, "If I put low
     # ponytail for a character, I want a low ponytail."
+    if slot.get("man"):
+        return man_prompt(character, slot, trigger, backdrop)
     from .wardrobe import short_hair  # noqa: PLC0415
     slot = {**slot, "hair": short_hair(character, slot.get("hair", ""), slot.get("look", 1))}
     slot = {**slot, "outfit": plain_graphics(slot["outfit"]), "hair": one_braid(slot.get("hair", ""))}
