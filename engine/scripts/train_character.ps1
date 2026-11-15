@@ -59,7 +59,7 @@ $ErrorActionPreference = "Continue"
 $SP  = "C:\dev\sourcemode\engine\scripts"
 $EV  = "C:\dev\sourcemode\engine\scripts\eval"
 $PY  = "C:\dev\sourcemode\engine\.venv\Scripts\python.exe"
-$M   = "C:\dev\e2egen\vendor\musubi-tuner"
+$M   = "C:\dev\sourcemode\vendor\musubi-tuner"
 # $DsDir, NOT $DS: PowerShell variable names are case-INSENSITIVE, so $DS IS
 # the $Ds parameter. Assigning the path to it overwrote the dataset name, so
 # the log path became "...\logs\C:\dev\...\mira_v2.log" - unsupported, and

@@ -27,7 +27,7 @@ from PIL import Image
 CHAR = sys.argv[1]
 DS_NAME = sys.argv[sys.argv.index("--ds") + 1] if "--ds" in sys.argv else f"{CHAR}_v2"
 DS = Path(f"outputs/lora-datasets/{DS_NAME}"); IMG = DS / "image_src"
-M = Path("C:/dev/e2egen/vendor/musubi-tuner")
+M = Path("C:/dev/sourcemode/vendor/musubi-tuner")
 VL = M / ".venv/Scripts/python.exe"
 CAPTIONER = M / "src/musubi_tuner/caption_images_by_qwen_vl.py"
 VL_MODEL = "C:/ComfyUI/models/text_encoders/qwen_2.5_vl_7b.safetensors"

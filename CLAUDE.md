@@ -20,6 +20,7 @@ Fully-local pipeline for consistent characters - faces now, video and voices nex
 /workflows/           ComfyUI API-format workflow JSON templates
 /pose-library/        pose reference photos
 /imagegen/            OpenAI Images tool, parked
+/vendor/musubi-tuner/ the LoRA trainer (kohya-ss, v0.3.4) with its own .venv, gitignored; copied out of e2egen 2026-11-15
 /devresources/        his drop folder, gitignored - keep it
 /devassets/           his drop folder, gitignored - keep it
 /docs/archive/        the August-era docs, superseded

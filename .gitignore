@@ -8,6 +8,9 @@
 /devresources/
 /devassets/
 
+# vendored tools with their own environments (musubi-tuner: kohya-ss, Apache 2.0)
+/vendor/
+
 # python engine
 engine/.venv/
 engine/**/__pycache__/
