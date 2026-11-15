@@ -6,8 +6,11 @@
 #   - a test that broke because live data was edited: fake the data in the test
 #   - a real gap (a new game location with no scene): fill the gap
 # Never skip this with --no-verify.
+# --no-sync: the implicit sync tries to reinstall the editable package and fails
+# on Scripts/sourcemode.exe, which the running monitor holds - the commit was
+# refused with no test having run (2026-11-15; same cause as the runner, 9cfe006).
 cd engine || exit 1
-if ! uv run pytest -m "not gpu" -q -p no:cacheprovider; then
+if ! uv run --no-sync pytest -m "not gpu" -q -p no:cacheprovider; then
   echo
   echo "pre-commit: tests failed - commit refused. See the hook for what to do."
   exit 1
