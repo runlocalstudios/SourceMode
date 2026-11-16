@@ -519,18 +519,17 @@ def test_shoulder_length_goes_under_an_up_style_and_leaves_no_bare_hair():
         "a young woman with fair skin, brown hair and brown eyes"
 
 
-def test_the_shoots_page_queues_every_shoot_with_her_hair_loose():
-    # Jeremy, 2026-11-16: "The default assumption for any shoot triggered from
-    # the shoots page should be that her hair is worn loose."
-    from dataclasses import replace
+def test_a_photo_story_is_loose_unless_its_shots_are_written_around_a_style():
+    # Jeremy, 2026-11-16: "I said the stories should have hair loose. Unless
+    # they have a specific hair style like the cheerleader or bar sets"
+    from sourcemode.monitor.queue_page import shoot_command, stories
 
-    from sourcemode.assets.shoots import resolve
-    from sourcemode.monitor.queue_page import shoot_command
-
-    assert shoot_command({}, "nobody", ["club"])[-1] == "--hair=her hair worn loose"
-    # the authored slot lists (selfies, influencer) obey the set's hair too
-    sh = replace(resolve(["club"])[0], explicit=({"id": "a", "hair": "her hair up in a messy bun"},))
-    assert [s["hair"] for s in sh.plan(hair="her hair worn loose")] == ["her hair worn loose"]
+    styled = {"cheer", "massage", "bar"}
+    for k, s in stories().items():
+        for look in s.looks.values():
+            assert (look.hair == "her hair worn loose") == (k not in styled), k
+    # and a shoot queued from the page is not handed a hair style at all
+    assert not any(a.startswith("--hair") for a in shoot_command({}, "nobody", ["club"]))
 
 
 def test_photo_stories_are_offered_and_counted():

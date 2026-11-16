@@ -20,8 +20,7 @@ the bar totals the ticked ones at the measured render rate.
     POST /queue/story     {character, stories:[ids]} -> one queued job per story
 
 2026-11-16: the page is tiles in three sections - Chill After Dark assets (the
-game bucket), Photo stories (story_defs.STORIES) and Other shoots - and every
-shoot queued here is shot with her hair loose (queue_page.shoot_command).
+game bucket), Photo stories (story_defs.STORIES) and Other shoots.
 """
 
 from __future__ import annotations

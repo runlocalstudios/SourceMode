@@ -2152,17 +2152,12 @@ def shoot_command(cfg: dict, character: str, shoot_ids: list[str]) -> list[str]:
     different jobs." So the ids are a comma list to a single script, and the
     queue sees one entry. The script still writes a judge set per shoot as it
     finishes, so one job is not one all-or-nothing result.
-
-    Jeremy, 2026-11-16: "The default assumption for any shoot triggered from
-    the shoots page should be that her hair is worn loose." Her own loose line,
-    as `--hair`; the wardrobe pack alone keeps the hair each approved look names.
     """
-    from ..assets.wardrobe import loose_hair  # noqa: PLC0415
     from ..config import ENGINE_ROOT  # noqa: PLC0415
 
     py = ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"
     script = ENGINE_ROOT / "scripts" / "eval" / "run_shoots.py"
-    return [str(py), str(script), character, ",".join(shoot_ids), f"--hair={loose_hair(character)}"]
+    return [str(py), str(script), character, ",".join(shoot_ids)]
 
 
 def stories() -> dict:
@@ -2182,7 +2177,10 @@ def stories() -> dict:
 
 def story_catalog() -> list[dict]:
     """The photo stories as the shoots tab offers them. `only` names the
-    characters a story was written for; None means anyone."""
+    characters a story was written for; None means anyone. A story is shot with
+    her hair loose unless its shots are written around a style - the cheerleader
+    ponytail, the bar pigtails, the massage bun (Jeremy, 2026-11-16) - which is
+    what each story's Look in story_defs already says."""
     return [{"id": k, "label": s.title[:1].upper() + s.title[1:], "shots": len(s.shots),
              "only": None if "*" in s.looks else sorted(s.looks)}
             for k, s in stories().items()]

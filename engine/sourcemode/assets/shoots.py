@@ -107,21 +107,14 @@ class Shoot:
         """
         from .wardrobe import hair_options, loose_hair  # noqa: PLC0415
 
-        # the set's one hair clause covers the authored slot lists too - the
-        # selfies and the influencer batches (Jeremy, 2026-11-16: "The default
-        # assumption for any shoot triggered from the shoots page should be
-        # that her hair is worn loose")
-        def worn(slots: list[dict]) -> list[dict]:
-            return [{**s, "hair": hair} if hair and s.get("hair") else s for s in slots]
-
         if self.make is not None:
-            return worn(self.make(character or "", self.batch or 1))
+            return self.make(character or "", self.batch or 1)
         if self.per_character is not None:
-            return worn(self.per_character(character or ""))
+            return self.per_character(character or "")
         if self.explicit:
-            return worn([dict(x) for x in self.explicit] if not character else [
+            return [dict(x) for x in self.explicit] if not character else [
                 {**x, "hair": hair_options(character)[i % len(hair_options(character))]}
-                for i, x in enumerate(self.explicit)])
+                for i, x in enumerate(self.explicit)]
         hairs = hair_options(character) if character else self.hair
         if self.loose_hair:
             hairs = (loose_hair(character) if character else self.hair[0],)
