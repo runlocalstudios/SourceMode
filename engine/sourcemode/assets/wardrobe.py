@@ -42,6 +42,16 @@ DEFAULT_HAIR: tuple[str, ...] = (
     # pigtails over hair worn down are one of his favourites for long hair.
     "her hair half-up",
     "her hair worn down with high, tight pigtails",
+    # Jeremy, 2026-11-16: "add more hair styles to the default pack for new
+    # characters - for long haired characters add the single over the shoulder
+    # braid (look at the prompts which didn't create a bunch of failed braids),
+    # and worn loose with wavy curls". Both are the wordings his own hair lists
+    # already use, by what he kept: the braid as written here (render.one_braid
+    # names both sides going into it) kept 34 of 34, against 15 of 27 for "a
+    # loose side braid" and 10 of 20 for "a single French braid"; the curls
+    # kept 108 of 108. SHORT_HAIR is untouched - neither suits hair too short.
+    "her hair in a single long braid over one shoulder",
+    "her hair worn down with wavy curls throughout",
 )
 
 _CACHE: dict[str, dict] = {}
