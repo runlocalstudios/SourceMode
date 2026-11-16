@@ -541,3 +541,15 @@ def test_photo_stories_are_offered_and_counted():
     assert stories()["livingroom"].look("eden") is not stories()["livingroom"].look("jenna")
     n, how = render_count(story_command({}, "nobody", "bar"))
     assert n == cat["bar"]["shots"] and "bar" in how
+
+
+def test_story_pickers_offer_her_hair_and_resolve_the_outfit_on_the_server():
+    # Jeremy, 2026-11-16: "2 drop downs in the photo story section, one for hair style and one for outfit"
+    from sourcemode.monitor.queue_page import story_command, story_options
+
+    o = story_options({"paths": {}}, "nobody")
+    assert o["hair"] and {x["id"] for x in o["outfits"]} >= {"story:bar", "story:librarian"}
+    assert all(x["text"] and x["label"] for x in o["outfits"])
+    cmd = story_command({}, "nobody", "bar", hair="her hair worn loose", outfit="a red dress")
+    assert cmd[-3:] == ["--fresh", "--hair=her hair worn loose", "--outfit=a red dress"]
+    assert story_command({}, "nobody", "bar")[-1] == "--fresh"

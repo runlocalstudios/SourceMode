@@ -2186,11 +2186,49 @@ def story_catalog() -> list[dict]:
             for k, s in stories().items()]
 
 
-def story_command(cfg: dict, character: str, story: str) -> list[str]:
+def story_options(cfg: dict, character: str) -> dict:
+    """What the photo-story pickers offer for her (Jeremy, 2026-11-16: "2 drop
+    downs in the photo story section, one for hair style and one for outfit"):
+    her own hair lines, and as outfits her approved 28 looks and each story's
+    own outfit. An option's id is what the page sends back; the text is
+    resolved here, never taken from the request."""
+    import json  # noqa: PLC0415
+
+    from ..assets.looks import approved_path  # noqa: PLC0415
+    from ..assets.wardrobe import hair_options  # noqa: PLC0415
+    from ..config import outputs_dir  # noqa: PLC0415
+
+    outfits = []
+    try:
+        plan = json.loads(approved_path(outputs_dir(cfg), character).read_text(encoding="utf-8"))
+        for cat, block in plan["categories"].items():
+            for e in block.get("looks", []):
+                if e.get("outfit"):
+                    outfits.append({"id": f"look:{e['id']}", "group": "Her looks - " + cat.replace("_", " "),
+                                    "text": e["outfit"]})
+    except (OSError, ValueError, KeyError):
+        pass
+    for k, s in stories().items():
+        lk = s.look(character)
+        if lk is not None:
+            outfits.append({"id": f"story:{k}", "group": "From a story",
+                            "label": s.title[:1].upper() + s.title[1:], "text": lk.outfit})
+    for o in outfits:
+        o.setdefault("label", o["text"][:1].upper() + o["text"][1:])
+    return {"hair": list(hair_options(character)), "outfits": outfits}
+
+
+def story_command(cfg: dict, character: str, story: str, *, hair: str = "", outfit: str = "") -> list[str]:
+    """`--fresh`: a story queued from the page is a new set, as a shoot is."""
     from ..config import ENGINE_ROOT  # noqa: PLC0415
 
     py = ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"
-    return [str(py), str(ENGINE_ROOT / "scripts" / "video" / "photo_story.py"), character, story]
+    cmd = [str(py), str(ENGINE_ROOT / "scripts" / "video" / "photo_story.py"), character, story, "--fresh"]
+    if hair:
+        cmd.append(f"--hair={hair}")
+    if outfit:
+        cmd.append(f"--outfit={outfit}")
+    return cmd
 
 
 def redo_command(cfg: dict, set_id: str) -> list[str]:
@@ -2557,6 +2595,13 @@ def queue_router(cfg: dict, status=None):
         q.save(path(), doc)
         return {"queued": job["id"], **queue_state(cfg)}
 
+    @router.get("/queue/story-options")
+    def story_opts(character: str = "") -> dict:
+        char = character.strip().lower()
+        if not char or "/" in char or "\\" in char or ".." in char:
+            raise HTTPException(400, "a character is required")
+        return story_options(cfg, char)
+
     @router.post("/queue/story")
     def add_story(body: dict = Body(default={})) -> dict:
         """Queue photo stories for one character: one job per story, because
@@ -2569,6 +2614,13 @@ def queue_router(cfg: dict, status=None):
             raise HTTPException(400, "a character is required")
         if not ids:
             raise HTTPException(400, "tick at least one story")
+        opts = story_options(cfg, char)
+        hair, pick = str(body.get("hair") or "").strip(), str(body.get("outfit") or "").strip()
+        if hair and hair not in opts["hair"]:
+            raise HTTPException(400, f"{hair!r} is not one of {char}'s hair styles")
+        outfit = next((o["text"] for o in opts["outfits"] if o["id"] == pick), "")
+        if pick and not outfit:
+            raise HTTPException(400, f"no outfit {pick}")
         known = stories()
         for i in ids:
             if i not in known:
@@ -2584,7 +2636,7 @@ def queue_router(cfg: dict, status=None):
                 raise HTTPException(409, f"{known[i].title} is already {dup['status']}")
         queued = []
         for i in sorted(ids):
-            cmd = story_command(cfg, char, i)
+            cmd = story_command(cfg, char, i, hair=hair, outfit=outfit)
             checked({"cmd": cmd, "cwd": str(ENGINE_ROOT)})
             job = q.add(doc, kind="shoot", label=f"{char}:story_{i}", cmd=cmd, cwd=str(ENGINE_ROOT),
                         expect=expect_for(cfg, cmd), note="photo story queued from the shoots page")

@@ -17,7 +17,8 @@ the bar totals the ticked ones at the measured render rate.
     GET  /shoots          the page
     GET  /queue/shoots    characters + catalog + the measured rate
     POST /queue/shoot     {character, shoots:[ids]} -> ONE queued job
-    POST /queue/story     {character, stories:[ids]} -> one queued job per story
+    GET  /queue/story-options?character=  her hair lines and the outfits a story can wear
+    POST /queue/story     {character, stories:[ids], hair?, outfit?} -> one queued job per story
 
 2026-11-16: the page is tiles in three sections - Chill After Dark assets (the
 game bucket), Photo stories (story_defs.STORIES) and Other shoots.
@@ -61,6 +62,7 @@ details.more>summary{cursor:pointer;font:var(--t-meta);font-weight:600;color:var
   border-radius:var(--r2);padding:0 var(--s2);font-size:16px;width:100%}
 .mix .row{display:flex;gap:var(--s2);margin-top:var(--s2)}
 .mix .blocked{color:var(--you-ink)}
+.storyopt{margin-bottom:var(--s2)}
 .picks{list-style:none;margin:var(--s3) 0 0;padding:0}
 .picks li{display:flex;justify-content:space-between;gap:var(--s3);
   padding:var(--s2) 0;border-top:1px solid var(--g3);font:var(--t-meta);color:var(--g7)}
@@ -141,7 +143,7 @@ function draw(){
   let h='';
   if(game) h+='<h2>Chill After Dark assets</h2><div class=tiles>'
     +game.shoots.map(s=>tile(s,blocked[s.id])).join('')+'</div>';
-  if(stories().length) h+='<h2>Photo stories</h2><div class=tiles>'
+  if(stories().length) h+='<h2>Photo stories</h2>'+storyPickers()+'<div class=tiles>'
     +stories().map(s=>tile(s,s.only&&!s.only.includes(who)?'not written for her':'')).join('')+'</div>';
   const rest=data.buckets.filter(b=>b.bucket!=='game');
   if(rest.length) h+='<h2>Other shoots</h2><div class=tiles>'
@@ -150,6 +152,37 @@ function draw(){
   SM.set($('list'),null,h);
   bar();
 }
+
+/* Jeremy, 2026-11-16: "2 drop downs in the photo story section, one for hair
+   style and one for outfit". Blank is the story's own; what is chosen goes with
+   every story queued. Her options are read per character and kept. */
+let storyOpt={hair:'',outfit:''}, optFor=null, opts=null;
+async function loadOpts(){
+  if(optFor===who) return;
+  const w=who; optFor=w; opts=null; storyOpt={hair:'',outfit:''};
+  try{ const o=await SM.getJSON('/queue/story-options?character='+encodeURIComponent(w));
+       if(who===w){ opts=o; draw(); } }catch(e){ if(optFor===w) optFor=null; }
+}
+function storyPickers(){
+  loadOpts();
+  const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  const o=opts||{hair:[],outfits:[]};
+  const hair='<option value="">Story\'s own</option>'+o.hair.map(x=>'<option value="'+SM.esc(x)+'"'
+    +(x===storyOpt.hair?' selected':'')+'>'+SM.esc(cap(x.replace(/^her hair /,'')))+'</option>').join('');
+  let outfit='<option value="">Story\'s own</option>', g=null;
+  for(const x of o.outfits){
+    if(x.group!==g){ outfit+=(g?'</optgroup>':'')+'<optgroup label="'+SM.esc(x.group)+'">'; g=x.group; }
+    outfit+='<option value="'+SM.esc(x.id)+'"'+(x.id===storyOpt.outfit?' selected':'')+' title="'+SM.esc(x.text)+'">'
+      +SM.esc(x.label.length>60?x.label.slice(0,58)+'...':x.label)+'</option>';
+  }
+  if(g) outfit+='</optgroup>';
+  return '<div class="mix storyopt"><div class=mixrow>'
+    +'<label class=mixf><span>Hair</span><select data-story=hair>'+hair+'</select></label>'
+    +'<label class=mixf><span>Outfit</span><select data-story=outfit>'+outfit+'</select></label></div></div>';
+}
+document.addEventListener('change',e=>{
+  const s=e.target.closest('[data-story]'); if(s) storyOpt[s.dataset.story]=s.value;
+});
 
 /* a story is picked like a shoot; its id carries the prefix so the queue click
    can send it to its own endpoint (one job per story) */
@@ -263,7 +296,7 @@ document.addEventListener('click',async e=>{
     try{
       const all=[...picked], st=all.filter(x=>x.startsWith('story:')), sh=all.filter(x=>!x.startsWith('story:'));
       if(sh.length){ await SM.postJSON('/queue/shoot',{character:who,shoots:sh}); sh.forEach(x=>picked.delete(x)); }
-      if(st.length) await SM.postJSON('/queue/story',{character:who,stories:st.map(x=>x.slice(6))});
+      if(st.length) await SM.postJSON('/queue/story',{character:who,stories:st.map(x=>x.slice(6)),hair:storyOpt.hair,outfit:storyOpt.outfit});
       SM.toast('queued',{label:'Open the queue',run:()=>SM.nav('gpu')});
       picked.clear(); draw(); SM.recount();
     }catch(err){ SM.toast(err.message); draw(); }

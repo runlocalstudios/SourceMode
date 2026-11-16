@@ -2,6 +2,11 @@
 
     python scripts/video/photo_story.py <character> <story> [--section=a,b] [--only=id,id] [--retry=id,id]
                                         [--reject=file,file] [--dry-run] [--sheet-only]
+                                        [--hair="her hair ..."] [--outfit="a ..."] [--fresh]
+
+`--hair` / `--outfit` replace the story's own look in every frame (the shoots
+page's two pickers, Jeremy 2026-11-16); `--fresh` sets the last run of this
+story aside first, so a story queued again is a new set and not a resume.
 
 The stories live in `story_defs.STORIES` (librarian, dictation, tryon, cheer,
 livingroom, massage, bar, tutor ...): each one is a room sentence, a camera
@@ -39,7 +44,7 @@ from PIL import Image, ImageDraw
 sys.path.insert(0, str(Path(__file__).parent))
 from story_defs import GNASS, GNASS_STRENGTH, HANDS, NEG_BASE, NEG_NOMAN, NEG_NUDE, STORIES, Shot  # noqa: E402
 
-from sourcemode.assets.appearance import clause, negative as appearance_negative  # noqa: E402
+from sourcemode.assets.appearance import clause, drop_length, is_up_style, negative as appearance_negative  # noqa: E402
 from sourcemode.assets.judge import make_set  # noqa: E402
 from sourcemode.assets.looks import reference  # noqa: E402
 from sourcemode.assets.lora import resolve_lora  # noqa: E402
@@ -71,6 +76,15 @@ story = STORIES[STORY_NAME]
 look = story.look(CHAR)
 if look is None:
     raise SystemExit(f"story {STORY_NAME} has no look for {CHAR}")
+HAIR = next((a.split("=", 1)[1].strip() for a in sys.argv if a.startswith("--hair=")), None)
+OUTFIT = next((a.split("=", 1)[1].strip() for a in sys.argv if a.startswith("--outfit=")), None)
+if HAIR or OUTFIT:
+    from dataclasses import replace  # noqa: E402
+
+    # the look's own negative refuses what its own outfit is not ("long dress, pants") - it goes with the outfit
+    look = replace(look, hair=HAIR or look.hair, outfit=OUTFIT or look.outfit,
+                   negative="" if OUTFIT else look.negative,
+                   alts={k: (HAIR or h, OUTFIT or o) for k, (h, o) in look.alts.items()})
 SHOTS: tuple[Shot, ...] = story.shots
 IDS = [s.id for s in SHOTS]
 assert len(IDS) == len(set(IDS)), "duplicate shot id"
@@ -89,6 +103,12 @@ write_set_json(d, character=CHAR, kind="video", name=f"{STORY_NAME}-story", date
                outfit=look.outfit, hair=look.hair)
 LOG = d / "run.log"
 SHOTS_JSON = d / "shots.json"
+if "--fresh" in sys.argv and not DRY and not SHEET_ONLY and any(d.glob("*__a*.png")):
+    aside = d / f"_previous_{datetime.now():%Y%m%d-%H%M%S}"
+    aside.mkdir()
+    for f in [*d.glob("*__a*.png"), *d.glob("*__a*.txt"), SHOTS_JSON, d / "sheet.jpg"]:
+        if f.is_file():
+            f.replace(aside / f.name)
 
 
 def log(s: str) -> None:
@@ -106,7 +126,9 @@ def prompt_for(shot: Shot) -> str:
     trig = lora.get("trigger") or CHAR
     room = story.close_room if "close" in shot.flags else story.room
     hair, _ = story.hair_outfit(shot, look)
-    return (f"{trig}, {clause(CHAR)}, {hair}, {text_of(shot)}, {HANDS}. {room}. Photorealistic, natural skin "
+    # a tied-up style drops her hair length from the sentence, as the shoots do (jenna's ponytail, 2026-11-16)
+    who = drop_length(clause(CHAR)) if is_up_style(hair) else clause(CHAR)
+    return (f"{trig}, {who}, {hair}, {text_of(shot)}, {HANDS}. {room}. Photorealistic, natural skin "
             f"texture, sharp focus.")
 
 
