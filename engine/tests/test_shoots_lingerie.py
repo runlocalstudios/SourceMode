@@ -109,6 +109,8 @@ def test_the_bend_over_and_spread_poses_turn_their_backs_and_name_the_torso_angl
     assert "direct eye contact" in by["after"]["gaze"] and "eyes closed" in by["after"]["negative"]
     assert "elbows locked" in by["crawling"]["stance"] and "chest on the floor" in by["crawling"]["negative"]
     assert "on all fours" in by["crawling"]["stance"] and "both arms in view" in by["crawling"]["stance"]
+    # jenna, 2026-11-16: three seeds, three push-ups
+    assert "one knee a step ahead" in by["crawling"]["stance"] and "push-up" in by["crawling"]["negative"]
     assert "upside-down V" in by["standingspread"]["stance"]
     # Jeremy, 2026-11-02: head-to-feet made her face too small - both close in
     for t in ("standingspread", "bendingover"):

@@ -743,18 +743,24 @@ LINGERIE_PACK: tuple[dict, ...] = (
     # side, arms straight under her shoulders, hands to feet in frame; jojo's
     # was on the floor and close, elbows bent, chest dropped, cropped. "Low-angle
     # from the floor", "torso low" and "face nearest the camera" are gone.
+    # Jeremy, 2026-11-16: jenna's came back a push-up on three different seeds -
+    # dead front, legs hidden straight behind her. "Just fix the fucking
+    # wording. Say like one knee on the ground or something." The knees are now
+    # mid-crawl and in view, and the plank is refused by name.
     {"tag": "crawling", "stance": "on all fours on the floor coming toward the camera, both arms straight and "
                                   "vertical with her elbows locked and her shoulders directly above her hands, "
                                   "both hands planted flat on the floor, both arms in view, her chest held up well off the floor, "
-                                  "her knees on the floor under her hips, her back level, her hips and bottom "
-                                  "behind her",
+                                  "both knees down on the floor, one knee a step ahead of the other mid-crawl, "
+                                  "her bent knees and thighs in view under her, her back level, her hips and "
+                                  "bottom behind her",
      "needs": _FLOOR, "framing": "her whole body in frame, from her hands to her feet",
      "shot_type": "full-length photo from a few steps in front of her, slightly above and a little to one side, "
                   "of her on all fours crawling toward the camera",
      "facing": "her face and shoulders toward the camera",
      "gaze": "looking up into the camera",
      "negative": _SITS_BACK + ", seen from the side, seen from behind, missing arm, one arm, hand raised, "
-                              "bent elbows, chest on the floor, forearms on the floor, close-up, cropped"},
+                              "bent elbows, chest on the floor, forearms on the floor, close-up, cropped, push-up, plank, "
+                              "straight legs, legs stretched out behind her, knees off the floor, on her toes"},
     # 16 of 16 sat back on their heels with "on all fours, back arched", and
     # eve's and gabi's still did with "from behind ... thighs vertical" -
     # Jeremy: "just kneeling viewed from behind". Straight from behind the
