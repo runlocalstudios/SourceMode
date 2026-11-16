@@ -52,6 +52,10 @@ DEFAULT_HAIR: tuple[str, ...] = (
     # kept 108 of 108. SHORT_HAIR is untouched - neither suits hair too short.
     "her hair in a single long braid over one shoulder",
     "her hair worn down with wavy curls throughout",
+    # the same day: "No I mean pigtails to the side" - plain pigtails, all of her
+    # hair in the two, beside the line above that leaves her hair down. His own
+    # lists' wording, which kept 102 of 106.
+    "her hair in pigtails",
 )
 
 _CACHE: dict[str, dict] = {}
