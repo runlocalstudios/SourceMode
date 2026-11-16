@@ -537,6 +537,7 @@ def test_photo_stories_are_offered_and_counted():
 
     cat = {s["id"]: s for s in story_catalog()}
     assert cat["bar"]["only"] is None and cat["bar"]["shots"] == len(stories()["bar"].shots)
-    assert cat["livingroom"]["only"] == ["eden", "fiona"]
+    assert all(s["only"] is None for s in cat.values())      # every story has a look for anyone
+    assert stories()["livingroom"].look("eden") is not stories()["livingroom"].look("jenna")
     n, how = render_count(story_command({}, "nobody", "bar"))
     assert n == cat["bar"]["shots"] and "bar" in how

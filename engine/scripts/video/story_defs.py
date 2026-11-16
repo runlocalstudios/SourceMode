@@ -504,7 +504,8 @@ STORIES["livingroom"] = Story(
         # 19-20 and the costume itself is the thing that reads under age, so that version was cancelled
         # (j1397) and deleted. This is the adult read of the same look: his repertoire's plaid micro mini and
         # tied-off top, with stockings, stilettos, red lips and a drink in her hand.
-        "fiona": Look(hair="her hair worn loose",
+        # Fiona's look is the default for anyone without her own (Jeremy, 2026-11-16: "Yes do that")
+        "*": Look(hair="her hair worn loose",
                       outfit=("a tight white cropped button-up shirt tied in a knot under her breasts with the "
                               "top buttons open, a very short red plaid pleated micro mini skirt, red lace "
                               "panties, sheer black thigh-high stockings with lace tops, black stiletto heels, "
