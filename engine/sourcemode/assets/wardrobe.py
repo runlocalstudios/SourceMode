@@ -33,6 +33,33 @@ import json
 import re
 from pathlib import Path
 
+#: Her hair down with two thin ponytails tied from the top. Jeremy, 2026-11-16:
+#: "The too high tight pigtails things too often resulted in double buns ... two
+#: ponytails that are not really sticking out of the top of her head, but are
+#: basically just like separating the hair, which all still flows sort of down."
+#: Three four-photo rounds on five characters: "small high ponytails at the back
+#: of her crown" drew buns on 13 of 20, "the top half tied into two long
+#: ponytails" tied all of her hair up, and this line with the negative below
+#: worked on amanda, jaina and priyanka ("Amanda and Jaina's worked ... Priyanka's
+#: was fine too"); fiona's tails vanish into hip-length hair.
+TWO_TAILS = ("most of her hair worn loose and hanging down, with just two thin sections from the top "
+             "of her head tied into two thin ponytails, one on each side, that hang down over her loose hair")
+TWO_TAILS_NEGATIVE = "hair buns, space buns, top knots, all of her hair tied up, twin tails with no loose hair"
+_OLD_TAILS = re.compile(r"her hair worn down with high, tight pigtails", re.I)
+
+
+def two_tails(hair: str) -> str:
+    """The old pigtail line, wherever a saved plan or set still carries it, is
+    rendered as TWO_TAILS; anything after it (bows, scrunchies) stays."""
+    return _OLD_TAILS.sub(TWO_TAILS, hair or "")
+
+
+def hair_negative(hair: str) -> str:
+    """What a hair clause refuses - the buns the two ponytails kept turning into."""
+    h = (hair or "").lower()
+    return TWO_TAILS_NEGATIVE if "two thin ponytails" in h or _OLD_TAILS.search(h) else ""
+
+
 #: The shared rotation, used by any character whose brief does not override it.
 DEFAULT_HAIR: tuple[str, ...] = (
     "her hair worn loose",
@@ -41,7 +68,7 @@ DEFAULT_HAIR: tuple[str, ...] = (
     # Jeremy, 2026-10-11: "half-up" reads better than "half pinned back", and
     # pigtails over hair worn down are one of his favourites for long hair.
     "her hair half-up",
-    "her hair worn down with high, tight pigtails",
+    TWO_TAILS,
     # Jeremy, 2026-11-16: "add more hair styles to the default pack for new
     # characters - for long haired characters add the single over the shoulder
     # braid (look at the prompts which didn't create a bunch of failed braids),

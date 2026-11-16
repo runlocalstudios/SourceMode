@@ -571,8 +571,28 @@ def test_a_hair_style_asked_for_by_name_is_not_swapped_for_a_short_haired_charac
     from sourcemode.assets.shoots import resolve
 
     monkeypatch.setattr(wardrobe, "short_hair", lambda c, clause, look: "SWAPPED")
-    pig = "her hair worn down with high, tight pigtails"
+    pig = "her hair worn down with wavy curls throughout"
     slot = resolve(["gym"])[0].plan(character="nobody", hair=pig)[0]
     assert slot["hair_final"] and pig in render.shot_prompt("nobody", slot, "nobody", backdrop=slot["setting"])
     plain = resolve(["gym"])[0].plan(character="nobody")[0]
     assert "hair_final" not in plain and "SWAPPED" in render.shot_prompt("nobody", plain, "nobody", backdrop=plain["setting"])
+
+
+def test_the_old_pigtail_line_renders_as_two_thin_ponytails_and_refuses_buns():
+    """Jeremy, 2026-11-16: "The too high tight pigtails things too often resulted
+    in double buns" - the line is replaced in the lists, and a saved plan or set
+    that still carries it is rendered in the new words."""
+    from sourcemode.assets import render
+    from sourcemode.assets.shoots import resolve
+    from sourcemode.assets.wardrobe import DEFAULT_HAIR, TWO_TAILS, hair_negative, two_tails
+
+    old = "her hair worn down with high, tight pigtails"
+    assert TWO_TAILS in DEFAULT_HAIR and old not in DEFAULT_HAIR
+    assert old not in resolve(["gym"])[0].hair and TWO_TAILS in resolve(["gym"])[0].hair
+    assert two_tails(old + " tied with bows") == TWO_TAILS + " tied with bows"
+    assert two_tails("her hair in pigtails") == "her hair in pigtails"
+    assert "hair buns" in hair_negative(old) and "hair buns" in hair_negative(TWO_TAILS)
+    assert hair_negative("her hair in pigtails") == "" and hair_negative("her hair worn loose") == ""
+    slot = resolve(["gym"])[0].plan(character="nobody", hair=old)[0]
+    p = render.shot_prompt("nobody", slot, "nobody", backdrop=slot["setting"])
+    assert TWO_TAILS in p and "tight pigtails" not in p

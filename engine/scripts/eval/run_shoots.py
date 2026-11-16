@@ -127,6 +127,11 @@ for pat in (f"{CHAR}_face.*", f"{CHAR}_portrait*.*"):
 
 client = ComfyUIClient(cfg["comfyui"]["host"], cfg["comfyui"]["port"])
 NEG = NEGATIVE + (", " + appearance_negative(CHAR) if appearance_negative(CHAR) else "")
+# --negative="hair buns, top knots": refused ahead of the run's own negative, for
+# a test of a wording that keeps drifting one way (the pigtail tests, 2026-11-16)
+_ASKED_NEG = next((a.split("=", 1)[1].strip() for a in sys.argv if a.startswith("--negative=")), None)
+if _ASKED_NEG:
+    NEG = f"{_ASKED_NEG}, {NEG}"
 
 
 def t2i(prompt: str, seed: int, prefix: str, *, negative: str = "", extra=()) -> dict:
@@ -152,7 +157,9 @@ def slot_negative(slot: dict) -> str:
     """What the slot refuses, then the run's negative - a selfie refuses the phone.
     The slot's own terms lead (2026-11-04): they are the specific failure, and
     casey's phone kept winning while 'phone' sat behind 30 quality terms."""
-    return (f"{slot['negative']}, " if slot.get("negative") else "") + NEG
+    from sourcemode.assets.wardrobe import hair_negative  # noqa: PLC0415
+
+    return ", ".join(filter(None, [slot.get("negative"), hair_negative(slot.get("hair", "")), NEG]))
 
 
 def run_pack(sh) -> int:

@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 
 from .pack import STUDIO_BACKDROP
 from .selfies import MIRROR_FRAMING
+from .wardrobe import TWO_TAILS
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,7 @@ class Shoot:
     poses: tuple[str, ...]
     hair: tuple[str, ...] = ("her hair worn loose", "her hair pulled back in a high ponytail",
                              "her hair up in a messy bun", "her hair half-up",
-                             "her hair worn down with high, tight pigtails")
+                             TWO_TAILS)
     framing: str = ""      # "" keeps shot_prompt's upper-thigh wardrobe crop
     shots: int = 12
     # "shoot" renders here, through shot_prompt and the t2i graph. "pack" means a

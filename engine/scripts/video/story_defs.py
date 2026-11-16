@@ -276,7 +276,7 @@ STORIES["tryon"] = Story(
         hair="her hair worn loose", outfit=TRY_A,
         negative="shoes, heels, sneakers, jeans, long dress",
         alts={"A": ("her hair worn loose", TRY_A),
-              "B": ("her hair half-up with two small high tight pigtails above her ears, the rest hanging loose", TRY_B),
+              "B": ("most of her hair worn loose and hanging down, with just two thin sections from the top of her head tied into two thin ponytails, one on each side, that hang down over her loose hair", TRY_B),
               "C": ("her hair half-up in one high half-up ponytail at the back of her crown, the rest hanging loose", TRY_C)})},
     shots=(
         Shot("a01_doorway", "{POV}: {FULL}, she stands facing the camera in the closet doorway with her fingertips "
@@ -612,7 +612,7 @@ STORIES["bar"] = Story(
     room=BAR,
     close_room="Soft out-of-focus backlit bottles and amber pendant lights behind her",
     looks={"*": Look(
-        hair="her hair worn down with high, tight pigtails",
+        hair="most of her hair worn loose and hanging down, with just two thin sections from the top of her head tied into two thin ponytails, one on each side, that hang down over her loose hair",
         outfit=("a black leather bustier corset laced up the front with nothing underneath, a tiny black leather "
                 "mini skirt with a silver chain belt, black fishnet stockings, black ankle boots, a black velvet "
                 "choker with a small silver ring and silver hoop earrings"),

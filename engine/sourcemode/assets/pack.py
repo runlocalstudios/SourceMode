@@ -189,6 +189,7 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
     from .render import pose_fields, shot_prompt, t2i_workflow  # noqa: PLC0415
 
     from .appearance import pack_camera  # noqa: PLC0415
+    from .wardrobe import hair_negative  # noqa: PLC0415
     have = {t.strip().lower() for t in negative.split(",")}
     for extra in (CAMERA_NEGATIVE, pack_camera(character).get("negative") or ""):
         add = [t.strip() for t in extra.split(",") if t.strip() and t.strip().lower() not in have]
@@ -250,7 +251,8 @@ def render_pack(cfg: dict, client, character: str, plan: dict, out_root: Path, *
             def draw(seed: int, path: Path) -> bool:
                 files = client.outputs(client.wait(client.submit(
                     t2i_workflow(cfg, prompt, seed, f"pack/{character}/{slot['id']}",
-                                 lora_path=lora_path, negative=negative, width=W, height=H)),
+                                 lora_path=lora_path, width=W, height=H,
+                                 negative=", ".join(filter(None, [hair_negative(slot.get("hair", "")), negative])))),
                     timeout_s=3600))
                 if files:
                     client.fetch(files[0], path)

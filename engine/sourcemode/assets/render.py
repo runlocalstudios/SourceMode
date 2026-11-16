@@ -494,7 +494,8 @@ def shot_prompt(character: str, slot: dict, trigger: str | None = None,
     from .wardrobe import short_hair  # noqa: PLC0415
     if not slot.get("hair_final"):      # the set's own hair, asked for by name, is never swapped
         slot = {**slot, "hair": short_hair(character, slot.get("hair", ""), slot.get("look", 1))}
-    slot = {**slot, "outfit": plain_graphics(slot["outfit"]), "hair": one_braid(slot.get("hair", ""))}
+    from .wardrobe import two_tails  # noqa: PLC0415
+    slot = {**slot, "outfit": plain_graphics(slot["outfit"]), "hair": one_braid(two_tails(slot.get("hair", "")))}
     if slot["pose"] == "sitting":
         look = f"Photorealistic, natural skin texture, sharp focus, {backdrop or KEY_BACKDROP}. Natural realistic human proportions, correct anatomy."
         return (f"{trigger or character}. {SITTING} She is wearing {slot['outfit']}, "

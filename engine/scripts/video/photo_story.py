@@ -44,6 +44,7 @@ from PIL import Image, ImageDraw
 sys.path.insert(0, str(Path(__file__).parent))
 from story_defs import GNASS, GNASS_STRENGTH, HANDS, NEG_BASE, NEG_NOMAN, NEG_NUDE, STORIES, Shot  # noqa: E402
 
+from sourcemode.assets.wardrobe import hair_negative, two_tails  # noqa: E402
 from sourcemode.assets.appearance import clause, drop_length, is_up_style, negative as appearance_negative  # noqa: E402
 from sourcemode.assets.judge import make_set  # noqa: E402
 from sourcemode.assets.looks import reference  # noqa: E402
@@ -126,6 +127,7 @@ def prompt_for(shot: Shot) -> str:
     trig = lora.get("trigger") or CHAR
     room = story.close_room if "close" in shot.flags else story.room
     hair, _ = story.hair_outfit(shot, look)
+    hair = two_tails(hair)
     # a tied-up style drops her hair length from the sentence, as the shoots do (jenna's ponytail, 2026-11-16)
     who = drop_length(clause(CHAR)) if is_up_style(hair) else clause(CHAR)
     return (f"{trig}, {who}, {hair}, {text_of(shot)}, {HANDS}. {room}. Photorealistic, natural skin "
@@ -140,6 +142,8 @@ def negative_for(shot: Shot) -> str:
         neg += ", " + story.negative
     if look.negative:
         neg += ", " + look.negative
+    if hair_negative(story.hair_outfit(shot, look)[0]):
+        neg = hair_negative(story.hair_outfit(shot, look)[0]) + ", " + neg
     if "nude" in shot.flags:
         neg += ", " + NEG_NUDE
     if "close" in shot.flags:

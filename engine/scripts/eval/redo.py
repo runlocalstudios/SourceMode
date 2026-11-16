@@ -130,7 +130,9 @@ def redo_shoot(info: dict, seed: int) -> Path | None:
             return None
         extra.append((lk["path"], float(strength)))
     # the slot's own terms lead, as run_shoots.slot_negative (2026-11-04)
-    neg = (f"{slot['negative']}, " if slot.get("negative") else "") + NEG
+    from sourcemode.assets.wardrobe import hair_negative  # noqa: PLC0415
+
+    neg = ", ".join(filter(None, [slot.get("negative"), hair_negative(slot.get("hair", "")), NEG]))
     files = client.outputs(client.wait(client.submit(
         t2i_workflow(cfg, prompt, seed, f"shoots/{CHAR}/{sh.id}",
                      lora_path=LORA["path"], negative=neg, width=W, height=H,
