@@ -560,3 +560,16 @@ def test_story_pickers_offer_her_hair_and_resolve_the_outfit_on_the_server():
     cmd = story_command({}, "nobody", "bar", hair="her hair worn loose", outfit="a red dress")
     assert cmd[-3:] == ["--fresh", "--hair=her hair worn loose", "--outfit=a red dress"]
     assert story_command({}, "nobody", "bar")[-1] == "--fresh"
+
+
+def test_a_hair_style_asked_for_by_name_is_not_swapped_for_a_short_haired_character(monkeypatch):
+    # jenna, 2026-11-16: --hair pigtails rendered "half-up, held back with a clip"
+    from sourcemode.assets import render, wardrobe
+    from sourcemode.assets.shoots import resolve
+
+    monkeypatch.setattr(wardrobe, "short_hair", lambda c, clause, look: "SWAPPED")
+    pig = "her hair worn down with high, tight pigtails"
+    slot = resolve(["gym"])[0].plan(character="nobody", hair=pig)[0]
+    assert slot["hair_final"] and pig in render.shot_prompt("nobody", slot, "nobody", backdrop=slot["setting"])
+    plain = resolve(["gym"])[0].plan(character="nobody")[0]
+    assert "hair_final" not in plain and "SWAPPED" in render.shot_prompt("nobody", plain, "nobody", backdrop=plain["setting"])

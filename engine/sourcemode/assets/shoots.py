@@ -118,6 +118,11 @@ class Shoot:
         hairs = hair_options(character) if character else self.hair
         if self.loose_hair:
             hairs = (loose_hair(character) if character else self.hair[0],)
+        # a hair clause asked for by name (run_shoots --hair) is final: the
+        # short-hair swap in shot_prompt must not trade it for one of her own
+        # lines. jenna's four-photo pigtail test rendered "half-up, held back
+        # with a clip" (2026-11-16) because her record says shoulder-length.
+        asked = {"hair_final": True} if hair else {}
         if hair:
             hairs = (hair,)
         hair = hairs
@@ -138,7 +143,7 @@ class Shoot:
                     "outfit": _strip_outfit(
                         outfit or next((o for o in outfits if p.get("wants") and re.search(p["wants"], o)),
                                        outfits[i % len(outfits)]), p.get("outfit_strip")),
-                    "hair": hair[i % len(hair)],
+                    "hair": hair[i % len(hair)], **asked,
                     "stance": p["stance"],
                     "framing": p.get("framing", self.framing),
                     "setting": self.setting,
@@ -155,7 +160,7 @@ class Shoot:
                 "id": f"{self.id}_{i:02d}", "look": i + 1, "category": self.bucket,
                 "pose": "standing", "shoot": self.id,
                 "outfit": outfit or outfits[i % len(outfits)],
-                "hair": hair[i % len(hair)],
+                "hair": hair[i % len(hair)], **asked,
                 "stance": self.poses[i % len(self.poses)],
                 "framing": self.framing,
                 "setting": self.setting,
