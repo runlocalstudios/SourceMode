@@ -58,6 +58,10 @@ BARE = {a for a in sys.argv if a in _BARE}
 # wears it too (Jeremy, 2026-11-10, on the office sets: "if I want a set run
 # with a different hair style I will ask you to queue it for me")
 HAIR = next((a.split("=", 1)[1].strip() for a in sys.argv if a.startswith("--hair=")), None)
+# --first=4: only the first N shots of each selection - a small test of a hair
+# style or an outfit before a whole set is spent on it (Jeremy, 2026-11-16:
+# "queue 4 photos as a test for Jenna with her hair down with high tight pigtails")
+FIRST = next((int(a.split("=", 1)[1]) for a in sys.argv if a.startswith("--first=")), None)
 if len(POS) < 3:
     raise SystemExit(__doc__)
 
@@ -225,6 +229,8 @@ def run_shoot(sh) -> int:
     if hair:
         log(f"  {sh.id}: the whole set has {hair}")
     plan = sh.plan(character=CHAR, outfit=outfit, hair=hair)
+    if FIRST:
+        plan = plan[:FIRST]
     # a queued shoot is a new set (Jeremy, 2026-11-05, as run_pack): the last
     # set's shots go aside and every slot draws again on a fresh seed
     old = [f for slot in plan for f in d.glob(f"{slot['id']}.*") if f.suffix in (".png", ".txt", ".seed")]
