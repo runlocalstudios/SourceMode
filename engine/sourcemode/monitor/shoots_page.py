@@ -21,7 +21,7 @@ the bar totals the ticked ones at the measured render rate.
     POST /queue/story     {character, stories:[ids], hair?, outfit?} -> one queued job per story
 
 2026-11-16: the page is tiles in three sections - Chill After Dark assets (the
-game bucket), Photo stories (story_defs.STORIES) and Other shoots.
+game bucket), Photo stories (story_defs.STORIES), Other shoots and, last, Men's shoots.
 """
 
 from __future__ import annotations
@@ -145,10 +145,14 @@ function draw(){
     +game.shoots.map(s=>tile(s,blocked[s.id])).join('')+'</div>';
   if(stories().length) h+='<h2>Photo stories</h2>'+storyPickers()+'<div class=tiles>'
     +stories().map(s=>tile(s,s.only&&!s.only.includes(who)?'not written for her':'')).join('')+'</div>';
-  const rest=data.buckets.filter(b=>b.bucket!=='game');
-  if(rest.length) h+='<h2>Other shoots</h2><div class=tiles>'
-    +rest.map(b=>b.shoots.map(s=>tile(s,blocked[s.id])).join('')).join('')+'</div>';
+  const rest=data.buckets.filter(b=>b.bucket!=='game').flatMap(b=>b.shoots);
+  const women=rest.filter(s=>!s.man), men=rest.filter(s=>s.man);
+  if(women.length) h+='<h2>Other shoots</h2><div class=tiles>'
+    +women.map(s=>tile(s,blocked[s.id])).join('')+'</div>';
   h+=mixCard(c);
+  /* Jeremy, 2026-11-16: "Separate Men's shoots into its own section at the bottom" */
+  if(men.length) h+='<h2>Men&#39;s shoots</h2><div class=tiles>'
+    +men.map(s=>tile(s,blocked[s.id])).join('')+'</div>';
   SM.set($('list'),null,h);
   bar();
 }

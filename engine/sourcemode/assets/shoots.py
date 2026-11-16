@@ -1382,7 +1382,8 @@ def buckets() -> list[dict]:
             out.append({"bucket": b, "label": BUCKET_LABEL.get(b, b),
                         "shoots": [{"id": s.id, "label": s.label, "shots": s.shots,
                                     "setting": s.setting, "kind": s.kind,
-                                    "note": s.note} for s in rows]})
+                                    "note": s.note, "man": bool(getattr(s, "man", False))}
+                                   for s in rows]})
     return out
 
 

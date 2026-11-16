@@ -532,6 +532,13 @@ def test_a_photo_story_is_loose_unless_its_shots_are_written_around_a_style():
     assert not any(a.startswith("--hair") for a in shoot_command({}, "nobody", ["club"]))
 
 
+def test_the_catalog_marks_a_mans_shoot_so_the_page_can_list_it_apart():
+    from sourcemode.assets.shoots import buckets
+
+    men = {s["id"] for b in buckets() for s in b["shoots"] if s["man"]}
+    assert men == {"talk_office"}
+
+
 def test_photo_stories_are_offered_and_counted():
     from sourcemode.monitor.queue_page import render_count, stories, story_catalog, story_command
 
