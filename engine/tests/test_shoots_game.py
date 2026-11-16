@@ -506,3 +506,14 @@ def test_a_set_queued_in_one_hair_style_wears_it_on_every_shot_and_a_redo_reads_
     assert set_hair(tmp_path, curls) == curls
     assert set_hair(tmp_path) == curls
     assert json.loads((tmp_path / "set.json").read_text(encoding="utf-8"))["hair"] == curls
+
+
+def test_shoulder_length_goes_under_an_up_style_and_leaves_no_bare_hair():
+    # jenna, 2026-11-16: "shoulder-length hair" beside "a short low ponytail"
+    # rendered a ponytail on one side and her bob hanging on the other.
+    from sourcemode.assets.appearance import drop_length
+
+    out = drop_length("a young woman with a slim figure, fair skin, shoulder-length hair and brown eyes")
+    assert out == "a young woman with a slim figure, fair skin and brown eyes"
+    assert drop_length("a young woman with fair skin, shoulder-length brown hair and brown eyes") == \
+        "a young woman with fair skin, brown hair and brown eyes"

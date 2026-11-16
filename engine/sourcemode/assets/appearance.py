@@ -416,12 +416,15 @@ def check(character: str) -> dict:
 #:
 #: Jeremy had said this before it was measured: "you cannot put long hair in the
 #: same prompt as a messy bun. Otherwise, you get those weird results."
-# Only the words that mean LONG. "chin-length" and "shoulder-length" stay:
-# short hair does not fight a bun, and dropping priya's "chin-length" would
-# lose the one trait that makes her the only short-haired character in the cast.
+# "chin-length" stays: dropping priya's would lose the one trait that makes her
+# the only short-haired character in the cast. "shoulder-length" goes
+# (2026-11-16): jenna's nine ponytail selfies all rendered a ponytail on one
+# side and her bob hanging on the other - "It knows how long her fucking hair is."
 _LENGTH = re.compile(
-    r"\b(?:very long|waist-length|long)\s+"
+    r"\b(?:very long|waist-length|shoulder-length|long)\s+"
     r"(?=(?:[\w-]+\s+){0,5}?(?:hair|bob|braids|curls|waves)\b)", re.I)
+# What is left when the length was her only hair word: "fair skin, hair and brown eyes".
+_BARE_HAIR = re.compile(r",\s*hair(?=\s*,|\s+and\b)|\s+and\s+hair(?=\s*[,.]|\s*$)", re.I)
 _FLOWING = re.compile(r",?\s*\b(?:hanging (?:free|loose|down)[^,.]*"
                       r"|worn (?:loose|down)|falling [^,.]*"
                       r"|down (?:her|the) back)", re.I)
@@ -445,7 +448,7 @@ def drop_length(text: str) -> str:
     texture stay, because a platinum bun is still platinum and the colour is the
     identity trait the base model will not volunteer.
     """
-    out = _FLOWING.sub("", _LENGTH.sub("", text or ""))
+    out = _BARE_HAIR.sub("", _FLOWING.sub("", _LENGTH.sub("", text or "")))
     out = re.sub(r"\s{2,}", " ", out)
     out = re.sub(r"\s+,", ",", out)
     out = re.sub(r",\s*,", ",", out)
