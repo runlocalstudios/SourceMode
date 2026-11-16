@@ -17,6 +17,11 @@ the bar totals the ticked ones at the measured render rate.
     GET  /shoots          the page
     GET  /queue/shoots    characters + catalog + the measured rate
     POST /queue/shoot     {character, shoots:[ids]} -> ONE queued job
+    POST /queue/story     {character, stories:[ids]} -> one queued job per story
+
+2026-11-16: the page is tiles in three sections - Chill After Dark assets (the
+game bucket), Photo stories (story_defs.STORIES) and Other shoots - and every
+shoot queued here is shot with her hair loose (queue_page.shoot_command).
 """
 
 from __future__ import annotations
@@ -32,25 +37,23 @@ OWN_CSS = r"""
 .who button.on{background:var(--act);border-color:var(--act-hi);color:var(--act-ink)}
 .who button[disabled]{opacity:.4;cursor:default}
 .who .sub{display:block;font:400 9px/1.2 var(--font);opacity:.8}
-.sh{display:flex;align-items:flex-start;gap:var(--s3);width:100%;
-  padding:var(--s3);margin-bottom:var(--s2);background:var(--g1);
-  border:1px solid var(--g3);border-left:3px solid var(--g3);
-  border-radius:var(--r2);color:var(--g8);text-align:left;cursor:pointer}
-.sh.on{border-left-color:var(--act);background:var(--g2)}
-.sh .box{flex:none;width:22px;height:22px;border-radius:var(--r1);
-  border:2px solid var(--g5);display:flex;align-items:center;justify-content:center;
-  font-size:14px;color:transparent;margin-top:2px}
-.sh.on .box{background:var(--act);border-color:var(--act-hi);color:var(--act-ink)}
-.sh .t{flex:1;min-width:0}
-.sh .t b{display:block;font:var(--t-lead);color:var(--g9)}
-.sh .t span{display:block;font:var(--t-meta);color:var(--g7)}
-.sh .n{flex:none;font:var(--t-small);color:var(--g7);font-variant-numeric:tabular-nums}
-.sh .t em{display:block;font:var(--t-small);font-style:normal;color:var(--g6);margin-top:2px}
-.sh.ship{border-color:var(--g4);background:var(--g2)}
-.sh.ship.on{border-left-color:var(--act)}
-.sh.off{opacity:.55;cursor:default}
-.sh.off .box{border-style:dashed}
-.sh .blocked{display:block;font:var(--t-small);color:var(--you-ink);margin-top:2px}
+/* Jeremy, 2026-11-16: "way too much text, and the boxes to choose each shoot
+   just take up way too much space" - a tile is a name and a cost; what the
+   shoot is sits in its tooltip. */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:6px;
+  margin-bottom:var(--s3)}
+.sh{display:block;min-height:var(--tap);padding:6px 8px;background:var(--g1);
+  border:1px solid var(--g3);border-radius:var(--r2);color:var(--g8);text-align:left;cursor:pointer}
+.sh.on{border-color:var(--act-hi);background:var(--act);color:var(--act-ink)}
+.sh b{display:block;font:600 13px/1.25 var(--font);color:var(--g9)}
+.sh.on b{color:var(--act-ink)}
+.sh span{display:block;font:400 11px/1.3 var(--font);color:var(--g7);font-variant-numeric:tabular-nums}
+.sh.on span{color:var(--act-ink);opacity:.85}
+.sh.off{opacity:.55;cursor:default;border-style:dashed}
+.sh .blocked{color:var(--you-ink)}
+h2 .tag{font:var(--t-small);font-weight:400;color:var(--g6);margin-left:var(--s2)}
+details.more>summary{cursor:pointer;font:var(--t-meta);font-weight:600;color:var(--g8);
+  min-height:var(--tap);display:flex;align-items:center}
 /* Mix your own: three pickers, one combo */
 .mix .mixrow{display:flex;gap:var(--s2);flex-wrap:wrap}
 .mixf{flex:1;min-width:150px;display:flex;flex-direction:column;gap:2px}
@@ -116,7 +119,7 @@ window.addEventListener('hashchange',()=>{ pickFromHash(); load(); });
 function draw(){
   SM.set($('who'),null, data.characters.map(c=>
     '<button data-who="'+SM.esc(c.character)+'" class="'+(c.character===who?'on':'')+'">'
-    +SM.esc(c.who)+'<span class=sub>'+(c.appearance_ok?'ready':'no appearance record')+'</span>'
+    +SM.esc(c.who)+(c.appearance_ok?'':'<span class=sub>no appearance record</span>')
     +'</button>').join('') || '<div class=empty><b>No approved LoRAs yet</b>'
     +'Choose an epoch on the judging tab, or prune a character to the one you keep.</div>');
 
@@ -130,27 +133,34 @@ function draw(){
     : '');
 
   const blocked=(c&&c.blocked)||{};
-  let h=mixCard(c);
-  for(const b of data.buckets){
-    h+='<h2>'+SM.esc(b.label||b.bucket)+'</h2>';
-    for(const s of b.shoots){
-      const why=blocked[s.id];
-      h+='<button class="sh'+(b.bucket==='game'?' ship':'')
-        +(picked.has(s.id)?' on':'')+(why?' off':'')+'" data-shoot="'+SM.esc(s.id)+'"'
-        +(why?' disabled':'')+'>'
-        +'<span class=box>&#10003;</span><span class=t><b>'+SM.esc(s.label)+'</b>'
-        +'<span>'+SM.esc(s.setting)+'</span>'
-        +(s.note?'<em>'+SM.esc(s.note)+'</em>':'')
-        +(why?'<span class=blocked>'+SM.esc(why)+'</span>':'')+'</span>'
-        +'<span class=n>'+s.shots+' shots<br>'+SM.dur(cost(s))+'</span></button>';
-    }
-  }
+  const tile=(s,why)=>'<button class="sh'+(picked.has(s.id)?' on':'')+(why?' off':'')
+    +'" data-shoot="'+SM.esc(s.id)+'" title="'+SM.esc([s.setting,s.note].filter(Boolean).join(' - '))+'"'
+    +(why?' disabled':'')+'><b>'+SM.esc(s.label)+'</b>'
+    +(why?'<span class=blocked>'+SM.esc(why)+'</span>'
+         :'<span>'+s.shots+' shots &middot; '+SM.dur(cost(s))+'</span>')+'</button>';
+  const game=data.buckets.find(b=>b.bucket==='game');
+  let h='';
+  if(game) h+='<h2>Chill After Dark assets</h2><div class=tiles>'
+    +game.shoots.map(s=>tile(s,blocked[s.id])).join('')+'</div>';
+  if(stories().length) h+='<h2>Photo stories</h2><div class=tiles>'
+    +stories().map(s=>tile(s,s.only&&!s.only.includes(who)?'not written for her':'')).join('')+'</div>';
+  const rest=data.buckets.filter(b=>b.bucket!=='game');
+  if(rest.length) h+='<h2>Other shoots</h2><div class=tiles>'
+    +rest.map(b=>b.shoots.map(s=>tile(s,blocked[s.id])).join('')).join('')+'</div>';
+  h+=mixCard(c);
   SM.set($('list'),null,h);
   bar();
 }
 
+/* a story is picked like a shoot; its id carries the prefix so the queue click
+   can send it to its own endpoint (one job per story) */
+function stories(){
+  return (data.stories||[]).map(s=>({...s,id:'story:'+s.id,kind:'story',setting:'',note:''}));
+}
+
 function find(id){
   for(const b of data.buckets) for(const s of b.shoots) if(s.id===id) return s;
+  const st=stories().find(s=>s.id===id); if(st) return st;
   return comboOf(id);
 }
 
@@ -160,6 +170,8 @@ function find(id){
    the club but wearing work outfit? No problem." Three pickers; the combo
    id <scene>-<wardrobe>-<poses> is a shoot like any other once added. */
 let mixPick={scene:'bedroom',wardrobe:'lingerie',poses:'submissive'};
+let mixOpen=false;   /* draw() rebuilds the list; the fold must survive it */
+document.addEventListener('toggle',e=>{ if(e.target.matches&&e.target.matches('details.more')) mixOpen=e.target.open; },true);
 const byId=(list,id)=>list.find(x=>x.id===id);
 function comboOf(id){
   const p=(id||'').split('-'); if(p.length!==3||!data.mix) return null;
@@ -188,7 +200,7 @@ function mixCard(c){
   const why=mixWhy(c,sc,w,pp);
   const id=sc.id+'-'+w.id+'-'+pp.id;
   const s=comboOf(id);
-  return '<h2>Mix your own</h2><div class="card mix">'
+  return '<details class=more'+(mixOpen?' open':'')+'><summary>Mix your own</summary><div class="card mix">'
     +'<div class=mixrow>'
     +sel('scene','Scene',m.scenes.map(o=>opt(o,mixPick.scene,pp.needs.some(n=>!o.has.includes(n))?'needs a '+pp.needs.filter(n=>!o.has.includes(n)).join(' and a '):'')).join(''))
     +sel('wardrobe','Wardrobe',m.wardrobes.map(o=>opt(o,mixPick.wardrobe,o.record==='job'&&!(c&&c.job_outfits)?'no job outfit in her record':'')).join(''))
@@ -197,7 +209,7 @@ function mixCard(c){
     +'<div class=card-sub>'+(why?'<span class=blocked>'+SM.esc(why)+'</span>'
       :'<b>'+s.shots+'</b> shots &middot; '+SM.dur(cost(s))+(pp.note?' &middot; '+SM.esc(pp.note):''))+'</div>'
     +'<div class=row><button class="btn btn-sm btn-primary" data-act=mixadd'+(why||picked.has(id)?' disabled':'')+'>'
-    +(picked.has(id)?'Added':'Add to the selection')+'</button></div></div>';
+    +(picked.has(id)?'Added':'Add to the selection')+'</button></div></div></details>';
 }
 document.addEventListener('change',e=>{
   const s=e.target.closest('[data-mix]'); if(!s) return;
@@ -214,7 +226,7 @@ function bar(){
   const c=data.characters.find(x=>x.character===who);
   if(!sel.length){
     SM.set($('bars'),null,'');
-    SM.set($('rail'),null,'<div class=card><div class=card-sub>Tick anything to see what it costs.</div></div>');
+    SM.set($('rail'),null,'');
     return;
   }
   const word=s=>s+(sel.length===1?'':'s');
@@ -224,8 +236,6 @@ function bar(){
     +'</b> of GPU time</div>'
     +'<ul class=picks>'+sel.map(s=>'<li><span>'+SM.esc(s.label)+'</span><b>'
       +SM.dur(cost(s))+'</b></li>').join('')+'</ul>'
-    +'<div class=basis>Queued as ONE job. Each one writes its own output as it'
-    +' finishes, so a run that stops part-way still leaves the rest usable.</div>'
     /* Jeremy, 2026-10-23: the same Queue button here, so the bottom bar need
        not be scrolled to */
     +'<div class=row><button class="btn btn-primary" data-act=queue>Queue for '
@@ -252,10 +262,12 @@ document.addEventListener('click',async e=>{
     const both=[...document.querySelectorAll('[data-act=queue]')];   /* rail and bottom bar */
     both.forEach(x=>x.disabled=true);
     try{
-      await SM.postJSON('/queue/shoot',{character:who,shoots:[...picked]});
-      SM.toast('queued as one job',{label:'Open the queue',run:()=>SM.nav('gpu')});
+      const all=[...picked], st=all.filter(x=>x.startsWith('story:')), sh=all.filter(x=>!x.startsWith('story:'));
+      if(sh.length){ await SM.postJSON('/queue/shoot',{character:who,shoots:sh}); sh.forEach(x=>picked.delete(x)); }
+      if(st.length) await SM.postJSON('/queue/story',{character:who,stories:st.map(x=>x.slice(6))});
+      SM.toast('queued',{label:'Open the queue',run:()=>SM.nav('gpu')});
       picked.clear(); draw(); SM.recount();
-    }catch(err){ SM.toast(err.message); both.forEach(x=>x.disabled=false); }
+    }catch(err){ SM.toast(err.message); draw(); }
   }
 });
 

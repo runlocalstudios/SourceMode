@@ -517,3 +517,27 @@ def test_shoulder_length_goes_under_an_up_style_and_leaves_no_bare_hair():
     assert out == "a young woman with a slim figure, fair skin and brown eyes"
     assert drop_length("a young woman with fair skin, shoulder-length brown hair and brown eyes") == \
         "a young woman with fair skin, brown hair and brown eyes"
+
+
+def test_the_shoots_page_queues_every_shoot_with_her_hair_loose():
+    # Jeremy, 2026-11-16: "The default assumption for any shoot triggered from
+    # the shoots page should be that her hair is worn loose."
+    from dataclasses import replace
+
+    from sourcemode.assets.shoots import resolve
+    from sourcemode.monitor.queue_page import shoot_command
+
+    assert shoot_command({}, "nobody", ["club"])[-1] == "--hair=her hair worn loose"
+    # the authored slot lists (selfies, influencer) obey the set's hair too
+    sh = replace(resolve(["club"])[0], explicit=({"id": "a", "hair": "her hair up in a messy bun"},))
+    assert [s["hair"] for s in sh.plan(hair="her hair worn loose")] == ["her hair worn loose"]
+
+
+def test_photo_stories_are_offered_and_counted():
+    from sourcemode.monitor.queue_page import render_count, stories, story_catalog, story_command
+
+    cat = {s["id"]: s for s in story_catalog()}
+    assert cat["bar"]["only"] is None and cat["bar"]["shots"] == len(stories()["bar"].shots)
+    assert cat["livingroom"]["only"] == ["eden", "fiona"]
+    n, how = render_count(story_command({}, "nobody", "bar"))
+    assert n == cat["bar"]["shots"] and "bar" in how

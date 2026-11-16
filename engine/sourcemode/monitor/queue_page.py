@@ -1336,6 +1336,15 @@ def render_count(cmd: list[str]) -> tuple[int, str] | None:
         # what was ticked, by name - "1 shoot" told him nothing
         return n, ", ".join(s.label for s in _resolve(ids))
 
+    if "photo_story.py" in joined:
+        pos = [c for c in cmd if not c.startswith("--")]
+        try:
+            i = next(k for k, c in enumerate(pos) if c.endswith("photo_story.py"))
+            st = stories()[pos[i + 2]]
+        except (StopIteration, IndexError, KeyError):
+            return None
+        return len(st.shots), f"{st.title} story"
+
     if "prompt_ab.py" in joined:
         arms = len([a for a in (flag("--arms", "") or "").split("|") if "=" in a])
         scenes = len([x for x in (flag("--scenes", "0,2,6") or "").split(",") if x.strip()])
@@ -1522,6 +1531,9 @@ def render_target(cfg: dict, cmd: list[str]) -> tuple[Path, str] | None:
             doc = _json.loads(Path(flag("--plan")).read_text(encoding="utf-8"))
             return Path(flag("--out") or (out / "game-assets")) / doc["character"] / "renders", "shot_*.png"
         from .. import library as L  # noqa: PLC0415
+        if "photo_story.py" in joined:
+            i = next(k for k, c in enumerate(pos) if c.endswith("photo_story.py"))
+            return L.find_set(cfg, pos[i + 1], "video", f"{pos[i + 2]}-story"), "*__a*.png"
         if "prompt_ab.py" in joined:
             i = next(k for k, c in enumerate(pos) if c.endswith("prompt_ab.py"))
             return L.find_set(cfg, pos[i + 1], "ab", flag("--tag", "hair")), "scene_*.png"
@@ -2140,12 +2152,47 @@ def shoot_command(cfg: dict, character: str, shoot_ids: list[str]) -> list[str]:
     different jobs." So the ids are a comma list to a single script, and the
     queue sees one entry. The script still writes a judge set per shoot as it
     finishes, so one job is not one all-or-nothing result.
+
+    Jeremy, 2026-11-16: "The default assumption for any shoot triggered from
+    the shoots page should be that her hair is worn loose." Her own loose line,
+    as `--hair`; the wardrobe pack alone keeps the hair each approved look names.
     """
+    from ..assets.wardrobe import loose_hair  # noqa: PLC0415
     from ..config import ENGINE_ROOT  # noqa: PLC0415
 
     py = ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"
     script = ENGINE_ROOT / "scripts" / "eval" / "run_shoots.py"
-    return [str(py), str(script), character, ",".join(shoot_ids)]
+    return [str(py), str(script), character, ",".join(shoot_ids), f"--hair={loose_hair(character)}"]
+
+
+def stories() -> dict:
+    """story_defs.STORIES, loaded from scripts/video (it imports nothing of ours)."""
+    import importlib.util  # noqa: PLC0415
+    import sys  # noqa: PLC0415
+
+    from ..config import ENGINE_ROOT  # noqa: PLC0415
+
+    spec = importlib.util.spec_from_file_location(
+        "story_defs", ENGINE_ROOT / "scripts" / "video" / "story_defs.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault("story_defs", mod)   # dataclasses look the module up by name
+    spec.loader.exec_module(mod)
+    return mod.STORIES
+
+
+def story_catalog() -> list[dict]:
+    """The photo stories as the shoots tab offers them. `only` names the
+    characters a story was written for; None means anyone."""
+    return [{"id": k, "label": s.title[:1].upper() + s.title[1:], "shots": len(s.shots),
+             "only": None if "*" in s.looks else sorted(s.looks)}
+            for k, s in stories().items()]
+
+
+def story_command(cfg: dict, character: str, story: str) -> list[str]:
+    from ..config import ENGINE_ROOT  # noqa: PLC0415
+
+    py = ENGINE_ROOT / ".venv" / "Scripts" / "python.exe"
+    return [str(py), str(ENGINE_ROOT / "scripts" / "video" / "photo_story.py"), character, story]
 
 
 def redo_command(cfg: dict, set_id: str) -> list[str]:
@@ -2459,6 +2506,7 @@ def queue_router(cfg: dict, status=None):
         return {"characters": approved_characters(cfg),
                 "buckets": buckets(),
                 "mix": mix(),
+                "stories": story_catalog(),
                 # Two rates, because a sweep render and an asset-pack shot are
                 # not the same work - the rail totals each selection at its own.
                 "s_per_shot": r["s_per_render"],
@@ -2510,6 +2558,41 @@ def queue_router(cfg: dict, status=None):
                     note=f"{len(ids)} shoots queued from the shoots page")
         q.save(path(), doc)
         return {"queued": job["id"], **queue_state(cfg)}
+
+    @router.post("/queue/story")
+    def add_story(body: dict = Body(default={})) -> dict:
+        """Queue photo stories for one character: one job per story, because
+        photo_story.py renders one."""
+        from ..assets.lora import resolve_lora  # noqa: PLC0415
+
+        char = str(body.get("character", "")).strip().lower()
+        ids = [str(x).strip() for x in (body.get("stories") or []) if str(x).strip()]
+        if not char or "/" in char or "\\" in char or ".." in char:
+            raise HTTPException(400, "a character is required")
+        if not ids:
+            raise HTTPException(400, "tick at least one story")
+        known = stories()
+        for i in ids:
+            if i not in known:
+                raise HTTPException(400, f"no story {i}")
+            if known[i].look(char) is None:
+                raise HTTPException(409, f"{known[i].title} was not written for {char}")
+        if not resolve_lora(cfg, char):
+            raise HTTPException(409, f"no approved LoRA for {char} - choose an epoch first")
+        doc = q.load(path())
+        for i in ids:
+            dup = q.duplicate_of(doc, "shoot", f"{char}:story_{i}")
+            if dup:
+                raise HTTPException(409, f"{known[i].title} is already {dup['status']}")
+        queued = []
+        for i in sorted(ids):
+            cmd = story_command(cfg, char, i)
+            checked({"cmd": cmd, "cwd": str(ENGINE_ROOT)})
+            job = q.add(doc, kind="shoot", label=f"{char}:story_{i}", cmd=cmd, cwd=str(ENGINE_ROOT),
+                        expect=expect_for(cfg, cmd), note="photo story queued from the shoots page")
+            queued.append(job["id"])
+        q.save(path(), doc)
+        return {"queued": queued, **queue_state(cfg)}
 
     @router.post("/queue/redo")
     def add_redo(body: dict = Body(default={})) -> dict:
