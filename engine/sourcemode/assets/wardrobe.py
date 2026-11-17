@@ -41,15 +41,21 @@ from pathlib import Path
 #: of her crown" drew buns on 13 of 20, "the top half tied into two long
 #: ponytails" tied all of her hair up, and this line with the negative below
 #: worked on amanda, jaina and priyanka ("Amanda and Jaina's worked ... Priyanka's
-#: was fine too"); fiona's tails vanish into hip-length hair.
-TWO_TAILS = ("most of her hair worn loose and hanging down, with just two thin sections from the top "
-             "of her head tied into two thin ponytails, one on each side, that hang down over her loose hair")
+#: was fine too"); fiona's tails vanish into hip-length hair. 2026-11-17: a
+#: Codex photo of mimi was "the perfect example of the ponytails I wanted", and
+#: its hair sentence, tested the same way, replaced that line: "The new top
+#: ponytails style is a winner especially with Jenna".
+TWO_TAILS = ("her hair with two small upper sections pulled into high, tightly secured pigtails, "
+             "most of her hair left loose and down, both high ties clearly visible")
 TWO_TAILS_NEGATIVE = "hair buns, space buns, top knots, all of her hair tied up, twin tails with no loose hair"
-_OLD_TAILS = re.compile(r"her hair worn down with high, tight pigtails", re.I)
+_OLD_TAILS = re.compile(
+    r"her hair worn down with high, tight pigtails"
+    r"|most of her hair worn loose and hanging down, with just two thin sections from the top of her head "
+    r"tied into two thin ponytails, one on each side, that hang down over her loose hair", re.I)
 
 
 def two_tails(hair: str) -> str:
-    """The old pigtail line, wherever a saved plan or set still carries it, is
+    """An earlier pigtail line, wherever a saved plan or set still carries it, is
     rendered as TWO_TAILS; anything after it (bows, scrunchies) stays."""
     return _OLD_TAILS.sub(TWO_TAILS, hair or "")
 
@@ -57,7 +63,7 @@ def two_tails(hair: str) -> str:
 def hair_negative(hair: str) -> str:
     """What a hair clause refuses - the buns the two ponytails kept turning into."""
     h = (hair or "").lower()
-    return TWO_TAILS_NEGATIVE if "two thin ponytails" in h or _OLD_TAILS.search(h) else ""
+    return TWO_TAILS_NEGATIVE if "two small upper sections" in h or _OLD_TAILS.search(h) else ""
 
 
 #: The shared rotation, used by any character whose brief does not override it.

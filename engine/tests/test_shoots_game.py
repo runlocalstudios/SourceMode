@@ -596,3 +596,15 @@ def test_the_old_pigtail_line_renders_as_two_thin_ponytails_and_refuses_buns():
     slot = resolve(["gym"])[0].plan(character="nobody", hair=old)[0]
     p = render.shot_prompt("nobody", slot, "nobody", backdrop=slot["setting"])
     assert TWO_TAILS in p and "tight pigtails" not in p
+
+
+def test_the_thin_ponytails_line_renders_as_the_top_ponytails_too():
+    """Jeremy, 2026-11-17: "The new top ponytails style is a winner" - a plan or
+    set saved under the line it replaced is rendered in the new words."""
+    from sourcemode.assets.wardrobe import TWO_TAILS, hair_negative, two_tails
+
+    thin = ("most of her hair worn loose and hanging down, with just two thin sections from the top of her "
+            "head tied into two thin ponytails, one on each side, that hang down over her loose hair")
+    assert "two small upper sections" in TWO_TAILS
+    assert two_tails(thin + ", tied with bows") == TWO_TAILS + ", tied with bows"
+    assert "hair buns" in hair_negative(thin)
