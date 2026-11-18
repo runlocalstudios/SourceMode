@@ -295,10 +295,17 @@ def test_young_woman_unless_she_is_over_30():
     assert young("the womanly figure", 20) == "the womanly figure"
 
 
-def test_the_sweep_anchor_and_her_clause_say_young_woman(records):
-    """The records keep his words (and his confirmation); the prompt says young woman."""
+def test_her_description_renders_exactly_as_he_wrote_it(records):
+    """Jeremy, 2026-11-18: "I would like the description to control. If the
+    girl's description causes her pictures to look like a little girl, I will
+    change her captions to say woman. If her captions say woman and make her
+    look old, I will change them to say girl" - no word is swapped on the way
+    to the prompt, at any age."""
     import sourcemode.assets.appearance as A
 
     A.reload()
-    assert clause("zara") == "a young woman with long dark hair"
-    assert "girl" not in clause("raven")
+    assert clause("zara") == "a woman with long dark hair"
+    for text in ("a beautiful girl with pink hair", "a woman with red hair", "a young woman with red hair"):
+        for age in ("22", "38"):
+            A.confirm("geena", {"prompt": text, "age": age})
+            assert clause("geena") == text

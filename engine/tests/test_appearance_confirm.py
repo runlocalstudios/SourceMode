@@ -73,7 +73,7 @@ def test_render_age_overrides_and_blank_restores(records):
 def test_the_clause_is_the_text_as_written_with_no_age_added(records):
     """2026-10-10: an age goes in the description itself, only when necessary."""
     A.confirm("x", {"prompt": "a woman with red hair"})
-    assert A.clause("x") == "a young woman with red hair"   # "young woman" under 31 (2026-11-08)
+    assert A.clause("x") == "a woman with red hair"         # as written (2026-11-18)
     A.confirm("x", {"prompt": "a 25-year-old woman with red hair"})
     assert A.clause("x") == "a 25-year-old woman with red hair"
 

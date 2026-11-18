@@ -456,7 +456,9 @@ def drop_length(text: str) -> str:
 
 
 def young(text: str, age: int | None = None) -> str:
-    """"young woman" in a prompt unless she is over 30.
+    """"young woman" unless she is over 30 - for the epoch sweep's anchor phrase
+    only. Since 2026-11-18 a character's description is never passed through
+    this (see `clause`): what he wrote is what renders.
 
     Jeremy, 2026-11-08 morning: "Woman makes the photos look old" - so it was
     "girl" for a day, and "girl" made them children: fiona (18) swept as kids at
@@ -484,11 +486,21 @@ def young(text: str, age: int | None = None) -> str:
 
 
 def clause(character: str) -> str:
-    """Her appearance text as written - no age added, "" if she has none - with
-    "woman" read as "young woman" unless she is over 30 (`young`).
+    """Her appearance text exactly as written - no age added, no word swapped,
+    "" if she has none.
 
     Jeremy, 2026-10-10: an age goes in the description itself, and only when it
     is absolutely necessary.
+
+    Jeremy, 2026-11-18: "I would like the description to control. If the girl's
+    description causes her pictures to look like a little girl, I will change
+    her captions to say woman. If her captions say woman and make her look old,
+    I will change them to say girl, and I don't want to have to go back and
+    forth with you every single time about it." So "girl", "woman" and "young
+    woman" each render as he wrote them; `young` no longer touches a
+    description (geena's record said "a beautiful girl" and her pack rendered
+    "a beautiful young woman"). It remains only for the sweep's own anchor
+    phrase, which is not anyone's description.
     """
     rec = _load()["look"].get(character.lower()) or {}
-    return young(rec.get("prompt", "") or "", age_of(character))
+    return rec.get("prompt", "") or ""
