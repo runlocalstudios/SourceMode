@@ -33,7 +33,7 @@ def test_make_set_shuffles_deterministically_and_payload_hides_arms(tmp_path: Pa
     assert load_set(tmp_path, "exp")["order"] == s["order"]                      # same seed, same blind order
     p = set_payload(tmp_path, "exp")
     assert [i["id"] for i in p["items"]] == s["order"] and p["has_reference"] is False
-    assert all(set(i) == {"id"} for i in p["items"])                            # no arm, no path
+    assert all(set(i) == {"id", "hash"} for i in p["items"])                    # no arm, no path
     with pytest.raises(ValueError):
         make_set(tmp_path, "dup", "x", items + [items[0]])
 
@@ -289,3 +289,33 @@ def test_review_from_the_start_walks_every_item_on_a_fresh_copy_of_the_set():
     assert "idx=walk?idx+1:nextOpenPair(idx+1)" in PAGE
     restart = PAGE[PAGE.index("if(a==='restart')"):][:200]
     assert "openSet(cur.id)" in restart and "walk=true" in restart
+
+
+def test_a_rerolled_shot_gets_a_new_image_address(tmp_path):
+    # Jeremy, 2026-11-18: "I reject a photo and then it gets regenerated and then
+    # the judging page shows me the one I rejected again ... so that I don't have
+    # to remember to reload the page." A re-rolled slot keeps its id, and the
+    # page keys the image address on the item's content hash - which the payload
+    # never carried, so the address never changed and the browser showed the copy
+    # it already held.
+    f = tmp_path / "a.png"; f.write_bytes(b"first render")
+    items = [{"id": "casual_01", "path": f, "arm": "casual", "group": "1"}]
+    J.make_set(tmp_path, "pack_x", "t", items)
+    before = J.set_payload(tmp_path, "pack_x")["items"][0]["hash"]
+    assert before == J.load_set(tmp_path, "pack_x")["items"][0]["hash"]
+    f.write_bytes(b"the re-roll")
+    J.make_set(tmp_path, "pack_x", "t", items)
+    after = J.set_payload(tmp_path, "pack_x")["items"][0]["hash"]
+    assert after and after != before
+    assert "it.hash?'&v='+it.hash" in J.OWN_JS                      # and the page puts it on the address
+
+
+def test_a_finished_set_reopens_itself_when_its_rerolls_land():
+    # the page parked on a set's results screen learns from the 20s list poll
+    # that the set has work again, and opens it - no reload
+    js = J.OWN_JS
+    body = js[js.index("async function refreshSets()"):js.index("async function openPicker()")]
+    assert "sets.find(x=>x.id===cur.id)" in body and "me.judged<me.n" in body
+    assert "openSet(cur.id)" in body
+    # only from the results screen: a set being judged is never interrupted
+    assert "idx>=cur.pairs.length:idx>=cur.items.length" in body

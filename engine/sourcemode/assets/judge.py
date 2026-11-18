@@ -324,10 +324,16 @@ def set_payload(root: Path, set_id: str) -> dict | None:
     # workout". A pack or shoot is production, not a blind comparison - its
     # shots go in plan order. Sweeps and A/Bs keep their blind shuffle.
     order = [it["id"] for it in s["items"]] if labels else s["order"]
+    # The content hash goes with each item: a re-rolled slot keeps its id, so the
+    # hash is the only thing that changes the image's address, and without it the
+    # page showed the rejected render again until it was reloaded (Jeremy,
+    # 2026-11-18). It is a digest of the pixels and says nothing about the arm.
+    hashes = {it["id"]: it.get("hash") for it in s["items"]}
     out = {"id": s["id"], "title": s["title"], "question": s.get("question", ""),
            "mode": s.get("mode", "single"),
            "has_reference": bool(s.get("reference")),
-           "items": [{"id": i, **({"label": labels[i]} if labels else {})} for i in order if i in here],
+           "items": [{"id": i, "hash": hashes.get(i), **({"label": labels[i]} if labels else {})}
+                     for i in order if i in here],
            "pending": len(pending),
            "verdicts": {k: v for k, v in load_verdicts(root, set_id).items() if k in here}}
     if out["mode"] == "pair":
@@ -858,10 +864,24 @@ async function loadSets(){
    hub keeps this frame alive across tab switches, so `sets` was the list from
    whenever the page first loaded. Refresh it before every use, on every show,
    and on a slow poll; and if the page is parked on "nothing left", open the
-   first set that now has work. A set being judged is never interrupted. */
+   first set that now has work. A set being judged is never interrupted.
+   A set parked on its RESULTS screen is not being judged: when its re-rolls
+   land it has work again, and it opens on them (Jeremy, 2026-11-18: "so that I
+   don't have to remember to reload the page"). Tried once per change in the
+   set's count, so a set whose open shot is still rendering does not flicker. */
+let reopened='';
 async function refreshSets(){
   try{ sets=await SM.getJSON('/judge/sets'); }catch(e){}
-  if(!idle) return;
+  if(!idle){
+    const me=cur&&sets.find(x=>x.id===cur.id);
+    const parked=cur&&(isPair()?idx>=cur.pairs.length:idx>=cur.items.length);
+    const key=me?me.id+':'+me.judged+':'+me.n:'';
+    if(me&&parked&&me.judged<me.n&&reopened!==key){
+      reopened=key;
+      await openSet(cur.id).catch(()=>{});
+    }
+    return;
+  }
   const n=sets.find(x=>x.judged<x.n);
   if(n) await openSet(n.id).catch(()=>{});
 }
