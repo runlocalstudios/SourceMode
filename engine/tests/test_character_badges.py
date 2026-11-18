@@ -87,3 +87,19 @@ def test_each_intimate_pack_waiting_on_him_is_its_own_badge():
     assert todo(r) == ["APPROVE LINGERIE"]
     r["packs"]["intimate_awaiting"] = {"lingerie": True, "pajamas": True}
     assert todo(r) == ["APPROVE LINGERIE", "APPROVE PAJAMAS"]
+
+
+def test_selfies_he_keeps_through_a_looks_reapproval_ask_for_nothing():
+    # Jeremy, 2026-11-18, geena: "override the message that would say that I
+    # need to do a new selfie shoot for Gina because I did not accept the vast
+    # majority of her new shots" - the game still wears her earlier looks, so
+    # the selfies shot in them are current. The mark lives in the approved plan
+    # and goes when the looks are approved again.
+    r = row(selfies="stale")
+    r["packs"]["selfies_kept"] = True
+    assert todo(r) == []
+    # it excuses the date only: a pack still rendering, or shot before the tie-in, still says so
+    for s in ("partial", "old"):
+        r = row(selfies=s)
+        r["packs"]["selfies_kept"] = True
+        assert todo(r) == ["NEEDS NEW SELFIES"]

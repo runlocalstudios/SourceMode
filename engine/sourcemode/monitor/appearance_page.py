@@ -85,7 +85,7 @@ def _packs(char: str, outputs: Path | None, judge_root: Path | None) -> dict:
                            "kept": sum(1 for x in v.values() if x == "keep")})
     plan = bool(outputs and (outputs / "game-assets" / char / "plan_28.json").is_file())
     staged = None
-    looks, looks_at = "none", None
+    looks, looks_at, selfies_kept = "none", None, False
     if outputs:
         from ..assets import looks as L  # noqa: PLC0415
         from ..assets.pack import read_staged  # noqa: PLC0415
@@ -96,6 +96,11 @@ def _packs(char: str, outputs: Path | None, judge_root: Path | None) -> dict:
         ap = L._read(L.approved_path(outputs, char))
         if ap:
             looks, looks_at = "approved", ap.get("approved")
+            # Jeremy, 2026-11-18, geena: he turned down most of a re-approved
+            # plan's renders, so the game still wears her earlier looks and the
+            # selfies shot in them stand. `selfies_kept` in the approved plan
+            # says so; a later approval writes a new plan without it.
+            selfies_kept = bool(ap.get("selfies_kept"))
         elif L.draft_path(outputs, char).is_file():
             looks = "draft"
     # cut and staged, not yet copied into the game by his approval
@@ -108,7 +113,8 @@ def _packs(char: str, outputs: Path | None, judge_root: Path | None) -> dict:
                 for o in I.PACKS}
     return {"shipped": shipped, "shoots": shoots, "plan": plan, "awaiting": awaiting,
             "intimate_awaiting": intimate,
-            "looks": looks, "looks_at": looks_at, "selfies": pack_state(char)}
+            "looks": looks, "looks_at": looks_at, "selfies_kept": selfies_kept,
+            "selfies": pack_state(char)}
 
 
 def todo(row: dict) -> list[str]:
@@ -143,7 +149,8 @@ def todo(row: dict) -> list[str]:
         if not s:
             out.append("NO SELFIES")
         elif (not s["wardrobe"] or s["rendered"] < s["total"]
-              or (p.get("looks_at") and s["at"] and s["at"] < p["looks_at"])):
+              or (p.get("looks_at") and s["at"] and s["at"] < p["looks_at"]
+                  and not p.get("selfies_kept"))):
             # shot before the tie-in, still rendering, or looks re-approved since
             out.append("NEEDS NEW SELFIES")
     return out
