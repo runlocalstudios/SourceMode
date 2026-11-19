@@ -35,6 +35,8 @@ to say something like wrist and hand out of the frame." Arms:
 
     A  the pack as it renders today ("her wrist and hand out of the frame")
     B  the 2026-11-18 wording ("her hand out of the frame")
+    C  A, with the hand named in the negative (added after A and B came out
+       level: a palm at the edge on 3 of 8 either way)
 """
 
 import sys
@@ -105,9 +107,14 @@ def hand_only(p: str):
     return p.replace(a, "her hand out of the frame") if a in p else None
 
 
+# words an arm adds to the negative, by (test, arm)
+NEG_EXTRA = {("edge-hand", "C"): "hand in the foreground, palm, fingers at the edge of the frame"}
+
+
 TESTS = {
-    "edge-hand": ((("A", 1.0, lambda p: p), ("B", 1.0, hand_only)),
-                  {"A": "wrist and hand out of the frame", "B": "hand out of the frame"},
+    "edge-hand": ((("A", 1.0, lambda p: p), ("B", 1.0, hand_only), ("C", 1.0, lambda p: p)),
+                  {"A": "wrist and hand out of the frame", "B": "hand out of the frame",
+                   "C": "A + hand in the negative"},
                   "No hand or palm at the edge of the frame? K = yes, X = no."),
     "selfie-phone": ((("A", 1.0, lambda p: p), ("B", 0.8, lambda p: p), ("C", 1.0, no_selfie)),
                      {"A": "as today", "B": "LoRA 0.8", "C": "no selfie wording"},
@@ -157,6 +164,8 @@ for arm, strength, edit in ARMS:
         if prompt is None:                       # this arm's phrase is not in this slot
             continue
         neg = NEG + (f", {slot['negative']}" if slot.get("negative") else "")
+        if (TAG, arm) in NEG_EXTRA:
+            neg += ", " + NEG_EXTRA[(TAG, arm)]
         dest = d / f"{sid}.png"
         if not dest.exists():
             files = client.outputs(client.wait(client.submit(t2i_workflow(
