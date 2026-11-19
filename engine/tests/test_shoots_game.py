@@ -190,6 +190,7 @@ def test_the_phone_is_in_the_picture_only_in_a_mirror_selfie():
         assert "a selfie, " in p
         assert "phone" in slot["negative"] and "phone frame" in slot["negative"]
         assert "camera" in slot["negative"]
+        assert "fingers at the edge of the frame" in slot["negative"]   # 2026-11-19: the palm at the edge
     for slot in mirror:
         p = shot_prompt("nobody", slot, backdrop=slot["setting"])
         assert "a mirror selfie, " in p and "phone held at chest height" in p

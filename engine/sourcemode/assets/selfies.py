@@ -49,6 +49,9 @@ TWO MEASURED THINGS the prompts here obey:
    at the frame edge, so the wrist goes out with it. Jeremy, 2026-11-19:
    "instead of just saying hand out of the picture, I think you need to say
    something like wrist and hand out of the frame."
+   Matched seeds (2026-11-19_ab_edge-hand) put the two wordings level, a
+   palm on 3 of 8 either way; naming the hand in `NEGATIVE` as well left it
+   on 1 of 8.
 
 3. **Do not name the camera either** (2026-10-21, casey). "the camera held a
    little above eye level" drew a phone in her free hand on three of her six
@@ -140,7 +143,8 @@ NEGATIVE = ("iPhone, holding a phone, phone held up beside her face, a phone in 
             "the back of a phone, phone camera lenses, smartphone, phone, phone screen, "
             "phone frame around the picture, a photo of a woman taking a selfie, "
             "someone else taking the photo, third-person view, "
-            "camera, DSLR camera, camera in hand, both arms raised, both hands up")
+            "camera, DSLR camera, camera in hand, both arms raised, both hands up, "
+            "hand in the foreground, palm, fingers at the edge of the frame")
 #: Appended on the mirror slots: the mirror is in front of her, not behind.
 MIRROR_NEGATIVE = ("mirror behind her, a second mirror, her back, rear view, two of her, "
                    "seen from behind, full-body, crossed eyes, cross-eyed, eyes looking in different directions, "
