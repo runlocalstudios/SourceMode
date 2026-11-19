@@ -27,6 +27,14 @@ BOTH arms reaching past the frame edges and a third hand where the prompt puts
        toward the viewer, her hand out of the frame", other hand kept
     D  work slots only: no "on a quick break" / "in a quiet corner on her
        break" (maya's gallery selfies kept drawing her phone)
+
+`edge-hand`: the named arm fixed the third arm, but on three of its eight
+shots the reaching hand showed as a large palm at the frame edge. Jeremy,
+2026-11-19: "instead of just saying hand out of the picture, I think you need
+to say something like wrist and hand out of the frame." Arms:
+
+    A  the pack as it renders today ("her wrist and hand out of the frame")
+    B  the 2026-11-18 wording ("her hand out of the frame")
 """
 
 import sys
@@ -92,7 +100,15 @@ def one_arm(p: str):
     return None
 
 
+def hand_only(p: str):
+    a = "her wrist and hand out of the frame"
+    return p.replace(a, "her hand out of the frame") if a in p else None
+
+
 TESTS = {
+    "edge-hand": ((("A", 1.0, lambda p: p), ("B", 1.0, hand_only)),
+                  {"A": "wrist and hand out of the frame", "B": "hand out of the frame"},
+                  "No hand or palm at the edge of the frame? K = yes, X = no."),
     "selfie-phone": ((("A", 1.0, lambda p: p), ("B", 0.8, lambda p: p), ("C", 1.0, no_selfie)),
                      {"A": "as today", "B": "LoRA 0.8", "C": "no selfie wording"},
                      "Is this her, with no phone in the picture? K = yes, X = no."),

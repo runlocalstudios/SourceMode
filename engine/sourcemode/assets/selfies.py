@@ -32,7 +32,7 @@ TWO MEASURED THINGS the prompts here obey:
    623px median in her working sweep. Re-rendered at 1024x1536 with nothing else
    changed, 7 of 12 were kept.
 
-2. **Name the reaching arm, and put its hand out of the frame** (`REACH`).
+2. **Name the reaching arm, and put its wrist and hand out of the frame** (`REACH`).
    The first test (jojo, n=4) went the other way - "her arm outstretched and
    visible in the frame" kept 1/4 against 3/4 for bare "taking a selfie" - and
    the arm went unnamed until 2026-11-18. Jeremy that day: "why do i get SO
@@ -45,6 +45,10 @@ TWO MEASURED THINGS the prompts here obey:
    phones; with the arm named, 8/8 with one arm reaching, the other where the
    prompt puts it, and no phone. Dropping the "on her break" words changed
    nothing (2/2 phones).
+   On three of those eight the reaching hand still showed, as a large palm
+   at the frame edge, so the wrist goes out with it. Jeremy, 2026-11-19:
+   "instead of just saying hand out of the picture, I think you need to say
+   something like wrist and hand out of the frame."
 
 3. **Do not name the camera either** (2026-10-21, casey). "the camera held a
    little above eye level" drew a phone in her free hand on three of her six
@@ -95,7 +99,7 @@ MIRROR_FRAMING = ("mirror selfie: the picture is her reflection from the waist u
 # have one arm extended and only rarely have both". The outstretched arm stays
 # unnamed (rule 2 above); the OTHER hand is placed, the way the mirror stance
 # already places it, and the negative refuses the second raised arm.
-REACH = "with one arm outstretched toward the viewer, her hand out of the frame"
+REACH = "with one arm outstretched toward the viewer, her wrist and hand out of the frame"
 STANCE = (f"she is taking a selfie {REACH}, shot from a little above eye level and angled slightly "
           "down toward her, her other hand down at her side")
 STANCE_SEATED = (f"she is sitting back comfortably and taking a selfie {REACH}, shot from a little above "

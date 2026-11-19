@@ -219,7 +219,7 @@ def test_a_selfie_places_the_other_hand_and_refuses_a_second_raised_arm():
     assert "both arms raised" in S.NEGATIVE
     # rule 2 of the module: ONE arm is named, its hand out of the frame (2026-11-18)
     for st in (S.STANCE, S.STANCE_SEATED):
-        assert "taking a selfie with one arm outstretched toward the viewer, her hand out of the frame," in st
+        assert "taking a selfie with one arm outstretched toward the viewer, her wrist and hand out of the frame," in st
     assert "outstretched" not in S.STANCE_MIRROR
 
 
