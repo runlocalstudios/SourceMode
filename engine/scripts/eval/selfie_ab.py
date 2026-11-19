@@ -10,10 +10,23 @@ slots; casey's drew it on most of the rest, on two different wordings. Arms:
     C  no "selfie" anywhere: "a close portrait picture ... one arm outstretched
        toward the viewer, her hand out of the frame" (his wording)
 
-    python scripts/eval/selfie_ab.py <char> <slot,slot,...> <seed>
+    python scripts/eval/selfie_ab.py <char> <slot,slot,...> <seed> [test]
 
-Writes library/<char>/<date>_ab_selfie-phone/<arm>/<slot>.png with the prompt
-beside each, a labelled sheet, and a blind judge set ab_<char>_selfie-phone.
+Writes library/<char>/<date>_ab_<test>/<arm>/<slot>.png with the prompt
+beside each, a labelled sheet, and a blind judge set ab_<char>_<test>.
+
+`test` is `selfie-phone` (above, the default) or `third-arm`. Jeremy,
+2026-11-18: "why do i get SO MANY selfies with 3 arms in them? is it because
+of the arm outstretched language?" - the five rejects on disk that day all had
+BOTH arms reaching past the frame edges and a third hand where the prompt puts
+"her other hand". Arms:
+
+    A  the pack as it renders today (control)
+    B  no "her other hand ..." clause
+    C  the reaching arm named: "taking a selfie with one arm outstretched
+       toward the viewer, her hand out of the frame", other hand kept
+    D  work slots only: no "on a quick break" / "in a quiet corner on her
+       break" (maya's gallery selfies kept drawing her phone)
 """
 
 import sys
@@ -33,7 +46,7 @@ from sourcemode.render.client import ComfyUIClient
 if len(sys.argv) < 4:
     raise SystemExit(__doc__)
 CHAR, IDS, SEED = sys.argv[1].lower(), sys.argv[2].split(","), int(sys.argv[3])
-TAG = "selfie-phone"
+TAG = sys.argv[4] if len(sys.argv) > 4 else "selfie-phone"
 W, H = 1024, 1536
 
 # (find, replace) pairs for arm C; each must hit, or the arm is not what it says
@@ -54,7 +67,44 @@ def no_selfie(p: str) -> str:
     return p
 
 
-ARMS = (("A", 1.0, lambda p: p), ("B", 0.8, lambda p: p), ("C", 1.0, no_selfie))
+OTHER_HAND = (", her other hand down at her side", ", her other hand resting in her lap")
+BREAKS = (", on a quick break", ", in a quiet corner on her break")
+
+
+def cut(phrases):
+    """Drop whichever of the phrases the prompt carries; None (skip the slot)
+    when it carries none, so an arm is never rendered as a copy of A."""
+    def edit(p: str):
+        hit = [x for x in phrases if x in p]
+        if not hit:
+            return None
+        for x in hit:
+            p = p.replace(x, "")
+        return p
+    return edit
+
+
+def one_arm(p: str):
+    for a in ("she is taking a selfie,", "she is sitting back comfortably and taking a selfie,"):
+        if a in p:
+            return p.replace(a, a[:-1] + " with one arm outstretched toward the viewer, "
+                                         "her hand out of the frame,")
+    return None
+
+
+TESTS = {
+    "selfie-phone": ((("A", 1.0, lambda p: p), ("B", 0.8, lambda p: p), ("C", 1.0, no_selfie)),
+                     {"A": "as today", "B": "LoRA 0.8", "C": "no selfie wording"},
+                     "Is this her, with no phone in the picture? K = yes, X = no."),
+    "third-arm": ((("A", 1.0, lambda p: p), ("B", 1.0, cut(OTHER_HAND)), ("C", 1.0, one_arm),
+                   ("D", 1.0, cut(BREAKS))),
+                  {"A": "as today", "B": "no other-hand clause", "C": "one arm named",
+                   "D": "no break wording (work)"},
+                  "Two arms at most and no phone in the picture? K = yes, X = no."),
+}
+if TAG not in TESTS:
+    raise SystemExit(f"no such test {TAG!r}: {sorted(TESTS)}")
+ARMS, ARM_LABEL, QUESTION = TESTS[TAG]
 
 cfg = load_config()
 OUT = L.find_set(cfg, CHAR, "ab", TAG, create=True)
@@ -88,6 +138,8 @@ for arm, strength, edit in ARMS:
     for k, sid in enumerate(IDS):
         slot = slots[sid]
         prompt = edit(shot_prompt(CHAR, slot, CHAR, backdrop=slot["setting"]))
+        if prompt is None:                       # this arm's phrase is not in this slot
+            continue
         neg = NEG + (f", {slot['negative']}" if slot.get("negative") else "")
         dest = d / f"{sid}.png"
         if not dest.exists():
@@ -104,11 +156,10 @@ for arm, strength, edit in ARMS:
 
 if not items:
     raise SystemExit("rendered nothing")
-make_set(outputs_dir(cfg) / "judge", f"ab_{CHAR}_{TAG}", f"{CHAR.title()} - selfie phone A/B",
-         items, question="Is this her, with no phone in the picture? K = yes, X = no.",
+make_set(outputs_dir(cfg) / "judge", f"ab_{CHAR}_{TAG}", f"{CHAR.title()} - {TAG} A/B",
+         items, question=QUESTION,
          priority=0, meta={"character": CHAR, "renders_dir": OUT, "seed": SEED,
-                           "arms": {"A": "pack as today", "B": "LoRA 0.8",
-                                    "C": "no selfie wording"}})
+                           "arms": ARM_LABEL})
 
 from PIL import Image, ImageDraw  # noqa: E402
 
@@ -122,8 +173,7 @@ for r, (arm, strength, _) in enumerate(ARMS):
             im = Image.open(p).convert("RGB")
             im.thumbnail((CW, CH))
             sheet.paste(im, (c * CW, r * (CH + 18)))
-    dr.text((4, r * (CH + 18) + CH + 3), {"A": "A: as today", "B": "B: LoRA 0.8",
-                                          "C": "C: no selfie wording"}[arm], fill=(220, 220, 230))
+    dr.text((4, r * (CH + 18) + CH + 3), f"{arm}: {ARM_LABEL[arm]}", fill=(220, 220, 230))
 sheet.save(OUT / "sheet.jpg", quality=90)
 log(f"judge set ab_{CHAR}_{TAG}: {len(items)} images; sheet {OUT / 'sheet.jpg'}")
 log("ABDONE")
