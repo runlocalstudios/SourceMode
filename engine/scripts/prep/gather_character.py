@@ -254,7 +254,11 @@ for p, prov in (SRC if ONLY_NEW is None else ONLY_NEW):
         reject.append((p.name, prov,
                        f"looks like {who} ({theirs:.2f}) more than {CHAR} ({mine:.2f})"))
         continue
-    if sim < MIN_SIM:
+    # A photo he picked by hand is not dropped on the metric: mimi, 2026-11-19,
+    # lost two of his 83 picks at 0.48 and 0.50, both profiles, where the
+    # embedding reads low on anyone. His eye is the judge; the floor is for
+    # what nobody has looked at. (The impostor check above still applies.)
+    if sim < MIN_SIM and prov != "curated":
         reject.append((p.name, prov, f"identity {sim:.2f} below the {MIN_SIM} floor")); continue
     fw, fh = float(f.bbox[2]-f.bbox[0]), float(f.bbox[3]-f.bbox[1])
     bucket = round(fh / im.height * (1536 if im.height > im.width else 1024))
