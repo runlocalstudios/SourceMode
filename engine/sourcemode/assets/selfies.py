@@ -32,11 +32,19 @@ TWO MEASURED THINGS the prompts here obey:
    623px median in her working sweep. Re-rendered at 1024x1536 with nothing else
    changed, 7 of 12 were kept.
 
-2. **Do not name the outstretched arm.** That was the suggested wording and it
-   is the arm that LOST: at 1024x1536, bare "taking a selfie" kept 3/4, the long
-   geometric description kept 3/4, and "her arm outstretched and visible in the
-   frame" kept 1/4. n=4, so that is a direction and not a measurement - but
-   there is no case for paying words for it.
+2. **Name the reaching arm, and put its hand out of the frame** (`REACH`).
+   The first test (jojo, n=4) went the other way - "her arm outstretched and
+   visible in the frame" kept 1/4 against 3/4 for bare "taking a selfie" - and
+   the arm went unnamed until 2026-11-18. Jeremy that day: "why do i get SO
+   MANY selfies with 3 arms in them?" With the arm unnamed and "her other
+   hand" placed, the model drew both arms reaching past the frame edges AND
+   the placed hand. Matched seeds, four slots each on marisol and maya
+   (library/<char>/2026-11-18_ab_third-arm): as it was, 2/4 marisol with three
+   arms and maya's two gallery selfies with an iPhone held up; without the
+   other-hand clause, both arms reaching on 4/4 marisol and the same two
+   phones; with the arm named, 8/8 with one arm reaching, the other where the
+   prompt puts it, and no phone. Dropping the "on her break" words changed
+   nothing (2/2 phones).
 
 3. **Do not name the camera either** (2026-10-21, casey). "the camera held a
    little above eye level" drew a phone in her free hand on three of her six
@@ -87,9 +95,10 @@ MIRROR_FRAMING = ("mirror selfie: the picture is her reflection from the waist u
 # have one arm extended and only rarely have both". The outstretched arm stays
 # unnamed (rule 2 above); the OTHER hand is placed, the way the mirror stance
 # already places it, and the negative refuses the second raised arm.
-STANCE = ("she is taking a selfie, shot from a little above eye level and angled slightly "
+REACH = "with one arm outstretched toward the viewer, her hand out of the frame"
+STANCE = (f"she is taking a selfie {REACH}, shot from a little above eye level and angled slightly "
           "down toward her, her other hand down at her side")
-STANCE_SEATED = ("she is sitting back comfortably and taking a selfie, shot from a little above "
+STANCE_SEATED = (f"she is sitting back comfortably and taking a selfie {REACH}, shot from a little above "
                  "eye level, her other hand resting in her lap")
 # Jeremy, 2026-10-26: the selfies are "ok, but too consistently top down". Every
 # non-mirror slot said "a little above eye level", so every other one is now shot
@@ -740,8 +749,8 @@ PORTRAIT_WAIST = ("portrait from the waist up, her head and shoulders filling th
                   "her face large and sharp; never a wide shot, never full-body")
 PORTRAIT_AVOID = ("No studio lighting, no professional photoshoot look, no plain backdrop: a casual candid "
                   "photo of her in a real room.")
-_PORTRAIT_STANCE = (("she is sitting back comfortably and taking a selfie, ", "she is sitting back comfortably, "),
-                    ("she is taking a selfie, ", "she is standing relaxed, "),
+_PORTRAIT_STANCE = ((f"she is sitting back comfortably and taking a selfie {REACH}, ", "she is sitting back comfortably, "),
+                    (f"she is taking a selfie {REACH}, ", "she is standing relaxed, "),
                     ("her other hand resting in her lap", "both hands resting in her lap"),
                     ("her other hand down at her side", "both arms relaxed at her sides"))
 

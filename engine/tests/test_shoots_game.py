@@ -208,12 +208,14 @@ def test_the_mirror_shoot_is_mirror_selfies_with_the_phone_in_every_shot():
         assert selfies.MIRROR_FRAMING in p and "standing portrait" not in p
 
 
-def test_the_selfie_prompt_never_names_the_outstretched_arm():
-    # Measured at 1024x1536, n=4: bare 3/4 keep, geometric 3/4, "her arm
-    # outstretched and visible in the frame" 1/4. It is the arm that lost.
+def test_the_selfie_prompt_names_one_reaching_arm_and_only_off_the_mirror():
+    # 2026-11-18, matched seeds on marisol and maya: unnamed, the arm came out
+    # as two reaching arms plus the placed "other hand" (three arms) or as an
+    # iPhone held up; named once with its hand out of the frame, 8/8 clean.
     for slot in selfies.slots(LOOKS, WORK):
         p = shot_prompt("nobody", slot, backdrop=slot["setting"])
-        assert "outstretched" not in p
+        assert p.count("outstretched") == (0 if slot["shot_type"] == "mirror selfie" else 1)
+        assert "visible in the frame" not in p
 
 
 def test_a_mixed_job_is_priced_at_two_rates_not_one():

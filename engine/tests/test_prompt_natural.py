@@ -216,7 +216,11 @@ def test_a_selfie_places_the_other_hand_and_refuses_a_second_raised_arm():
     from sourcemode.assets import selfies as S
     assert S.STANCE.endswith("her other hand down at her side")
     assert S.STANCE_SEATED.endswith("her other hand resting in her lap")
-    assert "both arms raised" in S.NEGATIVE and "arm outstretched" not in S.STANCE   # rule 2 of the module
+    assert "both arms raised" in S.NEGATIVE
+    # rule 2 of the module: ONE arm is named, its hand out of the frame (2026-11-18)
+    for st in (S.STANCE, S.STANCE_SEATED):
+        assert "taking a selfie with one arm outstretched toward the viewer, her hand out of the frame," in st
+    assert "outstretched" not in S.STANCE_MIRROR
 
 
 def test_a_bare_braid_is_rendered_as_one_long_braid_over_one_shoulder():
