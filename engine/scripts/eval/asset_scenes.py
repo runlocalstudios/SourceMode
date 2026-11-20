@@ -124,6 +124,65 @@ def asset_prompts(trigger: str, *, hair: bool = True, man: bool = False) -> list
     return [sweep_prompt(trigger, l, hair=hair) for l in LOOKS]
 
 
+# THE GAME SET. Jeremy, 2026-11-20, after mimi_v3's sweep drew meerkats on three
+# of the ten trimmed scenes: "re-run a new epoch sweep using prompts from one of
+# the existing game models' game assets, i don't care who, just pick a character
+# with normal outfits and run those as the 10 sweep shots, use 5 casual, then 1
+# of each from each of the other gropings (workout, fancy dining, fancy town,
+# work, casual date)".
+#
+# Mira's, from her plan approved 2026-10-30: the first five casual looks and the
+# first look of every other category, outfit and hair as her pack renders them.
+# The prompt is the pack's own - shot_prompt on the grey studio, the pose and
+# expression drawn per look as pack.posed draws them - with the sweep's subject
+# in place of an appearance sentence. The draw is fixed (GAME_POSE_SEED + i), so
+# every sweep on this set reads the same ten prompts. Numbers from this set are
+# not comparable to the asset set's or the tiebreaker's.
+GAME_POSE_SEED = 20261120
+GAME_LOOKS = [
+    {"id": "casual_01", "category": "casual", "look": 1, "n": 1,
+     "outfit": "a white fitted ribbed tank top and high-waisted light-wash denim shorts, small gold stud earrings",
+     "hair": "her hair worn loose"},
+    {"id": "casual_02", "category": "casual", "look": 2, "n": 2,
+     "outfit": "a lilac fitted baby tee and a cream pleated mini skirt, a thin gold chain necklace",
+     "hair": "her hair pulled back in a high ponytail"},
+    {"id": "casual_03", "category": "casual", "look": 3, "n": 3,
+     "outfit": "a sage green cropped knit cardigan buttoned up with nothing under it and light-wash flared jeans",
+     "hair": "her hair up in a messy bun"},
+    {"id": "casual_04", "category": "casual", "look": 4, "n": 4,
+     "outfit": "a white sundress with thin straps and a sweetheart neckline, cut to mid-thigh, small gold hoop earrings",
+     "hair": "her hair half-up"},
+    {"id": "casual_05", "category": "casual", "look": 5, "n": 5,
+     "outfit": "a dusty pink fitted long-sleeve crop top and a high-waisted light-wash denim mini skirt",
+     "hair": "her hair with two small upper sections pulled into high, tightly secured pigtails, "
+             "most of her hair left loose and down, both high ties clearly visible"},
+    {"id": "workout_01", "category": "workout", "look": 1, "n": 8,
+     "outfit": "a lilac sports bra and matching high-waisted leggings",
+     "hair": "her hair pulled back in a high ponytail"},
+    {"id": "fancy_dining_gallery_01", "category": "fancy_dining_gallery", "look": 1, "n": 12,
+     "outfit": "a lilac satin midi dress with a cowl neckline and thin straps, pearl stud earrings",
+     "hair": "her hair up in a messy bun"},
+    {"id": "fancy_town_01", "category": "fancy_town", "look": 1, "n": 16,
+     "outfit": "a lilac satin mini slip dress with a cowl neck, sparkling drop earrings",
+     "hair": "her hair half-up"},
+    {"id": "casual_date_01", "category": "casual_date", "look": 1, "n": 20,
+     "outfit": "a dusty pink smocked milkmaid top and a cream flowy midi skirt, small gold hoop earrings",
+     "hair": "her hair with two small upper sections pulled into high, tightly secured pigtails, "
+             "most of her hair left loose and down, both high ties clearly visible"},
+    {"id": "work_01", "category": "work", "look": 1, "n": 24,
+     "outfit": "a white fitted blouse tucked into a sage green pleated midi skirt, small gold stud earrings",
+     "hair": "her hair up in a messy bun"},
+]
+
+
+def game_prompts(trigger: str) -> list[str]:
+    from sourcemode.assets.pack import STUDIO_BACKDROP, posed  # noqa: PLC0415
+
+    return [shot_prompt(trigger, posed({**look, "pose": "standing"}, GAME_POSE_SEED + i),
+                        backdrop=STUDIO_BACKDROP)
+            for i, look in enumerate(GAME_LOOKS)]
+
+
 # THE TIEBREAKER SET. Jeremy, 2026-10-10, after vivienne's natural sweep: "some of
 # the pictures look exactly like her and some look horrible with weird lighting
 # ... create 20 new prompts that are all portraits from mid thigh up either front

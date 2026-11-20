@@ -41,7 +41,10 @@ param(
   [string]$Src = "",
   # with -Src: plus her reference photos, plus her loose lora-gen-80 shots
   [switch]$Refs,
-  [switch]$Loragen
+  [switch]$Loragen,
+  # Folders of hers the name search cannot find, added to what it finds
+  # (gather_character.py --also); several are separated by | (eva, 2026-11-20).
+  [string]$Also = ""
 )
 $ErrorActionPreference = "Continue"
 # Repo paths, never a session scratchpad. $SP used to be one Claude session's
@@ -181,6 +184,7 @@ if ($Force) { $gatherArgs += "--force" }
 if ($Src) { foreach ($s in $Src.Split("|")) { $gatherArgs += @("--src", "`"$s`"") } }
 if ($Src -and $Refs) { $gatherArgs += "--refs" }
 if ($Src -and $Loragen) { $gatherArgs += "--loragen" }
+if ($Also) { foreach ($s in $Also.Split("|")) { $gatherArgs += @("--also", "`"$s`"") } }
 $gatherArgs += $DsArgs
 Must "$Char gather" $gatherArgs "gather_$Char"
 Verify gather

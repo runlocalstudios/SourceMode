@@ -88,7 +88,7 @@ def test_the_eval_has_one_scene_set():
     """favorable and standard composed their own prompt. They are shelved, and a
     request for them must stop at the guard rather than silently render."""
     src = EVAL.read_text(encoding="utf-8")
-    guard = 'SCENE_SET not in ("asset", "tiebreaker")'
+    guard = 'SCENE_SET not in ("asset", "tiebreaker", "game")'
     assert guard in src
     assert "raise SystemExit" in src.split(guard)[1][:400]
 

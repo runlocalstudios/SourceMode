@@ -131,14 +131,18 @@ from sourcemode.assets.appearance import negative as appearance_negative  # noqa
 # no age, warm light, mostly indoors - for the sweeps too close to call on the
 # asset set. Jeremy: "call it the tiebreaker set so I can just tell you to run
 # the tiebreaker set." Its folder and judge set are dense_<sub>_tiebreaker.
+#
+# --scenes game (2026-11-20): ten of a shipped character's own game looks on
+# the pack's grey studio, through the same builder (asset_scenes.GAME_LOOKS).
 SCENE_SET = _FLAGVALS.get("--scenes", "asset")
-if SCENE_SET not in ("asset", "tiebreaker"):
+if SCENE_SET not in ("asset", "tiebreaker", "game"):
     raise SystemExit(
         f"--scenes {SCENE_SET} is shelved (2026-10-02): it built its own prompt with no "
         f"age and no appearance. Use --scenes asset, which renders the asset generator's "
-        f"own prompts verbatim, or --scenes tiebreaker.")
+        f"own prompts verbatim, --scenes tiebreaker or --scenes game.")
 sys.path.insert(0, str(Path("scripts/eval").resolve()))
-from asset_scenes import asset_prompts, captions_say_his, sweep_seed, tiebreaker_prompts  # noqa: E402
+from asset_scenes import (  # noqa: E402
+    asset_prompts, captions_say_his, game_prompts, sweep_seed, tiebreaker_prompts)
 # NO DESCRIPTION is the default. Jeremy, 2026-10-17: "when you run an epoch
 # sweep after doing LoRA training, I only want you to use the prompt and the
 # trigger word. I don't want you to incorporate the description of the
@@ -170,14 +174,17 @@ elif "--natural-prompt" in _BARESEEN:
 # --no-hair: no hair words in any scene, so the sweep shows the hair the LoRA
 # draws by itself (Jeremy, 2026-11-07, sylvie's bob and nat's shoulder length)
 NO_HAIR = "--no-hair" in _BARESEEN
-if NO_HAIR and SCENE_SET == "tiebreaker":
-    raise SystemExit("--no-hair is built for the asset set only; the tiebreaker's hair is part of each slot")
+if NO_HAIR and SCENE_SET != "asset":
+    raise SystemExit(f"--no-hair is built for the asset set only; the {SCENE_SET} set's hair is part of each slot")
 # A MAN. Jeremy, 2026-11-07: his sweep rendered 90 women, because every scene
 # said "a woman" and the gender check below called 0/90 male "clean". --man
 # says so; without it the training captions decide - a set captioned "his"
 # is a man's set - so a man's training run never needs to remember the flag.
 MAN = "--man" in _BARESEEN or captions_say_his(CKPT.parent / "image_src")
+if SCENE_SET == "game" and MAN:
+    raise SystemExit("--scenes game is a woman's wardrobe; a man sweeps on asset or tiebreaker")
 SCENES = (tiebreaker_prompts(TRIGGER, man=MAN) if SCENE_SET == "tiebreaker"
+          else game_prompts(TRIGGER) if SCENE_SET == "game"
           else asset_prompts(TRIGGER, hair=not NO_HAIR, man=MAN))
 VERBATIM = True
 # --tag renders into its own folder and judge set. Without it a re-run with a
@@ -373,7 +380,7 @@ _DATASET = CKPT.parent.name if CKPT.parent.parent.name == "lora-datasets" else S
 if True:
     make_set(Path("outputs/judge"), SET_ID,
              f"{CHAR.title()} - Qwen LoRA epoch eval, epochs {GRID[0]}-{GRID[-1]} ({N_SCENES} scenes"
-             + (", tiebreaker set" if SCENE_SET == "tiebreaker" else "") + ")", items,
+             + ("" if SCENE_SET == "asset" else f", {SCENE_SET} set") + ")", items,
              question=("Is this him? K = yes, X = no." if MAN else "Is this her? K = yes, X = no."),
              reference=REF_PATH, seed=61, priority=1,
              meta={"character": CHAR, "dataset": _DATASET, "output_name": SUB,
