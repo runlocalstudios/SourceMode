@@ -63,6 +63,14 @@ LOOKS = [
 ]
 
 
+# --subject-first (2026-11-22): mimi_v3 drew a meerkat on 26 of 140 renders of
+# "mimi, portrait picture of a young woman ..." and on 0 of 180 of the pack's
+# order, "mimi, a young woman, a portrait picture ...". Jeremy: "try another
+# sweep of 27-30 with revised language that you think won't cause the meercats".
+# The same ten scenes with the subject straight after the trigger.
+SUBJECT_FIRST = False
+
+
 def sweep_prompt(trigger: str, look: dict, character: str | None = None, *, hair: bool = True) -> str:
     """One trimmed sweep prompt. The subject is her appearance sentence, which
     the eval replaces with "a woman" unless --with-description; a look that puts
@@ -82,7 +90,9 @@ def sweep_prompt(trigger: str, look: dict, character: str | None = None, *, hair
     subject = _render.appearance_clause(character) or "a young woman"
     if hair and _render.is_up_style(hair):
         subject = _render.drop_length(subject)
-    return (f"{trigger}, portrait picture of {subject} {NATURAL_FRAMING}, {BODY[look['turn']]}, "
+    lead = (f"{trigger}, {subject}, a portrait picture {NATURAL_FRAMING}" if SUBJECT_FIRST
+            else f"{trigger}, portrait picture of {subject} {NATURAL_FRAMING}")
+    return (f"{lead}, {BODY[look['turn']]}, "
             f"she looks directly at the camera and {look['face']}, " + (f"{hair}, " if hair else "") +
             f"{look['doing']} wearing {look['outfit']}")
 

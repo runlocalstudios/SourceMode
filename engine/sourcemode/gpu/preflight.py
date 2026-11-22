@@ -43,7 +43,7 @@ def _positional(cmd: list[str]) -> list[str]:
         if a.startswith("--") and a not in ("--apply", "--all", "--force", "--allow-incomplete-appearance",
                                             "--no-description", "--with-description", "--natural-prompt",
                                             "--contract-prompt", "--fp8_vl", "--loragen-only", "--no-base",
-                                            "--dry-run"):
+                                            "--dry-run", "--subject-first"):
             next(it, None)
         elif not a.startswith("--"):
             out.append(a)

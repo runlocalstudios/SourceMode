@@ -33,3 +33,12 @@ def test_each_prompt_is_the_packs_own_for_that_look(monkeypatch):
         assert STUDIO_BACKDROP in p
         assert " ".join(look["outfit"].split()[:4]) in p
         assert "a young woman" in p
+
+
+def test_subject_first_puts_the_woman_straight_after_the_trigger(monkeypatch):
+    import asset_scenes
+
+    monkeypatch.setattr(R, "appearance_clause", lambda c, **_: "a young woman")
+    assert asset_scenes.asset_prompts("mimi")[0].startswith("mimi, portrait picture of a young woman from")
+    monkeypatch.setattr(asset_scenes, "SUBJECT_FIRST", True)
+    assert asset_scenes.asset_prompts("mimi")[0].startswith("mimi, a young woman, a portrait picture from")

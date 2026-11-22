@@ -32,7 +32,8 @@ _FLAGS = {"--scenes", "--epochs", "--tag", "--seed"}
 # Bare flags take no value. They are skipped here for the same reason the valued
 # ones are split out: anything left in argv lands in a positional slot by index.
 _BARE = {"--allow-incomplete-appearance", "--no-description", "--with-description",
-         "--natural-prompt", "--contract-prompt", "--no-lora", "--no-hair", "--man"}
+         "--natural-prompt", "--contract-prompt", "--no-lora", "--no-hair", "--man",
+         "--subject-first"}
 POS, _FLAGVALS, _BARESEEN = [], {}, set()
 _it = iter(sys.argv)
 for _a in _it:
@@ -174,6 +175,9 @@ elif "--natural-prompt" in _BARESEEN:
 # --no-hair: no hair words in any scene, so the sweep shows the hair the LoRA
 # draws by itself (Jeremy, 2026-11-07, sylvie's bob and nat's shoulder length)
 NO_HAIR = "--no-hair" in _BARESEEN
+if "--subject-first" in _BARESEEN:
+    import asset_scenes as _asset_scenes  # noqa: E402
+    _asset_scenes.SUBJECT_FIRST = True
 if NO_HAIR and SCENE_SET != "asset":
     raise SystemExit(f"--no-hair is built for the asset set only; the {SCENE_SET} set's hair is part of each slot")
 # A MAN. Jeremy, 2026-11-07: his sweep rendered 90 women, because every scene
