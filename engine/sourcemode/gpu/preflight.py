@@ -21,8 +21,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-# train_character.ps1 refuses under this; 24 checkpoints need about 30 GB
+# train_character.ps1 refuses under this; 24 checkpoints need about 30 GB.
+# A continued run of a few epochs needs far less: 15 GB of headroom plus 1.25 GB
+# an epoch, which is the same 45 at 24 (mimi +2 was refused at 43.9 GB free,
+# 2026-11-22).
 TRAIN_DISK_GB = 45
+
+
+def train_disk_gb(epochs: int) -> float:
+    return min(TRAIN_DISK_GB, 15 + 1.25 * epochs)
 
 
 def _flag(cmd: list[str], name: str, default: str | None = None) -> str | None:
@@ -111,8 +118,9 @@ def _train_character(cmd: list[str], cwd: Path, outputs: Path, previews_root: Pa
             out.append(f"{ds} is not approved as it stands" + (" (stale: images or captions changed)"
                                                               if st.get("stale") else ""))
     free_gb = shutil.disk_usage(str(outputs if outputs.exists() else Path.cwd())).free / 2**30
-    if free_gb < TRAIN_DISK_GB:
-        out.append(f"{free_gb:.1f} GB free on the outputs drive; a training needs {TRAIN_DISK_GB} GB")
+    need = train_disk_gb(int(_flag(cmd, "-Epochs", "24")))
+    if free_gb < need:
+        out.append(f"{free_gb:.1f} GB free on the outputs drive; this training needs {need:g} GB")
     # No appearance check here. Jeremy, 2026-10-14: "who gives a fuck about her
     # description why is that needed to train the lora? it's not. I fucking
     # approved the captions already." Training reads captions, never the record;

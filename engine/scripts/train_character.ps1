@@ -102,7 +102,9 @@ Log "checking approval for $Ds"
 & "C:\dev\sourcemode\engine\.venv\Scripts\sourcemode.exe" train approved $Ds --quiet
 if ($LASTEXITCODE -ne 0) { Log "ABORT: $Ds is not approved as it stands (exit $LASTEXITCODE)"; exit 1 }
 $free = (Get-PSDrive C).Free / 1GB
-if ($free -lt 45) { Log "ABORT: $([math]::Round($free,1)) GB free, 24 checkpoints need about 30 GB"; exit 1 }
+# 15 GB of headroom plus 1.25 GB an epoch: 45 at 24, as before (preflight.train_disk_gb).
+$need = [math]::Min(45, 15 + 1.25 * $Epochs)
+if ($free -lt $need) { Log "ABORT: $([math]::Round($free,1)) GB free, $Epochs checkpoints need $need GB"; exit 1 }
 
 Log "unloading ComfyUI"
 try { Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8188/free -ContentType application/json -Body '{"unload_models":true,"free_memory":true}' | Out-Null } catch {}

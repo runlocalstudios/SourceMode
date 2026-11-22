@@ -151,3 +151,11 @@ def test_a_mans_shoot_needs_no_appearance_record_but_a_womans_still_does(tmp_pat
     assert any("appearance record is not ready" in p for p in hers)
     mixed = preflight(_job([PY, str(s), "nobody_at_all", "talk_office,office_desk"], tmp_path), tmp_path)
     assert any("appearance record is not ready" in p for p in mixed)
+
+
+def test_a_short_continuation_needs_less_disk_than_a_full_run():
+    """mimi +2 was refused at 43.9 GB free on the 24-epoch figure, 2026-11-22."""
+    from sourcemode.gpu.preflight import train_disk_gb
+
+    assert train_disk_gb(24) == 45 and train_disk_gb(60) == 45
+    assert train_disk_gb(2) == 17.5
