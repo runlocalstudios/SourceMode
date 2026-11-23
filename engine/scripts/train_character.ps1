@@ -40,8 +40,14 @@ param(
   [switch]$NoHair,
   # A fixed sweep seed, so a second sweep of other epochs (another checkpoint
   # folder) renders on the same noise and the two compare. 0 = a fresh draw.
-  [int]$EvalSeed = 0
+  [int]$EvalSeed = 0,
+  # The TRAINING seed: which photo comes next and what noise it gets. It was a
+  # fixed 42 for every character, carried over from e2egen and never chosen, so
+  # re-running a set repeated the same run. Jeremy, 2026-11-22: "Yes, randomize
+  # it." 0 = a fresh draw; the seed used is logged, and passing it repeats a run.
+  [int]$Seed = 0
 )
+if (-not $Seed) { $Seed = Get-Random -Minimum 1 -Maximum 2147483647 }
 if (-not $Trigger) { $Trigger = $Char }
 if (-not $OutName) { $OutName = $Ds }
 # -EvalStart 0 is a real value for a continued run (its starting checkpoint is
@@ -129,7 +135,7 @@ Log "caching latents + text encoder"
 & "$M\.venv\Scripts\python.exe" "$M\src\musubi_tuner\qwen_image_cache_latents.py" --dataset_config "$DsDir\dataset_qwen_t2i.toml" --vae "C:\ComfyUI\models\vae\qwen_image_vae.safetensors" --model_version original 2>&1 | Select-Object -Last 1 | Out-File $log -Append -Encoding utf8
 & "$M\.venv\Scripts\python.exe" "$M\src\musubi_tuner\qwen_image_cache_text_encoder_outputs.py" --dataset_config "$DsDir\dataset_qwen_t2i.toml" --text_encoder "C:\ComfyUI\models\text_encoders\qwen_2.5_vl_7b.safetensors" --batch_size 1 --model_version original 2>&1 | Select-Object -Last 1 | Out-File $log -Append -Encoding utf8
 
-Log "START train $OutName (rank 32, lr $Lr, $Epochs epochs, every epoch saved)"
+Log "START train $OutName (rank 32, lr $Lr, $Epochs epochs, every epoch saved, training seed $Seed)"
 $targs = @("launch", "--num_cpu_threads_per_process", "1", "--mixed_precision", "bf16",
   "$M\src\musubi_tuner\qwen_image_train_network.py",
   "--dit", "C:\ComfyUI\models\diffusion_models\qwen_image_2512_bf16.safetensors",
@@ -141,7 +147,7 @@ $targs = @("launch", "--num_cpu_threads_per_process", "1", "--mixed_precision", 
   "--gradient_checkpointing", "--max_data_loader_n_workers", "2", "--persistent_data_loader_workers",
   "--network_module", "networks.lora_qwen_image", "--network_dim", "32", "--network_alpha", "16",
   "--timestep_sampling", "shift", "--weighting_scheme", "none", "--discrete_flow_shift", "2.2",
-  "--max_train_epochs", "$Epochs", "--save_every_n_epochs", "1", "--seed", "42", "--blocks_to_swap", "4",
+  "--max_train_epochs", "$Epochs", "--save_every_n_epochs", "1", "--seed", "$Seed", "--blocks_to_swap", "4",
   "--output_dir", "$DsDir\$LoraSub", "--output_name", "$OutName")
 if ($Resume) {
   if (-not (Test-Path $Resume)) { Log "ABORT: -Resume $Resume does not exist"; exit 1 }
