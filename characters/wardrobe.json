@@ -58,7 +58,7 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "her hair half-up",
-   "her hair worn down with high, tight pigtails",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
    "her hair in a long centered twist braid with little bows at every other braid"
   ]
  },
@@ -98,18 +98,25 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "her hair pulled back off her neck",
-   "her hair worn down with high, tight pigtails",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
    "her hair worn down and with wavy loose curls"
   ]
  },
  "keiko": {
   "_note": "DRAFT 2026-10-04 from her shipped 12 (she has 12, not 28 - the pack is incomplete). 18, freshman, works two days at her mother's Lumen Salon.",
-  "style": "sunny Californian teenager - denim everything, soft ribbed knits, nothing expensive",
+  "style": "sunny Californian teenager - denim everything, soft ribbed knits, nothing expensive; shapes: fitted ribbed tops with mom jeans or a denim mini; square necklines; skater dresses with puff sleeves",
   "palette": "cream, light denim, cobalt blue",
-  "silhouettes": "fitted ribbed tops with mom jeans or a denim mini; square necklines; skater dresses with puff sleeves",
-  "work": "Lumen Salon assistant: a chambray shirt with a canvas apron over jeans",
-  "workout": "simple two-piece set, nothing technical",
-  "avoid": "anything that reads older than 18 or expensive - she is a student, not a professional"
+  "avoid": "anything that reads older than 18 or expensive - she is a student, not a professional",
+  "outfits": {
+   "workout": "simple two-piece set, nothing technical"
+  },
+  "jobs": [
+   {
+    "job": "Lumen Salon assistant",
+    "places": [],
+    "outfit": "a chambray shirt with a canvas apron over jeans"
+   }
+  ]
  },
  "kimmy": {
   "_note": "DRAFT 2026-10-04 from her shipped 28. TWO LIVES and they must stay visibly separate: Grace Community Church on Sunday mornings, The Chill Trap in the evenings.",
@@ -130,10 +137,9 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair half-up",
-   "her hair worn down with high, tight pigtails",
-   "her hair in a low ponytail with a big bow",
-   "her hair in a long voluminous braid"
+   "her hair worn down with wavy curls throughout",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
+   "her hair in pigtails"
   ]
  },
  "maya": {
@@ -155,10 +161,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair worn loose and down paired with two high ponytails",
-   "Her hair in a long voluminous braid",
-   "Her hair in a low ponytail",
-   "her hair worn down with loose curls throughout"
+   "her hair worn down with wavy curls throughout"
   ]
  },
  "priya": {
@@ -179,9 +182,7 @@
   "hair": [
    "her hair worn loose",
    "Her hair in short pigtails",
-   "her hair in a low short ponytail",
-   "her hair down in a chin-length bob but with high-tight-pigtails",
-   "her hair half-up held with a clip"
+   "her hair down in a chin-length bob but with high-tight-pigtails"
   ]
  },
  "priyanka": {
@@ -205,7 +206,7 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "her hair half-up",
-   "her hair worn down with high, tight pigtails"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "sandra": {
@@ -292,7 +293,7 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "her hair half-up",
-   "her hair worn down with high, tight pigtails with matching bows and barrettes",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible, with matching bows and barrettes",
    "her hair partially curled throughout in loose curls"
   ]
  },
@@ -307,16 +308,18 @@
   },
   "jobs": [
    {
-    "job": "Outcall escort",
-    "places": [],
-    "outfit": "lingerie and bondage gear"
+    "job": "Receptionist at Meridian Commons",
+    "places": [
+     "officePark"
+    ],
+    "outfit": "sexy but office-appropriate front-desk wear: fitted blouses with a low neckline, pencil skirts, wrap and sheath dresses, nothing that reads as lingerie"
    }
   ],
   "hair": [
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair worn down with high, tight pigtails"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "sienna": {
@@ -341,7 +344,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair worn down with high, tight pigtails",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
    "Her hair worn loose with wavy curls throughout",
    "Her hair in twin braids"
   ]
@@ -364,9 +367,8 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "Her hair in a long braid",
-   "her hair worn down with high, tight pigtails",
-   "Her hair in a long centered braid"
+   "Her hair worn in twin braids",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "gigi": {
@@ -389,7 +391,7 @@
    "her hair pulled back in a high ponytail",
    "her hair in twin braids",
    "her hair half-up",
-   "her hair worn down with high, tight pigtails"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "vera": {
@@ -409,7 +411,7 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "Her hair in pigtails",
-   "her hair worn down with high, tight pigtails"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "nisha": {
@@ -449,7 +451,7 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "her hair in pigtails",
-   "her hair worn down with high, tight pigtails"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "hannah": {
@@ -483,7 +485,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair worn down with high, tight pigtails"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "gwen": {
@@ -578,7 +580,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair worn down with high, tight pigtails"
+   "her hair worn down with wavy curls throughout"
   ]
  },
  "bri": {
@@ -595,7 +597,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair worn down with high, tight pigtails",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
    "Her hair worn up in space buns",
    "Her hair in a long voluminous braid"
   ]
@@ -614,7 +616,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair in pigtails",
-   "her hair worn down with high, tight pigtails"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "maddie": {
@@ -631,7 +633,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "Her hair worn in space buns",
-   "her hair worn down with high, tight pigtails"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "dianna": {
@@ -652,7 +654,7 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "her hair half-up",
-   "her hair worn down with high, tight pigtails",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
    "Her hair worn down in loose wavy curls",
    "Her hair in a single long braid over one shoulder"
   ]
@@ -672,8 +674,8 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair in a thick voluminous mohawk-styled braid, braided down the center of her head and extended down her back",
-   "her hair worn down with high, tight pigtails"
+   "her hair in a single long braid over one shoulder",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "casey": {
@@ -719,7 +721,7 @@
    "her hair up in a messy bun",
    "her hair half-up",
    "her hair in a low ponytail",
-   "her hair worn down with high, tight pigtails"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "crystal": {
@@ -768,7 +770,7 @@
    "her hair in a long voluminous braid with a bow scrunchy",
    "her hair up in a messy bun",
    "her hair pinned half-up with a large clip",
-   "her hair worn down with high, tight pigtails"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
   ]
  },
  "lizzie": {
@@ -804,9 +806,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair half-up",
-   "her hair worn down with high, tight pigtails",
-   "Her hair worn loose with wavy curls at the ends"
+   "her hair worn down with wavy curls throughout"
   ]
  },
  "marisol": {
@@ -830,9 +830,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair half-up",
-   "her hair worn down with high, tight pigtails",
-   "Her hair worn down with the ends slightly curled"
+   "her hair worn down with wavy curls throughout"
   ]
  },
  "eden": {
@@ -854,7 +852,7 @@
    "her hair up in a messy bun",
    "her hair half-up",
    "her hair worn loose with wavy and slightly curled ends wearing barrettes which match her outfit",
-   "her hair worn down with high, tight pigtails with bow scrunchies"
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible, with bow scrunchies"
   ]
  },
  "sunny": {
@@ -873,10 +871,9 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair half-up",
-   "her hair worn down with high, tight pigtails",
-   "her hair in a low ponytail",
-   "her hair straightened"
+   "her hair worn down with wavy curls throughout",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
+   "her hair in pigtails"
   ]
  },
  "elsa": {
@@ -917,7 +914,7 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "her hair half-up",
-   "her hair worn down with high, tight pigtails",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
    "her hair styled with wavy curls"
   ]
  },
@@ -936,10 +933,9 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair pulled up into space buns",
-   "her hair worn down with high, tight pigtails",
-   "her hair straightened",
-   "her hair in a low ponytail"
+   "her hair worn down with wavy curls throughout",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
+   "her hair in pigtails"
   ]
  },
  "vivienne": {
@@ -958,9 +954,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair worn down with high, tight pigtails",
-   "her hair pulled up neatly into two space buns",
-   "her hair worn down with wavy curls througout"
+   "her hair worn down with wavy curls throughout"
   ]
  },
  "eve": {
@@ -1001,9 +995,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair in a long braid",
-   "her hair worn down with high, tight pigtails",
-   "her hair worn down with wavy loose curls"
+   "her hair worn down with wavy curls throughout"
   ]
  },
  "jaina": {
@@ -1028,7 +1020,7 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "her hair in a single long braid over one shoulder",
-   "her hair worn down with high, tight pigtails",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
    "her hair worn wavy"
   ]
  },
@@ -1048,9 +1040,7 @@
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
-   "her hair half-up",
-   "her hair wavy with loose curls throughout",
-   "her hair in a low ponytail"
+   "her hair worn down with wavy curls throughout"
   ]
  },
  "gloria": {
@@ -1128,7 +1118,7 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "her hair half-up",
-   "her hair worn down with high, tight pigtails",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
    "Her hair worn down with loose waves"
   ]
  },
@@ -1152,6 +1142,13 @@
  },
  "val": {
   "outfits": {},
+  "jobs": [
+   {
+    "job": "Student",
+    "places": [],
+    "outfit": "casual clothes"
+   }
+  ],
   "hair": [
    "her hair worn loose",
    "her hair pulled back in a high ponytail",
@@ -1177,8 +1174,398 @@
    "her hair pulled back in a high ponytail",
    "her hair up in a messy bun",
    "her hair half-up",
-   "her hair worn down with high, tight pigtails",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
    "her hair in a single long braid over one shoulder"
+  ]
+ },
+ "diane": {
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Professor at Chill Coast University",
+    "places": [],
+    "outfit": "professional outfits"
+   }
+  ]
+ },
+ "isabelle": {
+  "_note": "DRAFT 2026-11-04 at Jeremy's request: 'her looks should be drafted as a sort of normal casual girl'. Palette read off her reference photos.",
+  "style": "normal casual girl-next-door, simple everyday clothes",
+  "palette": "cream, beige, soft brown, white, pastel florals",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Server at Bella Notte",
+    "places": [],
+    "outfit": "a fitted black button-up shirt with the sleeves rolled, black trousers and a short white waist apron"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "most of her hair worn down and loose over her shoulders, with just two small high pigtails tied at the top of her head"
+  ]
+ },
+ "yuna": {
+  "style": "Cute kawaii",
+  "palette": "Pastels, primary colors, black",
+  "avoid": "Earthy colors, neutral colors",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Personal Trainer at Ironline",
+    "places": [],
+    "outfit": "Trendy yoga and workout outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair pulled up into a tight bun",
+   "her hair half-up",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
+   "Her hair worn down with loose wavy curls",
+   "her hair in a low ponytail"
+  ]
+ },
+ "larissa": {
+  "style": "Casual",
+  "palette": "Dark colors, primary colors",
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Server at Cup & Go coffee shop",
+    "places": [],
+    "outfit": "Casual outfits with jeans and tshirts or thin hoodies"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "Her hair worn down with loose wavy curls"
+  ]
+ },
+ "sylvie": {
+  "_note": "DRAFT 2026-11-07 from your brief: surf instructor at Sunset Point; outfits that show off her neck, shoulders and collarbones; summery colours and patterns.",
+  "style": "summery and breezy, every outfit shows off her neck, shoulders and collarbones - off-the-shoulder, square necklines, halters, strapless tops and thin straps",
+  "palette": "bright summer colours and patterns - coral, turquoise, sunshine yellow, white, hibiscus florals, stripes and tropical prints",
+  "avoid": "high necklines, turtlenecks, hoodies, heavy layers, dark muted colours",
+  "outfits": {
+   "everyday": "off-the-shoulder tops, halter tanks and square-neck sundresses with denim cutoffs or flowy shorts, flat sandals",
+   "workout": "strappy sports bras with bike shorts or leggings in bright colours and prints",
+   "dressy": "strapless or off-the-shoulder midi dresses in bold summer prints, a delicate gold necklace at her collarbone",
+   "night_out": "halter and one-shoulder mini dresses in bright colours, bare shoulders",
+   "date": "off-the-shoulder and square-neck sundresses in floral and gingham prints",
+   "home": "thin-strap camisoles with soft shorts, an oversized tee slipping off one shoulder",
+   "swim": "bandeau and halter bikinis in bright prints and stripes",
+   "intimate": "strapless and thin-strap lingerie in soft bright colours"
+  },
+  "jobs": [
+   {
+    "job": "surf instructor at Sunset Point",
+    "places": [
+     "beach"
+    ],
+    "outfit": "a fitted short-sleeve rash guard with a wide scoop neckline in a bright colour, a bikini underneath and printed board shorts"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair worn loose with a small barrette clipped on each side"
+  ]
+ },
+ "nat": {
+  "_note": "DRAFT 2026-11-07 from your brief: surf instructor at Sunset Point; summery outfits with more trend and flair.",
+  "style": "trendy surf-girl summer with flair - crochet, cutouts, cropped co-ords, low-rise shapes, layered gold jewellery and statement sunglasses pushed up",
+  "palette": "bold summer colours - tangerine, hot pink, lime, cobalt, white - with crochet, tie-dye and retro prints",
+  "avoid": "dark muted colours, heavy layers, plain basics with no detail",
+  "outfits": {
+   "everyday": "cropped tees and crochet tops with low-rise cargo shorts or denim cutoffs, chunky sandals, layered gold necklaces",
+   "workout": "matching ribbed sports bra and bike short sets in bold colours",
+   "dressy": "cutout midi dresses and satin slip skirts with cropped tops, gold hoops",
+   "night_out": "cutout mini dresses and sequined crop tops with low-rise mini skirts",
+   "date": "printed co-ord sets and crochet dresses over a bikini",
+   "home": "cropped tees and lounge shorts in bright colours",
+   "swim": "retro high-cut bikinis, cheeky printed bikinis and cutout one-pieces",
+   "intimate": "bright satin and lace sets"
+  },
+  "jobs": [
+   {
+    "job": "surf instructor at Sunset Point",
+    "places": [
+     "beach"
+    ],
+    "outfit": "a cropped long-sleeve rash guard in a bold colour with high-cut bikini bottoms"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair straightened",
+   "her hair in a short ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up"
+  ]
+ },
+ "fiona": {
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "student at Chill Coast University",
+    "places": [],
+    "outfit": "very slutty sorority outfits, short skirts with cutoff sorority letter sweatshirts, her sorority is Delta Zeta (in greek letters a triangle followed by a capital Z)"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up, the rest hanging down to her hips",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
+   "her hair worn down with wavy curls throughout"
+  ]
+ },
+ "nina": {
+  "style": "very high-end luxury - every piece reads expensive: silk, satin, cashmere, silk-velvet, fine leather and suede, Italian wool, French lace; professional pieces cut revealing; real fine jewelry (diamonds, gold, pearls) on some looks, not every one",
+  "palette": "black, ivory, champagne, emerald green, sapphire, chocolate and gold",
+  "avoid": "red, burgundy, maroon, wine and cherry red clothes - her hair is dark red; denim; logos; anything that looks cheap",
+  "outfits": {
+   "everyday": "cashmere, silk and fine leather worn as daywear - belted cashmere wraps, silk halters, suede shirt dresses, leather pleated minis, silk jumpsuits",
+   "workout": "luxury activewear with gold hardware - cashmere-blend sets, sculpting unitards, velvet track sets, nothing branded",
+   "dressy": "couture evening pieces - open-back crepe gowns, silk taffeta cocktail dresses, tuxedo jumpsuits, silk-velvet wrap dresses, diamonds",
+   "night_out": "revealing and expensive - liquid-metal micro dresses, satin corset minis with a fur stole, sheer silk chiffon, crystal bralettes, diamond body chains",
+   "date": "silk bustiers with velvet trousers, satin shirt dresses open to the sternum, backless cashmere halter dresses, lace camisoles under a cashmere wrap, pearls",
+   "home": "silk charmeuse pyjama sets, cashmere lounge sets, a long silk robe worn open",
+   "swim": "sculpted one-pieces with cut-outs and gold hardware, metallic bikinis, a sheer silk sarong",
+   "intimate": "French lace and silk - lace bodysuits, silk teddies, satin bra and garter sets with a fine gold body chain"
+  },
+  "jobs": [
+   {
+    "job": "unknown",
+    "places": [],
+    "outfit": "professional, revealing and very high-end: Italian-wool tailoring worn over bare skin, silk crepe blouses with deep cut-outs, cashmere dresses to mid-thigh, satin tuxedo waistcoats, leather trousers, pearls and diamonds"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair half-up",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
+   "her hair in a long braid over one shoulder",
+   "her hair worn down with wavy curls throughout"
+  ]
+ },
+ "serena": {
+  "_note": "DRAFT 2026-11-11 for the femdom influencer role, written to Nina's brief shape. Edit and confirm on the Characters tab.",
+  "style": "femdom influencer - polished, expensive and in command: structured leather, latex, patent and satin in sharp tailored cuts, corsetry and harness lines, long gloves, pointed stilettos and thigh boots; the casual and dressy looks keep the undertone in a detail (a collar-style choker, a buckled belt, a harness strap under a blazer, gloves, a riding crop of a heel) rather than the whole outfit",
+  "palette": "black, deep plum, gunmetal, ivory, emerald, silver hardware",
+  "avoid": "red, burgundy, maroon, wine and cherry red clothes - her hair is dark red; denim; logos; anything pink or girlish; anything that reads cheap or costume",
+  "outfits": {
+   "everyday": "a black leather pencil skirt with a silk blouse and a slim buckled collar choker; a fitted black turtleneck with latex-look leggings and pointed boots; a tailored ivory blazer worn over a leather bralette with a chain harness strap showing; a satin wrap top with a wide corset belt and cigarette trousers; long leather gloves with a cashmere dress",
+   "workout": "sculpting black compression sets with silver hardware and a zip-front; a strappy harness-back sports bra with high-waisted leggings; a wet-look unitard; nothing branded",
+   "dressy": "a floor-length black satin gown with a corseted bodice and opera gloves; an emerald silk column dress with a leather belt cinched tight; a plum velvet tuxedo jumpsuit open to the sternum with a collar choker; a structured ivory crepe dress with a leather harness worn over it; stilettos and silver cuffs",
+   "night_out": "a black latex mini dress with a square neckline; a patent leather corset top with a leather micro skirt and thigh-high boots; a sheer black mesh dress over a strappy bodysuit; a leather bustier with satin trousers and long gloves; a chain-link halter top with a leather pencil skirt",
+   "date": "a black silk slip dress with a leather collar choker and long gloves; a corseted satin top with a high-slit skirt; a fitted leather shirt dress unbuttoned low with a buckled belt; a velvet wrap dress with a chain harness over it; stilettos",
+   "home": "a black silk robe worn open over a strappy bodysuit; a satin camisole and shorts with a collar choker; a cashmere lounge set with leather slippers",
+   "swim": "a black strappy cut-out one-piece with silver rings and buckles; a wet-look high-cut bikini with a harness top; a sheer black mesh cover-up",
+   "intimate": "a black leather harness bra and panty set; a strappy latex bodysuit with cut-outs; a satin corset with garters, sheer black stockings and long gloves; a chain body harness over a lace bra and thong; a collar choker with every set"
+  },
+  "jobs": [
+   {
+    "job": "Femdom influencer",
+    "places": [],
+    "outfit": "the content looks: a black latex catsuit unzipped to the sternum with a buckled collar and thigh boots; a patent leather corset with a leather micro skirt, long gloves and a riding crop; a strappy leather harness bodysuit with opera gloves and stiletto thigh boots; a black satin corset dress with a chain collar; a leather bra and harness with high-waisted latex leggings; always pointed stilettos or thigh boots, silver hardware, red lips"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair slicked back into a severe low bun",
+   "her hair pulled back in a high ponytail",
+   "her hair in a sleek high braid",
+   "her hair half-up, the rest hanging down her back",
+   "her hair worn loose with finger waves"
+  ]
+ },
+ "freya": {
+  "_note": "DRAFT 2026-11-12 from your words: very slutty, naughty, job stripper. Edit on the Characters tab.",
+  "style": "very slutty and naughty - everything tiny, tight and revealing: micro skirts, tied-off and cropped tops, plunging necklines, bare midriff, thigh-high socks and stockings; a playful bratty girl-next-door-gone-bad look rather than high fashion",
+  "palette": "baby pink, white, black, baby blue and red plaid",
+  "avoid": "nothing baggy, oversized or conservative that hides her figure; no business tailoring; no logos",
+  "outfits": {
+   "everyday": "tiny cropped tank tops and tube tops with low-rise micro shorts or a pleated micro skirt, knee-high socks, a cropped zip hoodie worn open over a bralette",
+   "workout": "a tiny sports bra with high-cut booty shorts or sheer-panel leggings, a cropped tank tied up under her breasts, thigh-high socks and sneakers",
+   "dressy": "a backless satin micro dress, a plunging bodycon mini with a cut-out waist, a sheer mesh dress over a bralette and thong, strappy heels",
+   "night_out": "a red plaid micro skirt with a white shirt tied off under her breasts, a latex mini dress, a sequined bra top with a micro skirt and platform heels, fishnets",
+   "date": "a tiny slip dress with no bra, a cropped cardigan buttoned once over bare skin with a pleated micro skirt, thigh-high boots",
+   "home": "an oversized tee with nothing underneath that barely covers her ass, a tiny ribbed tank and cotton thong, a short pink satin robe worn open",
+   "swim": "a string micro bikini, a sheer white one-piece with high-cut legs, a thong bikini bottom with a tiny triangle top",
+   "intimate": "a sheer pink babydoll with a thong, a white lace bralette and cheeky panties with thigh-high socks, a black strappy harness bra and garter set with stockings, a schoolgirl tie and plaid micro skirt with nothing under it"
+  },
+  "jobs": [
+   {
+    "job": "stripper at the Chill Trap",
+    "places": [
+     "chillTrap"
+    ],
+    "outfit": "sexy stripper outfits - a red plaid micro skirt with a white shirt tied off under her breasts, a sequined micro bikini with a garter and platform heels, a sheer mesh bodysuit with a thong and thigh-high boots, a naughty-schoolgirl set with knee-high socks; a bratty, playful stage look"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair worn down with wavy curls throughout"
+  ]
+ },
+ "jenna": {
+  "_note": "DRAFT 2026-11-15 read off her four reference photos (fitted ribbed square-neck tops, a fitted crew-neck tee, blue jeans) - you gave no style words or job. Hair list is your Lora-Gen hair policy for her. Edit on the Characters tab.",
+  "style": "fresh, clean girl-next-door - simple fitted basics that show her slim figure: ribbed square-neck tops, fitted tees, high-waisted jeans, short skirts and sundresses; pretty and put-together rather than flashy",
+  "palette": "sage green, lilac, cobalt blue, white, cream and soft pink",
+  "avoid": "nothing baggy or oversized that hides her figure; no logos; nothing harsh or gothic",
+  "outfits": {
+   "everyday": "fitted ribbed long-sleeve square-neck tops and fitted crew-neck tees with high-waisted blue jeans or denim shorts, a cropped cardigan, a short cotton sundress",
+   "workout": "a fitted sports bra with high-waisted leggings, a cropped fitted tank with bike shorts, a zip-front crop jacket over a matching set",
+   "dressy": "a satin slip midi dress, a fitted square-neck cocktail dress, a wrap dress with a thigh slit, an off-the-shoulder fitted dress",
+   "night_out": "a fitted mini dress with thin straps, a satin cami with a short skirt, a backless halter top with a mini skirt, a bodycon mini dress",
+   "date": "a short floral sundress, a fitted square-neck top with a pleated mini skirt, an off-the-shoulder knit top with a denim skirt, a wrap mini dress",
+   "home": "a ribbed tank with cotton lounge shorts, a cropped tee with soft joggers, an oversized tee worn as a dress, a short knit lounge set",
+   "swim": "a triangle bikini, a high-cut one-piece, a bandeau bikini with tie-side bottoms",
+   "intimate": "a lace bralette with matching panties, a satin cami and shorts set, a sheer lace bodysuit, a short satin robe over lace lingerie"
+  },
+  "jobs": [
+   {
+    "job": "high class escort",
+    "places": [],
+    "outfit": "slutty schoolgirl outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair half-up, held back with a clip",
+   "her hair in a short ponytail",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible"
+  ]
+ },
+ "delilah": {
+  "_note": "DRAFT 2026-11-15 from your words: slutty kawaii - very short skirts, chokers, barrettes or bows in her hair, lots of midriff, booty shorts that show off the bottom of her butt cheeks, very very teasing and sexy. The palette and the job (none) are not yours - edit on the Characters tab.",
+  "style": "slutty kawaii - cute and very, very teasing: very short skirts, lots of bare midriff, booty shorts cut high enough to show the bottom of her butt cheeks, a choker on most looks, bows, ruffles, lace trim and heart details; sweet on top and sexy underneath",
+  "palette": "pastel pink, baby blue, lavender, white, black and cherry red",
+  "avoid": "nothing baggy, long or conservative that hides her midriff or legs; no skirt or shorts past the top of the thigh; no business tailoring; no logos",
+  "outfits": {
+   "everyday": "a cropped baby tee or a tiny tied-front cardigan over bare midriff with a pleated micro skirt or booty shorts that show the bottom of her butt cheeks, a ribbon choker, thigh-high socks",
+   "workout": "a tiny pastel sports bra with high-cut booty shorts that show the bottom of her butt cheeks, a cropped tank knotted under her breasts, a tennis micro skirt, a velvet choker",
+   "dressy": "a satin babydoll micro dress with a bow at the chest, a lace-trimmed corset top with a tiered micro skirt, a backless ruffled mini dress, a pearl or ribbon choker",
+   "night_out": "a heart-cutout crop top with a vinyl micro skirt, a lace-up corset with booty shorts that show the bottom of her butt cheeks, a tiny tube top with a ruffled micro skirt, a black lace choker, fishnets",
+   "date": "an off-the-shoulder cropped top with a pleated micro skirt, a tiny wrap sundress that barely covers her ass, a lace-trimmed cami with booty shorts, a heart-pendant choker, thigh-high stockings",
+   "home": "a cropped tank with tiny cotton booty shorts that show the bottom of her butt cheeks, a short open hoodie over a lace bralette, ruffled sleep shorts with a tied-up tee, a ribbon choker",
+   "swim": "a ruffled string bikini, a tie-side micro bikini with bows at the hips, a cheeky high-cut one-piece with a heart cut-out",
+   "intimate": "a sheer pastel babydoll with a thong, a lace bralette and cheeky panties with bows and thigh-high stockings, a ruffled garter set with a lace choker, a satin bow-front teddy"
+  },
+  "hair": [
+   "her hair worn loose",
+   "her hair worn loose with a bow barrette clipped on one side",
+   "her hair pulled back in a high ponytail tied with a ribbon bow",
+   "her hair up in a messy bun",
+   "her hair worn down with wavy curls throughout"
+  ]
+ },
+ "roxy": {
+  "_note": "DRAFT 2026-11-15 from your words: pornstar, petite, slutty; all of her outfits very girly, showoffy, taking advantage of her tiny figure but nice fake tits. The palette, the outfit lines and the hair list are not yours - edit on the Characters tab.",
+  "style": "very girly, show-offy and slutty - everything tiny and tight to flaunt her tiny figure and her breast implants: push-up and corset tops, plunging and sweetheart necklines, cinched waists, micro skirts and micro dresses, bows, ruffles, lace and satin",
+  "palette": "hot pink, blush pink, white, lilac and red",
+  "avoid": "nothing baggy, long or conservative that hides her waist or her cleavage; nothing tomboyish, edgy or gothic; no skirt or shorts past the top of the thigh; no business tailoring; no logos",
+  "outfits": {
+   "everyday": "a cropped corset-style tank or a lace-trimmed camisole cut low over her breasts with a ruffled or pleated micro skirt or tiny shorts with bows at the hips, a tight baby tee, a gingham micro sundress",
+   "workout": "a push-up sports bra with a deep V front and scrunch-back booty shorts, a zip-front sports bra unzipped low with leggings cinched at her waist, a tennis micro skirt",
+   "dressy": "a satin corset micro dress with a sweetheart neckline, a strapless bandage mini dress, a halter micro dress plunging to her waist, a sequined mini dress with a cinched waist",
+   "night_out": "a sheer lace micro dress over a bra and thong, a bandeau micro dress with a cut-out under her breasts, a sequined bra top with a satin micro skirt, a lace-up corset with a ruffled micro skirt, clear platform heels",
+   "date": "a milkmaid crop top tied at the chest with a satin micro skirt, a floral wrap micro dress with a deep V neckline, an off-the-shoulder ruched micro dress, a lace bustier top with a denim micro skirt",
+   "home": "a tiny lace-trimmed camisole with a cotton thong, a cropped baby tee with ruffled sleep shorts, a short satin robe worn open over a lace bra and panties",
+   "swim": "a micro string bikini with tiny triangle cups, a tie-side thong bikini with bows at the hips, a ruffled bandeau bikini",
+   "intimate": "a lace push-up bra and thong with a garter belt and stockings, a sheer lace babydoll open down the front, a satin bow-front bra with tie-side panties, a ruffled teddy"
+  },
+  "jobs": [
+   {
+    "job": "Pornstar",
+    "places": [],
+    "outfit": "what she wears on set, girly and showing everything: lace push-up lingerie and garter sets under a short satin robe, a sheer lace babydoll, a micro string bikini with clear platform heels, a plaid micro skirt with a white top tied off under her breasts"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair worn down with wavy curls throughout"
+  ]
+ },
+ "leela": {
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Influencer",
+    "places": [],
+    "outfit": ""
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a tight ponytail",
+   "her hair up in a messy bun",
+   "her hair half-up",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
+   "her hair over one shoulder in a single voluminous braid",
+   "her hair straightened with barrettes on each side"
+  ]
+ },
+ "yasmin": {
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Influencer",
+    "places": [],
+    "outfit": "Revealing but extremely high end outfits"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair worn down with wavy curls throughout"
+  ]
+ },
+ "mimi": {
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Escort",
+    "places": [],
+    "outfit": "Luxury outfits that are very revealing, bright colors and patterns"
+   }
+  ],
+  "hair": [
+   "her hair worn loose",
+   "her hair pulled back in a high ponytail",
+   "her hair up in a messy bun",
+   "her hair with two small upper sections pulled into high, tightly secured pigtails, most of her hair left loose and down, both high ties clearly visible",
+   "her hair in a single long braid over one shoulder",
+   "her hair worn down with wavy curls throughout"
+  ]
+ },
+ "mira": {
+  "outfits": {},
+  "jobs": [
+   {
+    "job": "Fitness instructor",
+    "places": [],
+    "outfit": ""
+   },
+   {
+    "job": "Massage therapist",
+    "places": [],
+    "outfit": ""
+   }
   ]
  }
 }

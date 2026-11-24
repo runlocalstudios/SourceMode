@@ -211,6 +211,18 @@
   "basis": "dense_elsa_v2_asset 7/10 at epoch 22",
   "locked_at": "2026-10-24T01:09:14+00:00"
  },
+ "eva": {
+  "name": "eva.safetensors",
+  "file": "eva_v2-000019.safetensors",
+  "epoch": 19,
+  "dataset": "eva_v2",
+  "output_name": "eva_v2",
+  "sha256": "872a12879b3a4bd8d4973dc9da63bc5c144127945e4dd73c4024349acb6c0bad",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\eva.safetensors",
+  "basis": "dense_eva_v2_tiebreaker 16/20 at epoch 19",
+  "locked_at": "2026-11-22T20:52:20+00:00"
+ },
  "eve": {
   "name": "eve.safetensors",
   "file": "eve_v2-000022.safetensors",
@@ -222,6 +234,30 @@
   "comfy": "sourcemode\\eve.safetensors",
   "basis": "dense_eve_v2_asset 9/10 at epoch 22",
   "locked_at": "2026-10-16T13:28:22+00:00"
+ },
+ "fiona": {
+  "name": "fiona.safetensors",
+  "file": "fiona_v2-000018.safetensors",
+  "epoch": 18,
+  "dataset": "fiona_v2",
+  "output_name": "fiona_v2",
+  "sha256": "0014628bdcbd5d3e01d58f049a175634c5827438decfcd72d669edbc897010fa",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\fiona.safetensors",
+  "basis": "dense_fiona_v2_asset_age18 7/10 at epoch 18",
+  "locked_at": "2026-11-09T01:20:38+00:00"
+ },
+ "freya": {
+  "name": "freya.safetensors",
+  "file": "freya_v2-000018.safetensors",
+  "epoch": 18,
+  "dataset": "freya_v2",
+  "output_name": "freya_v2",
+  "sha256": "f3eb1bdd6782e6cc8c977ce2ab1d364f13d68baca95b5a6f29e83fae5ed0c412",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\freya.safetensors",
+  "basis": "dense_freya_v2_tiebreaker 16/20 at epoch 18",
+  "locked_at": "2026-11-13T01:37:43+00:00"
  },
  "gabi": {
   "file": "gabi_v2-000022.safetensors",
@@ -307,6 +343,18 @@
   "basis": "dense_iris_v2_asset 9/10 at epoch 19",
   "locked_at": "2026-10-24T14:00:46+00:00"
  },
+ "isabelle": {
+  "name": "isabelle.safetensors",
+  "file": "isabelle_v2-000019.safetensors",
+  "epoch": 19,
+  "dataset": "isabelle_v2",
+  "output_name": "isabelle_v2",
+  "sha256": "c0ad50470097fd4622b0e28f60a4408b2d1196304abc3ac9a2cf0f2a8af2e4c1",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\isabelle.safetensors",
+  "basis": "dense_isabelle_v2_asset 7/10 at epoch 19",
+  "locked_at": "2026-11-04T13:18:59+00:00"
+ },
  "jaina": {
   "file": "jaina_v2.safetensors",
   "epoch": 24,
@@ -318,6 +366,30 @@
   "basis": "epoch-choices: dense_jaina_v2_asset_nofreckles 17/20 at ep24",
   "locked_at": "2026-10-09T19:58:54+00:00",
   "name": "jaina.safetensors"
+ },
+ "jenna": {
+  "name": "jenna.safetensors",
+  "file": "jenna_v2.safetensors",
+  "epoch": 24,
+  "dataset": "jenna_v2",
+  "output_name": "jenna_v2",
+  "sha256": "2e7d670c1bf559fc8c91924001638b388acc56ae66409733942f447c494e802d",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\jenna.safetensors",
+  "basis": "dense_jenna_v2_asset 8/10 at epoch 24",
+  "locked_at": "2026-11-16T04:13:19+00:00"
+ },
+ "jeremy": {
+  "name": "jeremy.safetensors",
+  "file": "jeremy_v2-000023.safetensors",
+  "epoch": 23,
+  "dataset": "jeremy_v2",
+  "output_name": "jeremy_v2",
+  "sha256": "82b7db558b9867b1c312a7d010508771b87f634bb5a591f7d54b3c97900ef35b",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\jeremy.safetensors",
+  "basis": "epoch 23 (jeremy_v2-000023): man tiebreaker 23 vs 24, 11 kept each, split only on scenes 6/8; the closer face photo (scene 6) won - Jeremy, 2026-11-08: lock 23",
+  "locked_at": "2026-11-08T22:09:23+00:00"
  },
  "jojo": {
   "file": "jojo_v2-000016.safetensors",
@@ -343,6 +415,18 @@
   "locked_at": "2026-10-10T00:11:09+00:00",
   "name": "jordan.safetensors"
  },
+ "juno": {
+  "name": "juno.safetensors",
+  "file": "juno_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "juno_v2",
+  "output_name": "juno_v2",
+  "sha256": "89ab56e62632c3b6bb3ad075b723fb68d753c8c5c466cb916fc5889f9bafad36",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\juno.safetensors",
+  "basis": "dense_juno_v2_asset 8/10 at epoch 22",
+  "locked_at": "2026-11-07T10:28:02+00:00"
+ },
  "kasia": {
   "name": "kasia.safetensors",
   "file": "kasia_v2-000019.safetensors",
@@ -356,16 +440,16 @@
   "locked_at": "2026-10-20T14:14:29+00:00"
  },
  "keiko": {
-  "file": "keiko_v2-000022.safetensors",
-  "epoch": 22,
-  "dataset": "keiko_v2",
-  "output_name": "keiko_v2",
-  "sha256": "c0c1d3681fa1f1cf2f1954714908b58529bb824ac6a984fbae26579370a62ea5",
+  "name": "keiko.safetensors",
+  "file": "keiko_v3-000017.safetensors",
+  "epoch": 17,
+  "dataset": "keiko_v3",
+  "output_name": "keiko_v3",
+  "sha256": "d83a178e99a009774d085c4082bc391a4abdc7086add89c8fcd58ca0ac3fb93d",
   "bytes": 1179978912,
   "comfy": "sourcemode\\keiko.safetensors",
-  "basis": "pruned to one; dense_keiko_v2 7/20 at ep22",
-  "locked_at": "2026-10-09T20:00:12+00:00",
-  "name": "keiko.safetensors"
+  "basis": "dense_keiko_v3_asset 9/10 at epoch 17",
+  "locked_at": "2026-11-06T00:33:39+00:00"
  },
  "kiki": {
   "name": "kiki.safetensors",
@@ -390,6 +474,18 @@
   "basis": "dense_kimmy_v2_asset_natural 15/20 at epoch 19",
   "locked_at": "2026-10-10T15:29:25+00:00",
   "name": "kimmy.safetensors"
+ },
+ "larissa": {
+  "name": "larissa.safetensors",
+  "file": "larissa_v2-000018.safetensors",
+  "epoch": 18,
+  "dataset": "larissa_v2",
+  "output_name": "larissa_v2",
+  "sha256": "1f04a1a276ef05a3f63ad27850031c56077a21f776f2ba2ca9ced6bb72eb7541",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\larissa.safetensors",
+  "basis": "dense_larissa_v2_asset 9/10 at epoch 18",
+  "locked_at": "2026-11-06T11:25:10+00:00"
  },
  "leela": {
   "name": "leela.safetensors",
@@ -487,6 +583,18 @@
   "locked_at": "2026-10-09T23:56:50+00:00",
   "name": "mei.safetensors"
  },
+ "mimi": {
+  "name": "mimi.safetensors",
+  "file": "mimi_v4-000030.safetensors",
+  "epoch": 30,
+  "dataset": "mimi_v4",
+  "output_name": "mimi_v4",
+  "sha256": "76e78f965fe60daffac916832b9c8686363deba8ed1dbee6d39c567253e90ea1",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\mimi.safetensors",
+  "basis": "dense_mimi_v4_asset about 70% at epoch 30; Jeremy 2026-11-23: 'Mimi epoch 30 is good'",
+  "locked_at": "2026-11-23T15:08:32+00:00"
+ },
  "mira": {
   "file": "mira_v2-000022.safetensors",
   "epoch": 22,
@@ -501,15 +609,39 @@
  },
  "nadia": {
   "name": "nadia.safetensors",
-  "file": "nadia_v2-000019.safetensors",
-  "epoch": 19,
-  "dataset": "nadia_v2",
-  "output_name": "nadia_v2",
-  "sha256": "4bd9a70dd608340c26f18fe2f4bd1772e5a3b66f6022f9bdbeb1be361c050d6a",
+  "file": "nadia_v3-000022.safetensors",
+  "epoch": 22,
+  "dataset": "nadia_v3",
+  "output_name": "nadia_v3",
+  "sha256": "ce71fd74e55c23b72350f1eb9e2b5e3ae473842ba045a7bbd8db033f795b04d3",
   "bytes": 1179978912,
   "comfy": "sourcemode\\nadia.safetensors",
-  "basis": "dense_nadia_v2_tiebreaker 13/20 at epoch 19",
-  "locked_at": "2026-10-28T00:27:06+00:00"
+  "basis": "dense_nadia_v3_tiebreaker 16/20 at epoch 22",
+  "locked_at": "2026-11-14T01:53:02+00:00"
+ },
+ "nat": {
+  "name": "nat.safetensors",
+  "file": "nat_v2b-000017.safetensors",
+  "epoch": 21,
+  "dataset": "nat_v2",
+  "output_name": "nat_v2b",
+  "sha256": "68d86f8907d088c9df278fd89929032bb80f3a62cf86f56ccd85532ec3d84df5",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\nat.safetensors",
+  "basis": "epoch 21 (nat_v2b-000017): tiebreaker 20 vs 21, 17 kept each; epoch 20 dropped her glasses in 2 of 20 - Jeremy, 2026-11-09: lock 21",
+  "locked_at": "2026-11-09T11:37:50+00:00"
+ },
+ "nina": {
+  "name": "nina.safetensors",
+  "file": "nina_v2.safetensors",
+  "epoch": 24,
+  "dataset": "nina_v2",
+  "output_name": "nina_v2",
+  "sha256": "e5c314b1b4d8272d010fdf5099aec0c3fa6a21b92f2f0f99207d3dbdff09dc82",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\nina.safetensors",
+  "basis": "dense_nina_v2_asset 9/10 at epoch 24",
+  "locked_at": "2026-11-10T12:50:24+00:00"
  },
  "nisha": {
   "file": "nisha_v2-000021.safetensors",
@@ -595,6 +727,18 @@
   "basis": "dense_sarah_v2_asset 6/10 at epoch 20",
   "locked_at": "2026-10-21T02:41:32+00:00"
  },
+ "serena": {
+  "name": "serena.safetensors",
+  "file": "serena_v2-000022.safetensors",
+  "epoch": 22,
+  "dataset": "serena_v2",
+  "output_name": "serena_v2",
+  "sha256": "5bc5b11157b6ba770b41b6cbe001e40992ac46bdbdf17cd4917410b91caac85b",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\serena.safetensors",
+  "basis": "dense_serena_v2_asset 7/10 at epoch 22",
+  "locked_at": "2026-11-11T19:37:20+00:00"
+ },
  "sienna": {
   "file": "sienna_v2-000023.safetensors",
   "epoch": 23,
@@ -618,6 +762,18 @@
   "basis": "dense_sunny_v2_tiebreaker 16/20 at epoch 19",
   "locked_at": "2026-10-13T01:26:35+00:00",
   "name": "sunny.safetensors"
+ },
+ "sylvie": {
+  "name": "sylvie.safetensors",
+  "file": "sylvie_v2b-000005.safetensors",
+  "epoch": 29,
+  "dataset": "sylvie_v2",
+  "output_name": "sylvie_v2b",
+  "sha256": "fa3a0d40a503a6ed898863cc7a4c56b2451180d31dd7f968566cbbce19f5aba1",
+  "bytes": 1179978912,
+  "comfy": "sourcemode\\sylvie.safetensors",
+  "basis": "epoch 29 (sylvie_v2b-000005): won the 24-30 no-hair sweep (only 28 and 29 strong); pack28 j1280 came out great - Jeremy, 2026-11-08: fully lock that epoch",
+  "locked_at": "2026-11-08T13:51:11+00:00"
  },
  "taylor": {
   "name": "taylor.safetensors",

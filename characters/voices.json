@@ -15,5 +15,12 @@
   "model": "",
   "seed": null,
   "chosen_at": "2026-10-28T00:23:42+00:00"
+ },
+ "fiona": {
+  "reference": "C:\\dev\\SourceMode\\library\\fiona\\2026-11-11_voice_fiona\\take_02.wav",
+  "description": "A sorority girl with a cute voice who speaks at an unhurried pace with a playful lilt. Her pitch is moderately high. The recording is of very high quality, with the speaker's voice sounding clear and very close up.",
+  "model": "parler-tts/parler-tts-mini-v1",
+  "seed": 1300,
+  "chosen_at": "2026-11-12T02:29:58+00:00"
  }
 }

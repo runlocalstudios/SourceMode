@@ -41,9 +41,9 @@
    "id": "tavern",
    "label": "Pints Half Full",
    "kind": "venue",
-   "tags": "instrumental, laid-back bar blues rock, twangy electric guitar, Hammond organ, shuffle drums, warm bass, neighbourhood pub, sits under conversation, steady groove, no vocals, no solos, no build-ups, background music",
-   "bpm": 96,
-   "keyscale": "E major",
+   "tags": "instrumental, Dropkick Murphys style Irish rock music, drinking anthem, guitar, drums, uplifting, bagpipes, no vocals, no solos, no build-ups, background music",
+   "bpm": 84,
+   "keyscale": "B major",
    "seconds": 180
   },
   {
@@ -68,7 +68,7 @@
    "id": "foundersClub",
    "label": "The Founders Club",
    "kind": "venue",
-   "tags": "instrumental, smoky jazz lounge trio, upright bass, brushed drums, soft grand piano, old leather and a lit fire, discreet and wealthy, steady swing, no vocals, no solos, no build-ups, background music",
+   "tags": "instrumental jazz lounge trio, bossa nova, upright bass, soft grand piano, soft drums with non-repetitive play, discreet and wealthy, simple melody, no vocals, no solos, no build-ups, background music",
    "bpm": 92,
    "keyscale": "Bb major",
    "seconds": 180
@@ -78,7 +78,7 @@
    "label": "Needle & Dust Records",
    "kind": "venue",
    "tags": "instrumental, 90s grunge, simple mid-tempo song, fuzzy distorted electric guitars, quiet clean verses and heavier choruses, loose heavy drums, droning bass, raw garage-band production, moody and laid-back, steady groove, no vocals, background music",
-   "bpm": 96,
+   "bpm": 82,
    "keyscale": "E minor",
    "seconds": 180
   },
@@ -88,14 +88,14 @@
    "kind": "venue",
    "tags": "instrumental, scrappy indie punk band playing live in a small club, driving melodic bass guitar up front, crunchy overdriven guitars, fast loose drums, catchy riff with a bite, raw energetic small-venue sound, no vocals, background music",
    "bpm": 150,
-   "keyscale": "A minor",
+   "keyscale": "G major",
    "seconds": 180
   },
   {
    "id": "beach",
    "label": "Sunset Point (the shore and The Sandbar)",
    "kind": "venue",
-   "tags": "instrumental, chill beach music, warm acoustic guitar, gentle surf-rock electric guitar with soft reverb, light reggae offbeat, soft hand percussion and shaker, round mellow bass, sunny laid-back seaside afternoon, steady easy groove, no vocals, no build-ups, no drops, background music",
+   "tags": "instrumental, chill beach music, warm marimba, light reggae offbeat, soft hand percussion and shaker, round mellow bass, sunny laid-back seaside afternoon, steady easy groove, no vocals, no build-ups, no drops, background music",
    "bpm": 90,
    "keyscale": "D major",
    "seconds": 180
@@ -104,16 +104,16 @@
    "id": "church",
    "label": "Grace Community Church",
    "kind": "venue",
-   "tags": "instrumental, gentle church music, soft pipe organ and warm piano playing a simple hymn-like melody, quiet string pad, reverent and peaceful, big stone-church reverb, slow steady pace, no vocals, no choir, no drums, no build-ups, background music",
-   "bpm": 66,
-   "keyscale": "C major",
+   "tags": "instrumental, sacred baroque organ music, cathedral pipe organ chorale prelude in the style of J.S. Bach, majestic full organ with bright principal stops and deep pedal bass, stately hymn melody in rich four-part harmony, long natural cathedral reverb, solemn and glorious, slow stately tempo, no vocals, no drums, no build-ups",
+   "bpm": 72,
+   "keyscale": "D major",
    "seconds": 180
   },
   {
    "id": "aireSpa",
    "label": "Aire Day Spa",
    "kind": "venue",
-   "tags": "instrumental, calm spa music, soft ambient pads, gentle harp and koto-like plucks, slow warm piano, flowing water texture, airy and serene, unhurried relaxing pace, no drums, no vocals, no build-ups, background music",
+   "tags": "instrumental, calm spa music, gentle harp and slow warm piano, flowing water texture, airy and serene, unhurried relaxing pace, no drums, no vocals, no build-ups, background music",
    "bpm": 60,
    "keyscale": "D major",
    "seconds": 180
