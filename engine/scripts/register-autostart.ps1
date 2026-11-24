@@ -32,4 +32,25 @@ foreach ($t in $tasks) {
   Register-ScheduledTask -TaskName $t.Name -Action $action -Trigger $trigger -Settings $settings -Force | Out-Null
   Write-Host "registered  $($t.Name)  ->  $script"
 }
+
+# The card's power limit. nvidia-smi's limit goes back to the 575 W default on
+# every reboot, and setting it needs admin (Jeremy, 2026-11-24: "the max power
+# draw should be 475" - a shoot was drawing 575). So this one task runs as
+# SYSTEM at startup, before ComfyUI's logon task, and registering it needs an
+# elevated shell; a normal shell registers the three above and says so here.
+$powerLimitW = 475
+$admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+  ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if ($admin) {
+  $smi = Join-Path $env:SystemRoot "System32\nvidia-smi.exe"
+  Register-ScheduledTask -TaskName "SourceMode GPU Power Limit" -Force `
+    -Action (New-ScheduledTaskAction -Execute $smi -Argument "-pl $powerLimitW") `
+    -Trigger (New-ScheduledTaskTrigger -AtStartup) `
+    -Principal (New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest) `
+    -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries) | Out-Null
+  Start-ScheduledTask "SourceMode GPU Power Limit"   # and set it now
+  Write-Host "registered  SourceMode GPU Power Limit  ->  nvidia-smi -pl $powerLimitW at startup"
+} else {
+  Write-Host "NOT registered: SourceMode GPU Power Limit ($powerLimitW W) needs an elevated PowerShell - run this script again as admin."
+}
 Write-Host "`nAlso stop the box from sleeping (render box):  powercfg /change standby-timeout-ac 0"
