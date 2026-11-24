@@ -309,6 +309,51 @@ def test_one_broken_manifest_does_not_500_the_badges(tmp_path: Path):
     assert d["counts"]["datasets"] == 0      # and the others still answer
 
 
+def test_strays_are_dev_servers_whose_shell_is_gone_or_a_day_old():
+    """2026-11-24: three `vercel dev` trees for chillafterdark ran from 28
+    September with nothing showing them. One row per tree, at its top."""
+    from sourcemode.monitor.strays import find_strays
+
+    now, hour = 1_000_000.0, 3600.0
+
+    def p(pid, ppid, name, cmdline, age_h, cpu_s=0.0):
+        return {"pid": pid, "ppid": ppid, "name": name, "cmdline": cmdline,
+                "started": now - age_h * hour, "cpu_s": cpu_s}
+
+    procs = [
+        p(1, 0, "explorer.exe", "explorer.exe", 2000),
+        # the real tree: bash's parent 999 is gone
+        p(10, 999, "bash.exe", '"bash.exe" "/c/Program Files/nodejs/npx" vercel dev --listen 5210 --yes', 1300),
+        p(11, 10, "node.exe", r'"node" "C:\npm\node_modules\vercel\dist\vc.js" dev --listen 5210 --yes', 1300, 7200.0),
+        p(12, 11, "cmd.exe", 'cmd.exe /C "vite --port 54929"', 1300),
+        p(13, 12, "node.exe", r'"node" "C:\dev\game\node_modules\vite\bin\vite.js" --port 54929', 1300, 3600.0),
+        # in a window he has open, started an hour ago: his, not a stray
+        p(20, 1, "WindowsTerminal.exe", "WindowsTerminal.exe", 100),
+        p(21, 20, "node.exe", '"node" "vite.js" --port 5173', 1),
+        # in a window too, but two days old
+        p(22, 20, "node.exe", '"node" "next" dev', 50),
+        # pid 30's "parent" 31 started after it: a reused pid, so the shell is gone
+        p(30, 31, "node.exe", "npm run dev", 3),
+        p(31, 1, "notepad.exe", "notepad.exe", 1),
+        # not dev servers
+        p(40, 999, "node.exe", r'"node" "C:\x\node_modules\vitest\vitest.mjs"', 100),
+    ]
+    rows = find_strays(procs, now, cwd_of=lambda pid: r"C:\dev\game")
+    assert [(r["pid"], r["orphaned"]) for r in rows] == [(10, True), (22, False), (30, True)]
+    top = rows[0]
+    assert top["cmd"] == "vercel dev --listen 5210 --yes"
+    assert top["age"] == "54 days" and top["cpu_h"] == 3.0 and top["cwd"] == r"C:\dev\game"
+
+
+def test_the_kill_route_refuses_a_pid_that_is_not_a_stray(monkeypatch):
+    pytest.importorskip("psutil")
+    from sourcemode.monitor import strays
+
+    monkeypatch.setattr(strays, "snapshot", lambda: [])
+    with pytest.raises(KeyError):
+        strays.kill(4)
+
+
 def test_log_mtime_prefers_the_stderr_sidecar(tmp_path: Path, monkeypatch):
     """tqdm writes progress to STDERR, so on a live run the .log stops moving
     while the .log.err keeps going. Line 183 used to overwrite the correct

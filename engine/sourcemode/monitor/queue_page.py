@@ -115,7 +115,7 @@ BODY = """
 
 OWN_JS = r"""
 const $=id=>document.getElementById(id);
-let state=null,stat=null,cands=[],sweeps=[],plan=null,posting=false;
+let state=null,stat=null,cands=[],sweeps=[],plan=null,strays=[],posting=false;
 
 /* A dead poll must never look like fresh data. */
 SM.staleHandler((age,msg)=>{
@@ -129,13 +129,14 @@ SM.staleHandler((age,msg)=>{
 });
 
 async function load(){
-  const [s,t,c,w,p]=await Promise.all([
+  const [s,t,c,w,p,x]=await Promise.all([
     SM.getJSON('/queue/state'),
     SM.getJSON('/status').catch(()=>null),
     SM.getJSON('/queue/candidates').catch(()=>[]),
     SM.getJSON('/queue/sweepable').catch(()=>[]),
-    SM.getJSON('/queue/plan').catch(()=>null)]);
-  state=s; stat=t; cands=c; sweeps=w; plan=p;
+    SM.getJSON('/queue/plan').catch(()=>null),
+    SM.getJSON('/queue/strays').catch(()=>[])]);
+  state=s; stat=t; cands=c; sweeps=w; plan=p; strays=x;
   draw();
 }
 
@@ -182,6 +183,14 @@ function drawBanners(){
       +'<button class="btn btn-primary" data-act="requeue" data-id="'+SM.esc(j.id)
       +'">Requeue (held)</button>'
       +'<button class="btn" data-act="dismiss" data-id="'+SM.esc(j.id)+'">Dismiss</button></div>');
+  /* dev servers nobody is using: three ran for two months before 2026-11-24 */
+  for(const r of strays)
+    out.push('<div class="banner you"><span class=msg><b>A dev server has been running for '
+      +SM.esc(r.age)+'.</b><span class=why>'+SM.esc(r.cmd)+(r.cwd?(' in '+SM.esc(r.cwd)):'')
+      +' &middot; '+(r.orphaned?'the shell that started it is gone':'still attached to a window')
+      +' &middot; '+r.cpu_h+' CPU-hours so far</span></span>'
+      +'<button class="btn" data-act="kill-stray" data-pid="'+r.pid+'" data-cmd="'
+      +SM.esc(r.cmd)+'">Kill it</button></div>');
   SM.set($('banners'),null,out.join(''));
 }
 
@@ -495,6 +504,8 @@ const ACTS={
   'pause':()=>SM.postJSON('/queue/pause'),
   'resume':()=>SM.postJSON('/queue/resume'),
   'reload':()=>load(),
+  'kill-stray':b=>confirm('Kill '+b.dataset.cmd+' and everything it started?')
+     ? SM.postJSON('/queue/stray/'+b.dataset.pid+'/kill') : null,
   'cancel':b=>confirm('Remove '+b.dataset.who+' from the queue?'+SM.NL+SM.NL
      +'Hold keeps its place instead. A removed job can still be restored below.')
      ? SM.postJSON('/queue/job/'+b.dataset.id+'/cancel') : null,
@@ -2398,6 +2409,21 @@ def queue_router(cfg: dict, status=None):
         # card read "Nothing is running" directly above a queue row saying
         # "Running now".
         return queue_state(cfg, status() if status else None)
+
+    @router.get("/queue/strays")
+    def strays_route() -> list[dict]:
+        from .strays import strays  # noqa: PLC0415
+
+        return strays()
+
+    @router.post("/queue/stray/{pid}/kill")
+    def stray_kill(pid: int) -> list[dict]:
+        from .strays import kill  # noqa: PLC0415
+
+        try:
+            return kill(pid)
+        except KeyError as exc:
+            raise HTTPException(409, f"{pid} is not a stray dev server") from exc
 
     @router.get("/queue/candidates")
     def candidates_route() -> list[dict]:
