@@ -70,6 +70,9 @@ ARMS = {"mcnl": NSFW + "qedit_mcnl_nsfw.safetensors", "sexgod": NSFW + "qedit_se
         # fellatio, handjob, throating, semen, anal among its words; SexGod Couples is two-person nudity
         "allin": NSFW + "qedit2511_all_included_v2.safetensors",
         "couples": NSFW + "qedit2511_sexgod_couples_v1.safetensors"}
+# the act LoRA weaker, for steps where 0.8 pulled her face off (mimi's tip, 2026-11-23: 0.48 and not her by eye)
+STRENGTHS = {"allin06": 0.6, "allin04": 0.4}
+ARMS.update({"allin06": ARMS["allin"], "allin04": ARMS["allin"]})
 if ONLY_ARMS:
     ARMS = {k: v for k, v in ARMS.items() if k in ONLY_ARMS}
 STRENGTH = 0.8
@@ -77,8 +80,8 @@ STRENGTH = 0.8
 COCK = "his thick erect penis"
 # key -> (parent key or None, instruction). Everything else in the picture stays as it is.
 CHAIN: dict[str, tuple[str | None, str]] = {
-    "topless": (None, "Remove her blazer and her bra so she is topless with her bare breasts showing, and "
-                      "change her skirt to red. Keep her face, her hair, her pose, the room and the man's "
+    "topless": (None, "Remove her blazer or vest and her bra so she is topless with her bare breasts showing, "
+                      "her skirt red. Keep her face, her hair, her pose, the room and the man's "
                       "legs exactly as they are."),
     "free": ("topless", f"Remove the man's navy shorts. {COCK} stands up from between his thighs at the bottom "
                         f"of the frame, and she wraps one hand around it, looking up into the camera. Keep her "
@@ -134,6 +137,35 @@ CHAIN: dict[str, tuple[str | None, str]] = {
     "deep_tip": (None, "She pushes her head down, taking the whole shaft of his erect penis into her mouth, her "
                        "lips at the base of the shaft and her nose in his pubic hair, her eyes heavy-lidded "
                        "looking up at the camera. Keep her face, her hair, the room and the framing as they are."),
+    # the office story's kept steps (office_story.py p04, p09, p10), so a probe can draw four handjob and
+    # four blowjob frames for another character from one plate
+    "stroke": ("free2", f"handjob: she strokes {COCK} with one hand, the shaft glistening wet with saliva, "
+                        f"looking up into the camera and loving it. Keep her face, her hair, her bare breasts, "
+                        f"the room and the framing exactly as they are."),
+    "suck_thighs": ("tip", f"Move both of her hands onto the tops of his thighs, palms flat on his thighs, no "
+                           f"hand touching the penis; the head of {COCK} stays in her mouth, her eyes looking up "
+                           f"into the camera. Keep her face, her hair, her bare breasts, the room and the "
+                           f"framing exactly as they are."),
+    "suck_two": ("hands2", f"She keeps both hands stacked on the shaft and lowers her mouth onto it, the head of "
+                           f"{COCK} between her lips above her top hand, her eyes looking up into the camera. "
+                           f"Keep her face, her hair, her bare breasts, the room and the framing exactly as "
+                           f"they are."),
+    # mimi, 2026-11-23: `tip` from `free` zoomed in, oversized him and lost her face; from the realistic-size
+    # step with the framing held
+    "tip2": ("free2", "She leans forward and takes just the head of his erect penis between her lips, one hand "
+                      "holding the shaft, her eyes looking up into the camera. The penis stays the same size. "
+                      "Keep her face, her hair, her bare breasts, the room and the framing exactly as they are, "
+                      "do not zoom in."),
+    # round 2 on mimi: spit and lick from `free` (no hand on him in her render) grew a desk in the foreground
+    # and a giant penis; the same steps from the realistic-size step, where her hand is already on it
+    "spit2": ("free2", "She holds his erect penis in one hand and spits onto the head of it, a string of saliva "
+                       "running from her lips to the penis, her eyes on the camera. The penis stays the same "
+                       "size. Keep her face, her hair, her bare breasts, the room and the framing exactly as "
+                       "they are, do not zoom in."),
+    "lick2": ("free2", "She leans forward with her tongue out, licking the head of his erect penis, one hand "
+                       "holding it at the base, her eyes looking up into the camera. The penis stays the same "
+                       "size. Keep her face, her hair, her bare breasts, the room and the framing exactly as "
+                       "they are, do not zoom in."),
 }
 if ONLY_KEYS:
     CHAIN = {k: v for k, v in CHAIN.items() if k in ONLY_KEYS}
@@ -174,13 +206,13 @@ def splice_lora(wf: dict, after: str, path: str, strength: float) -> dict:
     return wf
 
 
-def edit_wf(instr: str, seed: int, image: str, nsfw: str) -> dict:
+def edit_wf(instr: str, seed: int, image: str, nsfw: str, strength: float = STRENGTH) -> dict:
     wf, _ = build_edit_workflow(cfg, CHAR, instruction=instr, negative=NEGATIVE, image_name=image,
                                 image_lora=lora["path"], seed=seed, render_pass="medium",
                                 filename_prefix=f"sourcemode/{CHAR}_povedit")
     nodes = wf["nodes"] if "nodes" in wf else wf
     after = "222" if "222" in nodes else "161"
-    return splice_lora(wf, after, nsfw, STRENGTH)
+    return splice_lora(wf, after, nsfw, strength)
 
 
 plan = [(arm, key, s) for arm in ARMS for s in range(SEEDS) for key in CHAIN]
@@ -224,12 +256,15 @@ for arm, key, s in plan:
         continue
     parent, instr = CHAIN[key]
     src = PLATE if parent is None else d / f"{arm}__{parent}__s{s}.png"
+    if parent and not src.is_file():      # an arm that only differs late in the chain starts from allin's step
+        src = d / f"allin__{parent}__s{s}.png"
     if not src.is_file():
         log(f"  {out.name}: no {parent} to edit from")
         continue
     seed = rng.randrange(1, 2**31)
     t0 = time.monotonic()
-    files = client.outputs(client.wait(client.submit(edit_wf(instr, seed, upload(src), ARMS[arm])), timeout_s=3600))
+    files = client.outputs(client.wait(client.submit(edit_wf(instr, seed, upload(src), ARMS[arm],
+                                                             STRENGTHS.get(arm, STRENGTH))), timeout_s=3600))
     if not files:
         raise SystemExit(f"{out.name}: ComfyUI returned no image")
     client.fetch(files[0], out)

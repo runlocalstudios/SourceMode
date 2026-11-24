@@ -137,8 +137,6 @@ SHOTS.update({
                 f"her hand jerking {COCK} held just above her vagina as he ejaculates, ropes of thick white "
                 f"semen landing across her stomach, her breasts and her face, her eyes on the camera, loving it"),
 })
-if ONLY_SHOTS:
-    SHOTS = {k: v for k, v in SHOTS.items() if k in ONLY_SHOTS}
 # round 4 (2026-11-10): round 3 put the camera at the foot of the desk looking over her upside-down head every
 # time (0.13-0.18), whatever "side of the desk" and "head toward the far end" said - but the penis, the pullout
 # and the cum ropes were right. So two framings that keep her face upright: his eyes looking down at her,
@@ -164,6 +162,9 @@ SHOTS.update({
                      f"vagina as he ejaculates, ropes of thick white semen landing across her stomach, her "
                      f"breasts and her face, her face turned to the camera, loving it"),
 })
+# after every round's shots are added: filtered above them, --shots=tip also rendered rounds 3 and 4
+if ONLY_SHOTS:
+    SHOTS = {k: v for k, v in SHOTS.items() if k in ONLY_SHOTS}
 NEG = ("different person, different face, changed hair, bra, bralette, vest, blouse, shirt on her, top on her, "
        "extra penis, extra hands, extra limbs, deformed genitals, deformed hands, blurry, low quality, cartoon, "
        "anime, watermark, text, condom, tears, crying, watering eyes, toothy grin, childlike, child, underage")

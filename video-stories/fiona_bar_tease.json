@@ -1,0 +1,204 @@
+{
+ "name": "fiona_bar_tease",
+ "character": "fiona",
+ "summary": "Closing the bar, a solo POV tease, about 2 min 40 s. Every key is a kept photo from the bar story (library/fiona/2026-11-10_video_bar-story, judge set story_fiona_bar, 32/32 kept) and every one of them is the same framing - the door behind her, the bottle shelves to the right, the camera at his seat - so no room keys. Chained legs, never two free legs in a row, so her face is re-pinned at least every 10 s. Clothed throughout: she touches herself over the corset, the skirt and the fishnets, never undresses. Jeremy, 2026-11-11: 'her looking amazing and teasing the viewer, flirting, dancing (slow movement, nothing jerky), sort of lap dance style sexy appeal, her touching herself, no nudity'. Voice: Fiona has no voice record yet - the script is here, her voice was chosen on the Characters tab on 2026-11-11 (take_02 of 2026-11-11_voice_fiona), so the full run is voiced. Proof 1 (2026-11-11): the room and her face held; leg 1 walked the camera into the door and leg 3 sat her down on a free leg - so the suffix says static camera, free legs say she stays on her feet. Full run 1, leg 1: turning the lock lit the door's glass into a daytime window - the negative refuses daylight and the opening door, the motion keeps the door shut and dark. Take 2 did it again with the door named shut and dark, so leg 1 no longer turns the lock at all: she lets go of the handle and turns to the viewer - the lock is the script's, not the picture's. Take 3, leg 3: the walk_back key has her seated, so a free leg told to stand just held still with her hands on her knees - free legs now continue the pose the key leaves her in. Legs 14-17, 21, 27, 28 and 31 reworded the same way: she stays on the stool throughout.",
+ "size": [
+  960,
+  1440
+ ],
+ "quality": "medium",
+ "seed": 61834,
+ "fps": 16,
+ "chain": true,
+ "color_ramp": true,
+ "voice": true,
+ "voice_pace": {
+  "exaggeration": 0.5,
+  "cfg_weight": 0.3
+ },
+ "music": "C:/dev/chillafterdark/src/assets/music/chillTrap.mp3",
+ "music_db": -10,
+ "suffix": "one continuous shot, static camera, the camera does not move, smooth natural motion, she moves slowly and sensually, small smooth movements, her eyes on the viewer",
+ "negative": "fast motion, motion blur, camera cut, scene change, morphing, face change, different person, other people, nudity, undressing, bare breasts, daylight, daytime, bright sky, trees, the door opening",
+ "photos": {
+  "lock": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/a01_lock__a2.png",
+  "walk_back": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/a03_walk_back__a1.png",
+  "around": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/c01_around__a1.png",
+  "hop_up": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/c04_bar_sit__a2.png",
+  "bar_sit": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/c04_bar_sit__a1.png",
+  "bar_sit_smile": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/c05_bar_sit_smile__a1.png",
+  "bar_lean": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/c06_bar_lean__a1.png",
+  "legs_open": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/c07_bar_legs_open__a1.png",
+  "slide_off": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/c08_slide_off__a2.png",
+  "between_knees": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/d01_between_knees__a1.png",
+  "closer": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/d02_closer__a2.png",
+  "pigtails": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/d03_pigtails__a1.png",
+  "toast": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/d04_close_toast__a1.png",
+  "close_look": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/d05_close_look__a1.png",
+  "last_drink": "C:/dev/SourceMode/library/fiona/2026-11-10_video_bar-story/e03_last_drink__a1.png"
+ },
+ "segments": [
+  {
+   "start": "lock",
+   "end": null,
+   "seconds": 5.06,
+   "motion": "seated on the bar stool, she lets go of the door handle, turns to face the viewer with a slow teasing smirk and runs her fingertips slowly along the bar top beside her"
+  },
+  {
+   "end": "walk_back",
+   "seconds": 5.06,
+   "motion": "she stands up from the stool and walks slowly toward the viewer across the floor, her hips swaying with each step, her pigtails swinging, a half-smile"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "seated on the bar stool facing the viewer, she slowly runs both hands up her fishnet thighs, over her leather corset to her breasts and back down to her thighs, biting her lower lip, her eyes on the viewer"
+  },
+  {
+   "end": "around",
+   "seconds": 5.06,
+   "motion": "she stands up, steps slowly to the rounded end of the bar and perches on the stool there, one hand resting on the bar top, talking softly to the viewer"
+  },
+  {
+   "end": "hop_up",
+   "seconds": 5.06,
+   "motion": "she turns to the bar, puts her palms on the bar top and hops up onto the bar stool, crossing one leg over the other, smiling at the viewer"
+  },
+  {
+   "end": "bar_sit",
+   "seconds": 5.06,
+   "motion": "seated on the bar stool with her legs crossed, she settles back and rests her hands in her lap, a quiet closed-lip smile"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "seated on the bar stool, she slowly uncrosses and recrosses her legs, then runs one hand slowly up her fishnet thigh to the hem of her leather skirt and back down, her eyes on the viewer"
+  },
+  {
+   "end": "bar_sit_smile",
+   "seconds": 5.06,
+   "motion": "she leans forward with her hands on the bar edge either side of her hips, her shoulders squeezed in, and smiles brightly at the viewer"
+  },
+  {
+   "end": "bar_lean",
+   "seconds": 5.06,
+   "motion": "she slowly leans back on her palms, arching her back and pushing her chest forward, her head tilted, watching the viewer"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "leaning back on one palm, she slowly runs her other hand up her stomach and over her corset-covered breast, squeezing it gently, her lips parted, her eyes on the viewer"
+  },
+  {
+   "end": "legs_open",
+   "seconds": 5.06,
+   "motion": "she sits up, slowly opens her knees wide and rests her boots on the brass rail, leaning back on her palms with a teasing smile"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "knees apart on the bar stool, she slowly slides one hand up the inside of her fishnet thigh to the hem of her skirt and presses it there, biting her lip, holding the viewer's eyes"
+  },
+  {
+   "end": "legs_open",
+   "seconds": 5.06,
+   "motion": "she slides her hand slowly back down to her knee, sways her knees gently open and closed, and smiles at the viewer"
+  },
+  {
+   "end": "slide_off",
+   "seconds": 5.06,
+   "motion": "she closes her knees, presses her palms to the bar edge behind her hips and leans back, lifting her chest toward the viewer with a teasing smile"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "she swivels on the stool to turn her back to the viewer, arches her back and looks over her shoulder with a smirk, running one hand slowly over her hip and her bottom, then swivels back to face the viewer"
+  },
+  {
+   "end": "between_knees",
+   "seconds": 5.06,
+   "motion": "she scoots the stool in close to the camera, her knees coming close, and leans toward the camera with a gentle closed-mouth smile"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "seated close to the camera, she slowly sways her hips and shoulders on the stool in a slow lap dance, her hands sliding over her own thighs, her eyes on the viewer"
+  },
+  {
+   "end": "closer",
+   "seconds": 5.06,
+   "motion": "she leans in even closer, her face near the camera, and whispers something with a slow smile"
+  },
+  {
+   "end": "pigtails",
+   "seconds": 5.06,
+   "motion": "she straightens up, takes one pigtail in each hand and gives them a playful tug, a teasing smile at the viewer"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "holding her pigtails, she slowly rolls her hips in a figure eight close to the camera and bites her lower lip, her eyes locked on the viewer"
+  },
+  {
+   "end": "between_knees",
+   "seconds": 5.06,
+   "motion": "she lets her pigtails fall and leans in close to the camera again, talking softly with a gentle smile"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "close to the camera, she slowly slides one hand up her stomach and over her corset, cupping her breast and squeezing gently, her lips parted, her eyes heavy-lidded on the viewer"
+  },
+  {
+   "end": "toast",
+   "seconds": 5.06,
+   "motion": "she reaches to the bar, picks up a whisky glass and raises it close to the camera in a toast with a wide smile"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "she takes a slow sip from the glass, lowers it and slowly licks her lips, watching the viewer"
+  },
+  {
+   "end": "close_look",
+   "seconds": 5.06,
+   "motion": "she sets the glass aside and brings her face close to the camera, looking straight into it with a slow half-smile"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "close to the camera, she slowly runs her fingertips down her neck, over the choker, along her collarbone and down over her cleavage, her eyes on the viewer"
+  },
+  {
+   "end": "between_knees",
+   "seconds": 5.06,
+   "motion": "she eases back on the stool, swaying her shoulders slowly, a gentle smile"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "seated close to the camera, she slides one hand slowly down over the front of her leather skirt and presses it between her thighs, her hips rolling slowly, her eyes heavy-lidded, lips parted"
+  },
+  {
+   "end": "pigtails",
+   "seconds": 5.06,
+   "motion": "she brings both hands up to her pigtails and holds them with a knowing smile, swaying slowly"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "holding her pigtails, she talks softly to the viewer, nodding slowly as if counting down, a slow smile"
+  },
+  {
+   "end": "last_drink",
+   "seconds": 5.06,
+   "motion": "she turns to the bar beside her, picks up her own glass from its coaster and purses her lips as if about to make a toast"
+  },
+  {
+   "end": null,
+   "seconds": 5.06,
+   "motion": "she raises the glass to the viewer, winks, takes a slow drink and smiles with her eyes closed"
+  }
+ ],
+ "script": "[1s] There. Locked. It's just you and me now.\n[7s] Don't look so nervous... I saw you watching me all night.\n[13s] You like this outfit? I wore it for you.\n[19s] Mm. Stay right there on that stool.\n[26s] Let me get comfortable...\n[33s] You can't take your eyes off my legs, can you?\n[40s] Good. I want you to look.\n[47s] Watch my hands...\n[53s] I know what you're thinking. You can't hide it from me.\n[59s] Go ahead... take it out. Nobody's here but us.\n[66s] Slowly. I want to see.\n[73s] Like what you see back here?\n[78s] Come closer. Let me get right here...\n[85s] Stroke it for me. Nice and slow... match my hips.\n[92s] You like my pigtails? Keep that pace.\n[99s] Don't speed up. Not yet.\n[106s] I'm so turned on watching you.\n[112s] Here's to you... a little reward.\n[119s] Mm. Keep going. Just like that.\n[126s] Eyes on me. Only on me.\n[133s] A little faster now... I can tell you're close.\n[139s] Not until I say. Hold it for me.\n[145s] Ten...\n[146.5s] Nine...\n[148s] Eight...\n[149.5s] Seven...\n[151s] Six...\n[152.5s] Five...\n[154s] Four...\n[155.5s] Three...\n[157s] Two...\n[158.5s] One. Cum for me, baby. Last call."
+}
