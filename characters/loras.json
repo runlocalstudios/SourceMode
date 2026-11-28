@@ -163,6 +163,18 @@
   "locked_at": "2026-10-12T01:12:56+00:00",
   "name": "daisy.safetensors"
  },
+ "delilah": {
+  "name": "delilah.safetensors",
+  "file": "delilah_v2c-000001.safetensors",
+  "epoch": 31,
+  "dataset": "delilah_v2",
+  "output_name": "delilah_v2c",
+  "sha256": "32b2a20bd7af0e572ef0c0861d70e3633fa0f989e5cc87c77485dce924a6e259",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\delilah.safetensors",
+  "basis": "epoch 31 (delilah_v2c epoch 1, continued from epoch 30); tiebreaker set dense_delilah_v2c_tiebreaker 2026-11-27: epoch 31 kept 15/20 (30 kept 15/20, 32 kept 11/20); Jeremy: lock 31 as the winning epoch",
+  "locked_at": "2026-11-28T15:30:16+00:00"
+ },
  "diane": {
   "name": "diane.safetensors",
   "file": "diane_v2-000021.safetensors",
@@ -547,6 +559,18 @@
   "locked_at": "2026-10-09T19:59:17+00:00",
   "name": "maddie.safetensors"
  },
+ "marci": {
+  "name": "marci.safetensors",
+  "file": "marci_v2-000023.safetensors",
+  "epoch": 23,
+  "dataset": "marci_v2",
+  "output_name": "marci_v2",
+  "sha256": "27a6d912ef6b420eab2a81e2572ce6ed46fbc7f696526b06137a79ea4b714363",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\marci.safetensors",
+  "basis": "dense_marci_v2_tiebreaker 19/20 at epoch 23",
+  "locked_at": "2026-11-25T20:46:18+00:00"
+ },
  "marisol": {
   "file": "marisol_v2-000020.safetensors",
   "epoch": 20,
@@ -607,6 +631,18 @@
   "locked_at": "2026-10-09T20:00:58+00:00",
   "name": "mira.safetensors"
  },
+ "misty": {
+  "name": "misty.safetensors",
+  "file": "misty_v2-000017.safetensors",
+  "epoch": 17,
+  "dataset": "misty_v2",
+  "output_name": "misty_v2",
+  "sha256": "188f30cd26e53d77b27add66d28f2203256427e5ccdcaf43517e0929330b4eed",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\misty.safetensors",
+  "basis": "dense_misty_v2_tiebreaker 18/20 at epoch 17",
+  "locked_at": "2026-11-25T22:45:25+00:00"
+ },
  "nadia": {
   "name": "nadia.safetensors",
   "file": "nadia_v3-000022.safetensors",
@@ -654,6 +690,18 @@
   "basis": "dense_nisha_v2_asset 8/10 at epoch 21",
   "locked_at": "2026-10-14T13:26:13+00:00",
   "name": "nisha.safetensors"
+ },
+ "nora": {
+  "name": "nora.safetensors",
+  "file": "nora_v2-000016.safetensors",
+  "epoch": 16,
+  "dataset": "nora_v2",
+  "output_name": "nora_v2",
+  "sha256": "deaecd2c866ed182fe0afc8a76c0ae0f3cfaf239462ab524868c85a0710bde44",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\nora.safetensors",
+  "basis": "dense_nora_v2_asset 7/10 at epoch 16",
+  "locked_at": "2026-11-27T14:56:33+00:00"
  },
  "priya": {
   "file": "priya_v2-000016.safetensors",
@@ -703,6 +751,18 @@
   "locked_at": "2026-10-11T04:37:37+00:00",
   "name": "rivera.safetensors"
  },
+ "roxy": {
+  "name": "roxy.safetensors",
+  "file": "roxy_v2-000018.safetensors",
+  "epoch": 18,
+  "dataset": "roxy_v2",
+  "output_name": "roxy_v2",
+  "sha256": "d3fcbad1fa07661520a6bff31685aa46b76490c37b07e2d11800b648fb1fe170",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\roxy.safetensors",
+  "basis": "tiebreaker set dense_roxy_v2_tiebreaker 2026-11-27: epoch 18 kept 16/20 (17 kept 16/20, 24 kept 13/20); Jeremy: keep epoch 18 as the final",
+  "locked_at": "2026-11-27T21:10:42+00:00"
+ },
  "sandra": {
   "file": "sandra_v2-000021.safetensors",
   "epoch": 21,
@@ -714,6 +774,18 @@
   "basis": "pruned to one; dense_sandra_v2 7/10 at ep21",
   "locked_at": "2026-10-09T20:00:18+00:00",
   "name": "sandra.safetensors"
+ },
+ "sanna": {
+  "name": "sanna.safetensors",
+  "file": "sanna_v2.safetensors",
+  "epoch": 24,
+  "dataset": "sanna_v2",
+  "output_name": "sanna_v2",
+  "sha256": "0a9b05a47a36b3233aade8bce4caf1ba52b0080baf04c6fb02bbec109d599254",
+  "bytes": 1179978920,
+  "comfy": "sourcemode\\sanna.safetensors",
+  "basis": "dense_sanna_v2_asset 8/10 at epoch 24",
+  "locked_at": "2026-11-25T22:48:43+00:00"
  },
  "sarah": {
   "name": "sarah.safetensors",
